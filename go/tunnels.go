@@ -1,6 +1,8 @@
 package tunnels
 
-import "time"
+import (
+	"time"
+)
 
 type Tunnel struct {
 	ClusterID     string
@@ -9,13 +11,22 @@ type Tunnel struct {
 	Description   string
 	Tags          []string
 	Domain        string
-	AccessTokens  map[string]string
+	AccessTokens  map[TunnelAccessScope]string
 	AccessControl *TunnelAccessControl
 	Options       *TunnelOptions
 	Status        *TunnelStatus
 	Endpoints     []*TunnelEndpoint
 	Ports         []*TunnelPort
 }
+
+type TunnelAccessScope string
+
+const (
+	TunnelAccessScopeManage  TunnelAccessScope = "manage"
+	TunnelAccessScopeHost    TunnelAccessScope = "host"
+	TunnelAccessScopeInspect TunnelAccessScope = "inspect"
+	TunnelAccessScopeConnect TunnelAccessScope = "connect"
+)
 
 type TunnelAccessControl struct {
 	Entries []*TunnelAccessControlEntry
@@ -67,6 +78,9 @@ type TunnelEndpoint struct {
 	ConnectionMode TunnelConnectionMode
 	HostID         string
 	PortURIFormat  string
+	HostRelayURI   string
+	ClientRelayURI string
+	HostPublicKeys []string
 }
 
 type TunnelPort struct {
