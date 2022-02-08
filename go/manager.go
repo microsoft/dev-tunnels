@@ -41,8 +41,8 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	return nil, nil
 }
 
-func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) error {
-	return nil
+func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (bool, error) {
+	return false, nil
 }
 
 func (m *Manager) UpdateTunnelEndpoint(
