@@ -24,8 +24,15 @@ func newSSHSession(socket net.Conn) *sshSession {
 
 func (s *sshSession) connect(ctx context.Context) error {
 	clientConfig := ssh.ClientConfig{
+		// For now, the client is allowed to skip SSH authentication;
+		// they must have a valid tunnel access token already to get this far.
 		User:    "tunnel",
 		Timeout: 10 * time.Second,
+
+		// TODO: Validate host public keys match those published to the service?
+		// For now, the assumption is only a host with access to the tunnel can get a token
+		// that enables listening for tunnel connections.
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(s.socket, "", &clientConfig)

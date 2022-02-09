@@ -13,6 +13,7 @@ const (
 	clientWebSocketSubProtocol = "tunnel-relay-client"
 )
 
+// Client is a client for a tunnel. It is used to connect to a tunnel.
 type Client struct {
 	logger *log.Logger
 
@@ -24,13 +25,23 @@ type Client struct {
 }
 
 var (
-	ErrNoTunnel           = errors.New("tunnel cannot be nil")
-	ErrNoTunnelEndpoints  = errors.New("tunnel endpoints cannot be nil or empty")
-	ErrNoConnections      = errors.New("the specified host is not currently accepting connections to the tunnel")
-	ErrMultipleHosts      = errors.New("there are multiple hosts for the tunnel, specify the host ID to connect to")
+	// ErrNoTunnel is returned when no tunnel is provided.
+	ErrNoTunnel = errors.New("tunnel cannot be nil")
+
+	// ErrNoTunnelEndpoints is returned when no tunnel endpoints are provided.
+	ErrNoTunnelEndpoints = errors.New("tunnel endpoints cannot be nil or empty")
+
+	// ErrNoConnections is returned when no tunnel endpoints are provided for the given host ID.
+	ErrNoConnections = errors.New("the specified host is not currently accepting connections to the tunnel")
+
+	// ErrMultipleHosts is returned when multiple tunnel endpoints for different hosts are provided.
+	ErrMultipleHosts = errors.New("there are multiple hosts for the tunnel, specify the host ID to connect to")
+
+	// ErrNoRelayConnections is returned when no relay connections are available.
 	ErrNoRelayConnections = errors.New("the host is not currently accepting tunnel relay connections")
 )
 
+// Connect connects to a tunnel and returns a connected client.
 func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID string) (*Client, error) {
 	if tunnel == nil {
 		return nil, ErrNoTunnel
