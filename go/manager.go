@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"go.lsp.dev/uri"
-	"log"
 	"net/http"
 )
 
-type fn func(string)
+type fn func() <-chan string
 
 const (
 	apiV1Path                  = "/api/v1"
@@ -35,6 +34,14 @@ type Manager struct {
 func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUri uri.URI) (*Manager, error) {
 	if isEmpty(userAgent) {
 		return nil, fmt.Errorf("userAgent cannot be empty")
+	}
+	if accessTokenCallback == nil {
+		accessTokenCallback = func() <-chan string {
+			r := make(chan string)
+			defer close(r)
+			r <- ""
+			return r
+		}
 	}
 	client := &http.Client{}
 	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUri}, nil
