@@ -75,7 +75,6 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 
 func (c *Client) connect(ctx context.Context) (*Client, error) {
 	if len(c.endpoints) != 1 {
-		// TODO(josebalius): Why do we need exactly one endpoint and not just N > 0
 		return nil, ErrNoRelayConnections
 	}
 	tunnelEndpoint := c.endpoints[0]
