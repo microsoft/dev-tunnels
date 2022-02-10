@@ -1,11 +1,43 @@
 package tunnels
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"go.lsp.dev/uri"
+	"log"
+	"net/http"
+)
 
-type Manager struct{}
+type fn func(string)
 
-func NewManager() *Manager {
-	return &Manager{}
+const (
+	apiV1Path                  = "/api/v1"
+	tunnelsApiPath             = apiV1Path + "/tunnels"
+	subjectsApiPath            = apiV1Path + "/subjects"
+	endpointsApiSubPath        = "/endpoints"
+	portsApiSubPath            = "/ports"
+	tunnelAuthenticationScheme = "Tunnel"
+)
+
+var (
+	manageAccessTokenScope       = []string{ManageScope}
+	hostAccessTokenScope         = []string{HostScope}
+	hostOrManageAccessTokenScope = []string{ManageScope, HostScope}
+	readAccessTokenScope         = []string{ManageScope, HostScope, ConnectScope}
+)
+
+type Manager struct {
+	accessTokenCallback fn
+	httpClient          *http.Client
+	uri                 uri.URI
+}
+
+func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUri uri.URI) (*Manager, error) {
+	if isEmpty(userAgent) {
+		return nil, fmt.Errorf("userAgent cannot be empty")
+	}
+	client := &http.Client{}
+	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUri}, nil
 }
 
 type TunnelRequestOptions struct {
