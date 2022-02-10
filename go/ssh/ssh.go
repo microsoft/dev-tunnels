@@ -1,4 +1,4 @@
-package tunnels
+package tunnelssh
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type sshSession struct {
+type SSHSession struct {
 	*ssh.Session
 	socket net.Conn
 	conn   ssh.Conn
@@ -18,11 +18,11 @@ type sshSession struct {
 	writer io.Writer
 }
 
-func newSSHSession(socket net.Conn) *sshSession {
-	return &sshSession{socket: socket}
+func NewSSHSession(socket net.Conn) *SSHSession {
+	return &SSHSession{socket: socket}
 }
 
-func (s *sshSession) connect(ctx context.Context) error {
+func (s *SSHSession) Connect(ctx context.Context) error {
 	clientConfig := ssh.ClientConfig{
 		// For now, the client is allowed to skip SSH authentication;
 		// they must have a valid tunnel access token already to get this far.
@@ -60,10 +60,20 @@ func (s *sshSession) connect(ctx context.Context) error {
 	return nil
 }
 
-func (s *sshSession) Read(p []byte) (n int, err error) {
+func (s *SSHSession) Read(p []byte) (n int, err error) {
 	return s.reader.Read(p)
 }
 
-func (s *sshSession) Write(p []byte) (n int, err error) {
+func (s *SSHSession) Write(p []byte) (n int, err error) {
 	return s.writer.Write(p)
+}
+
+func (s *SSHSession) OpenChannel(ctx context.Context, channelType string, data []byte) (ssh.Channel, error) {
+	channel, reqs, err := s.conn.OpenChannel(channelType, data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open channel: %w", err)
+	}
+	go ssh.DiscardRequests(reqs)
+
+	return channel, nil
 }
