@@ -13,13 +13,19 @@ import (
 )
 
 func TestSuccessfulConnect(t *testing.T) {
-	relayServer, err := tunnelstest.NewRelayServer()
+	accessToken := "access-token"
+	relayServer, err := tunnelstest.NewRelayServer(
+		tunnelstest.WithAccessToken(accessToken),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
+		AccessTokens: map[TunnelAccessScope]string{
+			TunnelAccessScopeConnect: accessToken,
+		},
 		Endpoints: []*TunnelEndpoint{
 			{
 				HostID:         "host1",
@@ -50,6 +56,35 @@ func TestSuccessfulConnect(t *testing.T) {
 		if err != nil {
 			t.Errorf(err.Error())
 		}
+	}
+}
+
+func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
+	accessToken := "access-token"
+	relayServer, err := tunnelstest.NewRelayServer(
+		tunnelstest.WithAccessToken(accessToken),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
+	tunnel := Tunnel{
+		AccessTokens: map[TunnelAccessScope]string{
+			TunnelAccessScopeConnect: "invalid-access-token",
+		},
+		Endpoints: []*TunnelEndpoint{
+			{
+				HostID:         "host1",
+				ClientRelayURI: hostURL,
+			},
+		},
+	}
+
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+	_, err = Connect(context.Background(), logger, &tunnel, "")
+	if err == nil {
+		t.Error("expected error, got nil")
 	}
 }
 

@@ -30,9 +30,13 @@ type RelayServer struct {
 	httpServer *httptest.Server
 	errc       chan error
 	sshConfig  *ssh.ServerConfig
+
+	accessToken string
 }
 
-func NewRelayServer() (*RelayServer, error) {
+type RelayServerOption func(*RelayServer)
+
+func NewRelayServer(opts ...RelayServerOption) (*RelayServer, error) {
 	server := &RelayServer{
 		errc: make(chan error),
 		sshConfig: &ssh.ServerConfig{
@@ -47,7 +51,18 @@ func NewRelayServer() (*RelayServer, error) {
 	server.sshConfig.AddHostKey(privateKey)
 
 	server.httpServer = httptest.NewServer(http.HandlerFunc(makeConnection(server)))
+
+	for _, opt := range opts {
+		opt(server)
+	}
+
 	return server, nil
+}
+
+func WithAccessToken(accessToken string) func(*RelayServer) {
+	return func(server *RelayServer) {
+		server.accessToken = accessToken
+	}
 }
 
 func (rs *RelayServer) URL() string {
@@ -72,6 +87,13 @@ func makeConnection(server *RelayServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
+		if server.accessToken != "" {
+			if r.Header.Get("Authorization") != fmt.Sprintf("tunnel %s", server.accessToken) {
+				server.sendError(fmt.Errorf("invalid access token"))
+				return
+			}
+		}
 
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
