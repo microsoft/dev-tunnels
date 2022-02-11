@@ -176,7 +176,7 @@ func (c *Client) handleConnection(ctx context.Context, conn io.ReadWriteCloser, 
 	go copyConn(channel, conn)
 
 	// Wait until context is cancelled or both copies are done.
-	// Discard errors from io.Copy; they should not cause (e.g.) ForwardToListener to fail.
+	// Discard errors from io.Copy; they should not cause (e.g.) failures.
 	for i := 0; ; {
 		select {
 		case <-ctx.Done():
@@ -201,19 +201,19 @@ func (c *Client) nextChannelID() uint32 {
 }
 
 func (c *Client) openStreamingChannel(ctx context.Context, port int) (ssh.Channel, error) {
-	portForwardChannelOpenMessage := messages.NewPortForwardChannelOpen(
+	portForwardChannel := messages.NewPortForwardChannel(
 		c.nextChannelID(),
 		"127.0.0.1",
 		uint32(port),
 		"",
 		0,
 	)
-	data, err := portForwardChannelOpenMessage.MarshalBinary()
+	data, err := portForwardChannel.MarshalBinary()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal port forward channel open message: %w", err)
 	}
 
-	channel, err := c.ssh.OpenChannel(ctx, portForwardChannelOpenMessage.Type(), data)
+	channel, err := c.ssh.OpenChannel(ctx, portForwardChannel.Type(), data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open port forward channel: %w", err)
 	}

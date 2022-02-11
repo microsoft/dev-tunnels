@@ -3,6 +3,7 @@ package messages
 import (
 	"bytes"
 	"fmt"
+	"io"
 )
 
 type channelOpen struct {
@@ -32,14 +33,30 @@ func newChannelOpen(senderChannel uint32, initialWindowSize uint32, maximumPacke
 
 func (c *channelOpen) marshalBinary() ([]byte, error) {
 	buf := new(bytes.Buffer)
-	if err := WriteUint32(buf, c.senderChannel); err != nil {
+	if err := writeUint32(buf, c.senderChannel); err != nil {
 		return nil, fmt.Errorf("failed to write sender channel: %w", err)
 	}
-	if err := WriteUint32(buf, c.initialWindowSize); err != nil {
+	if err := writeUint32(buf, c.initialWindowSize); err != nil {
 		return nil, fmt.Errorf("failed to write initial window size: %w", err)
 	}
-	if err := WriteUint32(buf, c.maximumPacketSize); err != nil {
+	if err := writeUint32(buf, c.maximumPacketSize); err != nil {
 		return nil, fmt.Errorf("failed to write maximum packet size: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+func (c *channelOpen) unmarshalBinary(buf io.Reader) (err error) {
+	c.senderChannel, err = readUint32(buf)
+	if err != nil {
+		return fmt.Errorf("failed to read sender channel: %w", err)
+	}
+	c.initialWindowSize, err = readUint32(buf)
+	if err != nil {
+		return fmt.Errorf("failed to read initial window size: %w", err)
+	}
+	c.maximumPacketSize, err = readUint32(buf)
+	if err != nil {
+		return fmt.Errorf("failed to read maximum packet size: %w", err)
+	}
+	return nil
 }

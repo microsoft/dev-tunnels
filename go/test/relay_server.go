@@ -1,12 +1,15 @@
 package tunnelstest
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 
 	"github.com/gorilla/websocket"
+	"github.com/microsoft/tunnels/go/ssh/messages"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -30,9 +33,13 @@ type RelayServer struct {
 	httpServer *httptest.Server
 	errc       chan error
 	sshConfig  *ssh.ServerConfig
+	channels   map[string]channelHandler
 }
 
-func NewRelayServer() (*RelayServer, error) {
+type RelayServerOption func(*RelayServer)
+type channelHandler func(context.Context, ssh.NewChannel) error
+
+func NewRelayServer(opts ...RelayServerOption) (*RelayServer, error) {
 	server := &RelayServer{
 		errc: make(chan error),
 		sshConfig: &ssh.ServerConfig{
@@ -47,7 +54,61 @@ func NewRelayServer() (*RelayServer, error) {
 	server.sshConfig.AddHostKey(privateKey)
 
 	server.httpServer = httptest.NewServer(http.HandlerFunc(makeConnection(server)))
+	for _, opt := range opts {
+		opt(server)
+	}
+
 	return server, nil
+}
+
+func WithForwardedStream(pfc *messages.PortForwardChannel, port int, data *bytes.Buffer) RelayServerOption {
+	return func(server *RelayServer) {
+		if server.channels == nil {
+			server.channels = make(map[string]channelHandler)
+		}
+
+		server.channels[pfc.Type()] = func(ctx context.Context, ch ssh.NewChannel) error {
+			if pfc.Type() != ch.ChannelType() {
+				return fmt.Errorf("unexpected channel type: %s", ch.ChannelType())
+			}
+
+			pfcData, err := pfc.MarshalBinary()
+			if err != nil {
+				return fmt.Errorf("error marshaling port forward channel: %w", err)
+			}
+
+			channel, reqs, err := ch.Accept()
+			if err != nil {
+				return fmt.Errorf("error accepting channel: %w", err)
+			}
+			go ssh.DiscardRequests(reqs)
+
+			if len(ch.ExtraData()) != len(pfcData) {
+				return fmt.Errorf("unexpected extra data: %s", ch.ExtraData())
+			}
+
+			return forwardStream(ctx, data, channel)
+		}
+	}
+}
+
+func forwardStream(ctx context.Context, stream io.ReadWriter, channel ssh.Channel) (err error) {
+	defer func() {
+		if closeErr := channel.Close(); err == nil && closeErr != io.EOF {
+			err = closeErr
+		}
+	}()
+
+	errc := make(chan error, 2)
+	copy := func(dst io.Writer, src io.Reader) {
+		_, err := io.Copy(dst, src)
+		errc <- err
+	}
+
+	go copy(stream, channel)
+	go copy(channel, stream)
+
+	return awaitError(ctx, errc)
 }
 
 func (rs *RelayServer) URL() string {
@@ -103,14 +164,19 @@ func handleChannels(ctx context.Context, server *RelayServer, chans <-chan ssh.N
 	errc := make(chan error, 1)
 	go func() {
 		for ch := range chans {
-			ch, reqs, err := ch.Accept()
-			if err != nil {
-				errc <- fmt.Errorf("error accepting channel: %w", err)
-				return
+			if handler, ok := server.channels[ch.ChannelType()]; ok {
+				if err := handler(ctx, ch); err != nil {
+					errc <- err
+					return
+				}
+			} else {
+				// generic accept of the channel to not block
+				_, _, err := ch.Accept()
+				if err != nil {
+					errc <- fmt.Errorf("error accepting channel: %w", err)
+					return
+				}
 			}
-
-			// TODO(josebalius): handle ch & reqs
-			fmt.Println(ch, reqs)
 		}
 	}()
 	return awaitError(ctx, errc)
