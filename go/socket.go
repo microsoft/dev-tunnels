@@ -14,14 +14,15 @@ import (
 type socket struct {
 	addr      string
 	protocols []string
+	headers   http.Header
 	tlsConfig *tls.Config
 
 	conn   *websocket.Conn
 	reader io.Reader
 }
 
-func newSocket(uri string, protocols []string, tlsConfig *tls.Config) *socket {
-	return &socket{addr: uri, protocols: protocols, tlsConfig: tlsConfig}
+func newSocket(uri string, protocols []string, headers http.Header, tlsConfig *tls.Config) *socket {
+	return &socket{addr: uri, protocols: protocols, headers: headers, tlsConfig: tlsConfig}
 }
 
 func (s *socket) connect(ctx context.Context) error {
@@ -31,7 +32,7 @@ func (s *socket) connect(ctx context.Context) error {
 		TLSClientConfig:  s.tlsConfig,
 		Subprotocols:     s.protocols,
 	}
-	ws, _, err := dialer.Dial(s.addr, nil)
+	ws, _, err := dialer.Dial(s.addr, s.headers)
 	if err != nil {
 		return err
 	}

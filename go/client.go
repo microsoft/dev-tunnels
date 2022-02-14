@@ -9,6 +9,8 @@ import (
 	"net"
 	"sync/atomic"
 
+	"net/http"
+
 	tunnelssh "github.com/microsoft/tunnels/go/ssh"
 	"github.com/microsoft/tunnels/go/ssh/messages"
 	"golang.org/x/crypto/ssh"
@@ -91,12 +93,15 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 	c.logger.Println(fmt.Sprintf("Sec-Websocket-Protocol: %s", clientWebSocketSubProtocol))
 	protocols := []string{clientWebSocketSubProtocol}
 
+	var headers http.Header
 	if accessToken != "" {
 		c.logger.Println(fmt.Sprintf("Authorization: tunnel %s", accessToken))
-		protocols = append(protocols, accessToken)
+		headers = make(http.Header)
+
+		headers.Add("Authorization", fmt.Sprintf("tunnel %s", accessToken))
 	}
 
-	sock := newSocket(clientRelayURI, protocols, nil)
+	sock := newSocket(clientRelayURI, protocols, headers, nil)
 	if err := sock.connect(ctx); err != nil {
 		return nil, fmt.Errorf("failed to connect to client relay: %w", err)
 	}

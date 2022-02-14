@@ -30,10 +30,11 @@ FU3vi+4HlBysaT6IZ/HG+/dBsr4gYp4LGuS7DbaLuYw/uw==
 -----END RSA PRIVATE KEY-----`
 
 type RelayServer struct {
-	httpServer *httptest.Server
-	errc       chan error
-	sshConfig  *ssh.ServerConfig
-	channels   map[string]channelHandler
+	httpServer  *httptest.Server
+	errc        chan error
+	sshConfig   *ssh.ServerConfig
+	channels    map[string]channelHandler
+	accessToken string
 }
 
 type RelayServerOption func(*RelayServer)
@@ -54,6 +55,7 @@ func NewRelayServer(opts ...RelayServerOption) (*RelayServer, error) {
 	server.sshConfig.AddHostKey(privateKey)
 
 	server.httpServer = httptest.NewServer(http.HandlerFunc(makeConnection(server)))
+
 	for _, opt := range opts {
 		opt(server)
 	}
@@ -111,6 +113,12 @@ func forwardStream(ctx context.Context, stream io.ReadWriter, channel ssh.Channe
 	return awaitError(ctx, errc)
 }
 
+func WithAccessToken(accessToken string) func(*RelayServer) {
+	return func(server *RelayServer) {
+		server.accessToken = accessToken
+	}
+}
+
 func (rs *RelayServer) URL() string {
 	return rs.httpServer.URL
 }
@@ -133,6 +141,13 @@ func makeConnection(server *RelayServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
+		if server.accessToken != "" {
+			if r.Header.Get("Authorization") != fmt.Sprintf("tunnel %s", server.accessToken) {
+				server.sendError(fmt.Errorf("invalid access token"))
+				return
+			}
+		}
 
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
