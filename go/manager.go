@@ -58,15 +58,6 @@ func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl *url.
 	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUrl, userAgent: userAgent}, nil
 }
 
-type TunnelRequestOptions struct {
-	AccessToken       string
-	AdditionalHeaders map[string]string
-	FollowRedirects   bool
-	IncludePorts      bool
-	Scopes            []string
-	TokenScopes       []string
-}
-
 func (m *Manager) ListTunnels(
 	ctx context.Context, clusterID string, options *TunnelRequestOptions,
 ) ([]*Tunnel, error) {
@@ -90,7 +81,9 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnelId := tunnel.TunnelID; tunnelId != "" {
 		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
 	}
-	_, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, *m.uri, nil, manageAccessTokenScope, false)
+	url := m.buildUri(tunnel.ClusterID, tunnelsApiPath, options, "")
+	convertedTunnel := 
+	_, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, nil, manageAccessTokenScope, false)
 	return nil, err
 }
 
@@ -187,7 +180,66 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 	return token
 }
 
-func (m *Manager) buildUri(clusterId string, path string, options TunnelRequestOptions, query string) url.URL {
+func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) url.URL {
 	baseAddress := m.uri
+	if clusterId != "" {
+
+	}
+	if options != nil {
+		optionsQuery := options.toQueryString()
+		if optionsQuery != "" {
+			if query != "" {
+				query = fmt.Sprintf("%s&%s", query, optionsQuery)
+			} else {
+				query = optionsQuery
+			}
+		}
+	}
+	baseAddress.Path = path
+	baseAddress.RawQuery = query
 	return *baseAddress
+}
+
+func convertTunnelForRequest(tunnel *Tunnel) error {
+	for _, access := range tunnel.AccessControl {
+		if access.IsInherited {
+			return fmt.Errorf("tunnel access control cannot include inherited entries")
+		}
+	}
+	convertedTunnel = &Tunnel{
+		Name : tunnel.Name,
+		Domain : tunnel.Domain,
+		Description : tunnel.Description,
+		Tags : tunnel.Tags,
+		Options : tunnel.Options,
+		AccessControl : tunnel.AccessControl,
+		Endpoints : tunnel.Endpoints,
+		Ports: make([]*TunnelPort),
+	}
+
+	for i, port := range tunnel.Ports{
+		convertedTunnel.Ports = append(convertedTunnel.Ports, convertTunnelPortForRequest(tunnel, port))
+	}
+}
+
+func convertTunnelPortForRequest(tunnel *Tunnel, tunnelPort *TunnelPort) (*TunnelPort, error) {
+	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID{
+		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel.")
+	}
+	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID{
+		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel.")
+	}
+	convertedPort = &TunnelPort{
+		PortNumber: tunnelPort.PortNumber,
+		Protocol: tunnelPort.Protocol,
+		Options: tunnel.Options,
+		AccessControl: TunnelAccessControl{},
+	}
+	for _, entry := range tunnelPort.AccessControl.Entries{
+		if !entry.IsInherited {
+			convertedPort.AccessControl = append(convertedPort.AccessControl, entry)
+		}
+	}
+	return convertedPort, nil
+
 }
