@@ -3,8 +3,9 @@ package tunnels
 import (
 	"context"
 	"fmt"
-	"go.lsp.dev/uri"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 type fn func() <-chan string
@@ -28,10 +29,12 @@ var (
 type Manager struct {
 	accessTokenCallback fn
 	httpClient          *http.Client
-	uri                 uri.URI
+	uri                 url.URL
+	additionalHeaders   map[string]string
+	userAgent           string
 }
 
-func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUri uri.URI) (*Manager, error) {
+func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl url.URL, httpHandler *http.Client) (*Manager, error) {
 	if isEmpty(userAgent) {
 		return nil, fmt.Errorf("userAgent cannot be empty")
 	}
@@ -43,8 +46,14 @@ func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUri uri.U
 			return r
 		}
 	}
-	client := &http.Client{}
-	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUri}, nil
+	var client *http.Client
+	if httpHandler == nil {
+		client = &http.Client{}
+
+	} else {
+		client = httpHandler
+	}
+	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUrl}, nil
 }
 
 type TunnelRequestOptions struct {
@@ -73,6 +82,12 @@ func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *Tunnel
 }
 
 func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
+	if tunnel == nil {
+		return nil, fmt.Errorf("tunnel must be provided")
+	}
+	if tunnelId := tunnel.TunnelID; tunnelId != "" {
+		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
+	}
 	return nil, nil
 }
 
@@ -124,4 +139,51 @@ func (m *Manager) DeleteTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port int, options *TunnelRequestOptions,
 ) error {
 	return nil
+}
+
+func (m *Manager) sendTunnelRequest(
+	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject url.Values, accessTokenScopes []string, allowNotFound bool,
+) (resp *http.Response, err error) {
+	headers := url.Values{}
+
+	//Add authorization header
+	headers.Add("Authorization", m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes))
+	headers.Add("User-Agent", m.userAgent)
+
+	// Add additional headers
+	for header, headerValue := range m.additionalHeaders {
+		headers.Add(header, headerValue)
+	}
+	for header, headerValue := range tunnelRequestOptions.AdditionalHeaders {
+		headers.Add(header, headerValue)
+	}
+
+	request, err := http.NewRequest(method, uri.String(), strings.NewReader(headers.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	result, err := m.httpClient.Do(request)
+	return result, err
+}
+
+func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []string) string {
+	var token string
+	if tunnelRequestOptions.AccessToken != "" {
+		token = tunnelRequestOptions.AccessToken
+	}
+	if token == "" {
+		token = <-m.accessTokenCallback()
+	}
+	if token == "" && tunnel.AccessTokens != nil {
+		for _, scope := range scopes {
+			if tunnelToken, ok := tunnel.AccessTokens[scope]; ok {
+				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelToken)
+			}
+		}
+	}
+	return token
+}
+
+func (m *Manager) buildUri(clusterId string, path string, options TunnelRequestOptions, query string) url.URL {
+	baseAddress := m.uri
 }
