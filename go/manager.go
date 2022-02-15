@@ -20,29 +20,31 @@ const (
 )
 
 var (
-	manageAccessTokenScope       = []string{ManageScope}
-	hostAccessTokenScope         = []string{HostScope}
-	hostOrManageAccessTokenScope = []string{ManageScope, HostScope}
-	readAccessTokenScope         = []string{ManageScope, HostScope, ConnectScope}
+	manageAccessTokenScope       = []TunnelAccessScope{ManageScope}
+	hostAccessTokenScope         = []TunnelAccessScope{HostScope}
+	hostOrManageAccessTokenScope = []TunnelAccessScope{ManageScope, HostScope}
+	readAccessTokenScope         = []TunnelAccessScope{ManageScope, HostScope, ConnectScope}
 )
 
 type Manager struct {
 	accessTokenCallback fn
 	httpClient          *http.Client
-	uri                 url.URL
+	uri                 *url.URL
 	additionalHeaders   map[string]string
 	userAgent           string
 }
 
-func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl url.URL, httpHandler *http.Client) (*Manager, error) {
+func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
 	if isEmpty(userAgent) {
 		return nil, fmt.Errorf("userAgent cannot be empty")
 	}
 	if accessTokenCallback == nil {
 		accessTokenCallback = func() <-chan string {
 			r := make(chan string)
-			defer close(r)
-			r <- ""
+			go func() {
+				defer close(r)
+				r <- ""
+			}()
 			return r
 		}
 	}
@@ -53,7 +55,7 @@ func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl url.U
 	} else {
 		client = httpHandler
 	}
-	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUrl}, nil
+	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUrl, userAgent: userAgent}, nil
 }
 
 type TunnelRequestOptions struct {
@@ -88,7 +90,8 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnelId := tunnel.TunnelID; tunnelId != "" {
 		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
 	}
-	return nil, nil
+	_, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, *m.uri, nil, manageAccessTokenScope, false)
+	return nil, err
 }
 
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
@@ -142,7 +145,7 @@ func (m *Manager) DeleteTunnelPort(
 }
 
 func (m *Manager) sendTunnelRequest(
-	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject url.Values, accessTokenScopes []string, allowNotFound bool,
+	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject url.Values, accessTokenScopes []TunnelAccessScope, allowNotFound bool,
 ) (resp *http.Response, err error) {
 	headers := url.Values{}
 
@@ -166,7 +169,7 @@ func (m *Manager) sendTunnelRequest(
 	return result, err
 }
 
-func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []string) string {
+func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) string {
 	var token string
 	if tunnelRequestOptions.AccessToken != "" {
 		token = tunnelRequestOptions.AccessToken
@@ -186,4 +189,5 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 
 func (m *Manager) buildUri(clusterId string, path string, options TunnelRequestOptions, query string) url.URL {
 	baseAddress := m.uri
+	return *baseAddress
 }
