@@ -7,7 +7,13 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync/atomic"
+
 	"net/http"
+
+	tunnelssh "github.com/microsoft/tunnels/go/ssh"
+	"github.com/microsoft/tunnels/go/ssh/messages"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -22,7 +28,8 @@ type Client struct {
 	tunnel    *Tunnel
 	endpoints []*TunnelEndpoint
 
-	ssh *sshSession
+	ssh      *tunnelssh.SSHSession
+	channels uint32
 }
 
 var (
@@ -99,22 +106,122 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 		return nil, fmt.Errorf("failed to connect to client relay: %w", err)
 	}
 
-	c.ssh = newSSHSession(sock)
-	if err := c.ssh.connect(ctx); err != nil {
+	c.ssh = tunnelssh.NewSSHSession(sock)
+	if err := c.ssh.Connect(ctx); err != nil {
 		return nil, fmt.Errorf("failed to create ssh session: %w", err)
 	}
 
 	return c, nil
 }
 
-func (s *Client) ForwardPort(ctx context.Context, port int, conn io.ReadWriteCloser) error {
-	return nil
+func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listener, port int) error {
+	errc := make(chan error, 1)
+	sendError := func(err error) {
+		// Use non-blocking send, to avoid goroutines getting
+		// stuck in case of concurrent or sequential errors.
+		select {
+		case errc <- err:
+		default:
+		}
+	}
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				sendError(err)
+				return
+			}
+
+			go func() {
+				if err := c.handleConnection(ctx, conn, port); err != nil {
+					sendError(err)
+				}
+			}()
+		}
+	}()
+
+	return awaitError(ctx, errc)
 }
 
-func (s *Client) ForwardPortToListener(ctx context.Context, port int, listener net.Listener) error {
-	return nil
+func awaitError(ctx context.Context, errc chan error) error {
+	select {
+	case err := <-errc:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
-func (s *Client) WaitForForwardedPort(ctx context.Context, port int) error {
-	return nil
+func (c *Client) handleConnection(ctx context.Context, conn io.ReadWriteCloser, port int) (err error) {
+	defer safeClose(conn, &err)
+
+	channel, err := c.openStreamingChannel(ctx, port)
+	if err != nil {
+		return fmt.Errorf("failed to open streaming channel: %w", err)
+	}
+
+	// Ideally we would call safeClose again, but (*ssh.channel).Close
+	// appears to have a bug that causes it return io.EOF spuriously
+	// if its peer closed first; see github.com/golang/go/issues/38115.
+	defer func() {
+		closeErr := channel.Close()
+		if err == nil && closeErr != io.EOF {
+			err = closeErr
+		}
+	}()
+
+	errs := make(chan error, 2)
+	copyConn := func(w io.Writer, r io.Reader) {
+		_, err := io.Copy(w, r)
+		errs <- err
+	}
+
+	go copyConn(conn, channel)
+	go copyConn(channel, conn)
+
+	// Wait until context is cancelled or both copies are done.
+	// Discard errors from io.Copy; they should not cause (e.g.) failures.
+	for i := 0; ; {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-errs:
+			i++
+			if i == 2 {
+				return nil
+			}
+		}
+	}
+}
+
+func safeClose(c io.Closer, err *error) {
+	if closerErr := c.Close(); *err == nil {
+		*err = closerErr
+	}
+}
+
+func (c *Client) nextChannelID() uint32 {
+	return atomic.AddUint32(&c.channels, 1)
+}
+
+func (c *Client) openStreamingChannel(ctx context.Context, port int) (ssh.Channel, error) {
+	portForwardChannel := messages.NewPortForwardChannel(
+		c.nextChannelID(),
+		"127.0.0.1",
+		uint32(port),
+		"",
+		0,
+	)
+	data, err := portForwardChannel.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal port forward channel open message: %w", err)
+	}
+
+	channel, err := c.ssh.OpenChannel(ctx, portForwardChannel.Type(), data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open port forward channel: %w", err)
+	}
+
+	return channel, nil
 }
