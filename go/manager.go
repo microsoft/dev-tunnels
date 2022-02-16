@@ -144,11 +144,11 @@ func (m *Manager) sendTunnelRequest(
 ) (resp interface{}, err error) {
 	tunnelJson, err := json.Marshal(requestObject)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error converting tunnel to json: %w", err)
 	}
 	request, err := http.NewRequest(method, uri.String(), bytes.NewBuffer(tunnelJson))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating tunnel request request: %w", err)
 	}
 
 	//Add authorization header
@@ -166,13 +166,9 @@ func (m *Manager) sendTunnelRequest(
 		request.Header.Add(header, headerValue)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	result, err := m.httpClient.Do(request)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error sending request: %w", err)
 	}
 
 	convertedResponse, err := convertResponse(ctx, result, allowNotFound, resultObj)
@@ -202,18 +198,7 @@ func convertResponse(ctx context.Context, resp *http.Response, allowNotFound boo
 		}
 		return resultObj, nil
 	}
-	switch resp.StatusCode {
-	case http.StatusBadRequest:
-		return nil, fmt.Errorf("response 400: bad request")
-	case http.StatusUnauthorized:
-		return nil, fmt.Errorf("response 401: unauthorized")
-	case http.StatusForbidden:
-		return nil, fmt.Errorf("response 403: forbidden")
-	case http.StatusConflict:
-		return nil, fmt.Errorf("response 409: conflict ")
-	default:
-		return nil, fmt.Errorf(resp.Status)
-	}
+	return nil, fmt.Errorf("response: %d: %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 }
 
 func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) string {
