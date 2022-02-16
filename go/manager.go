@@ -87,11 +87,14 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
 	}
+
+	// Read response into a tunnel
 	tunnel = &Tunnel{}
 	err = json.Unmarshal(response, &tunnel)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
 	}
+
 	return tunnel, err
 }
 
