@@ -42,17 +42,3 @@ func scopeContains(s []TunnelAccessScope, e TunnelAccessScope) bool {
 	}
 	return false
 }
-
-func (s *TunnelAccessScopes) join(sep string) string {
-	if s == nil {
-		return ""
-	}
-	joinedScopes := ""
-	for i, scope := range *s {
-		joinedScopes += string(scope)
-		if i < len(*s)-1 {
-			joinedScopes += sep
-		}
-	}
-	return joinedScopes
-}
