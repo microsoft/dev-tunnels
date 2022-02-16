@@ -22,12 +22,14 @@ func (options *TunnelRequestOptions) toQueryString() string {
 		queryOptions["includePorts"] = "true"
 	}
 	if options.Scopes != nil {
-		options.Scopes.valid(nil)
-		queryOptions["scopes"] = options.Scopes.join(",")
+		if err := options.Scopes.valid(nil); err == nil {
+			queryOptions["scopes"] = options.Scopes.join(",")
+		}
 	}
 	if options.TokenScopes != nil {
-		options.TokenScopes.valid(nil)
-		queryOptions["tokenScopes"] = options.TokenScopes.join(",")
+		if err := options.TokenScopes.valid(nil); err == nil {
+			queryOptions["tokenScopes"] = options.TokenScopes.join(",")
+		}
 	}
 	if options.ForceRename {
 		queryOptions["forceRename"] = "true"
