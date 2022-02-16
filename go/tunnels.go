@@ -95,7 +95,7 @@ type TunnelPort struct {
 	Status        *TunnelStatus
 }
 
-func (tunnel *Tunnel) convertTunnelForRequest() (*Tunnel, error) {
+func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
 		for _, access := range tunnel.AccessControl.Entries {
 			if access.IsInherited {
@@ -116,7 +116,7 @@ func (tunnel *Tunnel) convertTunnelForRequest() (*Tunnel, error) {
 	}
 
 	for _, port := range tunnel.Ports {
-		convertedPort, err := port.convertTunnelPortForRequest(tunnel)
+		convertedPort, err := port.requestObject(tunnel)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func (tunnel *Tunnel) convertTunnelForRequest() (*Tunnel, error) {
 	return convertedTunnel, nil
 }
 
-func (tunnelPort *TunnelPort) convertTunnelPortForRequest(tunnel *Tunnel) (*TunnelPort, error) {
+func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
 	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
 		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
 	}

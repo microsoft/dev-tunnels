@@ -80,7 +80,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
 	}
 	url := m.buildUri(tunnel.ClusterID, tunnelsApiPath, options, "")
-	convertedTunnel, err := tunnel.convertTunnelForRequest()
+	convertedTunnel, err := tunnel.requestObject()
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
