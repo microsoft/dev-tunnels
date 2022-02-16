@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type fn func() string
@@ -69,7 +70,27 @@ func (m *Manager) SearchTunnels(
 }
 
 func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
-	return nil, nil
+	url, err := m.buildTunnelSpecificUri(tunnel, tunnelsApiPath, options, "")
+	if err != nil {
+		return nil, fmt.Errorf("error creating tunnel url: %w", err)
+	}
+	convertedTunnel, err := tunnel.requestObject()
+	if err != nil {
+		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
+	}
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, convertedTunnel, readAccessTokenScope, true)
+	if err != nil {
+		return nil, fmt.Errorf("error sending get tunnel request: %w", err)
+	}
+
+	// Read response into a tunnel
+	tunnel = &Tunnel{}
+	err = json.Unmarshal(response, &tunnel)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
+	}
+
+	return tunnel, err
 }
 
 func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
@@ -104,7 +125,22 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 }
 
 func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (bool, error) {
-	return false, nil
+	url, err := m.buildTunnelSpecificUri(tunnel, tunnelsApiPath, options, "")
+	if err != nil {
+		return false, fmt.Errorf("error creating tunnel url: %w", err)
+	}
+	convertedTunnel, err := tunnel.requestObject()
+	if err != nil {
+		return false, fmt.Errorf("error converting tunnel for request: %w", err)
+	}
+	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, convertedTunnel, manageAccessTokenScope, true)
+	if err != nil {
+		return false, fmt.Errorf("error sending delete tunnel request: %w", err)
+	}
+
+	result := err == nil
+
+	return result, err
 }
 
 func (m *Manager) UpdateTunnelEndpoint(
@@ -222,7 +258,12 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) url.URL {
 	baseAddress := m.uri
 	if clusterId != "" {
-		//TODO
+		if !strings.HasPrefix(baseAddress.Host, "localhost") && !strings.HasPrefix(baseAddress.Host, clusterId) {
+			// A specific cluster ID was specified (while not running on localhost).
+			// Prepend the cluster ID to the hostname, and optionally strip a global prefix.
+			baseAddress.Host = fmt.Sprintf("%s.%s", clusterId, baseAddress.Host)
+			baseAddress.Host = strings.Replace(baseAddress.Host, "global.", "", 1)
+		}
 	}
 	if options != nil {
 		optionsQuery := options.toQueryString()
@@ -237,4 +278,23 @@ func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequest
 	baseAddress.Path = path
 	baseAddress.RawQuery = query
 	return *baseAddress
+}
+
+func (m *Manager) buildTunnelSpecificUri(tunnel *Tunnel, path string, options *TunnelRequestOptions, query string) (url.URL, error) {
+	var tunnelPath string
+	if tunnel == nil {
+		return url.URL{}, fmt.Errorf("tunnel cannot be nil to make uri")
+	}
+	if tunnel.ClusterID != "" && tunnel.TunnelID != "" {
+		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID)
+	} else if tunnel.Name != "" {
+		if tunnel.Domain != "" {
+			tunnelPath = fmt.Sprintf("%s/%s.%s", tunnelsApiPath, tunnel.Name, tunnel.Domain)
+		} else {
+			tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.Name)
+		}
+	} else {
+		return url.URL{}, fmt.Errorf("tunnel must have either a name or cluster id and tunnel id")
+	}
+	return m.buildUri(tunnel.ClusterID, tunnelPath, options, query), nil
 }
