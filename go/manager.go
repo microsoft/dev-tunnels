@@ -89,10 +89,9 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if err != nil {
 		return nil, err
 	}
-
-	createdTunnelInterface, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, manageAccessTokenScope, false, reflect.TypeOf(tunnel))
-	createdTunnel := createdTunnelInterface.(*Tunnel)
-	return createdTunnel, err
+	createdTunnelResult := &Tunnel{}
+	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, manageAccessTokenScope, false, createdTunnelResult)
+	return createdTunnelResult, err
 }
 
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
@@ -146,7 +145,7 @@ func (m *Manager) DeleteTunnelPort(
 }
 
 func (m *Manager) sendTunnelRequest(
-	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool, responseType reflect.Type,
+	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool, resultObj interface{},
 ) (resp interface{}, err error) {
 	tunnelJson, err := json.Marshal(requestObject)
 	if err != nil {
@@ -158,7 +157,9 @@ func (m *Manager) sendTunnelRequest(
 	}
 
 	//Add authorization header
-	request.Header.Add("Authorization", m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes))
+	if token := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes); token != "" {
+		request.Header.Add("Authorization", token)
+	}
 	request.Header.Add("User-Agent", m.userAgent)
 	request.Header.Add("Content-Type", "application/json;charset=UTF-8")
 
@@ -179,11 +180,11 @@ func (m *Manager) sendTunnelRequest(
 		return nil, err
 	}
 
-	convertedResponse, err := convertResponse(ctx, result, allowNotFound, responseType)
+	convertedResponse, err := convertResponse(ctx, result, allowNotFound, resultObj)
 	return convertedResponse, err
 }
 
-func convertResponse(ctx context.Context, resp *http.Response, allowNotFound bool, responseType reflect.Type) (interface{}, error) {
+func convertResponse(ctx context.Context, resp *http.Response, allowNotFound bool, resultObj interface{}) (interface{}, error) {
 	if resp == nil {
 		return nil, fmt.Errorf("reponse cannot be nil")
 	}
@@ -191,21 +192,20 @@ func convertResponse(ctx context.Context, resp *http.Response, allowNotFound boo
 	// If response is a 2XX success
 	if resp.StatusCode/100 == 2 {
 		if resp.StatusCode == http.StatusNoContent || resp.Body == nil {
-			if responseType.Kind() == reflect.Bool {
+			if reflect.TypeOf(resultObj).Kind() == reflect.Bool {
 				return true, nil
 			}
 			return nil, nil
 		}
-		responseObject := reflect.New(responseType)
 		jsonDataFromHttp, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
-		err = json.Unmarshal(jsonDataFromHttp, &responseObject)
+		err = json.Unmarshal(jsonDataFromHttp, &resultObj)
 		if err != nil {
 			return nil, err
 		}
-		return responseObject, nil
+		return resultObj, nil
 	}
 	return nil, nil
 }
