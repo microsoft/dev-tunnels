@@ -19,6 +19,7 @@ const (
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
+	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK"
 )
 
 var (
@@ -165,6 +166,7 @@ func (m *Manager) sendTunnelRequest(
 		request.Header.Add("Authorization", token)
 	}
 	request.Header.Add("User-Agent", m.userAgent)
+	request.Header.Add("User-Agent", goUserAgent)
 	request.Header.Add("Content-Type", "application/json;charset=UTF-8")
 
 	// Add additional headers
