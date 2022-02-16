@@ -11,7 +11,7 @@ import (
 	"reflect"
 )
 
-type fn func() <-chan string
+type fn func() string
 
 const (
 	apiV1Path                  = "/api/v1"
@@ -30,25 +30,20 @@ var (
 )
 
 type Manager struct {
-	accessTokenCallback fn
-	httpClient          *http.Client
-	uri                 *url.URL
-	additionalHeaders   map[string]string
-	userAgent           string
+	tokenProvider     fn
+	httpClient        *http.Client
+	uri               *url.URL
+	additionalHeaders map[string]string
+	userAgent         string
 }
 
 func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
-	if isEmpty(userAgent) {
+	if len(userAgent) == 0 {
 		return nil, fmt.Errorf("userAgent cannot be empty")
 	}
 	if accessTokenCallback == nil {
-		accessTokenCallback = func() <-chan string {
-			r := make(chan string)
-			go func() {
-				defer close(r)
-				r <- ""
-			}()
-			return r
+		accessTokenCallback = func() string {
+			return ""
 		}
 	}
 	var client *http.Client
@@ -81,13 +76,13 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
-	if tunnelId := tunnel.TunnelID; tunnelId != "" {
+	if tunnel.TunnelID != "" {
 		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
 	}
 	url := m.buildUri(tunnel.ClusterID, tunnelsApiPath, options, "")
 	convertedTunnel, err := convertTunnelForRequest(tunnel)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
 	createdTunnelResult := &Tunnel{}
 	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, manageAccessTokenScope, false, createdTunnelResult)
@@ -227,7 +222,7 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 		token = tunnelRequestOptions.AccessToken
 	}
 	if token == "" {
-		token = <-m.accessTokenCallback()
+		token = m.tokenProvider()
 	}
 	if token == "" && tunnel.AccessTokens != nil {
 		for _, scope := range scopes {

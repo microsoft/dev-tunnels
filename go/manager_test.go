@@ -9,13 +9,8 @@ import (
 	"testing"
 )
 
-func getAccessToken() <-chan string {
-	r := make(chan string)
-	go func() {
-		defer close(r)
-		r <- ""
-	}()
-	return r
+func getAccessToken() string {
+	return ""
 }
 
 func TestTunnelCreate(t *testing.T) {

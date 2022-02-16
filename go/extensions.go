@@ -8,7 +8,3 @@ func contains(s []string, e string) bool {
 	}
 	return false
 }
-
-func isEmpty(s string) bool {
-	return len(s) == 0
-}
