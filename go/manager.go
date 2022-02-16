@@ -80,7 +80,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
 	}
 	url := m.buildUri(tunnel.ClusterID, tunnelsApiPath, options, "")
-	convertedTunnel, err := convertTunnelForRequest(tunnel)
+	convertedTunnel, err := tunnel.convertTunnelForRequest()
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
@@ -252,56 +252,4 @@ func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequest
 	baseAddress.Path = path
 	baseAddress.RawQuery = query
 	return *baseAddress
-}
-
-func convertTunnelForRequest(tunnel *Tunnel) (*Tunnel, error) {
-	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
-		for _, access := range tunnel.AccessControl.Entries {
-			if access.IsInherited {
-				return nil, fmt.Errorf("tunnel access control cannot include inherited entries")
-			}
-		}
-	}
-
-	convertedTunnel := &Tunnel{
-		Name:          tunnel.Name,
-		Domain:        tunnel.Domain,
-		Description:   tunnel.Description,
-		Tags:          tunnel.Tags,
-		Options:       tunnel.Options,
-		AccessControl: tunnel.AccessControl,
-		Endpoints:     tunnel.Endpoints,
-		Ports:         make([]*TunnelPort, 0),
-	}
-
-	for _, port := range tunnel.Ports {
-		convertedPort, err := convertTunnelPortForRequest(tunnel, port)
-		if err != nil {
-			return nil, err
-		}
-		convertedTunnel.Ports = append(convertedTunnel.Ports, convertedPort)
-	}
-	return convertedTunnel, nil
-}
-
-func convertTunnelPortForRequest(tunnel *Tunnel, tunnelPort *TunnelPort) (*TunnelPort, error) {
-	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
-		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
-	}
-	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
-		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
-	}
-	convertedPort := &TunnelPort{
-		PortNumber:    tunnelPort.PortNumber,
-		Protocol:      tunnelPort.Protocol,
-		Options:       tunnel.Options,
-		AccessControl: &TunnelAccessControl{},
-	}
-	for _, entry := range tunnelPort.AccessControl.Entries {
-		if !entry.IsInherited {
-			convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
-		}
-	}
-	return convertedPort, nil
-
 }

@@ -1,6 +1,7 @@
 package tunnels
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -92,4 +93,56 @@ type TunnelPort struct {
 	AccessControl *TunnelAccessControl
 	Options       *TunnelOptions
 	Status        *TunnelStatus
+}
+
+func (tunnel *Tunnel) convertTunnelForRequest() (*Tunnel, error) {
+	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
+		for _, access := range tunnel.AccessControl.Entries {
+			if access.IsInherited {
+				return nil, fmt.Errorf("tunnel access control cannot include inherited entries")
+			}
+		}
+	}
+
+	convertedTunnel := &Tunnel{
+		Name:          tunnel.Name,
+		Domain:        tunnel.Domain,
+		Description:   tunnel.Description,
+		Tags:          tunnel.Tags,
+		Options:       tunnel.Options,
+		AccessControl: tunnel.AccessControl,
+		Endpoints:     tunnel.Endpoints,
+		Ports:         make([]*TunnelPort, 0),
+	}
+
+	for _, port := range tunnel.Ports {
+		convertedPort, err := port.convertTunnelPortForRequest(tunnel)
+		if err != nil {
+			return nil, err
+		}
+		convertedTunnel.Ports = append(convertedTunnel.Ports, convertedPort)
+	}
+	return convertedTunnel, nil
+}
+
+func (tunnelPort *TunnelPort) convertTunnelPortForRequest(tunnel *Tunnel) (*TunnelPort, error) {
+	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
+		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
+	}
+	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
+		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
+	}
+	convertedPort := &TunnelPort{
+		PortNumber:    tunnelPort.PortNumber,
+		Protocol:      tunnelPort.Protocol,
+		Options:       tunnel.Options,
+		AccessControl: &TunnelAccessControl{},
+	}
+	for _, entry := range tunnelPort.AccessControl.Entries {
+		if !entry.IsInherited {
+			convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
+		}
+	}
+	return convertedPort, nil
+
 }
