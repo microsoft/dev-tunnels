@@ -1,9 +1,7 @@
 package tunnels
 
 import (
-	"fmt"
 	"net/url"
-	"strings"
 )
 
 type TunnelRequestOptions struct {
@@ -17,26 +15,28 @@ type TunnelRequestOptions struct {
 }
 
 func (options *TunnelRequestOptions) toQueryString() string {
-	queryOptions := make(map[string]string)
+	queryOptions := url.Values{}
 	if options.IncludePorts {
-		queryOptions["includePorts"] = "true"
+		queryOptions.Set("includePorts", "true")
 	}
 	if options.Scopes != nil {
 		if err := options.Scopes.valid(nil); err == nil {
-			queryOptions["scopes"] = options.Scopes.join(",")
+			for _, scope := range options.Scopes {
+				queryOptions.Add("scopes", string(scope))
+			}
+
 		}
 	}
 	if options.TokenScopes != nil {
 		if err := options.TokenScopes.valid(nil); err == nil {
-			queryOptions["tokenScopes"] = options.TokenScopes.join(",")
+			for _, scope := range options.TokenScopes {
+				queryOptions.Add("tokenScopes", string(scope))
+			}
 		}
 	}
 	if options.ForceRename {
-		queryOptions["forceRename"] = "true"
+		queryOptions.Set("forceRename", "true")
 	}
-	querySlice := make([]string, 0)
-	for key, value := range queryOptions {
-		querySlice = append(querySlice, fmt.Sprintf("%s=%s", key, url.QueryEscape(value)))
-	}
-	return strings.Join(querySlice, "&")
+
+	return queryOptions.Encode()
 }

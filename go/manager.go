@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 )
 
 type fn func() string
@@ -84,9 +83,16 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
-	createdTunnelResult := &Tunnel{}
-	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, manageAccessTokenScope, false, createdTunnelResult)
-	return createdTunnelResult, err
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, manageAccessTokenScope, false)
+	if err != nil {
+		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
+	}
+	tunnel = &Tunnel{}
+	err = json.Unmarshal(response, &tunnel)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
+	}
+	return tunnel, err
 }
 
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
@@ -140,8 +146,8 @@ func (m *Manager) DeleteTunnelPort(
 }
 
 func (m *Manager) sendTunnelRequest(
-	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool, resultObj interface{},
-) (resp interface{}, err error) {
+	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool,
+) ([]byte, error) {
 	tunnelJson, err := json.Marshal(requestObject)
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel to json: %w", err)
@@ -171,34 +177,23 @@ func (m *Manager) sendTunnelRequest(
 		return nil, fmt.Errorf("error sending request: %w", err)
 	}
 
-	convertedResponse, err := convertResponse(ctx, result, allowNotFound, resultObj)
-	return convertedResponse, err
-}
+	// Handle
+	err = func() error {
+		if result.StatusCode > 300 {
+			return fmt.Errorf("response: %d: %s", result.StatusCode, http.StatusText(result.StatusCode))
+		}
+		return nil
+	}()
+	if err != nil {
+		return nil, fmt.Errorf("request was not successful: %w", err)
+	}
 
-func convertResponse(ctx context.Context, resp *http.Response, allowNotFound bool, resultObj interface{}) (interface{}, error) {
-	if resp == nil {
+	if result == nil {
 		return nil, fmt.Errorf("reponse cannot be nil")
 	}
-	defer resp.Body.Close()
-	// If response is a 2XX success
-	if resp.StatusCode/100 == 2 {
-		if resp.StatusCode == http.StatusNoContent || resp.Body == nil {
-			if reflect.TypeOf(resultObj).Kind() == reflect.Bool {
-				return true, nil
-			}
-			return nil, nil
-		}
-		jsonDataFromHttp, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(jsonDataFromHttp, &resultObj)
-		if err != nil {
-			return nil, err
-		}
-		return resultObj, nil
-	}
-	return nil, fmt.Errorf("response: %d: %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+	defer result.Body.Close()
+	jsonDataFromHttp, err := ioutil.ReadAll(result.Body)
+	return jsonDataFromHttp, err
 }
 
 func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) string {
