@@ -1,11 +1,14 @@
 package tunnels
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
+	"reflect"
 )
 
 type fn func() <-chan string
@@ -82,9 +85,14 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
 	}
 	url := m.buildUri(tunnel.ClusterID, tunnelsApiPath, options, "")
-	convertedTunnel := 
-	_, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, nil, manageAccessTokenScope, false)
-	return nil, err
+	convertedTunnel, err := convertTunnelForRequest(tunnel)
+	if err != nil {
+		return nil, err
+	}
+
+	createdTunnelInterface, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, manageAccessTokenScope, false, reflect.TypeOf(tunnel))
+	createdTunnel := createdTunnelInterface.(*Tunnel)
+	return createdTunnel, err
 }
 
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
@@ -138,28 +146,68 @@ func (m *Manager) DeleteTunnelPort(
 }
 
 func (m *Manager) sendTunnelRequest(
-	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject url.Values, accessTokenScopes []TunnelAccessScope, allowNotFound bool,
-) (resp *http.Response, err error) {
-	headers := url.Values{}
-
-	//Add authorization header
-	headers.Add("Authorization", m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes))
-	headers.Add("User-Agent", m.userAgent)
-
-	// Add additional headers
-	for header, headerValue := range m.additionalHeaders {
-		headers.Add(header, headerValue)
-	}
-	for header, headerValue := range tunnelRequestOptions.AdditionalHeaders {
-		headers.Add(header, headerValue)
-	}
-
-	request, err := http.NewRequest(method, uri.String(), strings.NewReader(headers.Encode()))
+	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool, responseType reflect.Type,
+) (resp interface{}, err error) {
+	tunnelJson, err := json.Marshal(requestObject)
 	if err != nil {
 		return nil, err
 	}
+	request, err := http.NewRequest(method, uri.String(), bytes.NewBuffer(tunnelJson))
+	if err != nil {
+		return nil, err
+	}
+
+	//Add authorization header
+	request.Header.Add("Authorization", m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes))
+	request.Header.Add("User-Agent", m.userAgent)
+	request.Header.Add("Content-Type", "application/json;charset=UTF-8")
+
+	// Add additional headers
+	for header, headerValue := range m.additionalHeaders {
+		request.Header.Add(header, headerValue)
+	}
+	for header, headerValue := range tunnelRequestOptions.AdditionalHeaders {
+		request.Header.Add(header, headerValue)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := m.httpClient.Do(request)
-	return result, err
+	if err != nil {
+		return nil, err
+	}
+
+	convertedResponse, err := convertResponse(ctx, result, allowNotFound, responseType)
+	return convertedResponse, err
+}
+
+func convertResponse(ctx context.Context, resp *http.Response, allowNotFound bool, responseType reflect.Type) (interface{}, error) {
+	if resp == nil {
+		return nil, fmt.Errorf("reponse cannot be nil")
+	}
+	defer resp.Body.Close()
+	// If response is a 2XX success
+	if resp.StatusCode/100 == 2 {
+		if resp.StatusCode == http.StatusNoContent || resp.Body == nil {
+			if responseType.Kind() == reflect.Bool {
+				return true, nil
+			}
+			return nil, nil
+		}
+		responseObject := reflect.New(responseType)
+		jsonDataFromHttp, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(jsonDataFromHttp, &responseObject)
+		if err != nil {
+			return nil, err
+		}
+		return responseObject, nil
+	}
+	return nil, nil
 }
 
 func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) string {
@@ -183,7 +231,7 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) url.URL {
 	baseAddress := m.uri
 	if clusterId != "" {
-
+		//TODO
 	}
 	if options != nil {
 		optionsQuery := options.toQueryString()
@@ -200,44 +248,52 @@ func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequest
 	return *baseAddress
 }
 
-func convertTunnelForRequest(tunnel *Tunnel) error {
-	for _, access := range tunnel.AccessControl {
-		if access.IsInherited {
-			return fmt.Errorf("tunnel access control cannot include inherited entries")
+func convertTunnelForRequest(tunnel *Tunnel) (*Tunnel, error) {
+	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
+		for _, access := range tunnel.AccessControl.Entries {
+			if access.IsInherited {
+				return nil, fmt.Errorf("tunnel access control cannot include inherited entries")
+			}
 		}
 	}
-	convertedTunnel = &Tunnel{
-		Name : tunnel.Name,
-		Domain : tunnel.Domain,
-		Description : tunnel.Description,
-		Tags : tunnel.Tags,
-		Options : tunnel.Options,
-		AccessControl : tunnel.AccessControl,
-		Endpoints : tunnel.Endpoints,
-		Ports: make([]*TunnelPort),
+
+	convertedTunnel := &Tunnel{
+		Name:          tunnel.Name,
+		Domain:        tunnel.Domain,
+		Description:   tunnel.Description,
+		Tags:          tunnel.Tags,
+		Options:       tunnel.Options,
+		AccessControl: tunnel.AccessControl,
+		Endpoints:     tunnel.Endpoints,
+		Ports:         make([]*TunnelPort, 0),
 	}
 
-	for i, port := range tunnel.Ports{
-		convertedTunnel.Ports = append(convertedTunnel.Ports, convertTunnelPortForRequest(tunnel, port))
+	for _, port := range tunnel.Ports {
+		convertedPort, err := convertTunnelPortForRequest(tunnel, port)
+		if err != nil {
+			return nil, err
+		}
+		convertedTunnel.Ports = append(convertedTunnel.Ports, convertedPort)
 	}
+	return convertedTunnel, nil
 }
 
 func convertTunnelPortForRequest(tunnel *Tunnel, tunnelPort *TunnelPort) (*TunnelPort, error) {
-	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID{
-		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel.")
+	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
+		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
 	}
-	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID{
-		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel.")
+	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
+		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
 	}
-	convertedPort = &TunnelPort{
-		PortNumber: tunnelPort.PortNumber,
-		Protocol: tunnelPort.Protocol,
-		Options: tunnel.Options,
-		AccessControl: TunnelAccessControl{},
+	convertedPort := &TunnelPort{
+		PortNumber:    tunnelPort.PortNumber,
+		Protocol:      tunnelPort.Protocol,
+		Options:       tunnel.Options,
+		AccessControl: &TunnelAccessControl{},
 	}
-	for _, entry := range tunnelPort.AccessControl.Entries{
+	for _, entry := range tunnelPort.AccessControl.Entries {
 		if !entry.IsInherited {
-			convertedPort.AccessControl = append(convertedPort.AccessControl, entry)
+			convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
 		}
 	}
 	return convertedPort, nil

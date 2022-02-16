@@ -5,12 +5,12 @@ import (
 )
 
 type Tunnel struct {
-	ClusterID     string
-	TunnelID      string
-	Name          string
-	Description   string
+	ClusterID     string `json:"ClusterId,omitempty"`
+	TunnelID      string `json:"TunnelId,omitempty"`
+	Name          string `json:"Name,omitempty"`
+	Description   string `json:"Description,omitempty"`
 	Tags          []string
-	Domain        string
+	Domain        string `json:"Domain,omitempty"`
 	AccessTokens  map[TunnelAccessScope]string
 	AccessControl *TunnelAccessControl
 	Options       *TunnelOptions
