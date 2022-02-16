@@ -2,39 +2,57 @@ package tunnels
 
 import "fmt"
 
-const (
-	ManageScope  = "manage"
-	HostScope    = "host"
-	InspectScope = "inspect"
-	ConnectScope = "connect"
-)
+type TunnelAccessScopes []TunnelAccessScope
 
 var (
-	AllScopes = []string{
-		ManageScope,
-		HostScope,
-		InspectScope,
-		ConnectScope,
+	AllScopes = map[TunnelAccessScope]bool{
+		TunnelAccessScopeManage:  true,
+		TunnelAccessScopeHost:    true,
+		TunnelAccessScopeInspect: true,
+		TunnelAccessScopeConnect: true,
 	}
 )
 
-func ValidateScopes(scopes []string, validScopes []string) error {
-	if scopes == nil {
+func (s *TunnelAccessScopes) valid(validScopes []TunnelAccessScope) error {
+	if s == nil {
 		return fmt.Errorf("scopes cannot be null")
 	}
-	for _, scope := range scopes {
+	for _, scope := range *s {
 		if len(scope) == 0 {
 			return fmt.Errorf("scope cannot be null")
-		} else if !contains(AllScopes, scope) {
+		} else if AllScopes[scope] {
 			return fmt.Errorf("invalid scope %s", scope)
 		}
 	}
 	if len(validScopes) > 0 {
-		for _, scope := range scopes {
-			if !contains(validScopes, scope) {
+		for _, scope := range *s {
+			if !scopeContains(validScopes, scope) {
 				return fmt.Errorf("tunnel access scope is invalid for current request: %s", scope)
 			}
 		}
 	}
 	return nil
+}
+
+func scopeContains(s []TunnelAccessScope, e TunnelAccessScope) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *TunnelAccessScopes) join(sep string) string {
+	if s == nil {
+		return ""
+	}
+	joinedScopes := ""
+	for i, scope := range *s {
+		joinedScopes += string(scope)
+		if i < len(*s)-1 {
+			joinedScopes += sep
+		}
+	}
+	return joinedScopes
 }

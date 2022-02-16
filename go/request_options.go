@@ -11,23 +11,23 @@ type TunnelRequestOptions struct {
 	AdditionalHeaders map[string]string
 	FollowRedirects   bool
 	IncludePorts      bool
-	Scopes            []string
-	TokenScopes       []string
+	Scopes            TunnelAccessScopes
+	TokenScopes       TunnelAccessScopes
 	ForceRename       bool
 }
 
 func (options *TunnelRequestOptions) toQueryString() string {
-	var queryOptions map[string]string
+	queryOptions := make(map[string]string)
 	if options.IncludePorts {
 		queryOptions["includePorts"] = "true"
 	}
 	if options.Scopes != nil {
-		ValidateScopes(options.Scopes, nil)
-		queryOptions["scopes"] = strings.Join(options.Scopes, ",")
+		options.Scopes.valid(nil)
+		queryOptions["scopes"] = options.Scopes.join(",")
 	}
 	if options.TokenScopes != nil {
-		ValidateScopes(options.TokenScopes, nil)
-		queryOptions["tokenScopes"] = strings.Join(options.TokenScopes, ",")
+		options.TokenScopes.valid(nil)
+		queryOptions["tokenScopes"] = options.TokenScopes.join(",")
 	}
 	if options.ForceRename {
 		queryOptions["forceRename"] = "true"

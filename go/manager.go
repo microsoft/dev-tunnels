@@ -23,10 +23,10 @@ const (
 )
 
 var (
-	manageAccessTokenScope       = []TunnelAccessScope{ManageScope}
-	hostAccessTokenScope         = []TunnelAccessScope{HostScope}
-	hostOrManageAccessTokenScope = []TunnelAccessScope{ManageScope, HostScope}
-	readAccessTokenScope         = []TunnelAccessScope{ManageScope, HostScope, ConnectScope}
+	manageAccessTokenScope       = []TunnelAccessScope{TunnelAccessScopeManage}
+	hostAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeHost}
+	hostOrManageAccessTokenScope = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost}
+	readAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost, TunnelAccessScopeConnect}
 )
 
 type Manager struct {
@@ -53,7 +53,7 @@ func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl *url.
 	} else {
 		client = httpHandler
 	}
-	return &Manager{accessTokenCallback: accessTokenCallback, httpClient: client, uri: tunnelServiceUrl, userAgent: userAgent}, nil
+	return &Manager{tokenProvider: accessTokenCallback, httpClient: client, uri: tunnelServiceUrl, userAgent: userAgent}, nil
 }
 
 func (m *Manager) ListTunnels(
