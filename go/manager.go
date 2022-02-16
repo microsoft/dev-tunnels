@@ -207,7 +207,18 @@ func convertResponse(ctx context.Context, resp *http.Response, allowNotFound boo
 		}
 		return resultObj, nil
 	}
-	return nil, nil
+	switch resp.StatusCode {
+	case http.StatusBadRequest:
+		return nil, fmt.Errorf("response 400: bad request")
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("response 401: unauthorized")
+	case http.StatusForbidden:
+		return nil, fmt.Errorf("response 403: forbidden")
+	case http.StatusConflict:
+		return nil, fmt.Errorf("response 409: conflict ")
+	default:
+		return nil, fmt.Errorf(resp.Status)
+	}
 }
 
 func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) string {
