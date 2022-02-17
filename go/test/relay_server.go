@@ -35,6 +35,8 @@ type RelayServer struct {
 	sshConfig   *ssh.ServerConfig
 	channels    map[string]channelHandler
 	accessToken string
+
+	serverConn *ssh.ServerConn
 }
 
 type RelayServerOption func(*RelayServer)
@@ -74,7 +76,7 @@ func WithForwardedStream(pfc *messages.PortForwardChannel, port int, data *bytes
 				return fmt.Errorf("unexpected channel type: %s", ch.ChannelType())
 			}
 
-			pfcData, err := pfc.MarshalBinary()
+			pfcData, err := pfc.Marshal()
 			if err != nil {
 				return fmt.Errorf("error marshaling port forward channel: %w", err)
 			}
@@ -135,6 +137,29 @@ func (rs *RelayServer) sendError(err error) {
 	}
 }
 
+func (rs *RelayServer) ForwardPort(ctx context.Context, port int) error {
+	pfr := messages.NewPortForwardRequest("127.0.0.1", uint32(port))
+	b, err := pfr.Marshal()
+	if err != nil {
+		return fmt.Errorf("error marshaling port forward request: %w", err)
+	}
+
+	replied, data, err := rs.serverConn.SendRequest(messages.PortForwardRequestType, true, b)
+	if err != nil {
+		return fmt.Errorf("error sending port forward request: %w", err)
+	}
+
+	if !replied {
+		return fmt.Errorf("port forward request not replied")
+	}
+
+	if data == nil {
+		return fmt.Errorf("no data returned")
+	}
+
+	return nil
+}
+
 var upgrader = websocket.Upgrader{}
 
 func makeConnection(server *RelayServer) http.HandlerFunc {
@@ -161,13 +186,14 @@ func makeConnection(server *RelayServer) http.HandlerFunc {
 		}()
 
 		socketConn := newSocketConn(c)
-		_, chans, reqs, err := ssh.NewServerConn(socketConn, server.sshConfig)
+		serverConn, chans, reqs, err := ssh.NewServerConn(socketConn, server.sshConfig)
 		if err != nil {
 			server.sendError(fmt.Errorf("error creating ssh server conn: %w", err))
 			return
 		}
 		go ssh.DiscardRequests(reqs)
 
+		server.serverConn = serverConn
 		if err := handleChannels(ctx, server, chans); err != nil {
 			server.sendError(fmt.Errorf("error handling channels: %w", err))
 			return

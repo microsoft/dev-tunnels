@@ -30,8 +30,8 @@ func (pfc *PortForwardChannel) Type() string {
 	return "forwarded-tcpip"
 }
 
-func (pfc *PortForwardChannel) MarshalBinary() ([]byte, error) {
-	b, err := pfc.channelOpen.marshalBinary()
+func (pfc *PortForwardChannel) Marshal() ([]byte, error) {
+	b, err := pfc.channelOpen.marshal()
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling channel open: %w", err)
 	}
@@ -53,9 +53,9 @@ func (pfc *PortForwardChannel) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (pfc *PortForwardChannel) UnmarshalBinary(buf io.Reader) (err error) {
+func (pfc *PortForwardChannel) Unmarshal(buf io.Reader) (err error) {
 	co := new(channelOpen)
-	if err := co.unmarshalBinary(buf); err != nil {
+	if err := co.unmarshal(buf); err != nil {
 		return fmt.Errorf("error unmarshaling channel open: %w", err)
 	}
 

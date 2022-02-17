@@ -165,7 +165,7 @@ func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 	}
 }
 
-func TestConnectToForwardedPort(t *testing.T) {
+func TestPortForwarding(t *testing.T) {
 	listen, err := net.Listen("tcp", "127.0.0.1:8000")
 	if err != nil {
 		t.Fatal(fmt.Errorf("failed to listen: %v", err))
@@ -196,6 +196,9 @@ func TestConnectToForwardedPort(t *testing.T) {
 		},
 	}
 
+	ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	done := make(chan error)
 	go func() {
@@ -206,6 +209,26 @@ func TestConnectToForwardedPort(t *testing.T) {
 		}
 		if c == nil {
 			done <- errors.New("nil connection")
+			return
+		}
+
+		if err := relayServer.ForwardPort(ctx, streamPort); err != nil {
+			done <- fmt.Errorf("forward port failed: %v", err)
+			return
+		}
+
+		if err := c.WaitForForwardedPort(ctx, streamPort); err != nil {
+			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
+			return
+		}
+
+		if err := relayServer.ForwardPort(ctx, streamPort); err != nil {
+			done <- fmt.Errorf("forward port failed: %v", err)
+			return
+		}
+
+		if err := c.WaitForForwardedPort(ctx, streamPort); err != nil {
+			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
 			return
 		}
 
@@ -236,6 +259,8 @@ func TestConnectToForwardedPort(t *testing.T) {
 	}()
 
 	select {
+	case <-ctx.Done():
+		t.Fatal("test timed out")
 	case err := <-relayServer.Err():
 		t.Errorf("relay server error: %v", err)
 	case err := <-done:

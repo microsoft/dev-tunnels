@@ -28,8 +28,9 @@ type Client struct {
 	tunnel    *Tunnel
 	endpoints []*TunnelEndpoint
 
-	ssh      *tunnelssh.SSHSession
-	channels uint32
+	ssh                  *tunnelssh.SSHSession
+	channels             uint32
+	remoteForwardedPorts *remoteForwardedPorts
 }
 
 var (
@@ -47,6 +48,12 @@ var (
 
 	// ErrNoRelayConnections is returned when no relay connections are available.
 	ErrNoRelayConnections = errors.New("the host is not currently accepting tunnel relay connections")
+
+	// ErrSSHConnectionClosed is returned when the ssh connection is closed.
+	ErrSSHConnectionClosed = errors.New("the ssh connection is closed")
+
+	// ErrPortNotForwarded is returned when the specified port is not forwarded.
+	ErrPortNotForwarded = errors.New("the port is not forwarded")
 )
 
 // Connect connects to a tunnel and returns a connected client.
@@ -77,7 +84,13 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		endpointGroup = endpointGroups[tunnel.Endpoints[0].HostID]
 	}
 
-	c := &Client{logger: logger, hostID: hostID, tunnel: tunnel, endpoints: endpointGroup}
+	c := &Client{
+		logger:               logger,
+		hostID:               hostID,
+		tunnel:               tunnel,
+		endpoints:            endpointGroup,
+		remoteForwardedPorts: newRemoteForwardedPorts(),
+	}
 	return c.connect(ctx)
 }
 
@@ -106,7 +119,7 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 		return nil, fmt.Errorf("failed to connect to client relay: %w", err)
 	}
 
-	c.ssh = tunnelssh.NewSSHSession(sock)
+	c.ssh = tunnelssh.NewSSHSession(sock, c.remoteForwardedPorts, c.logger)
 	if err := c.ssh.Connect(ctx); err != nil {
 		return nil, fmt.Errorf("failed to create ssh session: %w", err)
 	}
@@ -114,7 +127,13 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 	return c, nil
 }
 
+// ConnectToForwardedPort connects to a forwarded port.
+// It accepts a listener and will forward the connection to the tunnel.
 func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listener, port int) error {
+	if !c.remoteForwardedPorts.hasPort(port) {
+		return ErrPortNotForwarded
+	}
+
 	errc := make(chan error, 1)
 	sendError := func(err error) {
 		// Use non-blocking send, to avoid goroutines getting
@@ -142,6 +161,25 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 	}()
 
 	return awaitError(ctx, errc)
+}
+
+// WaitForForwardedPort waits for the specified port to be forwarded.
+func (c *Client) WaitForForwardedPort(ctx context.Context, port int) error {
+	// It's already forwarded there's no need to wait.
+	if c.remoteForwardedPorts.hasPort(port) {
+		return nil
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case n := <-c.remoteForwardedPorts.notify:
+			if n.port == port && n.notificationType == remoteForwardedPortNotificationTypeAdd {
+				return nil
+			}
+		}
+	}
 }
 
 func awaitError(ctx context.Context, errc chan error) error {
@@ -213,7 +251,7 @@ func (c *Client) openStreamingChannel(ctx context.Context, port int) (ssh.Channe
 		"",
 		0,
 	)
-	data, err := portForwardChannel.MarshalBinary()
+	data, err := portForwardChannel.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal port forward channel open message: %w", err)
 	}

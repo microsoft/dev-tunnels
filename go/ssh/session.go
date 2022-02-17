@@ -1,14 +1,21 @@
 package tunnelssh
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"time"
 
+	"github.com/microsoft/tunnels/go/ssh/messages"
 	"golang.org/x/crypto/ssh"
 )
+
+type portForwardingManager interface {
+	Add(port int)
+}
 
 type SSHSession struct {
 	*ssh.Session
@@ -16,10 +23,12 @@ type SSHSession struct {
 	conn   ssh.Conn
 	reader io.Reader
 	writer io.Writer
+	pf     portForwardingManager
+	logger *log.Logger
 }
 
-func NewSSHSession(socket net.Conn) *SSHSession {
-	return &SSHSession{socket: socket}
+func NewSSHSession(socket net.Conn, pf portForwardingManager, logger *log.Logger) *SSHSession {
+	return &SSHSession{socket: socket, pf: pf, logger: logger}
 }
 
 func (s *SSHSession) Connect(ctx context.Context) error {
@@ -40,8 +49,9 @@ func (s *SSHSession) Connect(ctx context.Context) error {
 		return fmt.Errorf("error creating ssh client connection: %w", err)
 	}
 	s.conn = sshClientConn
+	go s.handleGlobalRequests(reqs)
 
-	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
+	sshClient := ssh.NewClient(sshClientConn, chans, nil)
 	s.Session, err = sshClient.NewSession()
 	if err != nil {
 		return fmt.Errorf("error creating ssh client session: %w", err)
@@ -60,6 +70,39 @@ func (s *SSHSession) Connect(ctx context.Context) error {
 	return nil
 }
 
+func (s *SSHSession) handleGlobalRequests(incoming <-chan *ssh.Request) {
+	for r := range incoming {
+		switch r.Type {
+		case messages.PortForwardRequestType:
+			s.handlePortForwardRequest(r)
+		default:
+			// This handles keepalive messages and matches
+			// the behaviour of OpenSSH.
+			r.Reply(false, nil)
+		}
+	}
+}
+
+func (s *SSHSession) handlePortForwardRequest(r *ssh.Request) {
+	req := new(messages.PortForwardRequest)
+	buf := bytes.NewReader(r.Payload)
+	if err := req.Unmarshal(buf); err != nil {
+		s.logger.Println(fmt.Sprintf("error unmarshalling port forward request: %s", err))
+		r.Reply(false, nil)
+		return
+	}
+
+	s.pf.Add(int(req.Port()))
+	reply := messages.NewPortForwardSuccess(req.Port())
+	b, err := reply.Marshal()
+	if err != nil {
+		s.logger.Println(fmt.Sprintf("error marshaling port forward success response", err))
+		r.Reply(false, nil)
+		return
+	}
+
+	r.Reply(true, b)
+}
 func (s *SSHSession) Read(p []byte) (n int, err error) {
 	return s.reader.Read(p)
 }
