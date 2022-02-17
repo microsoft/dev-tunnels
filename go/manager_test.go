@@ -36,6 +36,7 @@ func TestTunnelCreate(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
+		createdTunnel.table().Print()
 	}
 }
 
