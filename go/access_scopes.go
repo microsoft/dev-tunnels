@@ -3,9 +3,17 @@ package tunnels
 import "fmt"
 
 type TunnelAccessScopes []TunnelAccessScope
+type TunnelAccessScope string
+
+const (
+	TunnelAccessScopeManage  TunnelAccessScope = "manage"
+	TunnelAccessScopeHost    TunnelAccessScope = "host"
+	TunnelAccessScopeInspect TunnelAccessScope = "inspect"
+	TunnelAccessScopeConnect TunnelAccessScope = "connect"
+)
 
 var (
-	AllScopes = map[TunnelAccessScope]bool{
+	allScopes = map[TunnelAccessScope]bool{
 		TunnelAccessScopeManage:  true,
 		TunnelAccessScopeHost:    true,
 		TunnelAccessScopeInspect: true,
@@ -20,7 +28,7 @@ func (s *TunnelAccessScopes) valid(validScopes []TunnelAccessScope) error {
 	for _, scope := range *s {
 		if len(scope) == 0 {
 			return fmt.Errorf("scope cannot be null")
-		} else if AllScopes[scope] {
+		} else if allScopes[scope] {
 			return fmt.Errorf("invalid scope %s", scope)
 		}
 	}
