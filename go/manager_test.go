@@ -16,7 +16,7 @@ func getAccessToken() string {
 func TestTunnelCreate(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse("https://global.ci.tunnels.dev.api.visualstudio.com/")
+	url, err := url.Parse("https://global.rel.tunnels.api.visualstudio.com/")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
