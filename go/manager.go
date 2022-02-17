@@ -90,6 +90,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	}
 
 	// Read response into a tunnel
+	t = &Tunnel{}
 	err = json.Unmarshal(response, t)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
