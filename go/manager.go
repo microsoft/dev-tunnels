@@ -58,9 +58,27 @@ func NewManager(userAgent string, tp tokenProviderfn, tunnelServiceUrl *url.URL,
 }
 
 func (m *Manager) ListTunnels(
-	ctx context.Context, clusterID string, options *TunnelRequestOptions,
-) ([]*Tunnel, error) {
-	return nil, nil
+	ctx context.Context, clusterID string, domain string, options *TunnelRequestOptions,
+) (ts []*Tunnel, err error) {
+	queryParams := url.Values{}
+	if len(clusterID) == 0 {
+		queryParams.Add("global", "true")
+	}
+	if len(domain) > 0 {
+		queryParams.Add("domain", domain)
+	}
+	url := m.buildUri(clusterID, tunnelsApiPath, options, queryParams.Encode())
+	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, readAccessTokenScope, false)
+	if err != nil {
+		return nil, fmt.Errorf("error sending list tunnel request: %w", err)
+	}
+
+	err = json.Unmarshal(response, &ts)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
+	}
+
+	return ts, nil
 }
 
 func (m *Manager) SearchTunnels(
@@ -69,7 +87,7 @@ func (m *Manager) SearchTunnels(
 	return nil, nil
 }
 
-func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
+func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	url, err := m.buildTunnelSpecificUri(tunnel, tunnelsApiPath, options, "")
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
@@ -84,13 +102,12 @@ func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *Tunnel
 	}
 
 	// Read response into a tunnel
-	tunnel = &Tunnel{}
-	err = json.Unmarshal(response, &tunnel)
+	err = json.Unmarshal(response, &t)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
 	}
 
-	return tunnel, err
+	return t, err
 }
 
 func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
