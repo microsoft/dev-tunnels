@@ -5,6 +5,5 @@ go 1.17
 require (
 	github.com/gorilla/websocket v1.4.2
 	golang.org/x/crypto v0.0.0-20220208050332-20e1d8d225ab
+	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
 )
-
-require golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
