@@ -194,7 +194,7 @@ func (m *Manager) sendTunnelRequest(
 	}
 
 	if result == nil {
-		return nil, fmt.Errorf("reponse cannot be nil")
+		return nil, fmt.Errorf("response cannot be nil")
 	}
 	defer result.Body.Close()
 	jsonDataFromHttp, err := ioutil.ReadAll(result.Body)
