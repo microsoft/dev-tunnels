@@ -14,7 +14,7 @@ type TunnelRequestOptions struct {
 	ForceRename       bool
 }
 
-func (options *TunnelRequestOptions) toQueryString() string {
+func (options *TunnelRequestOptions) queryString() string {
 	queryOptions := url.Values{}
 	if options.IncludePorts {
 		queryOptions.Set("includePorts", "true")
