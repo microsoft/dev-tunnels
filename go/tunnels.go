@@ -3,6 +3,8 @@ package tunnels
 import (
 	"fmt"
 	"time"
+
+	"github.com/rodaine/table"
 )
 
 const PackageVersion = "0.0.1"
@@ -137,4 +139,27 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 		convertedTunnel.Ports = append(convertedTunnel.Ports, convertedPort)
 	}
 	return convertedTunnel, nil
+}
+
+func (t *Tunnel) table() table.Table {
+	tbl := table.New(" ", " ")
+
+	var accessTokens string
+	for scope, _ := range t.AccessTokens {
+		if len(accessTokens) == 0 {
+			accessTokens += string(scope)
+		} else {
+			accessTokens += fmt.Sprintf(", %s", scope)
+		}
+	}
+	tbl.AddRow("ClusterId", t.ClusterID)
+	tbl.AddRow("TunnelId", t.TunnelID)
+	tbl.AddRow("Name", t.Name)
+	tbl.AddRow("Description", t.Description)
+	tbl.AddRow("Tags", fmt.Sprintf("%v", t.Tags))
+	tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
+	tbl.AddRow("Host Connections", t.Status.HostConectionCount)
+	tbl.AddRow("Client Connections", t.Status.ClientConnectionCount)
+	tbl.AddRow("Available Scopes", accessTokens)
+	return tbl
 }
