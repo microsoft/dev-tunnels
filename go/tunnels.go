@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const PackageVersion = "0.0.1"
+
 type Tunnel struct {
 	ClusterID     string `json:"ClusterId,omitempty"`
 	TunnelID      string `json:"TunnelId,omitempty"`
@@ -19,15 +21,6 @@ type Tunnel struct {
 	Endpoints     []*TunnelEndpoint
 	Ports         []*TunnelPort
 }
-
-type TunnelAccessScope string
-
-const (
-	TunnelAccessScopeManage  TunnelAccessScope = "manage"
-	TunnelAccessScopeHost    TunnelAccessScope = "host"
-	TunnelAccessScopeInspect TunnelAccessScope = "inspect"
-	TunnelAccessScopeConnect TunnelAccessScope = "connect"
-)
 
 type TunnelAccessControl struct {
 	Entries []*TunnelAccessControlEntry
@@ -95,6 +88,27 @@ type TunnelPort struct {
 	Status        *TunnelStatus
 }
 
+func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
+	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
+		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
+	}
+	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
+		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
+	}
+	convertedPort := &TunnelPort{
+		PortNumber:    tunnelPort.PortNumber,
+		Protocol:      tunnelPort.Protocol,
+		Options:       tunnel.Options,
+		AccessControl: &TunnelAccessControl{},
+	}
+	for _, entry := range tunnelPort.AccessControl.Entries {
+		if !entry.IsInherited {
+			convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
+		}
+	}
+	return convertedPort, nil
+}
+
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
 		for _, access := range tunnel.AccessControl.Entries {
@@ -123,26 +137,4 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 		convertedTunnel.Ports = append(convertedTunnel.Ports, convertedPort)
 	}
 	return convertedTunnel, nil
-}
-
-func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
-	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
-		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
-	}
-	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
-		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
-	}
-	convertedPort := &TunnelPort{
-		PortNumber:    tunnelPort.PortNumber,
-		Protocol:      tunnelPort.Protocol,
-		Options:       tunnel.Options,
-		AccessControl: &TunnelAccessControl{},
-	}
-	for _, entry := range tunnelPort.AccessControl.Entries {
-		if !entry.IsInherited {
-			convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
-		}
-	}
-	return convertedPort, nil
-
 }

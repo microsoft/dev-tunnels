@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 )
 
-type fn func() string
+type tokenProviderfn func() string
 
 const (
 	apiV1Path                  = "/api/v1"
@@ -19,7 +19,7 @@ const (
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
-	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK"
+	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK/" + PackageVersion
 )
 
 var (
@@ -30,19 +30,19 @@ var (
 )
 
 type Manager struct {
-	tokenProvider     fn
+	tokenProvider     tokenProviderfn
 	httpClient        *http.Client
 	uri               *url.URL
 	additionalHeaders map[string]string
 	userAgent         string
 }
 
-func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
+func NewManager(userAgent string, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
 	if len(userAgent) == 0 {
 		return nil, fmt.Errorf("userAgent cannot be empty")
 	}
-	if accessTokenCallback == nil {
-		accessTokenCallback = func() string {
+	if tp == nil {
+		tp = func() string {
 			return ""
 		}
 	}
@@ -53,7 +53,7 @@ func NewManager(userAgent string, accessTokenCallback fn, tunnelServiceUrl *url.
 	} else {
 		client = httpHandler
 	}
-	return &Manager{tokenProvider: accessTokenCallback, httpClient: client, uri: tunnelServiceUrl, userAgent: userAgent}, nil
+	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgent: userAgent}, nil
 }
 
 func (m *Manager) ListTunnels(
@@ -72,7 +72,7 @@ func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *Tunnel
 	return nil, nil
 }
 
-func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
+func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
@@ -90,13 +90,12 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	}
 
 	// Read response into a tunnel
-	tunnel = &Tunnel{}
-	err = json.Unmarshal(response, &tunnel)
+	err = json.Unmarshal(response, t)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
 	}
 
-	return tunnel, err
+	return t, err
 }
 
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (*Tunnel, error) {
@@ -150,7 +149,7 @@ func (m *Manager) DeleteTunnelPort(
 }
 
 func (m *Manager) sendTunnelRequest(
-	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool,
+	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri *url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool,
 ) ([]byte, error) {
 	tunnelJson, err := json.Marshal(requestObject)
 	if err != nil {
@@ -182,27 +181,18 @@ func (m *Manager) sendTunnelRequest(
 		return nil, fmt.Errorf("error sending request: %w", err)
 	}
 
-	// Handle
-	err = func() error {
-		if result.StatusCode > 300 {
-			return fmt.Errorf("response: %d: %s", result.StatusCode, http.StatusText(result.StatusCode))
-		}
-		return nil
-	}()
+	// Handle non 200s responses
+	if result.StatusCode > 300 {
+		return nil, fmt.Errorf("unsuccessful request, response: %d: %s", result.StatusCode, http.StatusText(result.StatusCode))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("request was not successful: %w", err)
 	}
-
-	if result == nil {
-		return nil, fmt.Errorf("response cannot be nil")
-	}
 	defer result.Body.Close()
-	jsonDataFromHttp, err := ioutil.ReadAll(result.Body)
-	return jsonDataFromHttp, err
+	return io.ReadAll(result.Body)
 }
 
-func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) string {
-	var token string
+func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) (token string) {
 	if tunnelRequestOptions.AccessToken != "" {
 		token = tunnelRequestOptions.AccessToken
 	}
@@ -219,13 +209,13 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 	return token
 }
 
-func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) url.URL {
+func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) *url.URL {
 	baseAddress := m.uri
 	if clusterId != "" {
 		//TODO
 	}
 	if options != nil {
-		optionsQuery := options.toQueryString()
+		optionsQuery := options.queryString()
 		if optionsQuery != "" {
 			if query != "" {
 				query = fmt.Sprintf("%s&%s", query, optionsQuery)
@@ -236,5 +226,5 @@ func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequest
 	}
 	baseAddress.Path = path
 	baseAddress.RawQuery = query
-	return *baseAddress
+	return baseAddress
 }
