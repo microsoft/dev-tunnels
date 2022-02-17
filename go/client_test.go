@@ -222,11 +222,6 @@ func TestPortForwarding(t *testing.T) {
 			return
 		}
 
-		if err := relayServer.ForwardPort(ctx, streamPort); err != nil {
-			done <- fmt.Errorf("forward port failed: %v", err)
-			return
-		}
-
 		if err := c.WaitForForwardedPort(ctx, streamPort); err != nil {
 			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
 			return
