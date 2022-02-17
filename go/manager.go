@@ -90,8 +90,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	}
 
 	// Read response into a tunnel
-	t = &Tunnel{}
-	err = json.Unmarshal(response, t)
+	err = json.Unmarshal(response, &t)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
 	}
@@ -186,9 +185,7 @@ func (m *Manager) sendTunnelRequest(
 	if result.StatusCode > 300 {
 		return nil, fmt.Errorf("unsuccessful request, response: %d: %s", result.StatusCode, http.StatusText(result.StatusCode))
 	}
-	if err != nil {
-		return nil, fmt.Errorf("request was not successful: %w", err)
-	}
+
 	defer result.Body.Close()
 	return io.ReadAll(result.Body)
 }
