@@ -352,6 +352,9 @@ func (m *Manager) CreateTunnelPort(
 		}
 		newPorts = append(newPorts, tp)
 		tunnel.Ports = newPorts
+	} else {
+		tunnel.Ports = make([]*TunnelPort, 1)
+		tunnel.Ports[0] = tp
 	}
 	return tp, nil
 }
