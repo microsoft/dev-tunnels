@@ -3,7 +3,10 @@ package com.microsoft.tunnels;
 import com.microsoft.tunnels.management.ProductHeaderValue;
 import com.microsoft.tunnels.management.TunnelManagementClient;
 
-public class ConnectTest {
+/**
+ * Used for local manual testing.
+ */
+public class ConnectionTest {
     private static String AuthToken = "USER_TOKEN";
 
     public static void main(String[] args) {

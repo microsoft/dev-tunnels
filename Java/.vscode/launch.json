@@ -6,23 +6,16 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch App",
+            "name": "Launch ConnectionTest",
             "request": "launch",
-            "mainClass": "com.microsoft.tunnels.App",
-            "projectName": "basis-java-sdk"
+            "mainClass": "com.microsoft.tunnels.ConnectionTest",
+            "projectName": "tunnels-java-sdk"
         },
         {
             "type": "java",
             "name": "Launch Current File",
             "request": "launch",
             "mainClass": "${file}"
-        },
-        {
-            "type": "java",
-            "name": "Launch App",
-            "request": "launch",
-            "mainClass": "com.microsoft.tunnels.App",
-            "projectName": "tunnels-java-sdk"
         }
     ]
 }
