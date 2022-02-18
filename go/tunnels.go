@@ -80,10 +80,10 @@ type TunnelEndpoint struct {
 }
 
 type TunnelPort struct {
-	ClusterID     string
-	TunnelID      string
-	PortNumber    int
-	Protocol      string
+	ClusterID     string `json:"ClusterId,omitempty"`
+	TunnelID      string `json:"TunnelId,omitempty"`
+	PortNumber    int    `json:"PortNumber,omitempty"`
+	Protocol      string `json:"Protocol,omitempty"`
 	AccessTokens  map[string]string
 	AccessControl *TunnelAccessControl
 	Options       *TunnelOptions
@@ -103,11 +103,14 @@ func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error)
 		Options:       tunnel.Options,
 		AccessControl: &TunnelAccessControl{},
 	}
-	for _, entry := range tunnelPort.AccessControl.Entries {
-		if !entry.IsInherited {
-			convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
+	if tunnelPort.AccessControl != nil {
+		for _, entry := range tunnelPort.AccessControl.Entries {
+			if !entry.IsInherited {
+				convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
+			}
 		}
 	}
+
 	return convertedPort, nil
 }
 
@@ -152,6 +155,15 @@ func (t *Tunnel) table() table.Table {
 			accessTokens += fmt.Sprintf(", %s", scope)
 		}
 	}
+
+	var ports string
+	for _, port := range t.Ports {
+		if len(ports) == 0 {
+			ports += fmt.Sprintf("%d", port.PortNumber)
+		} else {
+			ports += fmt.Sprintf(", %d", port.PortNumber)
+		}
+	}
 	tbl.AddRow("ClusterId", t.ClusterID)
 	tbl.AddRow("TunnelId", t.TunnelID)
 	tbl.AddRow("Name", t.Name)
@@ -160,6 +172,7 @@ func (t *Tunnel) table() table.Table {
 	if t.AccessControl != nil {
 		tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
 	}
+	tbl.AddRow("Ports", ports)
 	tbl.AddRow("Host Connections", t.Status.HostConectionCount)
 	tbl.AddRow("Client Connections", t.Status.ClientConnectionCount)
 	tbl.AddRow("Available Scopes", accessTokens)

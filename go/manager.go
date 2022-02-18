@@ -111,15 +111,15 @@ func (m *Manager) SearchTunnels(
 }
 
 func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
-	url, err := m.buildTunnelSpecificUri(tunnel, tunnelsApiPath, options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
-	convertedTunnel, err := tunnel.requestObject()
+
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, convertedTunnel, readAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, readAccessTokenScope, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending get tunnel request: %w", err)
 	}
@@ -164,7 +164,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
 
-	url, err := m.buildTunnelSpecificUri(tunnel, tunnelsApiPath, options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
 	if err != nil {
 		return nil, fmt.Errorf("error creating request url: %w", err)
 	}
@@ -188,7 +188,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 }
 
 func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) error {
-	url, err := m.buildTunnelSpecificUri(tunnel, tunnelsApiPath, options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
 	if err != nil {
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -408,7 +408,7 @@ func (m *Manager) DeleteTunnelPort(
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, nil, hostOrManageAccessTokenScope, true)
+	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, hostOrManageAccessTokenScope, true)
 	if err != nil {
 		return fmt.Errorf("error sending get tunnel request: %w", err)
 	}
@@ -526,5 +526,5 @@ func (m *Manager) buildTunnelSpecificUri(tunnel *Tunnel, path string, options *T
 	} else {
 		return nil, fmt.Errorf("tunnel must have either a name or cluster id and tunnel id")
 	}
-	return m.buildUri(tunnel.ClusterID, tunnelPath, options, query), nil
+	return m.buildUri(tunnel.ClusterID, tunnelPath+path, options, query), nil
 }
