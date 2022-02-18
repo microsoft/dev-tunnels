@@ -74,7 +74,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
