@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	uri = "https://global.rel.tunnels.api.visualstudio.com/"
+	uri = "https://localhost:9901/"
 )
 
 func getAccessToken() string {
@@ -175,6 +175,10 @@ func TestTunnelAddPort(t *testing.T) {
 		getTunnel.table().Print()
 	}
 
+	if len(getTunnel.Ports) != 1 {
+		t.Errorf("port was not successfully added to tunnel")
+	}
+
 	err = managementClient.DeleteTunnel(context.Background(), createdTunnel, options)
 
 	if err != nil {
@@ -249,6 +253,10 @@ func TestTunnelDeletePort(t *testing.T) {
 		getTunnel.table().Print()
 	}
 
+	if len(getTunnel.Ports) != 0 {
+		t.Errorf("port was not successfully deleted")
+	}
+
 	err = managementClient.DeleteTunnel(context.Background(), createdTunnel, options)
 
 	if err != nil {
@@ -304,16 +312,12 @@ func TestTunnelUpdatePort(t *testing.T) {
 		getTunnel.table().Print()
 	}
 
-	portToAdd.Protocol = TunnelPortProtocolHttp
+	portToAdd.AccessTokens["manage"] = "testToken"
 
 	port, err = managementClient.UpdateTunnelPort(context.Background(), createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf("port was not successfully updated")
-	}
-	if createdTunnel.Ports[0].Protocol != TunnelPortProtocolHttp {
-		t.Errorf("port was not successfully updated")
-	}
-	if port.Protocol != TunnelPortProtocolHttp {
+	} else if port.AccessTokens["manage"] != "testToken" {
 		t.Errorf("port was not successfully updated")
 	}
 
@@ -327,6 +331,9 @@ func TestTunnelUpdatePort(t *testing.T) {
 	} else {
 		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
+	}
+	if getTunnel.Ports[0].AccessTokens["manage"] != "testToken" {
+		t.Errorf("port was not successfully updated")
 	}
 
 	err = managementClient.DeleteTunnel(context.Background(), createdTunnel, options)
