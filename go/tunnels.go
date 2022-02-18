@@ -157,7 +157,9 @@ func (t *Tunnel) table() table.Table {
 	tbl.AddRow("Name", t.Name)
 	tbl.AddRow("Description", t.Description)
 	tbl.AddRow("Tags", fmt.Sprintf("%v", t.Tags))
-	tbl.AddRow("Access Control", fmt.Sprintf("%v", t.AccessControl))
+	if t.AccessControl != nil {
+		tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
+	}
 	tbl.AddRow("Host Connections", t.Status.HostConectionCount)
 	tbl.AddRow("Client Connections", t.Status.ClientConnectionCount)
 	tbl.AddRow("Available Scopes", accessTokens)
