@@ -155,7 +155,7 @@ func TestTunnelAddPort(t *testing.T) {
 		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
-	portToAdd := &TunnelPort{PortNumber: 3000, Protocol: "auto"}
+	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(context.Background(), createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -210,7 +210,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
-	portToAdd := &TunnelPort{PortNumber: 3000, Protocol: "auto"}
+	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(context.Background(), createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -236,6 +236,86 @@ func TestTunnelDeletePort(t *testing.T) {
 		return
 	}
 	logger.Println(fmt.Sprintf("Deleted port: %+v", *port))
+
+	getTunnel, err = managementClient.GetTunnel(context.Background(), createdTunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if getTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully found")
+	} else {
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
+		getTunnel.table().Print()
+	}
+
+	err = managementClient.DeleteTunnel(context.Background(), createdTunnel, options)
+
+	if err != nil {
+		t.Errorf("tunnel was not successfully deleted")
+	} else {
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
+	}
+}
+
+func TestTunnelUpdatePort(t *testing.T) {
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+
+	url, err := url.Parse(uri)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	tunnel := &Tunnel{}
+	options := &TunnelRequestOptions{IncludePorts: true}
+	createdTunnel, err := managementClient.CreateTunnel(context.Background(), tunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if createdTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully created")
+	} else {
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
+		createdTunnel.table().Print()
+	}
+	portToAdd := NewTunnelPort(3000, "", "", "auto")
+	port, err := managementClient.CreateTunnelPort(context.Background(), createdTunnel, portToAdd, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	logger.Println(fmt.Sprintf("Created port: %+v", *port))
+
+	getTunnel, err := managementClient.GetTunnel(context.Background(), createdTunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if getTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully found")
+	} else {
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
+		getTunnel.table().Print()
+	}
+
+	portToAdd.Protocol = TunnelPortProtocolHttp
+
+	port, err = managementClient.UpdateTunnelPort(context.Background(), createdTunnel, portToAdd, options)
+	if err != nil {
+		t.Errorf("port was not successfully updated")
+	}
+	if createdTunnel.Ports[0].Protocol != TunnelPortProtocolHttp {
+		t.Errorf("port was not successfully updated")
+	}
+	if port.Protocol != TunnelPortProtocolHttp {
+		t.Errorf("port was not successfully updated")
+	}
 
 	getTunnel, err = managementClient.GetTunnel(context.Background(), createdTunnel, options)
 	if err != nil {

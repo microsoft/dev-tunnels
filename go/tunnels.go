@@ -79,41 +79,6 @@ type TunnelEndpoint struct {
 	HostPublicKeys []string
 }
 
-type TunnelPort struct {
-	ClusterID     string `json:"ClusterId,omitempty"`
-	TunnelID      string `json:"TunnelId,omitempty"`
-	PortNumber    int    `json:"PortNumber,omitempty"`
-	Protocol      string `json:"Protocol,omitempty"`
-	AccessTokens  map[string]string
-	AccessControl *TunnelAccessControl
-	Options       *TunnelOptions
-	Status        *TunnelStatus
-}
-
-func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
-	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
-		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
-	}
-	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
-		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
-	}
-	convertedPort := &TunnelPort{
-		PortNumber:    tunnelPort.PortNumber,
-		Protocol:      tunnelPort.Protocol,
-		Options:       tunnel.Options,
-		AccessControl: &TunnelAccessControl{},
-	}
-	if tunnelPort.AccessControl != nil {
-		for _, entry := range tunnelPort.AccessControl.Entries {
-			if !entry.IsInherited {
-				convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
-			}
-		}
-	}
-
-	return convertedPort, nil
-}
-
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
 		for _, access := range tunnel.AccessControl.Entries {
@@ -159,9 +124,9 @@ func (t *Tunnel) table() table.Table {
 	var ports string
 	for _, port := range t.Ports {
 		if len(ports) == 0 {
-			ports += fmt.Sprintf("%d", port.PortNumber)
+			ports += fmt.Sprintf("%d - %s", port.PortNumber, port.Protocol)
 		} else {
-			ports += fmt.Sprintf(", %d", port.PortNumber)
+			ports += fmt.Sprintf(", %d - %s", port.PortNumber, port.Protocol)
 		}
 	}
 	tbl.AddRow("ClusterId", t.ClusterID)
