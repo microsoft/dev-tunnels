@@ -140,11 +140,9 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
 
-	tunnelDeleted, err := managementClient.DeleteTunnel(context.Background(), createdTunnel, options)
+	err = managementClient.DeleteTunnel(context.Background(), createdTunnel, options)
+
 	if err != nil {
-		t.Errorf(err.Error())
-	}
-	if !tunnelDeleted {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
 		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", getTunnel.TunnelID))
