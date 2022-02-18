@@ -475,7 +475,7 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 	if token == "" {
 		token = m.tokenProvider()
 	}
-	if token == "" && tunnel.AccessTokens != nil {
+	if token == "" && tunnel != nil && tunnel.AccessTokens != nil {
 		for _, scope := range scopes {
 			if tunnelToken, ok := tunnel.AccessTokens[scope]; ok {
 				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelToken)
