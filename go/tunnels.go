@@ -21,11 +21,11 @@ type Tunnel struct {
 	Options       *TunnelOptions
 	Status        *TunnelStatus
 	Endpoints     []*TunnelEndpoint
-	Ports         []*TunnelPort
+	Ports         []*TunnelPort `json:"Ports,omitempty"`
 }
 
 type TunnelAccessControl struct {
-	Entries []*TunnelAccessControlEntry
+	Entries []*TunnelAccessControlEntry `json:"entries,omitempty"`
 }
 
 type TunnelAccessControlEntry struct {
@@ -33,7 +33,7 @@ type TunnelAccessControlEntry struct {
 	IsInherited  bool
 	IsDeny       bool
 	Subjects     []string
-	Scopes       []string
+	Scopes       []TunnelAccessScope
 	Provider     string
 	Organization string
 }

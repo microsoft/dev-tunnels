@@ -8,7 +8,7 @@ type TunnelPort struct {
 	PortNumber    int                `json:"PortNumber,omitempty"`
 	Protocol      TunnelPortProtocol `json:"Protocol,omitempty"`
 	AccessTokens  map[string]string
-	AccessControl *TunnelAccessControl
+	AccessControl *TunnelAccessControl `json:"AccessControl,omitempty"`
 	Options       *TunnelOptions
 	Status        *TunnelStatus
 }
