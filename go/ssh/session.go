@@ -96,7 +96,7 @@ func (s *SSHSession) handlePortForwardRequest(r *ssh.Request) {
 	reply := messages.NewPortForwardSuccess(req.Port())
 	b, err := reply.Marshal()
 	if err != nil {
-		s.logger.Println(fmt.Sprintf("error marshaling port forward success response", err))
+		s.logger.Println(fmt.Sprintf("error marshaling port forward success response: %s", err))
 		r.Reply(false, nil)
 		return
 	}
