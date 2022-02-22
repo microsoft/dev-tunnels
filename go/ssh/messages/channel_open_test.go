@@ -7,14 +7,14 @@ import (
 
 func TestUnmarshalChannelOpen(t *testing.T) {
 	co := newChannelOpen(11, 0, 0)
-	b, err := co.marshalBinary()
+	b, err := co.marshal()
 	if err != nil {
 		t.Error(err)
 	}
 
 	buf := bytes.NewReader(b)
 	co2 := new(channelOpen)
-	if err := co2.unmarshalBinary(buf); err != nil {
+	if err := co2.unmarshal(buf); err != nil {
 		t.Error(err)
 	}
 
