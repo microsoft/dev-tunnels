@@ -84,7 +84,7 @@ func (m *Manager) ListTunnels(
 
 func (m *Manager) SearchTunnels(
 	ctx context.Context, tags []string, requireAllTags bool, clusterID string, domain string, options *TunnelRequestOptions,
-) (ts []*TunnelPort, err error) {
+) (ts []*Tunnel, err error) {
 	queryParams := url.Values{}
 	if len(clusterID) == 0 {
 		queryParams.Add("global", "true")

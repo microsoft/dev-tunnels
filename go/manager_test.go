@@ -23,35 +23,6 @@ func getAccessToken() string {
 	return ""
 }
 
-func TestListTunnels(t *testing.T) {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-
-	// This test requires authentication
-	if getAccessToken() == "" {
-		return
-	}
-	url, err := url.Parse(uri)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
-	options := &TunnelRequestOptions{}
-	tunnels, err := managementClient.ListTunnels(ctx, "", "", options)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	for _, tunnel := range tunnels {
-		logger.Println(fmt.Sprintf("found tunnel with id %s", tunnel.TunnelID))
-		tunnel.table().Print()
-	}
-
-}
-
 func TestTunnelCreateDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -77,6 +48,57 @@ func TestTunnelCreateDelete(t *testing.T) {
 	} else {
 		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
+	}
+
+	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
+
+	if err != nil {
+		t.Errorf("tunnel was not successfully deleted")
+	} else {
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
+	}
+}
+
+func TestListTunnels(t *testing.T) {
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+
+	url, err := url.Parse(uri)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	tunnel := &Tunnel{}
+	options := &TunnelRequestOptions{}
+	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if createdTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully created")
+	} else {
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
+		createdTunnel.table().Print()
+	}
+	token := fmt.Sprintf("Tunnel %s", createdTunnel.AccessTokens["manage"])
+	options = &TunnelRequestOptions{
+		AccessToken: token,
+	}
+	tunnels, err := managementClient.ListTunnels(ctx, "", "", options)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if len(tunnels) == 0 {
+		t.Errorf("tunnel was not successfully listed")
+	}
+	for _, tunnel := range tunnels {
+		logger.Println(fmt.Sprintf("found tunnel with id %s", tunnel.TunnelID))
+		tunnel.table().Print()
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
