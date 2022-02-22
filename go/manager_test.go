@@ -488,3 +488,87 @@ func TestTunnelListPorts(t *testing.T) {
 		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
+
+func TestTunnelEndpoints(t *testing.T) {
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+
+	url, err := url.Parse(uri)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	tunnel := &Tunnel{}
+	options := &TunnelRequestOptions{}
+	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if createdTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully created")
+	} else {
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
+		createdTunnel.table().Print()
+	}
+
+	// Create and add endpoint
+	endpoint := &TunnelEndpoint{
+		HostID:         "test",
+		ConnectionMode: TunnelConnectionModeLiveShareRelay,
+	}
+
+	updatedEndpoint, err := managementClient.UpdateTunnelEndpoint(ctx, createdTunnel, endpoint, options)
+
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	logger.Println(fmt.Sprintf("updated endpoint %s", updatedEndpoint.HostID))
+
+	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if getTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully found")
+	} else {
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
+	}
+	if len(getTunnel.Endpoints) != 1 {
+		t.Errorf("endpoint was not successfully updated")
+	}
+
+	err = managementClient.DeleteTunnelEndpoints(ctx, createdTunnel, "test", TunnelConnectionModeLiveShareRelay, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	getTunnel, err = managementClient.GetTunnel(ctx, createdTunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if getTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully found")
+	} else {
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
+	}
+	if len(getTunnel.Endpoints) != 0 {
+		t.Errorf("endpoint was not successfully deleted")
+	}
+
+	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
+
+	if err != nil {
+		t.Errorf("tunnel was not successfully deleted")
+	} else {
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", getTunnel.TunnelID))
+	}
+}
