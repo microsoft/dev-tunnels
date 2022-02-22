@@ -220,7 +220,7 @@ func (m *Manager) UpdateTunnelEndpoint(
 
 	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, endpoint, hostAccessTokenScope, false)
 	if err != nil {
-		return nil, fmt.Errorf("error sending delete tunnel request: %w", err)
+		return nil, fmt.Errorf("error sending update tunnel endpoint request: %w", err)
 	}
 
 	// Read response into a tunnel endpoint

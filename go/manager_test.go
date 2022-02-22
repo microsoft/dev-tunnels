@@ -503,7 +503,9 @@ func TestTunnelEndpoints(t *testing.T) {
 	}
 
 	tunnel := &Tunnel{}
-	options := &TunnelRequestOptions{}
+	options := &TunnelRequestOptions{
+		TokenScopes: hostOrManageAccessTokenScope,
+	}
 	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
 	if err != nil {
 		t.Errorf(err.Error())
