@@ -1,18 +1,21 @@
 package com.microsoft.tunnels.management;
 
+/**
+ * HttpMethod.
+ */
 public enum HttpMethod {
-    GET("GET"),
-    POST("POST"),
-    PUT("PUT"),
-    DELETE("DELETE");
+  GET("GET"),
+  POST("POST"),
+  PUT("PUT"),
+  DELETE("DELETE");
 
-    private final String stringValue;
+  private final String stringValue;
 
-    HttpMethod(final String s) {
-        stringValue = s;
-    }
+  HttpMethod(final String s) {
+    stringValue = s;
+  }
 
-    public String toString() {
-        return stringValue;
-    }
+  public String toString() {
+    return stringValue;
+  }
 }
