@@ -7,14 +7,14 @@ import (
 
 func TestUnmarshalPortForwardChannel(t *testing.T) {
 	pfc := NewPortForwardChannel(11, "127.0.0.1", 8001, "999", 8002)
-	b, err := pfc.MarshalBinary()
+	b, err := pfc.Marshal()
 	if err != nil {
 		t.Error(err)
 	}
 
 	buf := bytes.NewReader(b)
 	pfc2 := &PortForwardChannel{}
-	if err := pfc2.UnmarshalBinary(buf); err != nil {
+	if err := pfc2.Unmarshal(buf); err != nil {
 		t.Error(err)
 	}
 

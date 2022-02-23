@@ -23,3 +23,10 @@ func writeBinary(buf *bytes.Buffer, p []byte) error {
 func writeUint32(buf *bytes.Buffer, v uint32) error {
 	return binary.Write(buf, binary.BigEndian, v)
 }
+
+func writeBool(buf *bytes.Buffer, v bool) error {
+	if v {
+		return buf.WriteByte(1)
+	}
+	return buf.WriteByte(0)
+}
