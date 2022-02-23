@@ -333,7 +333,7 @@ func (m *Manager) CreateTunnelPort(
 
 	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedPort, hostOrManageAccessTokenScope, true)
 	if err != nil {
-		return nil, fmt.Errorf("error sending get tunnel request: %w", err)
+		return nil, fmt.Errorf("error sending create tunnel port request: %w", err)
 	}
 
 	// Read response into a tunnel
