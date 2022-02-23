@@ -289,7 +289,7 @@ func (m *Manager) ListTunnelPorts(
 		return nil, fmt.Errorf("error sending list tunnel ports request: %w", err)
 	}
 
-	// Read response into a tunnel
+	// Read response into a tunnel port
 	err = json.Unmarshal(response, &tp)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel ports: %w", err)
