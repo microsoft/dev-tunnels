@@ -9,7 +9,6 @@
   <version>1.0-SNAPSHOT</version>
 
   <name>tunnels-java-sdk</name>
-  <!-- FIXME change it to the project's website -->
   <url>https://github.com/microsoft/tunnels</url>
 
   <properties>
@@ -20,6 +19,13 @@
   </properties>
 
   <dependencies>
+
+    <dependency>
+      <groupId>org.apache.maven.shared</groupId>
+      <artifactId>maven-shared-utils</artifactId>
+      <version>3.3.4</version>
+    </dependency>
+
 
     <dependency>
       <groupId>com.google.code.gson</groupId>

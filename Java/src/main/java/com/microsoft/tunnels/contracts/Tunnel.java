@@ -66,4 +66,12 @@ public class Tunnel {
     // public TunnelPort[] ports;
     // TODO
     // public DateTime created;
+
+    public Tunnel() {
+        this(null);
+    }
+
+    public Tunnel(String name) {
+        this.name = name;
+    }
 }
