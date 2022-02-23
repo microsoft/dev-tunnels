@@ -175,7 +175,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	}
 	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, manageAccessTokenScope, false)
 	if err != nil {
-		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
+		return nil, fmt.Errorf("error sending update tunnel request: %w", err)
 	}
 
 	// Read response into a tunnel
