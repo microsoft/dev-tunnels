@@ -142,11 +142,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
                 host = (clusterId + baseAddress.getHost()).replace("global.", "");
             } else if (baseAddress.getScheme() == "https" &&
                     clusterId.startsWith("localhost") &&
-                    baseAddress.getPort() % 10 > 0)
-            {
+                    baseAddress.getPort() % 10 > 0) {
                 var clusterNumber = Integer.parseInt(clusterId.substring("localhost".length()));
                 if (clusterNumber > 0 && clusterNumber < 10) {
                     port = baseAddress.getPort() - (baseAddress.getPort() % 10) + clusterNumber;
+                }
             }
         }
 
