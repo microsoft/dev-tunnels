@@ -339,7 +339,7 @@ func (m *Manager) CreateTunnelPort(
 
 	// Updated local tunnel ports
 	if tunnel.Ports != nil {
-		newPorts := make([]*TunnelPort, 0)
+		var newPorts []*TunnelPort
 		for _, p := range tunnel.Ports {
 			if p.PortNumber != tp.PortNumber {
 				newPorts = append(newPorts, p)
@@ -384,7 +384,7 @@ func (m *Manager) UpdateTunnelPort(
 
 	// Updated local tunnel ports
 	if tunnel.Ports != nil {
-		newPorts := make([]*TunnelPort, 0)
+		var newPorts []*TunnelPort
 		for _, p := range tunnel.Ports {
 			if p.PortNumber != tp.PortNumber {
 				newPorts = append(newPorts, p)
@@ -413,7 +413,7 @@ func (m *Manager) DeleteTunnelPort(
 
 	// Updated local tunnel ports
 	if tunnel.Ports != nil {
-		newPorts := make([]*TunnelPort, 0)
+		var newPorts []*TunnelPort
 		for _, p := range tunnel.Ports {
 			if p.PortNumber != port {
 				newPorts = append(newPorts, p)

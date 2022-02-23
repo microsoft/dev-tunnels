@@ -113,7 +113,7 @@ func (t *Tunnel) table() table.Table {
 	tbl := table.New(" ", " ")
 
 	var accessTokens string
-	for scope, _ := range t.AccessTokens {
+	for scope := range t.AccessTokens {
 		if len(accessTokens) == 0 {
 			accessTokens += string(scope)
 		} else {
