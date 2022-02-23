@@ -286,7 +286,7 @@ func (m *Manager) ListTunnelPorts(
 
 	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, readAccessTokenScope, false)
 	if err != nil {
-		return nil, fmt.Errorf("error sending get tunnel request: %w", err)
+		return nil, fmt.Errorf("error sending list tunnel ports request: %w", err)
 	}
 
 	// Read response into a tunnel
