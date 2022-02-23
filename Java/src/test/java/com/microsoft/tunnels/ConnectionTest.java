@@ -38,7 +38,6 @@ public class ConnectionTest {
 
     @Test
     public void getTunnelTest() {
-        System.out.println(AUTH_TOKEN);
         Tunnel tunnel = new Tunnel("testtunnel");
         var options = new TunnelRequestOptions();
         tryCreateTunnel(tunnel, options);
