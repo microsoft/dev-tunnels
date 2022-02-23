@@ -116,9 +116,6 @@ func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *Tunnel
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
-	}
 	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, readAccessTokenScope, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending get tunnel request: %w", err)
@@ -201,7 +198,7 @@ func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		return fmt.Errorf("error sending delete tunnel request: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 func (m *Manager) UpdateTunnelEndpoint(
@@ -230,7 +227,7 @@ func (m *Manager) UpdateTunnelEndpoint(
 	}
 
 	if tunnel.Endpoints != nil {
-		newEndpoints := make([]*TunnelEndpoint, 0)
+		var newEndpoints []*TunnelEndpoint
 		for _, ep := range tunnel.Endpoints {
 			if ep.HostID != endpoint.HostID || ep.ConnectionMode != endpoint.ConnectionMode {
 				newEndpoints = append(newEndpoints, ep)
@@ -248,11 +245,9 @@ func (m *Manager) DeleteTunnelEndpoints(
 	if hostID == "" {
 		return fmt.Errorf("hostId must be provided and must not be nil")
 	}
-	var path string
+	path := fmt.Sprintf("%s/%s/%s", endpointsApiSubPath, hostID, connectionMode)
 	if connectionMode == "" {
 		path = fmt.Sprintf("%s/%s", endpointsApiSubPath, hostID)
-	} else {
-		path = fmt.Sprintf("%s/%s/%s", endpointsApiSubPath, hostID, connectionMode)
 	}
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "")
 	if err != nil {
@@ -261,11 +256,11 @@ func (m *Manager) DeleteTunnelEndpoints(
 
 	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, hostAccessTokenScope, true)
 	if err != nil {
-		return fmt.Errorf("error sending endpoint delete tunnel request: %w", err)
+		return fmt.Errorf("error sending delete tunnel endpoint requestt: %w", err)
 	}
 
 	if tunnel.Endpoints != nil {
-		newEndpoints := make([]*TunnelEndpoint, 0)
+		var newEndpoints []*TunnelEndpoint
 		for _, ep := range tunnel.Endpoints {
 			if ep.HostID != hostID || ep.ConnectionMode != connectionMode {
 				newEndpoints = append(newEndpoints, ep)
@@ -310,7 +305,7 @@ func (m *Manager) GetTunnelPort(
 		return nil, fmt.Errorf("error sending get tunnel port request: %w", err)
 	}
 
-	// Read response into a tunnel
+	// Read response into a tunnel port
 	err = json.Unmarshal(response, &tp)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel ports: %w", err)
@@ -518,15 +513,15 @@ func (m *Manager) buildTunnelSpecificUri(tunnel *Tunnel, path string, options *T
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel cannot be nil to make uri")
 	}
-	if tunnel.ClusterID != "" && tunnel.TunnelID != "" {
+	switch {
+	case tunnel.ClusterID != "" && tunnel.TunnelID != "":
 		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID)
-	} else if tunnel.Name != "" {
+	case tunnel.Name != "":
+		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.Name)
 		if tunnel.Domain != "" {
 			tunnelPath = fmt.Sprintf("%s/%s.%s", tunnelsApiPath, tunnel.Name, tunnel.Domain)
-		} else {
-			tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.Name)
 		}
-	} else {
+	default:
 		return nil, fmt.Errorf("tunnel must have either a name or cluster id and tunnel id")
 	}
 	return m.buildUri(tunnel.ClusterID, tunnelPath+path, options, query), nil
