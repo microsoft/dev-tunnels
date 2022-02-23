@@ -99,7 +99,7 @@ func (m *Manager) SearchTunnels(
 	url := m.buildUri(clusterID, tunnelsApiPath, options, queryParams.Encode())
 	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, readAccessTokenScope, false)
 	if err != nil {
-		return nil, fmt.Errorf("error sending list tunnel request: %w", err)
+		return nil, fmt.Errorf("error sending search tunnel request: %w", err)
 	}
 
 	err = json.Unmarshal(response, &ts)
