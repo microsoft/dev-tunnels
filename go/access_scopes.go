@@ -28,7 +28,7 @@ func (s *TunnelAccessScopes) valid(validScopes []TunnelAccessScope) error {
 	for _, scope := range *s {
 		if len(scope) == 0 {
 			return fmt.Errorf("scope cannot be null")
-		} else if allScopes[scope] {
+		} else if !allScopes[scope] {
 			return fmt.Errorf("invalid scope %s", scope)
 		}
 	}
