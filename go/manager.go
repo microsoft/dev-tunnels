@@ -256,7 +256,7 @@ func (m *Manager) DeleteTunnelEndpoints(
 
 	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, hostAccessTokenScope, true)
 	if err != nil {
-		return fmt.Errorf("error sending delete tunnel endpoint requestt: %w", err)
+		return fmt.Errorf("error sending delete tunnel endpoint request: %w", err)
 	}
 
 	if tunnel.Endpoints != nil {
