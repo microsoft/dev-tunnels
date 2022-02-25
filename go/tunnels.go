@@ -21,11 +21,11 @@ type Tunnel struct {
 	Options       *TunnelOptions
 	Status        *TunnelStatus
 	Endpoints     []*TunnelEndpoint
-	Ports         []*TunnelPort
+	Ports         []*TunnelPort `json:"Ports,omitempty"`
 }
 
 type TunnelAccessControl struct {
-	Entries []*TunnelAccessControlEntry
+	Entries []*TunnelAccessControlEntry `json:"entries,omitempty"`
 }
 
 type TunnelAccessControlEntry struct {
@@ -33,7 +33,7 @@ type TunnelAccessControlEntry struct {
 	IsInherited  bool
 	IsDeny       bool
 	Subjects     []string
-	Scopes       []string
+	Scopes       []TunnelAccessScope
 	Provider     string
 	Organization string
 }
@@ -79,38 +79,6 @@ type TunnelEndpoint struct {
 	HostPublicKeys []string
 }
 
-type TunnelPort struct {
-	ClusterID     string
-	TunnelID      string
-	PortNumber    int
-	Protocol      string
-	AccessTokens  map[string]string
-	AccessControl *TunnelAccessControl
-	Options       *TunnelOptions
-	Status        *TunnelStatus
-}
-
-func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
-	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
-		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
-	}
-	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
-		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
-	}
-	convertedPort := &TunnelPort{
-		PortNumber:    tunnelPort.PortNumber,
-		Protocol:      tunnelPort.Protocol,
-		Options:       tunnel.Options,
-		AccessControl: &TunnelAccessControl{},
-	}
-	for _, entry := range tunnelPort.AccessControl.Entries {
-		if !entry.IsInherited {
-			convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
-		}
-	}
-	return convertedPort, nil
-}
-
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
 		for _, access := range tunnel.AccessControl.Entries {
@@ -145,11 +113,20 @@ func (t *Tunnel) table() table.Table {
 	tbl := table.New(" ", " ")
 
 	var accessTokens string
-	for scope, _ := range t.AccessTokens {
+	for scope := range t.AccessTokens {
 		if len(accessTokens) == 0 {
 			accessTokens += string(scope)
 		} else {
 			accessTokens += fmt.Sprintf(", %s", scope)
+		}
+	}
+
+	var ports string
+	for _, port := range t.Ports {
+		if len(ports) == 0 {
+			ports += fmt.Sprintf("%d - %s", port.PortNumber, port.Protocol)
+		} else {
+			ports += fmt.Sprintf(", %d - %s", port.PortNumber, port.Protocol)
 		}
 	}
 	tbl.AddRow("ClusterId", t.ClusterID)
@@ -157,7 +134,10 @@ func (t *Tunnel) table() table.Table {
 	tbl.AddRow("Name", t.Name)
 	tbl.AddRow("Description", t.Description)
 	tbl.AddRow("Tags", fmt.Sprintf("%v", t.Tags))
-	tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
+	if t.AccessControl != nil {
+		tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
+	}
+	tbl.AddRow("Ports", ports)
 	tbl.AddRow("Host Connections", t.Status.HostConectionCount)
 	tbl.AddRow("Client Connections", t.Status.ClientConnectionCount)
 	tbl.AddRow("Available Scopes", accessTokens)
