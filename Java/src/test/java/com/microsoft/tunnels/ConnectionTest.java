@@ -12,45 +12,42 @@ import com.microsoft.tunnels.management.TunnelRequestOptions;
 import org.junit.Test;
 
 /**
- * Used for local manual testing.
- * Requires AUTH_TOKEN to be set with a token from `basis user show -v`.
+ * TODO: tests E2E client connection.
  */
 public class ConnectionTest {
-  private static final String AUTH_TOKEN = "AUTH_TOKEN";
   private static ProductHeaderValue userAgent = new ProductHeaderValue("connection-test",
       ConnectionTest.class.getPackage().getSpecificationVersion());
 
-  private TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(userAgent,
-      () -> "Bearer " + AUTH_TOKEN);
+  private TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
+      userAgent, () -> "");
 
   @Test
   public void createTunnelTest() {
-    Tunnel tunnel = new Tunnel("testtunnel");
+    Tunnel tunnel = new Tunnel();
     var options = new TunnelRequestOptions();
 
     var createdTunnel = tryCreateTunnel(tunnel, options);
 
     assertNotNull("Tunnel should not be null", createdTunnel);
-    assertEquals("Incorrect tunnel name. Actual: " + createdTunnel.name + " Expected: " + tunnel.name,
-        createdTunnel.name, tunnel.name);
     assertNotNull("Tunnel ID should not be null", createdTunnel.tunnelId);
-    tunnelManagementClient.deleteTunnelAsync(tunnel, options).join();
+    tunnelManagementClient.deleteTunnelAsync(createdTunnel, options).join();
   }
 
   @Test
   public void getTunnelTest() {
-    Tunnel tunnel = new Tunnel("testtunnel");
+    Tunnel tunnel = new Tunnel();
     var options = new TunnelRequestOptions();
-    tryCreateTunnel(tunnel, options);
+    var createdTunnel = tryCreateTunnel(tunnel, options);
 
-    var result = tunnelManagementClient.getTunnelAsync(tunnel, options).join();
+    var result = tunnelManagementClient.getTunnelAsync(createdTunnel, options).join();
 
     assertNotNull("Tunnel should not be null", result);
-    assertEquals("Incorrect tunnel name. Actual: " + result.name + " Expected: " + tunnel.name,
-        result.name, tunnel.name);
+    assertEquals(
+        "Incorrect tunnel ID. Actual: " + result.tunnelId + " Expected: " + createdTunnel.tunnelId,
+        result.tunnelId, createdTunnel.tunnelId);
     assertNotNull("Tunnel ID should not be null", result.tunnelId);
 
-    tunnelManagementClient.deleteTunnelAsync(tunnel, options).join();
+    tunnelManagementClient.deleteTunnelAsync(createdTunnel, options).join();
   }
 
   /**

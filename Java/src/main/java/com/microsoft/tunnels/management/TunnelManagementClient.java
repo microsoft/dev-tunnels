@@ -27,8 +27,12 @@ import org.apache.maven.shared.utils.StringUtils;
  * TunnelManagementClient.
  */
 public class TunnelManagementClient implements ITunnelManagementClient {
-  private static String SDK_USER_AGENT = "tunnels-java-sdk/"
+  private static final String SDK_USER_AGENT = "tunnels-java-sdk/"
       + TunnelManagementClient.class.getPackage().getImplementationVersion();
+  private static final String AUTH_HEADER = "Authorization";
+  private static final String CONTENT_TYPE_HEADER = "Content-Type";
+  private static final String USER_AGENT_HEADER = "User-Agent";
+
   // Api strings
   private String prodServiceUri = "https://global.rel.tunnels.api.visualstudio.com";
   private String apiV1Path = "/api/v1";
@@ -38,6 +42,16 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private String portsApiSubPath = "/ports";
   private String tunnelAuthentication = "Authorization";
   private String tunnelAuthenticationScheme = "Tunnel";
+
+  // Access Scopes
+  private static String[] ManageAccessTokenScope = {
+      TunnelAccessScopes.Manage
+  };
+  private static String[] ReadAccessTokenScopes = {
+      TunnelAccessScopes.Manage,
+      TunnelAccessScopes.Host,
+      TunnelAccessScopes.Connect
+  };
 
   private ProductHeaderValue userAgent;
   private Supplier<String> accessTokenCallback;
@@ -68,34 +82,71 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       Supplier<String> accessTokenCallback,
       String tunnelServiceUri) {
     this.userAgent = userAgent;
-    this.accessTokenCallback = accessTokenCallback != null ? accessTokenCallback : () -> null;
+    this.accessTokenCallback = accessTokenCallback != null ? accessTokenCallback : () -> "";
     this.baseAddress = tunnelServiceUri != null ? tunnelServiceUri : prodServiceUri;
   }
 
-  private <T, U> CompletableFuture<U> requestAsync(HttpMethod requestMethod, URI uri,
-      T requestObject, Type responseType) {
+  private <T, U> CompletableFuture<U> requestAsync(
+      Tunnel tunnel,
+      TunnelRequestOptions options,
+      HttpMethod requestMethod,
+      URI uri,
+      String[] scopes,
+      T requestObject,
+      Type responseType) {
     var client = HttpClient.newHttpClient();
-    // TODO handle tunnel auth
-    HttpRequest request = creatHttpRequest(requestMethod, uri, requestObject);
+    HttpRequest request = creatHttpRequest(
+        tunnel, options, requestMethod, uri, requestObject, scopes);
     return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
         .thenApply(response -> parseResponse(response, responseType));
   }
 
+  private Tunnel convertTunnelForRequest(Tunnel tunnel) {
+    // TODO
+    return tunnel;
+  }
+
   private <T> HttpRequest creatHttpRequest(
+      Tunnel tunnel,
+      TunnelRequestOptions options,
       HttpMethod requestMethod,
       URI uri,
-      T requestObject) {
+      T requestObject,
+      String[] scopes) {
+
+    String authHeaderValue = null;
+    if (options != null && options.accessToken != null) {
+      authHeaderValue = tunnelAuthenticationScheme + " " + options.accessToken;
+    }
+
+    if (StringUtils.isBlank(authHeaderValue)) {
+      authHeaderValue = this.accessTokenCallback.get();
+    }
+
+    if (StringUtils.isBlank(authHeaderValue) && tunnel != null && tunnel.accessTokens != null) {
+      for (String scope : scopes) {
+        var accessToken = tunnel.accessTokens.get(scope);
+        if (StringUtils.isNotBlank(accessToken)) {
+          authHeaderValue = tunnelAuthenticationScheme + " " + accessToken;
+          break;
+        }
+      }
+    }
+
     String userAgentString = this.userAgent.productName
         + "/" + this.userAgent.version + " " + SDK_USER_AGENT;
     var requestBuilder = HttpRequest.newBuilder()
         .uri(uri)
-        .header("Authorization", this.accessTokenCallback.get())
-        .header("User-Agent", userAgentString)
-        .header("Content-Type", "application/json");
+        .header(USER_AGENT_HEADER, userAgentString)
+        .header(CONTENT_TYPE_HEADER, "application/json");
+    if (StringUtils.isNotBlank(authHeaderValue)) {
+      requestBuilder.header(AUTH_HEADER, authHeaderValue);
+    }
 
     Gson gson = new Gson();
+    var requestJson = gson.toJson(requestObject);
     var bodyPublisher = requestMethod == HttpMethod.POST || requestMethod == HttpMethod.PUT
-        ? BodyPublishers.ofString(gson.toJson(requestObject))
+        ? BodyPublishers.ofString(requestJson)
         : BodyPublishers.noBody();
     requestBuilder.method(requestMethod.toString(), bodyPublisher);
     return requestBuilder.build();
@@ -158,7 +209,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (StringUtils.isNotBlank(clusterId)) {
       if (baseAddress.getHost() != "localhost"
           && !baseAddress.getHost().startsWith(clusterId + ".")) {
-        host = (clusterId + baseAddress.getHost()).replace("global.", "");
+        host = (clusterId + "." + baseAddress.getHost()).replace("global.", "");
       } else if (baseAddress.getScheme() == "https"
           && clusterId.startsWith("localhost")
           && baseAddress.getPort() % 10 > 0) {
@@ -184,7 +235,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           host != null ? host : baseAddress.getHost(),
           port,
           path,
-          queryString,
+          StringUtils.isNotBlank(queryString) ? queryString : null,
           null /* fragment */
       );
     } catch (URISyntaxException e) {
@@ -228,7 +279,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var requestUri = this.buildUri(clusterId, tunnelsApiPath, options, query);
     final Type responseType = new TypeToken<Collection<Tunnel>>() {
     }.getType();
-    return requestAsync(HttpMethod.GET, requestUri, null /* requestObject */, responseType);
+    return requestAsync(
+        null /* tunnel */,
+        options,
+        HttpMethod.GET,
+        requestUri,
+        ReadAccessTokenScopes,
+        null /* requestObject */,
+        responseType);
   }
 
   @Override
@@ -247,21 +305,32 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var requestUri = buildUri(tunnel, options, null, null);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
-    return requestAsync(HttpMethod.GET, requestUri, null, responseType);
+    return requestAsync(
+        tunnel,
+        options,
+        HttpMethod.GET,
+        requestUri,
+        ReadAccessTokenScopes,
+        null,
+        responseType);
   }
 
   @Override
   public CompletableFuture<Tunnel> createTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    if (tunnel.name == null) {
-      throw new IllegalArgumentException("Tunnel name must be specified.");
-    }
     if (tunnel.tunnelId != null) {
       throw new IllegalArgumentException("Tunnel ID may not be specified when creating a tunnel.");
     }
     var uri = buildUri(tunnel.clusterId, tunnelsApiPath, options, null);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
-    return requestAsync(HttpMethod.POST, uri, tunnel, responseType);
+    return requestAsync(
+        tunnel,
+        options,
+        HttpMethod.POST,
+        uri,
+        ManageAccessTokenScope,
+        convertTunnelForRequest(tunnel),
+        responseType);
   }
 
   @Override
@@ -275,7 +344,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var uri = buildUri(tunnel, options);
     final Type responseType = new TypeToken<Boolean>() {
     }.getType();
-    return requestAsync(HttpMethod.DELETE, uri, tunnel, responseType);
+    return requestAsync(
+        tunnel,
+        options,
+        HttpMethod.DELETE,
+        uri,
+        ManageAccessTokenScope,
+        convertTunnelForRequest(tunnel),
+        responseType);
   }
 
   @Override
