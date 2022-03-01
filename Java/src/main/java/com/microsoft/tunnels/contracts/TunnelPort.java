@@ -51,10 +51,9 @@ public class TunnelPort {
   @Expose
   public TunnelOptions options;
 
-  // /**
-  //  * Gets or sets current connection status of the tunnel port.
-  //  */
-  // TODO
-  // @Expose
-  // public TunnelStatus status;
+  /**
+   * Gets or sets current connection status of the tunnel port.
+   */
+  @Expose
+  public TunnelStatus status;
 }

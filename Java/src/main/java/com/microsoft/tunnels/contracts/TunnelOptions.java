@@ -1,5 +1,7 @@
 package com.microsoft.tunnels.contracts;
 
+import com.google.gson.annotations.Expose;
+
 import java.util.Collection;
 
 /**
@@ -11,5 +13,6 @@ public class TunnelOptions {
    * tunnel
    * or port. If unspecified, all supported modes are enabled.
    */
-  Collection<TunnelConnectionMode> connectionModes;
+  @Expose
+  public Collection<TunnelConnectionMode> connectionModes;
 }

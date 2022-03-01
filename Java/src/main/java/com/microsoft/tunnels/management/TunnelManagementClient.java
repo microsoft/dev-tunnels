@@ -8,6 +8,8 @@ import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
+import com.microsoft.tunnels.contracts.TunnelRelayTunnelEndpoint;
+
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URI;
@@ -21,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.apache.maven.shared.utils.StringUtils;
 
 /**
@@ -40,10 +44,16 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private String subjectsApiPath = apiV1Path + "/subjects";
   private String endpointsApiSubPath = "/endpoints";
   private String portsApiSubPath = "/ports";
-  private String tunnelAuthentication = "Authorization";
   private String tunnelAuthenticationScheme = "Tunnel";
 
   // Access Scopes
+  private static String[] HostAccessTokenScope = {
+      TunnelAccessScopes.Host
+  };
+  private static String[] HostOrManageAccessTokenScope = {
+      TunnelAccessScopes.Host,
+      TunnelAccessScopes.Manage,
+  };
   private static String[] ManageAccessTokenScope = {
       TunnelAccessScopes.Manage
   };
@@ -99,11 +109,6 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         tunnel, options, requestMethod, uri, requestObject, scopes);
     return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
         .thenApply(response -> parseResponse(response, responseType));
-  }
-
-  private Tunnel convertTunnelForRequest(Tunnel tunnel) {
-    // TODO
-    return tunnel;
   }
 
   private <T> HttpRequest creatHttpRequest(
@@ -166,6 +171,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   private URI buildUri(Tunnel tunnel, TunnelRequestOptions options) {
     return buildUri(tunnel, options, null, null);
+  }
+
+  private URI buildUri(Tunnel tunnel, TunnelRequestOptions options, String path) {
+    return buildUri(tunnel, options, path, null);
   }
 
   private URI buildUri(Tunnel tunnel, TunnelRequestOptions options, String path, String query) {
@@ -333,10 +342,24 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
   }
 
+  private Tunnel convertTunnelForRequest(Tunnel tunnel) {
+    // TODO
+    return tunnel;
+  }
+
   @Override
   public CompletableFuture<Tunnel> updateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+    var uri = buildUri(tunnel, options);
+    final Type responseType = new TypeToken<Tunnel>() {
+    }.getType();
+    return requestAsync(
+        tunnel,
+        options,
+        HttpMethod.PUT,
+        uri,
+        ManageAccessTokenScope,
+        convertTunnelForRequest(tunnel),
+        responseType);
   }
 
   @Override
@@ -355,54 +378,222 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   }
 
   @Override
-  public CompletableFuture<Boolean> updateTunnelEndpointsAsync(
+  public CompletableFuture<TunnelRelayTunnelEndpoint> updateTunnelEndpointsAsync(
       Tunnel tunnel,
       TunnelEndpoint endpoint,
       TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+    if (endpoint == null) {
+      throw new IllegalArgumentException("Endpoint must not be null.");
+    }
+    if (StringUtils.isBlank(endpoint.hostId)) {
+      throw new IllegalArgumentException("Endpoint hostId must not be null.");
+    }
+
+    var path = endpointsApiSubPath + "/" + endpoint.hostId + "/" + endpoint.connectionMode;
+    var uri = buildUri(
+        tunnel,
+        options,
+        path);
+
+    final Type responseType = new TypeToken<TunnelRelayTunnelEndpoint>() {
+    }.getType();
+    CompletableFuture<TunnelRelayTunnelEndpoint> result = requestAsync(
+        tunnel,
+        options,
+        HttpMethod.PUT,
+        uri,
+        HostAccessTokenScope,
+        endpoint,
+        responseType);
+
+    if (tunnel.endpoints != null) {
+      tunnel.endpoints = tunnel.endpoints.stream().filter((e) -> {
+        return e.hostId != endpoint.hostId || e.connectionMode != endpoint.connectionMode;
+      }).collect(Collectors.toList());
+      tunnel.endpoints.add(result.join());
+    }
+    return result;
   }
 
   @Override
-  public CompletableFuture<Boolean> deleteTunnelEndpointsAsync(Tunnel tunnel, String hostId,
-      TunnelConnectionMode tunnelConnectionMode, TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+  public CompletableFuture<Boolean> deleteTunnelEndpointsAsync(
+      Tunnel tunnel,
+      String hostId,
+      TunnelConnectionMode connectionMode,
+      TunnelRequestOptions options) {
+    if (hostId == null) {
+      throw new IllegalArgumentException("hostId must not be null");
+    }
+    var path = endpointsApiSubPath + "/" + hostId;
+    if (connectionMode != null) {
+      path += "/" + connectionMode;
+    }
+    var uri = buildUri(tunnel, options, path);
+
+    final Type responseType = new TypeToken<Boolean>() {
+    }.getType();
+    CompletableFuture<Boolean> result = requestAsync(
+        tunnel,
+        options,
+        HttpMethod.DELETE,
+        uri,
+        ManageAccessTokenScope,
+        convertTunnelForRequest(tunnel),
+        responseType);
+
+    if (tunnel.endpoints != null) {
+      tunnel.endpoints = tunnel.endpoints.stream().filter((e) -> {
+        return e.hostId != hostId || e.connectionMode != connectionMode;
+      }).collect(Collectors.toList());
+    }
+    return result;
   }
 
   @Override
   public CompletableFuture<Collection<TunnelPort>> listTunnelPortsAsync(
       Tunnel tunnel,
       TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+    var uri = buildUri(tunnel, options, portsApiSubPath);
+
+    final Type responseType = new TypeToken<Collection<TunnelPort>>() {
+    }.getType();
+    return requestAsync(
+        tunnel,
+        options,
+        HttpMethod.GET,
+        uri,
+        ReadAccessTokenScopes,
+        null /* requestObject */,
+        responseType);
   }
 
   @Override
-  public CompletableFuture<TunnelPort> getTunnelPortAsync(Tunnel tunnel, int portNumber,
+  public CompletableFuture<TunnelPort> getTunnelPortAsync(
+      Tunnel tunnel,
+      int portNumber,
       TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+    var uri = buildUri(tunnel, options, portsApiSubPath + "/" + portNumber);
+    final Type responseType = new TypeToken<TunnelPort>() {
+    }.getType();
+    return requestAsync(
+        tunnel,
+        options,
+        HttpMethod.GET,
+        uri,
+        ReadAccessTokenScopes,
+        null,
+        responseType);
   }
 
   @Override
-  public CompletableFuture<TunnelPort> createTunnelPortAsync(Tunnel tunnel, TunnelPort tunnelPort,
+  public CompletableFuture<TunnelPort> createTunnelPortAsync(
+      Tunnel tunnel,
+      TunnelPort tunnelPort,
       TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+    if (tunnel == null) {
+      throw new IllegalArgumentException("Tunnel must not be null.");
+    }
+    if (tunnelPort == null) {
+      throw new IllegalArgumentException("Tunnel port must be specified");
+    }
+    var uri = buildUri(tunnel, options, portsApiSubPath);
+    final Type responseType = new TypeToken<TunnelPort>() {
+    }.getType();
+    CompletableFuture<TunnelPort> result = requestAsync(
+        tunnel,
+        options,
+        HttpMethod.POST,
+        uri,
+        ManageAccessTokenScope,
+        convertTunnelPortForRequest(tunnel, tunnelPort),
+        responseType);
+
+    if (tunnel.ports != null) {
+      tunnel.ports = tunnel.ports.stream().filter((p) -> {
+        return p.portNumber != tunnelPort.portNumber;
+      }).collect(Collectors.toList());
+      tunnel.ports.add(result.join());
+    }
+    return result;
+  }
+
+  private TunnelPort convertTunnelPortForRequest(Tunnel tunnel, TunnelPort tunnelPort) {
+    /* TODO */
+    return tunnelPort;
   }
 
   @Override
-  public CompletableFuture<TunnelPort> updateTunnelPortAsync(Tunnel tunnel, TunnelPort tunnelPort,
+  public CompletableFuture<TunnelPort> updateTunnelPortAsync(
+      Tunnel tunnel,
+      TunnelPort tunnelPort,
       TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+    if (tunnel == null) {
+      throw new IllegalArgumentException("Tunnel must not be null.");
+    }
+    if (tunnelPort == null) {
+      throw new IllegalArgumentException("Tunnel port must not be null.");
+    }
+
+    if (StringUtils.isNotBlank(tunnelPort.clusterId)
+        && StringUtils.isNotBlank(tunnel.clusterId)
+        && tunnelPort.clusterId != tunnel.clusterId) {
+      throw new Error("Tunnel port cluster ID is not consistent.");
+    }
+
+    var path = portsApiSubPath + "/" + tunnelPort.portNumber;
+    var uri = buildUri(
+        tunnel,
+        options,
+        path);
+
+    final Type responseType = new TypeToken<TunnelPort>() {
+    }.getType();
+    CompletableFuture<TunnelPort> result = requestAsync(
+        tunnel,
+        options,
+        HttpMethod.PUT,
+        uri,
+        HostAccessTokenScope,
+        convertTunnelPortForRequest(tunnel, tunnelPort),
+        responseType);
+
+    if (tunnel.ports != null) {
+      tunnel.ports = tunnel.ports.stream().filter((p) -> {
+        return p.portNumber != tunnelPort.portNumber;
+      }).collect(Collectors.toList());
+      tunnel.ports.add(result.join());
+    }
+    return result;
   }
 
   @Override
-  public CompletableFuture<Boolean> deleteTunnelPortAsync(Tunnel tunnel, int portNumber,
+  public CompletableFuture<Boolean> deleteTunnelPortAsync(
+      Tunnel tunnel,
+      int portNumber,
       TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
+    if (tunnel == null) {
+      throw new IllegalArgumentException("Tunnel must not be null.");
+    }
+
+    var path = portsApiSubPath + "/" + portNumber;
+    var uri = buildUri(tunnel, options, path);
+
+    final Type responseType = new TypeToken<Boolean>() {
+    }.getType();
+    CompletableFuture<Boolean> result = requestAsync(
+        tunnel,
+        options,
+        HttpMethod.DELETE,
+        uri,
+        HostOrManageAccessTokenScope,
+        null /* requestObject */,
+        responseType);
+
+    if (tunnel.ports != null) {
+      tunnel.ports = tunnel.ports.stream().filter((p) -> {
+        return p.portNumber != portNumber;
+      }).collect(Collectors.toList());
+    }
+    return result;
   }
 }

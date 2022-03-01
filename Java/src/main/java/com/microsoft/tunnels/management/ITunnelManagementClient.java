@@ -4,6 +4,8 @@ import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
+import com.microsoft.tunnels.contracts.TunnelRelayTunnelEndpoint;
+
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,7 +32,7 @@ public interface ITunnelManagementClient {
 
   public CompletableFuture<Boolean> deleteTunnelAsync(Tunnel tunnel, TunnelRequestOptions options);
 
-  public CompletableFuture<Boolean> updateTunnelEndpointsAsync(
+  public CompletableFuture<TunnelRelayTunnelEndpoint> updateTunnelEndpointsAsync(
       Tunnel tunnel,
       TunnelEndpoint endpoint,
       TunnelRequestOptions options);

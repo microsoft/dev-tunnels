@@ -2,6 +2,7 @@ package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 
 /**
@@ -53,18 +54,21 @@ public class Tunnel {
   // public TunnelAccessControl accessControlEntry;
   @Expose
   public TunnelOptions options;
-  // TODO
-  // public TunnelStatus status;
+
+  @Expose
+  public TunnelStatus status;
   /**
    * Gets or sets an array of endpoints where hosts are currently accepting
    * client connections to the tunnel.
    */
   @Expose
-  public Collection<TunnelEndpoint> endpoints;
-  // TODO
-  // public TunnelPort[] ports;
-  // TODO
-  // public DateTime created;
+  public Collection<TunnelRelayTunnelEndpoint> endpoints;
+
+  @Expose
+  public Collection<TunnelPort> ports;
+
+  @Expose
+  public Date created;
 
   public Tunnel() {
     this(null);
