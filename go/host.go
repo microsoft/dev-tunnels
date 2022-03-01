@@ -7,9 +7,15 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"log"
+	"net/http"
 
 	"github.com/google/uuid"
 	tunnelssh "github.com/microsoft/tunnels/go/ssh"
+)
+
+const (
+	hostWebSocketSubProtocol = "tunnel-relay-host"
 )
 
 type Host struct {
@@ -18,9 +24,11 @@ type Host struct {
 	tunnel      *Tunnel
 	privateKey  *rsa.PrivateKey
 	hostId      string
+	logger      *log.Logger
+	ssh         *tunnelssh.SSHSession
 }
 
-func NewHost(manager *Manager) (*Host, error) {
+func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("private key could not be generated: %w", err)
@@ -30,6 +38,7 @@ func NewHost(manager *Manager) (*Host, error) {
 		sshSessions: make(map[tunnelssh.SSHSession]bool),
 		privateKey:  privateKey,
 		hostId:      uuid.New().String(),
+		logger:      logger,
 	}, nil
 }
 
@@ -65,12 +74,27 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 	if endpoint.HostRelayURI == "" {
 		return fmt.Errorf("endpoint relay uri was not correctly set")
 	}
+	hostRelayUri := endpoint.HostRelayURI
+	protocols := []string{hostWebSocketSubProtocol}
 
-	stream := SteamFactory.CreateRelayStream(
-		endpoint.HostRelayURI,
-		accessToken,
-		"tunnel-relay-host",
-	)
+	var headers http.Header
+	if accessToken != "" {
+		h.logger.Println(fmt.Sprintf("Authorization: tunnel %s", accessToken))
+		headers = make(http.Header)
+
+		headers.Add("Authorization", fmt.Sprintf("tunnel %s", accessToken))
+	}
+
+	sock := newSocket(hostRelayUri, protocols, headers, nil)
+	if err := sock.connect(ctx); err != nil {
+		return fmt.Errorf("failed to connect to host relay: %w", err)
+	}
+
+	h.ssh = tunnelssh.NewSSHSession(sock, c.remoteForwardedPorts, h.logger)
+	if err := h.ssh.Connect(ctx); err != nil {
+		return fmt.Errorf("failed to create ssh session: %w", err)
+	}
+
 	return nil
 }
 

@@ -1,7 +1,6 @@
 package tunnels
 
 import (
-	"context"
 	"log"
 	"net/url"
 	"os"
@@ -10,18 +9,9 @@ import (
 	tunnelssh "github.com/microsoft/tunnels/go/ssh"
 )
 
-const (
-	uri = "https://global.rel.tunnels.api.visualstudio.com/"
-)
-
 var (
-	ctx    = context.Background()
 	logger = log.New(os.Stdout, "", log.LstdFlags)
 )
-
-func getAccessToken() string {
-	return ""
-}
 
 func TestSuccessfulHost(t *testing.T) {
 	url, err := url.Parse(uri)
@@ -33,7 +23,7 @@ func TestSuccessfulHost(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	host, _ := NewHost(managementClient)
+	host, _ := NewHost(managementClient, logger)
 	ssh := &tunnelssh.SSHSession{}
 	host.sshSessions[*ssh] = true
 	logger.Println(host.manager.uri)
