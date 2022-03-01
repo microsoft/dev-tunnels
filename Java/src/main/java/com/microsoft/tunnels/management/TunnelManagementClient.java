@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.tunnels.contracts.Tunnel;
+import com.microsoft.tunnels.contracts.TunnelAccessControl;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
@@ -148,7 +149,8 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       requestBuilder.header(AUTH_HEADER, authHeaderValue);
     }
 
-    Gson gson = new Gson();
+    // TODO - serializeNulls?
+    Gson gson = new GsonBuilder().create();
     var requestJson = gson.toJson(requestObject);
     var bodyPublisher = requestMethod == HttpMethod.POST || requestMethod == HttpMethod.PUT
         ? BodyPublishers.ofString(requestJson)
@@ -161,7 +163,8 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (response.statusCode() >= 300) {
       throw new HttpResponseException(
           "Error sending request, status code: " + response.statusCode(),
-          response.statusCode());
+          response.statusCode(),
+          response.body());
     }
     var builder = new GsonBuilder()
         .excludeFieldsWithoutExposeAnnotation();
@@ -343,8 +346,28 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   }
 
   private Tunnel convertTunnelForRequest(Tunnel tunnel) {
-    // TODO
-    return tunnel;
+    if (tunnel.accessControl != null
+        && tunnel.accessControl.entries != null
+        && tunnel.accessControl.entries.stream().anyMatch(e -> e.isInherited)) {
+      throw new IllegalArgumentException("Tunnel access control cannot include inherited entries.");
+    }
+
+    Tunnel converted = new Tunnel();
+    converted.name = tunnel.name;
+    converted.domain = tunnel.domain;
+    converted.description = tunnel.description;
+    converted.tags = tunnel.tags;
+    converted.options = tunnel.options;
+    converted.accessControl = tunnel.accessControl;
+    converted.endpoints = tunnel.endpoints;
+    if (tunnel.ports == null) {
+      converted.ports = null;
+    } else {
+      converted.ports = tunnel.ports.stream().map((p) -> {
+        return convertTunnelPortForRequest(tunnel, p);
+      }).collect(Collectors.toList());
+    }
+    return converted;
   }
 
   @Override
@@ -518,8 +541,31 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   }
 
   private TunnelPort convertTunnelPortForRequest(Tunnel tunnel, TunnelPort tunnelPort) {
-    /* TODO */
-    return tunnelPort;
+    if (tunnelPort.clusterId != null && tunnel.clusterId != null &&
+        tunnelPort.clusterId != tunnel.clusterId) {
+      throw new IllegalArgumentException(
+          "Tunnel port cluster ID does not match tunnel.");
+    }
+
+    if (tunnelPort.tunnelId != null && tunnel.tunnelId != null &&
+        tunnelPort.tunnelId != tunnel.tunnelId) {
+      throw new IllegalArgumentException(
+          "Tunnel port tunnel ID does not match tunnel.");
+    }
+
+    var converted = new TunnelPort();
+    converted.portNumber = tunnelPort.portNumber;
+    converted.protocol = tunnelPort.protocol;
+    converted.options = tunnelPort.options;
+    if (tunnelPort.accessControl == null) {
+      converted.accessControl = null;
+    } else {
+      converted.accessControl = new TunnelAccessControl(
+          tunnelPort.accessControl.entries.stream()
+              .filter((e) -> !e.isInherited)
+              .collect(Collectors.toList()));
+    }
+    return converted;
   }
 
   @Override

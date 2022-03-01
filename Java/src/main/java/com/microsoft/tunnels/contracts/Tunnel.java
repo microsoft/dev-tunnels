@@ -50,11 +50,18 @@ public class Tunnel {
   /**
    * Gets or sets default options for the tunnel.
    */
-  // TODO
-  // public TunnelAccessControl accessControlEntry;
+  @Expose
+  public TunnelAccessControl accessControl;
+
+  /**
+   * Gets or sets default options for the tunnel.
+   */
   @Expose
   public TunnelOptions options;
 
+  /**
+   * Gets or sets current connection status of the tunnel port.
+   */
   @Expose
   public TunnelStatus status;
   /**
@@ -64,9 +71,15 @@ public class Tunnel {
   @Expose
   public Collection<TunnelRelayTunnelEndpoint> endpoints;
 
+  /**
+   * Gets or sets a list of ports in the tunnel.
+   */
   @Expose
   public Collection<TunnelPort> ports;
 
+  /**
+   * Gets or sets the time in UTC of tunnel creation.
+   */
   @Expose
   public Date created;
 
