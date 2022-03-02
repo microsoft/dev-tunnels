@@ -11,12 +11,27 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	tunnelssh "github.com/microsoft/tunnels/go/ssh"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
 	hostWebSocketSubProtocol = "tunnel-relay-host"
 )
+
+type RelayServer struct {
+	httpServer  *http.Server
+	errc        chan error
+	sshConfig   *ssh.ServerConfig
+	channels    map[string]channelHandler
+	accessToken string
+
+	serverConn *ssh.ServerConn
+}
+
+type RelayServerOption func(*RelayServer)
+type channelHandler func(context.Context, ssh.NewChannel) error
 
 type Host struct {
 	manager          *Manager
@@ -27,6 +42,7 @@ type Host struct {
 	hostId           string
 	logger           *log.Logger
 	ssh              *tunnelssh.SSHSession
+	server           *http.Server
 }
 
 func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
@@ -93,6 +109,49 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 		return fmt.Errorf("failed to connect to host relay: %w", err)
 	}
 
+	var upgrader = websocket.Upgrader{}
+
+	makeConnection := func(server *RelayServer) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			if server.accessToken != "" {
+				if r.Header.Get("Authorization") != fmt.Sprintf("tunnel %s", server.accessToken) {
+					server.sendError(fmt.Errorf("invalid access token"))
+					return
+				}
+			}
+
+			c, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				server.sendError(fmt.Errorf("error upgrading to websocket: %w", err))
+				return
+			}
+			defer func() {
+				if err := c.Close(); err != nil {
+					server.sendError(fmt.Errorf("error closing websocket: %w", err))
+				}
+			}()
+
+			socketConn := newSocketConn(c)
+			serverConn, chans, reqs, err := ssh.NewServerConn(socketConn, server.sshConfig)
+			if err != nil {
+				server.sendError(fmt.Errorf("error creating ssh server conn: %w", err))
+				return
+			}
+			go ssh.DiscardRequests(reqs)
+
+			server.serverConn = serverConn
+			if err := handleChannels(ctx, server, chans); err != nil {
+				server.sendError(fmt.Errorf("error handling channels: %w", err))
+				return
+			}
+		}
+	}
+
+	h.server = &http.Server{}
+
 	//serverConn, chans, reqs, err := ssh.NewServerConn(socketConn, server.sshConfig)
 
 	//h.ssh = tunnelssh.NewSSHSession(sock, c.remoteForwardedPorts, h.logger)
@@ -101,6 +160,14 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 	//}
 
 	return nil
+}
+
+func (rs *RelayServer) sendError(err error) {
+	select {
+	case rs.errc <- err:
+	default:
+		// channel is blocked with a previous error, so we ignore this one
+	}
 }
 
 func (h *Host) AddPort(ctx context.Context, port TunnelPort) (*TunnelPort, error) {
