@@ -85,7 +85,7 @@ func (s *HostSSHSession) handlePortForwardRequest(r *ssh.Request) {
 		return
 	}
 
-	s.pf.Add(int(req.Port()))
+	//s.pf.Add(int(req.Port()))
 	reply := messages.NewPortForwardSuccess(req.Port())
 	b, err := reply.Marshal()
 	if err != nil {

@@ -3,6 +3,7 @@ package tunnels
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -32,8 +33,11 @@ func (s *socket) connect(ctx context.Context) error {
 		TLSClientConfig:  s.tlsConfig,
 		Subprotocols:     s.protocols,
 	}
-	ws, _, err := dialer.Dial(s.addr, s.headers)
+	ws, resp, err := dialer.Dial(s.addr, s.headers)
 	if err != nil {
+		if err == websocket.ErrBadHandshake {
+			return fmt.Errorf("handshake failed with status %d", resp.StatusCode)
+		}
 		return err
 	}
 	s.conn = ws

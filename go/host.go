@@ -19,13 +19,14 @@ const (
 )
 
 type Host struct {
-	manager     *Manager
-	sshSessions map[tunnelssh.SSHSession]bool
-	tunnel      *Tunnel
-	privateKey  *rsa.PrivateKey
-	hostId      string
-	logger      *log.Logger
-	ssh         *tunnelssh.SSHSession
+	manager          *Manager
+	sshSessions      map[tunnelssh.SSHSession]bool
+	remoteForwarders map[string]string
+	tunnel           *Tunnel
+	privateKey       *rsa.PrivateKey
+	hostId           string
+	logger           *log.Logger
+	ssh              *tunnelssh.SSHSession
 }
 
 func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
@@ -34,11 +35,12 @@ func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
 		return nil, fmt.Errorf("private key could not be generated: %w", err)
 	}
 	return &Host{
-		manager:     manager,
-		sshSessions: make(map[tunnelssh.SSHSession]bool),
-		privateKey:  privateKey,
-		hostId:      uuid.New().String(),
-		logger:      logger,
+		manager:          manager,
+		sshSessions:      make(map[tunnelssh.SSHSession]bool),
+		remoteForwarders: make(map[string]string),
+		privateKey:       privateKey,
+		hostId:           uuid.New().String(),
+		logger:           logger,
 	}, nil
 }
 
@@ -49,7 +51,7 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 	if tunnel.Ports == nil {
 		return fmt.Errorf("tunnel ports slice cannot be nil")
 	}
-	publicKeyBytes, err := x509.MarshalPKIXPublicKey(h.privateKey.PublicKey)
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&h.privateKey.PublicKey)
 	if err != nil {
 		return fmt.Errorf("error getting host public key: %w", err)
 	}
@@ -64,9 +66,10 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 	endpoint := &TunnelEndpoint{
 		HostID:         h.hostId,
 		HostPublicKeys: hostPublicKeys,
+		ConnectionMode: TunnelConnectionModeTunnelRelay,
 	}
-
-	endpoint, err = h.manager.UpdateTunnelEndpoint(ctx, tunnel, endpoint, nil)
+	requestOptions := TunnelRequestOptions{}
+	endpoint, err = h.manager.UpdateTunnelEndpoint(ctx, tunnel, endpoint, &requestOptions)
 	if err != nil {
 		return fmt.Errorf("error updating tunnel endpoint: %w", err)
 	}
@@ -90,10 +93,12 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 		return fmt.Errorf("failed to connect to host relay: %w", err)
 	}
 
-	h.ssh = tunnelssh.NewSSHSession(sock, c.remoteForwardedPorts, h.logger)
-	if err := h.ssh.Connect(ctx); err != nil {
-		return fmt.Errorf("failed to create ssh session: %w", err)
-	}
+	//serverConn, chans, reqs, err := ssh.NewServerConn(socketConn, server.sshConfig)
+
+	//h.ssh = tunnelssh.NewSSHSession(sock, c.remoteForwardedPorts, h.logger)
+	//if err := h.ssh.Connect(ctx); err != nil {
+	//	return fmt.Errorf("failed to create ssh session: %w", err)
+	//}
 
 	return nil
 }
