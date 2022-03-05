@@ -46,7 +46,9 @@ func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
 	}, nil
 }
 
+// This must be called on an existing host and the tunnel and tunnel.ports cannot be nil
 func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
+	// check input
 	if tunnel == nil {
 		return fmt.Errorf("tunnel cannot be nil")
 	}
@@ -54,6 +56,8 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 	if tunnel.Ports == nil {
 		return fmt.Errorf("tunnel ports slice cannot be nil")
 	}
+
+	// generate rsa keys
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&h.privateKey.PublicKey)
 	if err != nil {
 		return fmt.Errorf("error getting host public key: %w", err)
@@ -66,6 +70,8 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 		return fmt.Errorf("tunnel did not contain the host access token")
 	}
 
+	// create and publish the endpoint to the tunnel
+	// this will return an endpoint with the hostRelayURI set
 	endpoint := &TunnelEndpoint{
 		HostID:         h.hostId,
 		HostPublicKeys: hostPublicKeys,
