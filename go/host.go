@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	tunnelssh "github.com/microsoft/tunnels/go/ssh"
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -27,8 +26,8 @@ type Host struct {
 	privateKey       *rsa.PrivateKey
 	hostId           string
 	logger           *log.Logger
-	ssh              *tunnelssh.SSHSession
-	server           *http.Server
+	ssh              *tunnelssh.HostSSHSession
+	forwardedPorts   *forwardedPorts
 }
 
 func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
@@ -43,14 +42,15 @@ func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
 		privateKey:       privateKey,
 		hostId:           uuid.New().String(),
 		logger:           logger,
+		forwardedPorts:   newForwardedPorts(),
 	}, nil
 }
 
 func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
-	serverConfig := ssh.ServerConfig{}
 	if tunnel == nil {
 		return fmt.Errorf("tunnel cannot be nil")
 	}
+	h.tunnel = tunnel
 	if tunnel.Ports == nil {
 		return fmt.Errorf("tunnel ports slice cannot be nil")
 	}
@@ -91,17 +91,14 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 		headers.Add("Authorization", fmt.Sprintf("tunnel %s", accessToken))
 	}
 
+	// Up to here is tested, when I test this successfully creates and connects to the socket
 	sock := newSocket(hostRelayUri, protocols, headers, nil)
 	if err := sock.connect(ctx); err != nil {
 		return fmt.Errorf("failed to connect to host relay: %w", err)
 	}
 
-	h.server = &http.Server{}
-
-	serverConn, chans, reqs, err := ssh.NewServerConn(sock, &serverConfig)
-
-	h.ssh = tunnelssh.NewSSHSession(sock, c.remoteForwardedPorts, h.logger)
-	if err := h.ssh.Connect(ctx); err != nil {
+	h.ssh = tunnelssh.NewHostSSHSession(sock, h.forwardedPorts, h.logger)
+	if err := h.ssh.Host(ctx); err != nil {
 		return fmt.Errorf("failed to create ssh session: %w", err)
 	}
 

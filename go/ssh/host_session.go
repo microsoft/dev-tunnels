@@ -37,6 +37,7 @@ func (s *HostSSHSession) Host(ctx context.Context) error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
+	// This is where the host currently breaks due to a mismatch of key exchange algorithms
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(s.socket, "", &clientConfig)
 	if err != nil {
 		return fmt.Errorf("error creating ssh client connection: %w", err)

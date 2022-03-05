@@ -7,14 +7,14 @@ import (
 	"net/url"
 	"os"
 	"testing"
-
-	tunnelssh "github.com/microsoft/tunnels/go/ssh"
 )
 
 var (
 	logger = log.New(os.Stdout, "", log.LstdFlags)
 )
 
+// This tests against the real prod service uri when it creates and manages tunnels
+// We do have a cleanup worker that will delete unused tunnels so its not horrible for the test to break mid run
 func TestSuccessfulHost(t *testing.T) {
 	url, err := url.Parse(uri)
 	if err != nil {
@@ -29,6 +29,8 @@ func TestSuccessfulHost(t *testing.T) {
 	options := &TunnelRequestOptions{
 		TokenScopes: hostOrManageAccessTokenScope,
 	}
+
+	// Create the tunnel for the test
 	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -41,22 +43,31 @@ func TestSuccessfulHost(t *testing.T) {
 		createdTunnel.table().Print()
 	}
 
+	// Add a port to the tunnel
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-
 	logger.Println(fmt.Sprintf("Created port: %+v", *port))
+
 	host, _ := NewHost(managementClient, logger)
-	ssh := &tunnelssh.SSHSession{}
-	host.sshSessions[*ssh] = true
 	logger.Println(host.manager.uri)
+
 	ctx = context.Background()
 	err = host.StartServer(ctx, createdTunnel)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Errorf(err.Error())
 		return
+	}
+
+	// Delete tunnel after test is finished
+	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
+
+	if err != nil {
+		t.Errorf("tunnel was not successfully deleted")
+	} else {
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
