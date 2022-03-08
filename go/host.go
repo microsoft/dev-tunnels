@@ -12,10 +12,13 @@ import (
 
 	"github.com/google/uuid"
 	tunnelssh "github.com/microsoft/tunnels/go/ssh"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
 	hostWebSocketSubProtocol = "tunnel-relay-host"
+	clientStreamChannelType  = "client-ssh-session-stream"
 )
 
 type Host struct {
@@ -24,9 +27,11 @@ type Host struct {
 	remoteForwarders map[string]string
 	tunnel           *Tunnel
 	privateKey       *rsa.PrivateKey
+	publicKeys       []string
 	hostId           string
 	logger           *log.Logger
 	ssh              *tunnelssh.HostSSHSession
+	sock             *socket
 	forwardedPorts   *forwardedPorts
 }
 
@@ -47,7 +52,7 @@ func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
 }
 
 // This must be called on an existing host and the tunnel and tunnel.ports cannot be nil
-func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
+func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel, hostPublicKeys []string) (err error) {
 	// check input
 	if tunnel == nil {
 		return fmt.Errorf("tunnel cannot be nil")
@@ -58,12 +63,16 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 	}
 
 	// generate rsa keys
-	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&h.privateKey.PublicKey)
-	if err != nil {
-		return fmt.Errorf("error getting host public key: %w", err)
+	if len(hostPublicKeys) == 0 {
+		publicKeyBytes, err := x509.MarshalPKIXPublicKey(&h.privateKey.PublicKey)
+		if err != nil {
+			return fmt.Errorf("error getting host public key: %w", err)
+		}
+		sEnc := base64.StdEncoding.EncodeToString(publicKeyBytes)
+		h.publicKeys = []string{sEnc}
+	} else {
+		h.publicKeys = hostPublicKeys
 	}
-	sEnc := base64.StdEncoding.EncodeToString(publicKeyBytes)
-	hostPublicKeys := []string{sEnc}
 
 	accessToken, ok := tunnel.AccessTokens[TunnelAccessScopeHost]
 	if !ok {
@@ -74,7 +83,7 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 	// this will return an endpoint with the hostRelayURI set
 	endpoint := &TunnelEndpoint{
 		HostID:         h.hostId,
-		HostPublicKeys: hostPublicKeys,
+		HostPublicKeys: h.publicKeys,
 		ConnectionMode: TunnelConnectionModeTunnelRelay,
 	}
 	requestOptions := TunnelRequestOptions{}
@@ -97,18 +106,65 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel) error {
 		headers.Add("Authorization", fmt.Sprintf("tunnel %s", accessToken))
 	}
 
-	// Up to here is tested, when I test this successfully creates and connects to the socket
-	sock := newSocket(hostRelayUri, protocols, headers, nil)
-	if err := sock.connect(ctx); err != nil {
+	h.sock = newSocket(hostRelayUri, protocols, headers, nil)
+	if err := h.sock.connect(ctx); err != nil {
 		return fmt.Errorf("failed to connect to host relay: %w", err)
 	}
 
-	h.ssh = tunnelssh.NewHostSSHSession(sock, h.forwardedPorts, h.logger)
-	if err := h.ssh.Host(ctx); err != nil {
+	supportedChannelTypes := []string{clientStreamChannelType}
+	h.ssh = tunnelssh.NewHostSSHSession(h.sock, h.forwardedPorts, supportedChannelTypes, h.logger)
+	if err := h.ssh.Connect(ctx); err != nil {
 		return fmt.Errorf("failed to create ssh session: %w", err)
 	}
 
-	return nil
+	g, ctx := errgroup.WithContext(ctx)
+	for _, channelType := range supportedChannelTypes {
+		g.Go(func() error {
+			ch := h.ssh.OpenChannelNotifier(channelType)
+			return h.handleOpenChannel(ctx, ch)
+		})
+	}
+
+	return g.Wait()
+}
+
+func (h *Host) handleOpenChannel(ctx context.Context, incomingChannels <-chan ssh.NewChannel) error {
+	errc := make(chan error, 1)
+	sendError := func(err error) {
+		select {
+		case errc <- err:
+		default:
+		}
+	}
+
+	go func() {
+		for channel := range incomingChannels {
+			if channel.ChannelType() != clientStreamChannelType {
+				channel.Reject(ssh.UnknownChannelType, "unknown channel type")
+				sendError(fmt.Errorf("unknown channel type: %s", channel.ChannelType()))
+				return
+			}
+			channelSession, requests, err := channel.Accept()
+			if err != nil {
+				sendError(fmt.Errorf("failed to accept channel: %w", err))
+				return
+			}
+			go ssh.DiscardRequests(requests)
+			go func() {
+				h.logger.Println(fmt.Sprintf("accepted channel: %s", channel.ChannelType()))
+				if err := h.connectAndRunClientSession(ctx, channelSession); err != nil {
+					sendError(fmt.Errorf("failed to handle channel session: %w", err))
+				}
+			}()
+		}
+	}()
+
+	return awaitError(ctx, errc)
+}
+
+func (h *Host) connectAndRunClientSession(ctx context.Context, channelSession ssh.Channel) error {
+	hostServer := newHostServer(h.sock, channelSession)
+	return hostServer.start(ctx)
 }
 
 func (h *Host) AddPort(ctx context.Context, port TunnelPort) (*TunnelPort, error) {
