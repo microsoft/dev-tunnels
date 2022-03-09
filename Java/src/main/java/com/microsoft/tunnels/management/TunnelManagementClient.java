@@ -186,20 +186,19 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     String tunnelPath;
-    if (tunnel.clusterId != null && !tunnel.clusterId.isBlank() && tunnel.tunnelId != null
-        && !tunnel.tunnelId.isBlank()) {
+    if (StringUtils.isNotBlank(tunnel.clusterId) && StringUtils.isNotBlank(tunnel.tunnelId)) {
       tunnelPath = tunnelsApiPath + "/" + tunnel.tunnelId;
     } else {
       if (tunnel.name == null) {
         throw new Error("Tunnel object must include either a name or tunnel ID and cluster ID.");
       }
-      if (tunnel.domain == null || tunnel.domain.isBlank()) {
+      if (StringUtils.isBlank(tunnel.domain)) {
         tunnelPath = tunnelsApiPath + "/" + tunnel.name;
       } else {
         tunnelPath = tunnelsApiPath + "/" + tunnel.name + "." + tunnel.domain;
       }
     }
-    if (path != null && !path.isBlank()) {
+    if (StringUtils.isNotBlank(path)) {
       tunnelPath += path;
     }
     return buildUri(tunnel.clusterId, tunnelPath, options, query);
@@ -237,7 +236,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       queryString = toQueryString(options);
     }
     if (query != null) {
-      queryString += queryString.isBlank() ? query : "&" + query;
+      queryString += StringUtils.isBlank(queryString) ? query : "&" + query;
     }
 
     try {
@@ -287,7 +286,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   public CompletableFuture<Collection<Tunnel>> listTunnelsAsync(
       String clusterId,
       TunnelRequestOptions options) {
-    var query = clusterId == null || clusterId.isBlank() ? "global=true" : null;
+    var query = StringUtils.isBlank(clusterId) ? "global=true" : null;
     var requestUri = this.buildUri(clusterId, tunnelsApiPath, options, query);
     final Type responseType = new TypeToken<Collection<Tunnel>>() {
     }.getType();

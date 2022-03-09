@@ -1,6 +1,9 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+
+import org.apache.maven.shared.utils.StringUtils;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -36,7 +39,7 @@ public class TunnelAccessScopes {
       throw new IllegalArgumentException("scopes must not be null");
     }
     scopes.forEach(scope -> {
-      if (scope == null || scope.isBlank()) {
+      if (StringUtils.isBlank(scope)) {
         throw new IllegalArgumentException("Tunnel access scopes include a null/empty item.");
       } else if (!TunnelAccessScopes.All.contains(scope)) {
         throw new IllegalArgumentException("Invalid tunnel access scope: " + scope);
