@@ -384,6 +384,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
   }
 
+  public CompletableFuture<Boolean> deleteTunnelAsync(Tunnel tunnel) {
+    return deleteTunnelAsync(tunnel, null);
+  }
+
   @Override
   public CompletableFuture<Boolean> deleteTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
     var uri = buildUri(tunnel, options);
@@ -540,14 +544,16 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   }
 
   private TunnelPort convertTunnelPortForRequest(Tunnel tunnel, TunnelPort tunnelPort) {
-    if (tunnelPort.clusterId != null && tunnel.clusterId != null &&
-        tunnelPort.clusterId != tunnel.clusterId) {
+    if (tunnelPort.clusterId != null
+        && tunnel.clusterId != null
+        && !tunnelPort.clusterId.equals(tunnel.clusterId)) {
       throw new IllegalArgumentException(
           "Tunnel port cluster ID does not match tunnel.");
     }
 
-    if (tunnelPort.tunnelId != null && tunnel.tunnelId != null &&
-        tunnelPort.tunnelId != tunnel.tunnelId) {
+    if (tunnelPort.tunnelId != null
+        && tunnel.tunnelId != null
+        && !tunnelPort.tunnelId.equals(tunnel.tunnelId)) {
       throw new IllegalArgumentException(
           "Tunnel port tunnel ID does not match tunnel.");
     }
@@ -558,7 +564,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.options = tunnelPort.options;
     if (tunnelPort.accessControl == null) {
       converted.accessControl = null;
-    } else {
+    } else if (tunnelPort.accessControl.entries != null) {
       converted.accessControl = new TunnelAccessControl(
           tunnelPort.accessControl.entries.stream()
               .filter((e) -> !e.isInherited)

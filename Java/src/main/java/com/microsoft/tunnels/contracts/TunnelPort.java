@@ -39,8 +39,8 @@ public class TunnelPort {
   public HashMap<String, String> accessTokens;
 
   /**
-  * Gets or sets access control settings for the tunnel port.
-  */
+   * Gets or sets access control settings for the tunnel port.
+   */
   @Expose
   public TunnelAccessControl accessControl;
 
@@ -57,5 +57,5 @@ public class TunnelPort {
   public TunnelStatus status;
 
   public TunnelPort() {
-  };
+  }
 }

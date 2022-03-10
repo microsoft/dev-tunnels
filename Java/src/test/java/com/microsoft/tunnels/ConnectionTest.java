@@ -5,6 +5,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import com.microsoft.tunnels.contracts.Tunnel;
+import com.microsoft.tunnels.contracts.TunnelAccessControl;
+import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
+import com.microsoft.tunnels.contracts.TunnelAccessControlEntryType;
+import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelPort;
 import com.microsoft.tunnels.contracts.TunnelProtocol;
 import com.microsoft.tunnels.management.HttpResponseException;
@@ -12,6 +16,7 @@ import com.microsoft.tunnels.management.ProductHeaderValue;
 import com.microsoft.tunnels.management.TunnelManagementClient;
 import com.microsoft.tunnels.management.TunnelRequestOptions;
 
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import org.junit.Test;
 
@@ -27,25 +32,46 @@ public class ConnectionTest {
 
   @Test
   public void createTunnel() {
-    Tunnel tunnel = new Tunnel();
-    var options = new TunnelRequestOptions();
 
-    var createdTunnel = tryCreateTunnel(tunnel, options);
+    // Set up tunnel access control.
+    var tunnelAccessEntry = new TunnelAccessControlEntry();
+    tunnelAccessEntry.type = TunnelAccessControlEntryType.Anonymous;
+    tunnelAccessEntry.subjects = new String[]{};
+    tunnelAccessEntry.scopes = new String[]{"connect"};
+    var access = new TunnelAccessControl(Arrays.asList(new TunnelAccessControlEntry()));
+
+    // set up the tunnel port.
+    var port = new TunnelPort();
+    port.portNumber = 3000;
+    port.protocol = TunnelProtocol.Https;
+
+    // Set up tunnel.
+    Tunnel tunnel = new Tunnel();
+    tunnel.accessControl = access;
+    tunnel.ports = Arrays.asList(port);
+
+    // Configure tunnel request options.
+    var requestOptions = new TunnelRequestOptions();
+    requestOptions.tokenScopes = Arrays.asList(TunnelAccessScopes.Host);
+    requestOptions.includePorts = true;
+
+    var createdTunnel = tryCreateTunnel(tunnel, requestOptions);
 
     assertNotNull(createdTunnel.clusterId);
     assertNotNull(createdTunnel.accessTokens);
+    assertNotNull(createdTunnel.accessControl);
     assertNotNull(createdTunnel.created);
     assertNotNull(createdTunnel.description);
     assertNull(createdTunnel.domain);
     assertNotNull(createdTunnel.endpoints);
     assertNotNull(createdTunnel.name);
     assertNotNull(createdTunnel.options);
-    assertNull(createdTunnel.ports);
+    assertNotNull(createdTunnel.ports);
     assertNotNull(createdTunnel.status);
     assertNotNull(createdTunnel.tags);
     assertNotNull(createdTunnel.tunnelId);
 
-    tunnelManagementClient.deleteTunnelAsync(createdTunnel, options).join();
+    tunnelManagementClient.deleteTunnelAsync(createdTunnel).join();
   }
 
   @Test
