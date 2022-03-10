@@ -3,7 +3,7 @@ steps:
   - task: UseDotNet@2
     inputs:
       packageType: 'sdk'
-      workingDirectory: '$(Build.SourcesDirectory)/csharp'
+      workingDirectory: 'csharp'
       performMultiLevelLookup: true
       useGlobalJson: true
 
@@ -11,23 +11,19 @@ steps:
   - task: NuGetAuthenticate@0
     displayName: 'NuGet Authenticate'
 
-  - task: CmdLine@2
-    displayName: 'LS'
-    inputs:
-      script: 'ls'
-      workingDirectory: '$(Build.SourcesDirectory)/csharp'
-
   - task: DotNetCoreCLI@2
     inputs:
       command: 'restore'
-      workingDirectory: '$(Build.SourcesDirectory)/csharp'
-      projects: '$(Build.SourcesDirectory)/csharp/dirs.proj'
+      workingDirectory: 'csharp'
+      projects: 'csharp/dirs.proj'
+      nugetConfigPath: 'csharp/NuGet.config'
+      verbosityRestore: 'Minimal'
 
   - task: DotNetCoreCLI@2
     inputs:
       command: 'build'
-      workingDirectory: '$(Build.SourcesDirectory)/csharp'
-      projects: '$(Build.SourcesDirectory)/csharp/dirs.proj'
+      workingDirectory: 'csharp'
+      projects: 'csharp/dirs.proj'
 
   # # Restore, Build the solution
   # - task: CmdLine@2
