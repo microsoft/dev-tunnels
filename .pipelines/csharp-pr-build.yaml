@@ -1,0 +1,12 @@
+pool:
+  name: Azure Pipelines
+
+# Run build on all PRs.
+pr:
+  autoCancel: true
+  branches:
+    include:
+    - '*'
+
+steps:
+- template: typescript-build-steps.yaml 

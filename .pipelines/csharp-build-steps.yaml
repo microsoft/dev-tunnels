@@ -1,0 +1,19 @@
+steps:
+  # Install dotnet SDK as configured in /global.json
+  - task: UseDotNet@2
+    inputs:
+      packageType: 'sdk'
+      workingDirectory: '$(Build.SourcesDirectory)/csharp'
+      performMultiLevelLookup: true
+      useGlobalJson: true
+
+  # NuGet Authenticate
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+
+    # Restore, Build the solution
+  - task: CmdLine@2
+    displayName: 'Build Solution'
+    inputs:
+      script: '$(REPO_ROOT)/build/build.sh'
+      workingDirectory: '$(REPO_ROOT)/csharp'

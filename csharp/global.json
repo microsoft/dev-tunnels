@@ -1,0 +1,9 @@
+{
+  "sdk": {
+    "version": "6.0.100"
+  },
+  "msbuild-sdks": {
+    "Microsoft.Build.NoTargets": "3.2.14",
+    "Microsoft.Build.Traversal": "3.0.54"
+  }
+}

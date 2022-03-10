@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.Build.Traversal">
+
+  <ItemGroup>
+    <ProjectReference Include="Connections/TunnelService.Connections.csproj" />
+    <ProjectReference Include="Contracts/TunnelService.Contracts.csproj" />
+    <ProjectReference Include="Management/TunnelService.Management.csproj" />
+  </ItemGroup>
+
+</Project>
