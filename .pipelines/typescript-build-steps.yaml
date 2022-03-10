@@ -19,6 +19,13 @@ steps:
     customCommand: 'run build -- --release'
 
 - task: Npm@1
+  displayName: Run unit tests
+  inputs:
+    command: test
+    workingDir: TypeScript
+    verbose: false
+
+- task: Npm@1
   displayName: Pack
   inputs:
     command: custom
