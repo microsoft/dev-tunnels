@@ -21,13 +21,13 @@ steps:
     inputs:
       command: 'restore'
       workingDirectory: '$(Build.SourcesDirectory)/csharp'
-      projects: 'dirs.proj'
+      projects: '$(Build.SourcesDirectory)/csharp/dirs.proj'
 
   - task: DotNetCoreCLI@2
     inputs:
       command: 'build'
       workingDirectory: '$(Build.SourcesDirectory)/csharp'
-      projects: 'dirs.proj'
+      projects: '$(Build.SourcesDirectory)/csharp/dirs.proj'
 
   # # Restore, Build the solution
   # - task: CmdLine@2
