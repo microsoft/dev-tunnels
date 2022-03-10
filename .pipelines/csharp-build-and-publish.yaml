@@ -12,11 +12,3 @@ trigger:
 
 steps:
 - template: csharp-build-steps.yaml
-
-- task: Npm@1
-  displayName: 'Publish packages to internal feed'
-  inputs:
-    command: custom
-    workingDir: csharp
-    verbose: false
-    customCommand: 'run publish'
