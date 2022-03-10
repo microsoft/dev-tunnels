@@ -21,9 +21,10 @@ steps:
 - task: Npm@1
   displayName: Run unit tests
   inputs:
-    command: test
+    command: custom
     workingDir: TypeScript
     verbose: false
+    customCommand: 'run test'
 
 - task: Npm@1
   displayName: Pack
