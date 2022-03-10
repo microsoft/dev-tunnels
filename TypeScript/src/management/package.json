@@ -1,0 +1,22 @@
+{
+	"name": "@vs/tunnels-management",
+	"version": "",
+	"description": "Tunnels library for Visual Studio tools",
+	"keywords": [
+		"Tunnels"
+	],
+	"scripts": {
+		"compile": "npm run -C ../../.. compile",
+		"eslint": "npm run -C ../../.. eslint",
+		"eslint-fix": "npm run -C ../../.. eslint-fix",
+		"watch": "npm run -C ../../.. watch .",
+		"test": "npm run -C ../../.. test"
+	},
+	"dependencies": {
+		"buffer": "^5.2.1",
+		"debug": "^4.1.1",
+		"vscode-jsonrpc": "^4.0.0",
+		"@vs/tunnels-contracts": "^1.0.0",
+		"axios": "^0.21.1"
+	}
+}
