@@ -11,6 +11,12 @@ steps:
   - task: NuGetAuthenticate@0
     displayName: 'NuGet Authenticate'
 
+  - task: CmdLine@2
+    displayName: 'PWD'
+    inputs:
+      script: 'pwd'
+      workingDirectory: '$(Build.SourcesDirectory)/csharp'
+
   - task: DotNetCoreCLI@2
     inputs:
       command: 'restore'
@@ -21,7 +27,7 @@ steps:
       command: 'build'
       workingDirectory: '$(Build.SourcesDirectory)/csharp'
 
-  #   # Restore, Build the solution
+  # # Restore, Build the solution
   # - task: CmdLine@2
   #   displayName: 'Build Solution'
   #   inputs:
