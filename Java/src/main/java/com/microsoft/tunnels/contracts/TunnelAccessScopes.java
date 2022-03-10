@@ -2,10 +2,9 @@ package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
 
-import org.apache.maven.shared.utils.StringUtils;
-
 import java.util.ArrayList;
 import java.util.Collection;
+import org.apache.maven.shared.utils.StringUtils;
 
 /**
  * TunnelAccessScopes.

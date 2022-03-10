@@ -12,7 +12,7 @@ public class TunnelAccessControl {
   public Collection<TunnelAccessControlEntry> entries;
 
   /**
-   * Initializes a new instance of the <see cref="TunnelAccessControl"/> class
+   * Initializes a new instance of the {@link TunnelAccessControl} class
    * with a specified list of access control entries.
    */
   public TunnelAccessControl(Collection<TunnelAccessControlEntry> entries) {

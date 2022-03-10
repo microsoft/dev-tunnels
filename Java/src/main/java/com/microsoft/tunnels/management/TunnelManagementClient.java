@@ -29,7 +29,8 @@ import java.util.stream.Collectors;
 import org.apache.maven.shared.utils.StringUtils;
 
 /**
- * TunnelManagementClient.
+ * Implementation of a client that manages tunnels and tunnel ports via the
+ * tunnel service management API.
  */
 public class TunnelManagementClient implements ITunnelManagementClient {
   private static final String SDK_USER_AGENT = "tunnels-java-sdk/"
@@ -282,10 +283,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     return String.join("&", queryOptions);
   }
 
-  @Override
   public CompletableFuture<Collection<Tunnel>> listTunnelsAsync(
       String clusterId,
       TunnelRequestOptions options) {
+    // TODO - add domain parameter
     var query = StringUtils.isBlank(clusterId) ? "global=true" : null;
     var requestUri = this.buildUri(clusterId, tunnelsApiPath, options, query);
     final Type responseType = new TypeToken<Collection<Tunnel>>() {
