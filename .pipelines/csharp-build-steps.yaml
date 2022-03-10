@@ -15,15 +15,15 @@ steps:
     inputs:
       command: 'restore'
       workingDirectory: 'csharp'
-      projects: 'csharp/dirs.proj'
-      nugetConfigPath: 'csharp/NuGet.config'
+      projects: '$(Build.SourcesDirectory)/csharp/dirs.proj'
+      nugetConfigPath: '$(Build.SourcesDirectory)/csharp/NuGet.config'
       verbosityRestore: 'Minimal'
 
   - task: DotNetCoreCLI@2
     inputs:
       command: 'build'
       workingDirectory: 'csharp'
-      projects: 'csharp/dirs.proj'
+      projects: '$(Build.SourcesDirectory)/csharp/dirs.proj'
 
   # # Restore, Build the solution
   # - task: CmdLine@2
