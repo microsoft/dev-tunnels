@@ -9,4 +9,4 @@ pr:
     - '*'
 
 steps:
-- template: typescript-build-steps.yaml 
+- template: csharp-build-steps.yaml 
