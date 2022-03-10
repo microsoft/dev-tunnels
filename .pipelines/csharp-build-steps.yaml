@@ -12,9 +12,9 @@ steps:
     displayName: 'NuGet Authenticate'
 
   - task: CmdLine@2
-    displayName: 'PWD'
+    displayName: 'LS'
     inputs:
-      script: 'pwd'
+      script: 'ls'
       workingDirectory: '$(Build.SourcesDirectory)/csharp'
 
   - task: DotNetCoreCLI@2
