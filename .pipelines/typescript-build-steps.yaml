@@ -1,13 +1,3 @@
-pool:
-  name: Azure Pipelines
-
-# Run build on all PRs.
-pr:
-  autoCancel: true
-  branches:
-    include:
-    - '*'
-
 steps:
 - task: NodeTool@0
   displayName: 'Use Node 12.x'

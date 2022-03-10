@@ -11,7 +11,7 @@ trigger:
     - TypeScript
 
 steps:
-- template: typescript-build.yaml
+- template: typescript-build-steps.yaml
 
 - task: Npm@1
   displayName: 'Publish packages to internal feed'
