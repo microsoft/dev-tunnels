@@ -10,6 +10,8 @@ trigger:
     include:
     - TypeScript
 
+pr: none
+
 steps:
 - template: typescript-build-steps.yaml
 
