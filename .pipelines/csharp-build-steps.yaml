@@ -15,5 +15,5 @@ steps:
   - task: CmdLine@2
     displayName: 'Build Solution'
     inputs:
-      script: '$(Build.SourcesDirectory)/build/build.sh'
+      script: '$(Build.SourcesDirectory)/csharp/build/build.sh'
       workingDirectory: '$(Build.SourcesDirectory)/csharp'
