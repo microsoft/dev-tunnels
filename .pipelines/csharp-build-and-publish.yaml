@@ -21,7 +21,7 @@ steps:
       projects: 'csharp/dirs.proj'
       verbosityPack: 'Minimal'
       packagesToPack: 'csharp/**/*.csproj'
-      arguments: '--no-build --configuration release'
+      configuration: 'Release'
       packDirectory: '$(Build.ArtifactStagingDirectory)'
 
   - task: PublishBuildArtifacts@1
