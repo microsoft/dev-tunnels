@@ -4,6 +4,9 @@ pool:
 # Run build on all PRs.
 pr:
   autoCancel: true
+  paths:
+    include:
+    - cs
 
 steps:
 - template: csharp-build-steps.yaml 
