@@ -18,7 +18,21 @@ steps:
       command: 'pack'
       workingDirectory: 'csharp'
       projects: 'csharp/dirs.proj'
-      verbosityRestore: 'Minimal'
+      verbosity: 'Minimal'
+      feedsToUse: Select
+      nugetFeedType: 'internal'
+      publishVstsFeed: VS
+      publishPackageMetadata: true
+      versioningScheme: 'byEnvVar'
+      versionEnvVar: 'PackageVersion'
+      packagesToPack: 'csharp/**/*.csproj'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'push'
+      workingDirectory: 'csharp'
+      projects: 'csharp/dirs.proj'
+      verbosity: 'Minimal'
       feedsToUse: Select
       nugetFeedType: 'internal'
       publishVstsFeed: VS
