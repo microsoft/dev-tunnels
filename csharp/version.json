@@ -4,7 +4,7 @@
   // Specifies the Major and Minor product version. The build number is automatically appended
   // to this as the 3rd part of the product version. Increment the Major product version for
   // major product milestones. Optionally increment the Minor product version for minor milestones.
-  "version": "1.0",
+  "version": "1.1",
 
   // The service API version consists of the Major product version combined with the Major protocol
   // version. Increment either of those when a client or agent change requires an updated service,
