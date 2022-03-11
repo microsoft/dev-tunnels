@@ -31,17 +31,14 @@ steps:
       artifactName: 'drop'
       publishLocation: 'Container'
 
-  # - task: DotNetCoreCLI@2
-  #   displayName: "DotNet Push"
-  #   inputs:
-  #     command: 'push'
-  #     workingDirectory: 'csharp'
-  #     projects: 'csharp/dirs.proj'
-  #     verbosity: 'Minimal'
-  #     feedsToUse: Select
-  #     nugetFeedType: 'internal'
-  #     publishVstsFeed: VS
-  #     publishPackageMetadata: true
-  #     versioningScheme: 'byEnvVar'
-  #     versionEnvVar: 'PackageVersion'
-  #     packagesToPack: 'csharp/**/*.csproj'
+  - task: DotNetCoreCLI@2
+    displayName: "DotNet Push"
+    inputs:
+      command: 'push'
+      workingDirectory: 'csharp'
+      verbosity: 'Minimal'
+      feedsToUse: Select
+      nugetFeedType: 'internal'
+      publishVstsFeed: VS
+      publishPackageMetadata: true
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
