@@ -9,4 +9,4 @@ pr:
     - cs
 
 steps:
-- template: csharp-build-steps.yaml 
+- template: cs-build-steps.yaml 

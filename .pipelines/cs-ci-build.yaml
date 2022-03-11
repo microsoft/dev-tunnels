@@ -13,7 +13,7 @@ trigger:
 pr: none
 
 steps:
-- template: csharp-build-steps.yaml
+- template: cs-build-steps.yaml
 
 - task: DotNetCoreCLI@2
   displayName: Install NBGV tool
