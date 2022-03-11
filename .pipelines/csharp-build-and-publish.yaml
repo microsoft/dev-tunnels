@@ -10,6 +10,8 @@ trigger:
     include:
     - csharp
 
+pr: none
+
 steps:
   - template: csharp-build-steps.yaml
 
