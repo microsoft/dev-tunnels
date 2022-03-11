@@ -28,3 +28,4 @@ steps:
       command: 'build'
       workingDirectory: 'csharp'
       projects: 'csharp/dirs.proj'
+      arguments: '--configuration release  --no-cache'

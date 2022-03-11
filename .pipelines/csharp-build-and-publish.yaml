@@ -27,18 +27,31 @@ steps:
       versioningScheme: 'byEnvVar'
       versionEnvVar: 'PackageVersion'
       packagesToPack: 'csharp/**/*.csproj'
+      arguments: '--no-build'
 
-  - task: DotNetCoreCLI@2
-    displayName: "DotNet Push"
+  - script: dotnet publish --no-build -o "$(Build.ArtifactStagingDirectory)" --configuration release
+    displayName: Publish
     inputs:
-      command: 'push'
       workingDirectory: 'csharp'
-      projects: 'csharp/dirs.proj'
-      verbosity: 'Minimal'
-      feedsToUse: Select
-      nugetFeedType: 'internal'
-      publishVstsFeed: VS
-      publishPackageMetadata: true
-      versioningScheme: 'byEnvVar'
-      versionEnvVar: 'PackageVersion'
-      packagesToPack: 'csharp/**/*.csproj'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Build
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: 'drop'
+      publishLocation: 'Container'
+
+  # - task: DotNetCoreCLI@2
+  #   displayName: "DotNet Push"
+  #   inputs:
+  #     command: 'push'
+  #     workingDirectory: 'csharp'
+  #     projects: 'csharp/dirs.proj'
+  #     verbosity: 'Minimal'
+  #     feedsToUse: Select
+  #     nugetFeedType: 'internal'
+  #     publishVstsFeed: VS
+  #     publishPackageMetadata: true
+  #     versioningScheme: 'byEnvVar'
+  #     versionEnvVar: 'PackageVersion'
+  #     packagesToPack: 'csharp/**/*.csproj'
