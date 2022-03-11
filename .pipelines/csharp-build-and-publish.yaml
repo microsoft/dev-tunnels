@@ -31,8 +31,7 @@ steps:
 
   - script: dotnet publish --no-build -o "$(Build.ArtifactStagingDirectory)" --configuration release
     displayName: Publish
-    inputs:
-      workingDirectory: 'csharp'
+    cwd: 'csharp'
 
   - task: PublishBuildArtifacts@1
     displayName: Publish Build
