@@ -11,4 +11,29 @@ trigger:
     - csharp
 
 steps:
-- template: csharp-build-steps.yaml
+  - template: csharp-build-steps.yaml
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'pack'
+      workingDirectory: 'csharp'
+      projects: 'csharp/dirs.proj'
+      verbosityRestore: 'Minimal'
+      feedsToUse: Select
+      nugetFeedType: 'internal'
+      publishVstsFeed: publishVstsFeed
+      publishPackageMetadata: true
+      versioningScheme: 'byBuildNumber'
+      packagesToPack: 'csharp/**/*.csproj'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'publish'
+      workingDirectory: 'csharp'
+      projects: 'csharp/dirs.proj'
+      verbosityRestore: 'Minimal'
+      feedsToUse: Select
+      nugetFeedType: 'internal'
+      publishVstsFeed: publishVstsFeed
+      publishPackageMetadata: true
+      versioningScheme: 'byBuildNumber'
