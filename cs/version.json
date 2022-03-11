@@ -5,6 +5,7 @@
   // to this as the 3rd part of the product version. Increment the Major product version for
   // major product milestones. Optionally increment the Minor product version for minor milestones.
   "version": "1.0",
+  // Remove this when we update version number to start from 0
   "versionHeightOffset": 7200,
 
   "publicReleaseRefSpec": [
