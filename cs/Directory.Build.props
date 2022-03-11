@@ -1,7 +1,7 @@
 <Project>
-  <Import Project="$(ThisFileDirectory)build/vsclk.build.props" />
+  <Import Project="$(ThisFileDirectory)build/build.props" />
 
-  <!-- Overrides and switches for vsclk.build.props -->
+  <!-- Overrides and switches for build.props -->
   <PropertyGroup>
     <UseStyleCop>true</UseStyleCop>
     <UseCodeAnalysis>true</UseCodeAnalysis>
@@ -17,18 +17,15 @@
     <Authors>Microsoft</Authors>
     <Copyright>Copyright (c) Microsoft Corporation. All rights reserved.</Copyright>
     <Owners>Microsoft</Owners>
-    <Product>Microsoft Visual Studio SaaS Cloud Environments</Product>
     <RepositoryType>Git</RepositoryType>
     <RepositoryUrl>https://github.com/microsoft/tunnels</RepositoryUrl>
-    <Tags>Microsoft;vssaas;cloudenvironments</Tags>
-    <Title>VS SaaS Cloud Environments</Title>
   </PropertyGroup>
 
   <!-- Product Properties -->
   <PropertyGroup>
-    <Product>Microsoft Visual Studio SaaS</Product>
-    <Tags>Microsoft;vssaas</Tags>
-    <Title>VS SaaS</Title>
+    <Product>Visual Studio Tunnel Service</Product>
+    <Tags>Microsoft;VSTunnels</Tags>
+    <Title>Visual Studio Tunnel Service</Title>
   </PropertyGroup>
 
   <ItemGroup>

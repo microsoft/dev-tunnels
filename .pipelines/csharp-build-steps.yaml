@@ -4,7 +4,7 @@ steps:
     displayName: "Install DotNet SDK"
     inputs:
       packageType: 'sdk'
-      workingDirectory: 'csharp'
+      workingDirectory: 'cs'
       performMultiLevelLookup: true
       useGlobalJson: true
 
@@ -16,9 +16,9 @@ steps:
     displayName: "DotNet Restore"
     inputs:
       command: 'restore'
-      workingDirectory: 'csharp'
-      projects: 'csharp/dirs.proj'
-      nugetConfigPath: 'csharp/NuGet.config'
+      workingDirectory: 'cs'
+      projects: 'cs/src/TunnelsSDK.sln'
+      nugetConfigPath: 'cs/NuGet.config'
       verbosityRestore: 'Minimal'
       feedsToUse: 'config'
 
@@ -26,6 +26,6 @@ steps:
     displayName: "DotNet Build"
     inputs:
       command: 'build'
-      workingDirectory: 'csharp'
-      projects: 'csharp/dirs.proj'
+      workingDirectory: 'cs'
+      projects: 'cs/src/TunnelsSDK.sln'
       arguments: '--configuration release  --no-cache'

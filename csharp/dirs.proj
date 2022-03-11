@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.Build.Traversal">
-
-  <ItemGroup>
-    <ProjectReference Include="src/dirs.proj" />
-  </ItemGroup>
-
-</Project>

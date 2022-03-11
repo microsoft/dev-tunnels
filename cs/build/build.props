@@ -68,7 +68,7 @@
     <MicrosoftVisualStudioLiveSharePackageVersion>1.0.1710</MicrosoftVisualStudioLiveSharePackageVersion>
     <MicrosoftNETTestSdkVersion>15.8.0</MicrosoftNETTestSdkVersion>
     <MoqVersion>4.9.0</MoqVersion>
-    <NerdBankGitVersioningVersion>3.4.220</NerdBankGitVersioningVersion>
+    <NerdBankGitVersioningVersion>3.4.255</NerdBankGitVersioningVersion>
     <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
     <NewtonsoftJsonSchemaVersion>2.0.8</NewtonsoftJsonSchemaVersion>
     <OpenTelemetryVersion>1.0.0-rc1.1</OpenTelemetryVersion>

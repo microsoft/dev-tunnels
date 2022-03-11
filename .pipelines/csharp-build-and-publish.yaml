@@ -1,46 +1,56 @@
 pool:
   name: Azure Pipelines
 
-# Publish only if changes to csharp directory are committed to main.
+# Publish only if changes to cs directory are committed to main.
 trigger:
   branches:
     include:
     - main
   paths:
     include:
-    - csharp
+    - cs
 
 pr: none
 
 steps:
-  - template: csharp-build-steps.yaml
+- template: csharp-build-steps.yaml
 
-  - task: DotNetCoreCLI@2
-    displayName: "DotNet Pack"
-    inputs:
-      command: 'pack'
-      workingDirectory: 'csharp'
-      projects: 'csharp/dirs.proj'
-      verbosityPack: 'Minimal'
-      packagesToPack: 'csharp/**/*.csproj'
-      configuration: 'Release'
-      packDirectory: '$(Build.ArtifactStagingDirectory)'
+- task: DotNetCoreCLI@2
+  displayName: Install NBGV tool
+  inputs:
+    command: custom
+    custom: tool
+    arguments: install --tool-path . nbgv
 
-  - task: PublishBuildArtifacts@1
-    displayName: Publish Build
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: 'drop'
-      publishLocation: 'Container'
+- script: nbgv cloud
+  displayName: Set Version
 
-  - task: DotNetCoreCLI@2
-    displayName: "DotNet Push"
-    inputs:
-      command: 'push'
-      workingDirectory: 'csharp'
-      verbosity: 'Minimal'
-      feedsToUse: Select
-      nugetFeedType: 'internal'
-      publishVstsFeed: VS
-      publishPackageMetadata: true
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+- task: DotNetCoreCLI@2
+  displayName: "DotNet Pack"
+  inputs:
+    command: 'pack'
+    workingDirectory: 'cs'
+    projects: 'cs/dirs.proj'
+    verbosityPack: 'Minimal'
+    packagesToPack: 'cs/**/*.csproj'
+    configuration: 'Release'
+    packDirectory: '$(Build.ArtifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Build
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    artifactName: 'drop'
+    publishLocation: 'Container'
+
+# - task: DotNetCoreCLI@2
+#   displayName: "DotNet Push"
+#   inputs:
+#     command: 'push'
+#     workingDirectory: 'cs'
+#     verbosity: 'Minimal'
+#     feedsToUse: Select
+#     nugetFeedType: 'internal'
+#     publishVstsFeed: VS
+#     publishPackageMetadata: true
+#     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
