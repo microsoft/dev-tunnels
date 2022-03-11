@@ -14,11 +14,12 @@ steps:
   - template: csharp-build-steps.yaml
 
   - task: DotNetCoreCLI@2
+    displayName: "DotNet Pack"
     inputs:
       command: 'pack'
       workingDirectory: 'csharp'
       projects: 'csharp/dirs.proj'
-      verbosity: 'Minimal'
+      verbosityPack: 'Minimal'
       feedsToUse: Select
       nugetFeedType: 'internal'
       publishVstsFeed: VS
@@ -28,6 +29,7 @@ steps:
       packagesToPack: 'csharp/**/*.csproj'
 
   - task: DotNetCoreCLI@2
+    displayName: "DotNet Push"
     inputs:
       command: 'push'
       workingDirectory: 'csharp'

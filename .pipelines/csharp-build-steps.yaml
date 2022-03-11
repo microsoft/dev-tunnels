@@ -1,6 +1,7 @@
 steps:
   # Install dotnet SDK as configured in /global.json
   - task: UseDotNet@2
+    displayName: "Install DotNet SDK"
     inputs:
       packageType: 'sdk'
       workingDirectory: 'csharp'
@@ -12,6 +13,7 @@ steps:
     displayName: 'NuGet Authenticate'
 
   - task: DotNetCoreCLI@2
+    displayName: "DotNet Restore"
     inputs:
       command: 'restore'
       workingDirectory: 'csharp'
@@ -21,6 +23,7 @@ steps:
       feedsToUse: 'config'
 
   - task: DotNetCoreCLI@2
+    displayName: "DotNet Build"
     inputs:
       command: 'build'
       workingDirectory: 'csharp'
