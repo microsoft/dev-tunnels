@@ -20,14 +20,8 @@ steps:
       workingDirectory: 'csharp'
       projects: 'csharp/dirs.proj'
       verbosityPack: 'Minimal'
-      feedsToUse: Select
-      nugetFeedType: 'internal'
-      publishVstsFeed: VS
-      publishPackageMetadata: true
-      versioningScheme: 'byEnvVar'
-      versionEnvVar: 'PackageVersion'
       packagesToPack: 'csharp/**/*.csproj'
-      arguments: '--no-build'
+      arguments: '--no-build --configuration release'
       packDirectory: '$(Build.ArtifactStagingDirectory)'
 
   - task: PublishBuildArtifacts@1
