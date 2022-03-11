@@ -28,10 +28,7 @@ steps:
       versionEnvVar: 'PackageVersion'
       packagesToPack: 'csharp/**/*.csproj'
       arguments: '--no-build'
-
-  - script: dotnet publish --no-build -o "$(Build.ArtifactStagingDirectory)" --configuration release
-    displayName: Publish
-    cwd: 'csharp'
+      packDirectory: '$(Build.ArtifactStagingDirectory)'
 
   - task: PublishBuildArtifacts@1
     displayName: Publish Build
