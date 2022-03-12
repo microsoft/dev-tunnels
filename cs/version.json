@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/master/src/NerdBank.GitVersioning/version.schema.json",
+
+  // Specifies the Major and Minor product version. The build number is automatically appended
+  // to this as the 3rd part of the product version. Increment the Major product version for
+  // major product milestones. Optionally increment the Minor product version for minor milestones.
+  "version": "1.0",
+  // Remove this when we update version number to start from 0
+  "versionHeightOffset": 7200,
+
+  "publicReleaseRefSpec": [
+    "^refs/heads/main$", // we release out of main
+    "^refs/heads/v\\d+(?:.\\d+)?$", // we also release out of vNN branches
+    "^refs/heads/releases/.+$" // weekly release branches
+  ],
+  "cloudBuild": {
+    "setVersionVariables": true,
+    "buildNumber": {
+      "enabled": true,
+      "includeCommitId": {
+        "when": "nonPublicReleaseOnly",
+        // Tell NB.GV to create a build revision from the commit id.
+        // Using buildMetadata inserts "+commitId", and the "+" character is invalid in the docker image tag
+        "where": "fourthVersionComponent"
+      }
+    }
+  }
+}

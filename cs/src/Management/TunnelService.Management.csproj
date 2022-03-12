@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Microsoft.VsSaaS.TunnelService.Management</AssemblyName>
+    <RootNamespace>Microsoft.VsSaaS.TunnelService</RootNamespace>
+    <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <IsPackable>true</IsPackable>
+    <UseVsSaaSSdk>false</UseVsSaaSSdk>
+    <UseNewtonsoftJson>false</UseNewtonsoftJson>
+    <DebugType>embedded</DebugType>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+    <!-- Include PDB files in NuGet package -->
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Contracts\TunnelService.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    Note: Need to explictly include GetTargetPath as dotnet pack with the no-build flag fails without it
+  -->
+  <Target Name="GetTargetPath" Returns="@(_FakeOutputPath)">
+    <ItemGroup>
+      <_FakeOutputPath Include="$(MSBuildProjectDirectory)\$(PackageOutputPath)\$(AssemblyName).UNK" />
+    </ItemGroup>
+  </Target>
+
+</Project>

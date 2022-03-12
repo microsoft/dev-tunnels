@@ -1,0 +1,12 @@
+pool:
+  name: Azure Pipelines
+
+# Run build on all PRs.
+pr:
+  autoCancel: true
+  paths:
+    include:
+    - cs
+
+steps:
+- template: cs-build-steps.yaml 

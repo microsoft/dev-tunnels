@@ -1,0 +1,41 @@
+<Project>
+  <Import Project="$(ThisFileDirectory)build/build.props" />
+
+  <!-- Overrides and switches for build.props -->
+  <PropertyGroup>
+    <UseStyleCop>true</UseStyleCop>
+    <UseCodeAnalysis>true</UseCodeAnalysis>
+    <DefineConstants Condition="'$(DEVSTAMP)' != ''">$(DefineConstants);DEVSTAMP</DefineConstants>
+    <RootName>Microsoft.VsSaaS.Services</RootName>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <GitVersionBaseDirectory>$(MSBuildThisFileDirectory)</GitVersionBaseDirectory>
+  </PropertyGroup>
+
+  <!-- Package Versions -->
+  <PropertyGroup>
+    <Authors>Microsoft</Authors>
+    <Copyright>Copyright (c) Microsoft Corporation. All rights reserved.</Copyright>
+    <Owners>Microsoft</Owners>
+    <RepositoryType>Git</RepositoryType>
+    <RepositoryUrl>https://github.com/microsoft/tunnels</RepositoryUrl>
+  </PropertyGroup>
+
+  <!-- Product Properties -->
+  <PropertyGroup>
+    <Product>Visual Studio Tunnel Service</Product>
+    <Tags>Microsoft;VSTunnels</Tags>
+    <Title>Visual Studio Tunnel Service</Title>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- All projects need to be rebuilt if the version changes. -->
+    <Content Include="$(MSBuildThisFileDirectory)\version.json" Link="version.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible><!-- Hide from VS solution explorer -->
+      <Pack>false</Pack> <!--Exclude from NuGet Packages -->
+      <CopyToPublishDirectory Condition=" '$(OutputType)' == 'Exe' ">Never</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+steps:
+  # Install dotnet SDK as configured in /global.json
+  - task: UseDotNet@2
+    displayName: "Install DotNet SDK"
+    inputs:
+      packageType: 'sdk'
+      workingDirectory: 'cs'
+      performMultiLevelLookup: true
+      useGlobalJson: true
+
+  # NuGet Authenticate
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+
+  - task: DotNetCoreCLI@2
+    displayName: "DotNet Restore"
+    inputs:
+      command: 'restore'
+      workingDirectory: 'cs'
+      projects: 'cs/src/TunnelsSDK.sln'
+      nugetConfigPath: 'cs/NuGet.config'
+      verbosityRestore: 'Minimal'
+      feedsToUse: 'config'
+
+  - task: DotNetCoreCLI@2
+    displayName: "DotNet Build"
+    inputs:
+      command: 'build'
+      workingDirectory: 'cs'
+      projects: 'cs/src/TunnelsSDK.sln'
+      arguments: '--configuration release  --no-cache'
