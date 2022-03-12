@@ -1,0 +1,35 @@
+steps:
+- task: NodeTool@0
+  displayName: 'Use Node 12.x'
+  inputs:
+    versionSpec: 12.x
+
+- task: Npm@1
+  displayName: 'Restore npm packages'
+  inputs:
+    workingDir: TypeScript
+    verbose: false
+
+- task: Npm@1
+  displayName: Build
+  inputs:
+    command: custom
+    workingDir: TypeScript
+    verbose: false
+    customCommand: 'run build -- --release'
+
+- task: Npm@1
+  displayName: Run unit tests
+  inputs:
+    command: custom
+    workingDir: TypeScript
+    verbose: false
+    customCommand: 'run test'
+
+- task: Npm@1
+  displayName: Pack
+  inputs:
+    command: custom
+    workingDir: TypeScript
+    verbose: false
+    customCommand: 'run pack --release'

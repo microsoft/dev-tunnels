@@ -1,0 +1,112 @@
+{
+	"rulesDirectory": ["node_modules/tslint-microsoft-contrib"],
+	"rules": {
+		/*
+		 * SECURITY RULES: The following rules should be turned on because they find security issues
+		 * or are recommended in the Microsoft Secure Development Lifecycle (SDL).
+		 * Reference: node_modules\tslint-microsoft-contrib\recommended_ruleset.js
+		 */
+		"no-banned-terms": true,
+		"no-delete-expression": true,
+		"no-disable-auto-sanitization": true,
+		"no-document-domain": true,
+		"no-document-write": true,
+		"no-eval": true,
+		"no-exec-script": true,
+		"no-http-string": true,
+		"no-inner-html": true,
+		"no-octal-literal": true,
+		"no-string-based-set-immediate": true,
+		"no-string-based-set-interval": true,
+		"no-string-based-set-timeout": true,
+		"non-literal-require": true,
+		"possible-timing-attack": true,
+		"non-literal-fs-path": true,
+		"no-cookies": true,
+		"insecure-random": false,
+		/* END SECURITY RULES */
+		"align": [
+			true,
+			"parameters",
+			"statements"
+		],
+		"ban": false,
+		"class-name": true,
+		"curly": false,
+		"forin": true,
+		"indent": [
+			true,
+			"spaces", 4
+		],
+		"jsdoc-format": true,
+		"label-position": true,
+		"member-access": true,
+		"no-any": false,
+		"no-arg": true,
+		"no-conditional-assignment": true,
+		"no-consecutive-blank-lines": true,
+		"no-console": [
+			true,
+			"debug",
+			"info",
+			"time",
+			"timeEnd",
+			"trace"
+		],
+		"no-construct": true,
+		"no-debugger": true,
+		"no-duplicate-variable": true,
+		"no-empty": false,
+		"no-floating-promises": false,
+		"no-inferrable-types": false,
+		"no-internal-module": true,
+		"no-var-keyword": true,
+		"no-require-imports": false,
+		"no-shadowed-variable": true,
+		"no-string-literal": false,
+		"no-string-throw": true,
+		"no-switch-case-fall-through": true,
+		"no-unused-expression": true,
+		"no-unused-variable": false,
+		"no-use-before-declare": false,
+		"no-var-requires": false,
+		"one-line": [
+			true,
+			"check-open-brace",
+			"check-catch",
+			"check-else",
+			"check-whitespace"
+		],
+		"promise-function-async": false,
+		"quotemark": [
+			true,
+			"single"
+		],
+		"radix": true,
+		"semicolon": false,
+		"switch-default": true,
+		"triple-equals": [
+			true,
+			"allow-null-check"
+		],
+		"typedef-whitespace": [
+			true,
+			{
+				"call-signature": "nospace",
+				"index-signature": "nospace",
+				"parameter": "nospace",
+				"property-declaration": "nospace",
+				"variable-declaration": "nospace"
+			}
+		],
+		"variable-name": true,
+		"whitespace": [
+			true,
+			"check-branch",
+			"check-decl",
+			"check-operator",
+			"check-separator",
+			"check-type"
+		]
+	}
+}

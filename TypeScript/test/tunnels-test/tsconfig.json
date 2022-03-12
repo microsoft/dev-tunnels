@@ -1,0 +1,23 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"outDir": "../../out/lib/tunnels-test",
+		"tsBuildInfoFile": "../../out/lib/tunnels-test/tsbuildinfo.json",
+		"rootDir": "."
+	},
+	"include": [
+		"**/*.ts",
+		"package.json"
+	],
+	"references": [
+		{
+			"path": "../../src/contracts"
+		},
+		{
+			"path": "../../src/management"
+		},
+		{
+			"path": "../../src/connections"
+		}
+	]
+}

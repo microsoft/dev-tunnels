@@ -1,0 +1,24 @@
+pool:
+  name: Azure Pipelines
+
+# Publish only if changes to TypeScript directory are committed to main.
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - TypeScript
+
+pr: none
+
+steps:
+- template: typescript-build-steps.yaml
+
+- task: Npm@1
+  displayName: 'Publish packages to internal feed'
+  inputs:
+    command: custom
+    workingDir: TypeScript
+    verbose: false
+    customCommand: 'run publish'

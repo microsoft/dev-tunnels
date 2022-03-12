@@ -1,0 +1,46 @@
+{
+	"compilerOptions": {
+		"composite": true,
+		"module": "commonjs",
+		"target": "es2017",
+		"lib": [
+			"es2017",
+			"dom"
+		],
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true,
+		"strict": true,
+		"stripInternal": true,
+		"resolveJsonModule": true,
+		"forceConsistentCasingInFileNames": true,
+		"experimentalDecorators": true,
+		"baseUrl": ".",
+		"paths": {
+			"@vs/tunnels-contracts": [
+				"./src/contracts"
+			],
+			"@vs/tunnels-management": [
+				"./src/management"
+			],
+			"@vs/tunnels-connections": [
+				"./src/connections"
+			]
+		}
+	},
+	"include": [],
+	"references": [
+		{
+			"path": "./src/contracts"
+		},
+		{
+			"path": "./src/management"
+		},
+		{
+			"path": "./src/connections"
+		},
+		{
+			"path": "./test/tunnels-test"
+		}
+	]
+}

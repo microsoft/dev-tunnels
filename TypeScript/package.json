@@ -1,0 +1,113 @@
+{
+	"name": "@vs/tunnels",
+	"description": "Tunnels library",
+	"keywords": [
+		"Tunnels"
+	],
+	"author": "Microsoft",
+	"main": "out/lib/tunnels/index.js",
+	"scripts": {
+		"build": "node ./build.js build",
+		"pack": "node ./build.js pack",
+		"test": "node ./build.js test",
+		"publish": "node ./build.js publish-ts",
+		"compile": "tsc --build",
+		"eslint": "eslint . --ext ts",
+		"eslint-fix": "eslint . --ext ts --fix",
+		"watch": "tsc --build --watch",
+		"test-api": "@powershell copy './test/ts/tunnels-test/starthost.ps1' 'out/lib/tunnels-test/' && cd out/lib/tunnels-test/ && node connection.js sshd -w -p 9880",
+		"mocha": "mocha",
+		"build-pack-publish": "npm run build && npm run pack && npm run publish"
+	},
+	"dependencies": {
+		"@vs/vs-ssh": "^3.6.4",
+		"@vs/vs-ssh-tcp": "^3.6.4",
+		"await-semaphore": "^0.1.3",
+		"axios": "^0.21.1",
+		"buffer": "^5.2.1",
+		"debug": "^4.1.1",
+		"hyco-websocket": "^1.0.5",
+		"uuid": "^3.3.3",
+		"vscode-jsonrpc": "^4.0.0"
+	},
+	"devDependencies": {
+		"@testdeck/mocha": "^0.1.0",
+		"@types/debug": "^4.1.4",
+		"@types/mocha": "^5.2.6",
+		"@types/node": "^12.12.6",
+		"@types/tmp": "0.0.34",
+		"@types/uuid": "^3.3.3",
+		"@types/websocket": "0.0.40",
+		"@types/yargs": "^17.0.3",
+		"@typescript-eslint/eslint-plugin-tslint": "^4.14.2",
+		"@typescript-eslint/parser": "^4.14.2",
+		"@vs/mocha-trx-reporter": "^1.0.4987",
+		"brfs": "^2.0.2",
+		"browserify": "^16.2.3",
+		"chalk": "^2.4.2",
+		"eslint": "^7.19.0",
+		"eslint-config-prettier": "^7.2.0",
+		"eslint-plugin-prettier": "^3.3.1",
+		"mocha": "^9.1.2",
+		"mocha-multi-reporters": "^1.1.7",
+		"moment": "^2.24.0",
+		"nerdbank-gitversioning": "^3.1.91",
+		"prettier": "^1.19.1",
+		"source-map-support": "^0.5.11",
+		"tmp": "^0.1.0",
+		"tslint": "^6.1.3",
+		"tslint-microsoft-contrib": "^6.2.0",
+		"typescript": "^4.1.3",
+		"websocket": "^1.0.28",
+		"yargs": "^17.2.1"
+	},
+	"mocha": {
+		"require": "source-map-support/register",
+		"spec": [
+			"out/lib/tunnels-test/*Tests.js"
+		]
+	},
+	"eslintConfig": {
+		"root": true,
+		"env": {
+			"node": true
+		},
+		"parser": "@typescript-eslint/parser",
+		"parserOptions": {
+			"ecmaVersion": 2019,
+			"sourceType": "module",
+			"project": "./tsconfig.eslint.json"
+		},
+		"extends": [
+			"prettier"
+		],
+		"plugins": [
+			"@typescript-eslint/tslint",
+			"prettier"
+		],
+		"rules": {
+			"prettier/prettier": "error",
+			"@typescript-eslint/tslint/config": [
+				2,
+				{
+					"lintFile": "./tslint.json"
+				}
+			]
+		}
+	},
+	"eslintIgnore": [
+		"bench",
+		"out",
+		"test"
+	],
+	"prettier": {
+		"printWidth": 100,
+		"useTabs": false,
+		"tabWidth": 4,
+		"semi": true,
+		"singleQuote": true,
+		"trailingComma": "all",
+		"arrowParens": "always",
+		"parser": "typescript"
+	}
+}
