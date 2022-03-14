@@ -1,30 +1,34 @@
 package tunnelssh
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"net"
 	"time"
 
-	"github.com/microsoft/tunnels/go/ssh/messages"
 	"golang.org/x/crypto/ssh"
 )
 
 type HostSSHSession struct {
-	SSHSession
+	*SSHSession
+
+	supportedChannelTypes             []string
+	supportedChannelNotificationChans map[string]<-chan ssh.NewChannel
 }
 
-func NewHostSSHSession(socket net.Conn, pf portForwardingManager, logger *log.Logger) *HostSSHSession {
+func NewHostSSHSession(socket net.Conn, pf portForwardingManager, supportedChannelTypes []string, logger *log.Logger) *HostSSHSession {
 	return &HostSSHSession{
-		SSHSession: SSHSession{
+		SSHSession: &SSHSession{
 			socket: socket,
-			logger: logger},
+			logger: logger,
+		},
+		supportedChannelTypes:             supportedChannelTypes,
+		supportedChannelNotificationChans: make(map[string]<-chan ssh.NewChannel),
 	}
 }
 
-func (s *HostSSHSession) Host(ctx context.Context) error {
+func (s *HostSSHSession) Connect(ctx context.Context) error {
 	clientConfig := ssh.ClientConfig{
 		// For now, the client is allowed to skip SSH authentication;
 		// they must have a valid tunnel access token already to get this far.
@@ -43,9 +47,12 @@ func (s *HostSSHSession) Host(ctx context.Context) error {
 		return fmt.Errorf("error creating ssh client connection: %w", err)
 	}
 	s.conn = sshClientConn
-	go s.handleGlobalRequests(reqs)
 
-	sshClient := ssh.NewClient(sshClientConn, chans, nil)
+	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
+	for _, channelType := range s.supportedChannelTypes {
+		s.supportedChannelNotificationChans[channelType] = sshClient.HandleChannelOpen(channelType)
+	}
+
 	s.Session, err = sshClient.NewSession()
 	if err != nil {
 		return fmt.Errorf("error creating ssh client session: %w", err)
@@ -64,53 +71,6 @@ func (s *HostSSHSession) Host(ctx context.Context) error {
 	return nil
 }
 
-func (s *HostSSHSession) handleGlobalRequests(incoming <-chan *ssh.Request) {
-	for r := range incoming {
-		switch r.Type {
-		case messages.PortForwardRequestType:
-			s.handlePortForwardRequest(r)
-		default:
-			// This handles keepalive messages and matches
-			// the behaviour of OpenSSH.
-			r.Reply(false, nil)
-		}
-	}
-}
-
-func (s *HostSSHSession) handlePortForwardRequest(r *ssh.Request) {
-	req := new(messages.PortForwardRequest)
-	buf := bytes.NewReader(r.Payload)
-	if err := req.Unmarshal(buf); err != nil {
-		s.logger.Println(fmt.Sprintf("error unmarshalling port forward request: %s", err))
-		r.Reply(false, nil)
-		return
-	}
-
-	//s.pf.Add(int(req.Port()))
-	reply := messages.NewPortForwardSuccess(req.Port())
-	b, err := reply.Marshal()
-	if err != nil {
-		s.logger.Println(fmt.Sprintf("error marshaling port forward success response: %s", err))
-		r.Reply(false, nil)
-		return
-	}
-
-	r.Reply(true, b)
-}
-func (s *HostSSHSession) Read(p []byte) (n int, err error) {
-	return s.reader.Read(p)
-}
-
-func (s *HostSSHSession) Write(p []byte) (n int, err error) {
-	return s.writer.Write(p)
-}
-
-func (s *HostSSHSession) OpenChannel(ctx context.Context, channelType string, data []byte) (ssh.Channel, error) {
-	channel, reqs, err := s.conn.OpenChannel(channelType, data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open channel: %w", err)
-	}
-	go ssh.DiscardRequests(reqs)
-
-	return channel, nil
+func (s *HostSSHSession) OpenChannelNotifier(channelType string) <-chan ssh.NewChannel {
+	return s.supportedChannelNotificationChans[channelType]
 }

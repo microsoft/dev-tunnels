@@ -16,3 +16,11 @@ type SSHSession struct {
 	writer io.Writer
 	logger *log.Logger
 }
+
+func (s *SSHSession) Read(p []byte) (n int, err error) {
+	return s.reader.Read(p)
+}
+
+func (s *SSHSession) Write(p []byte) (n int, err error) {
+	return s.writer.Write(p)
+}

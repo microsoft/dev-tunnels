@@ -17,13 +17,13 @@ type portForwardingManager interface {
 }
 
 type ClientSSHSession struct {
-	SSHSession
+	*SSHSession
 	pf portForwardingManager
 }
 
 func NewClientSSHSession(socket net.Conn, pf portForwardingManager, logger *log.Logger) *ClientSSHSession {
 	return &ClientSSHSession{
-		SSHSession: SSHSession{
+		SSHSession: &SSHSession{
 			socket: socket,
 			logger: logger,
 		},
@@ -102,13 +102,6 @@ func (s *ClientSSHSession) handlePortForwardRequest(r *ssh.Request) {
 	}
 
 	r.Reply(true, b)
-}
-func (s *ClientSSHSession) Read(p []byte) (n int, err error) {
-	return s.reader.Read(p)
-}
-
-func (s *ClientSSHSession) Write(p []byte) (n int, err error) {
-	return s.writer.Write(p)
 }
 
 func (s *ClientSSHSession) OpenChannel(ctx context.Context, channelType string, data []byte) (ssh.Channel, error) {
