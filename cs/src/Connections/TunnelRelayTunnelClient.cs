@@ -58,13 +58,21 @@ namespace Microsoft.VsSaaS.TunnelService
                 nameof(tunnel),
                 $"The tunnel client relay endpoint URI is missing.");
 
-            var random = new Random();
             var clientRelayUri = endpoint.ClientRelayUri;
 
             // The access token might be null if connecting to a tunnel that allows anonymous access.
             string? accessToken = null!;
             tunnel.AccessTokens?.TryGetValue(TunnelAccessScopes.Connect, out accessToken);
 
+            await ConnectAsync(clientRelayUri, accessToken, cancellation);
+        }
+
+        /// <summary>
+        /// Connect to the <paramref name="clientRelayUri"/> using <paramref name="accessToken"/>.
+        /// </summary>
+        protected async Task ConnectAsync(string clientRelayUri, string? accessToken, CancellationToken cancellation)
+        {
+            Requires.NotNullOrEmpty(clientRelayUri, nameof(clientRelayUri));            
             Trace.TraceInformation("Connecting to client tunnel relay {0}", clientRelayUri);
             try
             {

@@ -5,6 +5,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Microsoft.VisualStudio.Ssh;
 using Microsoft.VisualStudio.Ssh.Events;
 using Microsoft.VisualStudio.Ssh.Messages;
 using Microsoft.VisualStudio.Ssh.Tcp;
+using Microsoft.VisualStudio.Ssh.Tcp.Events;
 
 namespace Microsoft.VsSaaS.TunnelService;
 
@@ -66,6 +68,21 @@ public class SshPfsClientBase : IAsyncDisposable
     /// A value indicating whether the SSH session is active.
     /// </summary>
     protected bool IsSshSessionActive { get; private set; }
+
+    /// <summary>
+    /// Get a value indicating if remote <paramref name="port"/> is forwarded and has any channels open on the client,
+    /// whether used by local tcp listener if <see cref="AcceptLocalConnectionsForForwardedPorts"/> is true, or
+    /// streamed via <see cref="ConnectToForwardedPortAsync(int, CancellationToken)"/>.
+    /// </summary>
+    protected bool HasForwardedChannels(int port) =>
+        IsSshSessionActive &&
+        SshPortForwardingService!.RemoteForwardedPorts.FirstOrDefault(p => p.RemotePort == port) is ForwardedPort forwardedPort &&
+        SshPortForwardingService!.RemoteForwardedPorts.GetChannels(forwardedPort).Any();
+
+    /// <summary>
+    /// SSH session closed event.
+    /// </summary>
+    protected EventHandler? SshSessionClosed { get; set; }
 
     private void OnRequest(object? sender, SshRequestEventArgs<SessionRequestMessage> e)
     {
@@ -135,6 +152,7 @@ public class SshPfsClientBase : IAsyncDisposable
     protected virtual void OnSshSessionClosed(Exception? exception)
     {
         IsSshSessionActive = false;
+        SshSessionClosed?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnSshServerAuthenticating(object? sender, SshAuthenticatingEventArgs e)
@@ -146,12 +164,14 @@ public class SshPfsClientBase : IAsyncDisposable
     }
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         if (this.SshSession != null)
         {
             await this.SshSession.CloseAsync(SshDisconnectReason.ByApplication);
         }
+
+        SshSessionClosed = null;
     }
 
     /// <summary>
