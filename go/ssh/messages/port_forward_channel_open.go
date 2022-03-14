@@ -30,6 +30,10 @@ func (pfc *PortForwardChannel) Type() string {
 	return "forwarded-tcpip"
 }
 
+func (pfc *PortForwardChannel) Port() uint32 {
+	return pfc.port
+}
+
 func (pfc *PortForwardChannel) Marshal() ([]byte, error) {
 	b, err := pfc.channelOpen.marshal()
 	if err != nil {
