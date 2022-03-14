@@ -7,14 +7,14 @@ steps:
 - task: Npm@1
   displayName: 'Restore npm packages'
   inputs:
-    workingDir: TypeScript
+    workingDir: ts
     verbose: false
 
 - task: Npm@1
   displayName: Build
   inputs:
     command: custom
-    workingDir: TypeScript
+    workingDir: ts
     verbose: false
     customCommand: 'run build -- --release'
 
@@ -22,7 +22,7 @@ steps:
   displayName: Run unit tests
   inputs:
     command: custom
-    workingDir: TypeScript
+    workingDir: ts
     verbose: false
     customCommand: 'run test'
 
@@ -30,6 +30,6 @@ steps:
   displayName: Pack
   inputs:
     command: custom
-    workingDir: TypeScript
+    workingDir: ts
     verbose: false
     customCommand: 'run pack --release'
