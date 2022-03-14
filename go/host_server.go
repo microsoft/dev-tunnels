@@ -80,11 +80,10 @@ func (h *hostServer) handleRequests(ctx context.Context, reqs <-chan *ssh.Reques
 			}
 		}
 	}
-	return nil
 }
 
 func (h *hostServer) handleRequest(ctx context.Context, req *ssh.Request) error {
-	if req.Type != "tcpip-forward" || req.Type != "cancel-tcpip-forward" {
+	if req.Type != "tcpip-forward" && req.Type != "cancel-tcpip-forward" {
 		return fmt.Errorf("unsupported request type: %s", req.Type)
 	}
 
