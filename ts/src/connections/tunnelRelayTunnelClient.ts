@@ -46,6 +46,13 @@ export class TunnelRelayTunnelClient extends TunnelClientBase {
             ? tunnel.accessTokens[TunnelAccessScopes.connect]
             : undefined;
 
+        await this.connectClientToRelayServer(clientRelayUri, accessToken);
+    }
+
+    protected async connectClientToRelayServer(
+        clientRelayUri: string,
+        accessToken?: string,
+    ): Promise<void> {
         this.trace(TraceLevel.Info, 0, `Connecting to client tunnel relay ${clientRelayUri}`);
         this.trace(
             TraceLevel.Verbose,
