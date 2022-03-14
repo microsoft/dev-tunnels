@@ -8,7 +8,7 @@ trigger:
     - main
   paths:
     include:
-    - TypeScript
+    - ts
 
 pr: none
 
@@ -19,6 +19,6 @@ steps:
   displayName: 'Publish packages to internal feed'
   inputs:
     command: custom
-    workingDir: TypeScript
+    workingDir: ts
     verbose: false
     customCommand: 'run publish'
