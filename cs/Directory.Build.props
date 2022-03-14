@@ -38,4 +38,10 @@
     </Content>
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(GenerateDocs)'=='true'">
+    <!-- This causes all dependency assemblies to be copied to the output directory,
+         which is required by the doc generator tool. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
 </Project>
