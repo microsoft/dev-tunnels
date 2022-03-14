@@ -1,12 +1,18 @@
 pool:
   name: Azure Pipelines
 
-# Run build on all PRs.
+# Do not trigger on non-PR pushes.
+trigger: none
+
+# Trigger on PRs to `main` branch when there are changes in the `ts` folder.
 pr:
-  autoCancel: true
   branches:
     include:
-    - '*'
+    - main
+  paths:
+    include:
+    - ts
+  autoCancel: true
 
 steps:
 - template: typescript-build-steps.yaml
