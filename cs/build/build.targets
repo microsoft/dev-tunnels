@@ -1,0 +1,5 @@
+<Project>
+
+  <Import Condition="'$(IsTestProject)'=='true'" Project="$(MSBuildThisFileDirectory)test.targets" />
+
+</Project>

@@ -1,0 +1,37 @@
+<Project>
+
+    <!-- If unit tests fail, code coverage collection doesn't run and some saved files are leftover,
+        which may cause the next run to fail if they are not cleaned up. -->
+    <Target Name="CleanCoverageSavedFiles" BeforeTargets="AltCoverInstrumentModulesNoBuild;AltCoverInstrumentModulesAfterBuild">
+        <RemoveDir Directories="$(TargetDir)__Saved" Condition="Exists('$(TargetDir)__Saved')" />
+    </Target>
+
+    <Target Name="ReportCoverage" AfterTargets="AltCoverGenerateCoverageResult" Condition="  '$(CodeCoverage)' == 'true' ">
+        <PropertyGroup>
+            <CoverageDir>$(TestResultsDirectory)\coverage\$(TestBaseName)</CoverageDir>
+            <CoverageSummary>$(CoverageDir)\Summary.txt</CoverageSummary>
+            <CoverageDetail>$(CoverageDir)\index.htm</CoverageDetail>
+        </PropertyGroup>
+
+        <ItemGroup>
+          <CoverageData Include="$(TestResultsDirectory)\$(TestBaseName)-coverage.xml" />
+        </ItemGroup>
+        <ReportGenerator
+          Condition=" '@(CoverageData)' != '' "
+          ReportFiles="@(CoverageData)"
+          TargetDirectory="$(CoverageDir)"
+          ReportTypes="Cobertura;TextSummary;CsvSummary;HtmlInline_AzurePipelines"
+          ContinueOnError="True" />
+
+        <ReadLinesFromFile File="$(CoverageSummary)" Condition="Exists('$(CoverageSummary)')">
+          <Output ItemName="ReportSummaryLines" TaskParameter="Lines" />
+        </ReadLinesFromFile>
+
+        <Message Text=" " Importance="High" Condition="Exists('$(CoverageSummary)')" />
+        <Message Text="%(ReportSummaryLines.Identity)" Importance="High" Condition="Exists('$(CoverageSummary)')" />
+        <Message Text=" " Importance="High" Condition="Exists('$(CoverageDetail)')" />
+        <Message Text="See full coverage report at $(CoverageDetail)" Importance="High" Condition="Exists('$(CoverageDetail)')" />
+        <Message Text=" " Importance="High" Condition="Exists('$(CoverageDetail)')" />
+    </Target>
+
+</Project>

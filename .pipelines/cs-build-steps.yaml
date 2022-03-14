@@ -1,31 +1,55 @@
 steps:
-  # Install dotnet SDK as configured in /global.json
-  - task: UseDotNet@2
-    displayName: "Install DotNet SDK"
-    inputs:
-      packageType: 'sdk'
-      workingDirectory: 'cs'
-      performMultiLevelLookup: true
-      useGlobalJson: true
+# Install dotnet SDK as configured in /global.json
+- task: UseDotNet@2
+  displayName: "Install DotNet SDK"
+  inputs:
+    packageType: 'sdk'
+    workingDirectory: 'cs'
+    performMultiLevelLookup: true
+    useGlobalJson: true
 
-  # NuGet Authenticate
-  - task: NuGetAuthenticate@0
-    displayName: 'NuGet Authenticate'
+# NuGet Authenticate
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
 
-  - task: DotNetCoreCLI@2
-    displayName: "DotNet Restore"
-    inputs:
-      command: 'restore'
-      workingDirectory: 'cs'
-      projects: 'cs/src/TunnelsSDK.sln'
-      nugetConfigPath: 'cs/NuGet.config'
-      verbosityRestore: 'Minimal'
-      feedsToUse: 'config'
+- task: DotNetCoreCLI@2
+  displayName: "DotNet Restore"
+  inputs:
+    command: 'restore'
+    workingDirectory: 'cs'
+    projects: 'cs/TunnelsSDK.sln'
+    nugetConfigPath: 'cs/NuGet.config'
+    verbosityRestore: 'Minimal'
+    feedsToUse: 'config'
 
-  - task: DotNetCoreCLI@2
-    displayName: "DotNet Build"
-    inputs:
-      command: 'build'
-      workingDirectory: 'cs'
-      projects: 'cs/src/TunnelsSDK.sln'
-      arguments: '--configuration release  --no-cache'
+- task: DotNetCoreCLI@2
+  displayName: "DotNet Build"
+  inputs:
+    command: 'build'
+    workingDirectory: 'cs'
+    projects: 'cs/TunnelsSDK.sln'
+    arguments: '--configuration release  --no-cache'
+
+- task: DotNetCoreCLI@2
+  displayName: "DotNet Test"
+  inputs:
+    command: 'test'
+    workingDirectory: 'cs'
+    projects: 'cs/TunnelsSDK.sln'
+    arguments: '-v:n -c release -p:CodeCoverage=true --no-build'
+
+- task: PublishTestResults@2
+  displayName: 'Publish test results'
+  inputs:
+    testResultsFormat: VSTest
+    testResultsFiles: '*.trx'
+    searchFolder: cs/bin/release/testresults
+  condition: succeededOrFailed()
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage'
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: cs/bin/release/testresults/TunnelsSDK-coverage.xml
+    reportDirectory: cs/bin/release/testresults/coverage
+    failIfCoverageEmpty: true
