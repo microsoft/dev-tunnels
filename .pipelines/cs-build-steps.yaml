@@ -44,5 +44,4 @@ steps:
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: cs/bin/release/testresults/coverage/TunnelsSDK/Cobertura.xml
-    reportDirectory: cs/bin/release/testresults/coverage/TunnelsSDK
     failIfCoverageEmpty: true
