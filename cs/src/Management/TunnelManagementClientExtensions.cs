@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,16 +47,24 @@ namespace Microsoft.VsSaaS.TunnelService
 
             foreach (var ace in accessControl)
             {
+                // With AAD, a user can only query info about their current organization.
+                // With GH, a user can be a member of multiple orgs so there is no "current".
                 if (ace.Provider == provider &&
-                    (ace.Organization == organization ||
+                    (ace.Provider != TunnelAccessControlEntry.Providers.Microsoft ||
+                    ace.Organization == organization ||
                     ace.Type == TunnelAccessControlEntryType.Organizations))
                 {
+                    bool isOrganizationIdRequired =
+                        ace.Type == TunnelAccessControlEntryType.Groups &&
+                        ace.Provider == TunnelAccessControlEntry.Providers.GitHub;
+
                     for (int i = 0; i < ace.Subjects.Length; i++)
                     {
                         subjects.Add(new TunnelAccessSubject
                         {
                             Type = ace.Type,
                             Id = ace.Subjects[i],
+                            OrganizationId = isOrganizationIdRequired ? ace.Organization : null,
                         });
                         aceIndexes.Add((ace, i));
                     }
@@ -143,10 +152,24 @@ namespace Microsoft.VsSaaS.TunnelService
                 for (int i = 0; i < resolvedSubjects.Length; i++)
                 {
                     var resolvedId = resolvedSubjects[i].Id;
+                    var resolvedOrgId = resolvedSubjects[i].OrganizationId;
                     if (!string.IsNullOrEmpty(resolvedId))
                     {
                         var (ace, subjectIndex) = aceIndexes[i];
                         ace.Subjects[subjectIndex] = resolvedId;
+
+                        if (!string.IsNullOrEmpty(resolvedOrgId))
+                        {
+                            if (ace.Organization == null)
+                            {
+                                ace.Organization = resolvedOrgId;
+                            }
+                            else if (ace.Organization != resolvedOrgId)
+                            {
+                                throw new ArgumentException(
+                                    "Multiple teams must be in the same organization.");
+                            }
+                        }
                     }
                     else
                     {
