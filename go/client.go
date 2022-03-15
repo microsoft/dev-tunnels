@@ -28,7 +28,7 @@ type Client struct {
 	tunnel    *Tunnel
 	endpoints []*TunnelEndpoint
 
-	ssh                  *tunnelssh.SSHSession
+	ssh                  *tunnelssh.ClientSSHSession
 	channels             uint32
 	remoteForwardedPorts *remoteForwardedPorts
 }
@@ -119,7 +119,7 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 		return nil, fmt.Errorf("failed to connect to client relay: %w", err)
 	}
 
-	c.ssh = tunnelssh.NewSSHSession(sock, c.remoteForwardedPorts, c.logger)
+	c.ssh = tunnelssh.NewClientSSHSession(sock, c.remoteForwardedPorts, c.logger)
 	if err := c.ssh.Connect(ctx); err != nil {
 		return nil, fmt.Errorf("failed to create ssh session: %w", err)
 	}
