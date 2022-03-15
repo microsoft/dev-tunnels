@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Microsoft.VsSaaS.TunnelService.Test</AssemblyName>
+    <RootNamespace>Microsoft.VsSaaS.TunnelService.Test</RootNamespace>
+    <Nullable>disable</Nullable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Contracts\TunnelService.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Management\TunnelService.Management.csproj" />
+    <ProjectReference Include="..\..\src\Connections\TunnelService.Connections.csproj" />
+  </ItemGroup>
+
+</Project>

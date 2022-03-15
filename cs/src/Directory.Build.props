@@ -1,0 +1,20 @@
+<Project>
+  <Import Project="$(ThisFileDirectory)../Directory.Build.props" />
+
+  <ItemGroup>
+    <!-- All projects need to be rebuilt if the version changes. -->
+    <Content Include="$(MSBuildThisFileDirectory)..\version.json" Link="version.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible><!-- Hide from VS solution explorer -->
+      <Pack>false</Pack> <!--Exclude from NuGet Packages -->
+      <CopyToPublishDirectory Condition=" '$(OutputType)' == 'Exe' ">Never</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(GenerateDocs)'=='true'">
+    <!-- This causes all dependency assemblies to be copied to the output directory,
+         which is required by the doc generator tool. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+</Project>

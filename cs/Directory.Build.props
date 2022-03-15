@@ -5,7 +5,6 @@
   <PropertyGroup>
     <UseStyleCop>true</UseStyleCop>
     <UseCodeAnalysis>true</UseCodeAnalysis>
-    <DefineConstants Condition="'$(DEVSTAMP)' != ''">$(DefineConstants);DEVSTAMP</DefineConstants>
     <RootName>Microsoft.VsSaaS.Services</RootName>
     <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
@@ -26,22 +25,6 @@
     <Product>Visual Studio Tunnel Service</Product>
     <Tags>Microsoft;VSTunnels</Tags>
     <Title>Visual Studio Tunnel Service</Title>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <!-- All projects need to be rebuilt if the version changes. -->
-    <Content Include="$(MSBuildThisFileDirectory)\version.json" Link="version.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Visible>false</Visible><!-- Hide from VS solution explorer -->
-      <Pack>false</Pack> <!--Exclude from NuGet Packages -->
-      <CopyToPublishDirectory Condition=" '$(OutputType)' == 'Exe' ">Never</CopyToPublishDirectory>
-    </Content>
-  </ItemGroup>
-
-  <PropertyGroup Condition="'$(GenerateDocs)'=='true'">
-    <!-- This causes all dependency assemblies to be copied to the output directory,
-         which is required by the doc generator tool. -->
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
 </Project>
