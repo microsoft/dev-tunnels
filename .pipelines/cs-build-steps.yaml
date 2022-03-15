@@ -42,7 +42,7 @@ steps:
   displayName: 'Publish test results'
   inputs:
     testResultsFormat: VSTest
-    testResultsFiles: '*.trx'
+    testResultsFiles: TunnelsSDK.trx
     searchFolder: $(System.DefaultWorkingDirectory)/cs/bin/release/testresults
   condition: succeededOrFailed()
 
@@ -50,6 +50,6 @@ steps:
   displayName: 'Publish code coverage'
   inputs:
     codeCoverageTool: Cobertura
-    summaryFileLocation: $(System.DefaultWorkingDirectory)/cs/bin/release/testresults/TunnelsSDK-coverage.xml
+    summaryFileLocation: $(System.DefaultWorkingDirectory)/cs/bin/release/testresults/coverage/TunnelsSDK/Cobertura.xml
     reportDirectory: $(System.DefaultWorkingDirectory)/cs/bin/release/testresults/coverage/TunnelsSDK
     failIfCoverageEmpty: true
