@@ -36,20 +36,13 @@ steps:
     command: 'test'
     workingDirectory: 'cs'
     projects: 'cs/TunnelsSDK.sln'
+    publishTestResults: true
     arguments: '-v:n -c release -p:CodeCoverage=true --no-build'
-
-- task: PublishTestResults@2
-  displayName: 'Publish test results'
-  inputs:
-    testResultsFormat: VSTest
-    testResultsFiles: TunnelsSDK.trx
-    searchFolder: $(System.DefaultWorkingDirectory)/cs/bin/release/testresults
-  condition: succeededOrFailed()
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'
   inputs:
     codeCoverageTool: Cobertura
-    summaryFileLocation: $(System.DefaultWorkingDirectory)/cs/bin/release/testresults/coverage/TunnelsSDK/Cobertura.xml
-    reportDirectory: $(System.DefaultWorkingDirectory)/cs/bin/release/testresults/coverage/TunnelsSDK
+    summaryFileLocation: cs/bin/release/testresults/coverage/TunnelsSDK/Cobertura.xml
+    reportDirectory: cs/bin/release/testresults/coverage/TunnelsSDK
     failIfCoverageEmpty: true
