@@ -947,6 +947,13 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default)
         {
+            Requires.NotNull(subjects, nameof(subjects));
+
+            if (subjects.Length == 0)
+            {
+                return subjects;
+            }
+
             var uri = BuildUri(clusterId: null, SubjectsApiPath + "/format", options);
             var formattedSubjects = await SendTunnelRequestAsync
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(
@@ -967,6 +974,13 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default)
         {
+            Requires.NotNull(subjects, nameof(subjects));
+
+            if (subjects.Length == 0)
+            {
+                return subjects;
+            }
+
             var uri = BuildUri(clusterId: null, SubjectsApiPath + "/resolve", options);
             var resolvedSubjects = await SendTunnelRequestAsync
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(

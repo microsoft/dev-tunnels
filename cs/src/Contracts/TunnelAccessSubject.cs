@@ -24,6 +24,12 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public string? Id { get; set; }
 
         /// <summary>
+        /// Gets or sets the subject organization ID, which may be required if an organization is
+        /// not implied by the authentication context.
+        /// </summary>
+        public string? OrganizationId { get; set; }
+
+        /// <summary>
         /// Gets or sets the partial or full subject name.
         /// </summary>
         /// <remarks>
