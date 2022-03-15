@@ -30,6 +30,7 @@ import {
 import { DuplexStream } from './duplexStream';
 import * as net from 'net';
 import { MockTunnelRelayStreamFactory } from './mocks/mockTunnelRelayStreamFactory';
+import { TestTunnelRelayTunnelClient } from './testTunnelRelayTunnelClient';
 
 @suite
 @slow(3000)
@@ -107,7 +108,7 @@ export class TunnelHostAndClientTests {
     // Connects a relay client to a duplex stream and returns the SSH server session
     // on the other end of the stream.
     private async connectRelayClient(
-        relayClient: TunnelRelayTunnelClient,
+        relayClient: TestTunnelRelayTunnelClient,
         tunnel: Tunnel,
     ): Promise<SshServerSession> {
         const [serverStream, clientStream] = await DuplexStream.createStreams();
@@ -120,9 +121,12 @@ export class TunnelHostAndClientTests {
             TunnelRelayTunnelClient.webSocketSubProtocol,
             clientStream,
         );
-        await relayClient.connect(tunnel, undefined);
 
+        assert.strictEqual(false, relayClient.isSshSessionActiveProperty);
+        await relayClient.connect(tunnel, undefined);
+        
         await serverConnectPromise;
+        assert.strictEqual(true, relayClient.isSshSessionActiveProperty);
 
         return sshSession;
     }
@@ -149,45 +153,67 @@ export class TunnelHostAndClientTests {
 
     @test
     public async connectRelayClientTest() {
-        let relayClient = new TunnelRelayTunnelClient();
+        let relayClient = new TestTunnelRelayTunnelClient();
 
         relayClient.connectionModes.forEach((connectionMode) => {
             assert.strictEqual(connectionMode, TunnelConnectionMode.TunnelRelay);
         });
 
+        let sshSessionClosedEventFired = false;
+        relayClient.sshSessionClosedEvent((e) => 
+            sshSessionClosedEventFired = true
+            );
+
         let tunnel = this.createRelayTunnel();
-        let serverSshSession = await this.connectRelayClient(relayClient, tunnel);
+        await this.connectRelayClient(relayClient, tunnel);
+        assert.strictEqual(false, sshSessionClosedEventFired);
+
+        await relayClient.dispose();
+        assert.strictEqual(false, relayClient.isSshSessionActiveProperty);
+        assert.strictEqual(true, sshSessionClosedEventFired);
     }
 
     @test
     public async connectRelayClientAddPort() {
-        let relayClient = new TunnelRelayTunnelClient();
+        let relayClient = new TestTunnelRelayTunnelClient();
+        relayClient.acceptLocalConnectionsForForwardedPorts = false;
 
         let tunnel = this.createRelayTunnel();
         let serverSshSession = await this.connectRelayClient(relayClient, tunnel);
         let pfs = serverSshSession.activateService(PortForwardingService);
 
         let testPort = 9881;
-        let remotePortStreamer = await pfs.streamFromRemotePort('::', testPort);
+
+        assert.strictEqual(false, relayClient.hasForwardedChannels(testPort));
+
+        let remotePortStreamer = await pfs.streamFromRemotePort('127.0.0.1', testPort);
         assert.notStrictEqual(remotePortStreamer, null);
         assert.strictEqual(testPort, remotePortStreamer!.remotePort);
 
-        let tcs = new PromiseCompletionSource<any>();
+        await relayClient.waitForForwardedPort(testPort);
+
+        let tcs = new PromiseCompletionSource<void>();
+        let isStreamOpenedOnServer = false;
         remotePortStreamer?.onStreamOpened(async (stream: SshStream) => {
-            const nodeStream = new NodeStream(stream);
-            nodeStream.close();
+            isStreamOpenedOnServer = true;
             await tcs.promise;
+            stream.destroy();
         });
 
-        const socket = new net.Socket();
-        socket.connect(testPort, '127.0.0.1', async () => {});
-        socket.destroy();
+        const forwardedStream = await relayClient.connectToForwardedPort(testPort);
+        assert.notStrictEqual(null, forwardedStream);
+        assert.strictEqual(true, relayClient.hasForwardedChannels(testPort));
+        assert.strictEqual(true, isStreamOpenedOnServer);
+        tcs.resolve();
+        
+        forwardedStream.destroy();
         remotePortStreamer?.dispose();
+        await relayClient.dispose();
     }
 
     @test
     public async connectRelayClientAddPortInUse() {
-        let relayClient = new TunnelRelayTunnelClient();
+        let relayClient = new TestTunnelRelayTunnelClient();
 
         let tunnel = this.createRelayTunnel([9982]);
         let serverSshSession = await this.connectRelayClient(relayClient, tunnel);
@@ -208,7 +234,7 @@ export class TunnelHostAndClientTests {
 
     @test
     public async connectRelayClientRemovePort() {
-        let relayClient = new TunnelRelayTunnelClient();
+        let relayClient = new TestTunnelRelayTunnelClient();
 
         let tunnel = this.createRelayTunnel();
         let serverSshSession = await this.connectRelayClient(relayClient, tunnel);

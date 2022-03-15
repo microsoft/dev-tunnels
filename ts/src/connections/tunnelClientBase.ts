@@ -7,6 +7,7 @@ import {
     SshClientSession,
     SshDisconnectReason,
     SshRequestEventArgs,
+    SshSessionClosedEventArgs,
     SshSessionConfiguration,
     SshStream,
     Stream,
@@ -17,11 +18,13 @@ import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
 import { isNode } from './sshHelpers';
 import { TunnelClient } from './tunnelClient';
 import { List } from './utils';
+import { Emitter } from 'vscode-jsonrpc';
 
 /**
  * Base class for clients that connect to a single host
  */
 export abstract class TunnelClientBase implements TunnelClient {
+    private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
     /**
      * Session used to connect to host
@@ -29,6 +32,28 @@ export abstract class TunnelClientBase implements TunnelClient {
     public sshSession?: SshClientSession;
 
     public connectionModes: TunnelConnectionMode[] = [];
+
+    protected get isSshSessionActive(): boolean {
+        return !!this.sshSession?.isConnected;
+    }
+
+    protected readonly sshSessionClosed = this.sshSessionClosedEmitter.event;
+
+    /**
+     * Get a value indicating if remote port is forwarded and has any channels open on the client,
+     * whether used by local tcp listener if {AcceptLocalConnectionsForForwardedPorts} is true, or
+     * streamed via <see cref="ConnectToForwardedPortAsync(int, CancellationToken)"/>.
+     */
+    protected hasForwardedChannels(port: number): boolean {
+        if (!this.isSshSessionActive) {
+            return false;
+        }
+
+        const pfs = this.sshSession?.activateService(PortForwardingService);
+        const remoteForwardedPorts = pfs?.remoteForwardedPorts;
+        const forwardedPort = remoteForwardedPorts?.find((p) => p.remotePort === port);
+        return !!forwardedPort && remoteForwardedPorts!.getChannels(forwardedPort).length > 0;
+    }
 
     /**
      * A value indicating whether local connections for forwarded ports are accepted.
@@ -129,6 +154,7 @@ export abstract class TunnelClientBase implements TunnelClient {
 
         this.sshSession = new SshClientSession(clientConfig);
         this.sshSession.trace = this.trace;
+        this.sshSession.onClosed((e) => this.onSshSessionClosed(e));
         this.sshSession.onAuthenticating((e) => this.onSshServerAuthenticating(e));
 
         this.activatePfsIfNeeded();
@@ -195,6 +221,10 @@ export abstract class TunnelClientBase implements TunnelClient {
         // For now, the assumption is only a host with access to the tunnel can get a token
         // that enables listening for tunnel connections.
         e.authenticationPromise = Promise.resolve({});
+    }
+
+    private onSshSessionClosed(e: SshSessionClosedEventArgs) {
+        this.sshSessionClosedEmitter.fire(this);
     }
 
     public async dispose(): Promise<void> {
