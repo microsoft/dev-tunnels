@@ -28,7 +28,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public string? ClientRelayUri { get; set; }
 
         /// <summary>
-        /// Gets or sets an array of public keys, which can be used by clients to authenticate.
+        /// Gets or sets an array of public keys, which can be used by clients to authenticate
         /// the host.
         /// </summary>
         public string[]? HostPublicKeys { get; set; }

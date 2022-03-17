@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>Microsoft.VsSaaS.TunnelService.Contracts</RootNamespace>
@@ -25,8 +25,12 @@
     </ItemGroup>
   </Target>
 
-
   <ItemGroup>
+    <ProjectReference
+      Condition="'$(TargetFramework)'=='net6.0'"
+      Include="..\..\tools\TunnelsSDK.Generator\TunnelsSDK.Generator.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
