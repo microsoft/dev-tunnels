@@ -12,17 +12,18 @@ import (
 
 type HostSSHSession struct {
 	*SSHSession
-
+	hostRelayURI                      string
 	supportedChannelTypes             []string
 	supportedChannelNotificationChans map[string]<-chan ssh.NewChannel
 }
 
-func NewHostSSHSession(socket net.Conn, pf portForwardingManager, supportedChannelTypes []string, logger *log.Logger) *HostSSHSession {
+func NewHostSSHSession(socket net.Conn, supportedChannelTypes []string, logger *log.Logger, url string) *HostSSHSession {
 	return &HostSSHSession{
 		SSHSession: &SSHSession{
 			socket: socket,
 			logger: logger,
 		},
+		hostRelayURI:                      url,
 		supportedChannelTypes:             supportedChannelTypes,
 		supportedChannelNotificationChans: make(map[string]<-chan ssh.NewChannel),
 	}
@@ -42,7 +43,7 @@ func (s *HostSSHSession) Connect(ctx context.Context) error {
 	}
 
 	// This is where the host currently breaks due to a mismatch of key exchange algorithms
-	sshClientConn, chans, reqs, err := ssh.NewClientConn(s.socket, "", &clientConfig)
+	sshClientConn, chans, reqs, err := ssh.NewClientConn(s.socket, s.hostRelayURI, &clientConfig)
 	if err != nil {
 		return fmt.Errorf("error creating ssh client connection: %w", err)
 	}

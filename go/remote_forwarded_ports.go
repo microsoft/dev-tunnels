@@ -45,9 +45,26 @@ func (r *remoteForwardedPorts) Add(port int) {
 	}
 }
 
-func (r *remoteForwardedPorts) hasPort(port int) bool {
+func (r *remoteForwardedPorts) HasPort(port int) bool {
 	r.portsMu.RLock()
 	defer r.portsMu.RUnlock()
 
 	return r.ports[port]
+}
+
+func (r *remoteForwardedPorts) Remove(port int) {
+	r.portsMu.Lock()
+	defer r.portsMu.Unlock()
+
+	r.ports[port] = false
+
+	notification := remoteForwardedPortNotification{
+		port:             port,
+		notificationType: remoteForwardedPortNotificationTypeRemove,
+	}
+
+	select {
+	case r.notify <- notification:
+	default:
+	}
 }

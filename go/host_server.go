@@ -9,14 +9,14 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type hostServer struct {
+type HostServer struct {
 	host       *Host
 	transport  *serverTransport
 	serverConn *ssh.ServerConn
 }
 
-func newHostServer(h *Host, ch ssh.Channel) *hostServer {
-	return &hostServer{
+func newHostServer(h *Host, ch ssh.Channel) *HostServer {
+	return &HostServer{
 		host:      h,
 		transport: newServerTransport(h.sock, ch),
 	}
@@ -24,7 +24,7 @@ func newHostServer(h *Host, ch ssh.Channel) *hostServer {
 
 // TODO(josebalius): audit all go routines and ensure they are closed
 // properly.
-func (h *hostServer) start(ctx context.Context) error {
+func (h *HostServer) start(ctx context.Context) error {
 	errc := make(chan error, 1)
 	serverConn, chans, reqs, err := ssh.NewServerConn(h.transport, &ssh.ServerConfig{
 		// For now, the client is allowed to skip SSH authentication;
@@ -66,7 +66,7 @@ func (h *hostServer) start(ctx context.Context) error {
 	return awaitError(ctx, errc)
 }
 
-func (h *hostServer) handleRequests(ctx context.Context, reqs <-chan *ssh.Request) error {
+func (h *HostServer) handleRequests(ctx context.Context, reqs <-chan *ssh.Request) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -82,7 +82,7 @@ func (h *hostServer) handleRequests(ctx context.Context, reqs <-chan *ssh.Reques
 	}
 }
 
-func (h *hostServer) handleRequest(ctx context.Context, req *ssh.Request) error {
+func (h *HostServer) handleRequest(ctx context.Context, req *ssh.Request) error {
 	if req.Type != "tcpip-forward" && req.Type != "cancel-tcpip-forward" {
 		return fmt.Errorf("unsupported request type: %s", req.Type)
 	}
@@ -102,7 +102,7 @@ func (h *hostServer) handleRequest(ctx context.Context, req *ssh.Request) error 
 	return nil
 }
 
-func (h *hostServer) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel) error {
+func (h *HostServer) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -126,7 +126,7 @@ func (h *hostServer) handleChannels(ctx context.Context, chans <-chan ssh.NewCha
 	}
 }
 
-func (h *hostServer) handleDirectTCPIP(ctx context.Context, newChanReq ssh.NewChannel) {
+func (h *HostServer) handleDirectTCPIP(ctx context.Context, newChanReq ssh.NewChannel) {
 	var foundPort bool
 	m := new(messages.PortForwardChannel)
 	if err := m.Unmarshal(bytes.NewBuffer(newChanReq.ExtraData())); err != nil {
@@ -145,7 +145,7 @@ func (h *hostServer) handleDirectTCPIP(ctx context.Context, newChanReq ssh.NewCh
 	}
 }
 
-func (h *hostServer) handleForwardedTCPIP(ctx context.Context, newChanReq ssh.NewChannel) {
+func (h *HostServer) handleForwardedTCPIP(ctx context.Context, newChanReq ssh.NewChannel) {
 	// TODO(josebalius): implement
 }
 

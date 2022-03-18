@@ -53,14 +53,15 @@ func TestSuccessfulHost(t *testing.T) {
 	}
 	logger.Println(fmt.Sprintf("Created port: %+v", *port))
 
-	//host, _ := NewHost(managementClient, logger)
+	host, _ := NewHost(managementClient, logger)
 	//logger.Println(host.manager.uri)
 
 	ctx = context.Background()
-	//err = host.StartServer(ctx, createdTunnel)
+	var emptyKeys []string
+	err = host.StartServer(ctx, createdTunnel, emptyKeys)
 	if err != nil {
 		// This throws an error now but in order to make tests pass in the PR the error is commented out
-		// t.Errorf(err.Error())
+		t.Errorf(err.Error())
 		return
 	}
 

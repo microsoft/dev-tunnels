@@ -34,7 +34,8 @@ type Host struct {
 	logger              *log.Logger
 	ssh                 *tunnelssh.HostSSHSession
 	sock                *socket
-	localForwardedPorts *forwardedPorts
+	localForwardedPorts *tunnelssh.ForwardedPorts
+	hostServer          *HostServer
 }
 
 func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
@@ -47,7 +48,7 @@ func NewHost(manager *Manager, logger *log.Logger) (*Host, error) {
 		privateKey:          privateKey,
 		hostId:              uuid.New().String(),
 		logger:              logger,
-		localForwardedPorts: newForwardedPorts(),
+		localForwardedPorts: tunnelssh.NewForwardedPorts(),
 	}, nil
 }
 
@@ -112,15 +113,16 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel, hostPublicKeys [
 	}
 
 	supportedChannelTypes := []string{clientStreamChannelType}
-	h.ssh = tunnelssh.NewHostSSHSession(h.sock, h.localForwardedPorts, supportedChannelTypes, h.logger)
+	h.ssh = tunnelssh.NewHostSSHSession(h.sock, supportedChannelTypes, h.logger, hostRelayUri)
 	if err := h.ssh.Connect(ctx); err != nil {
 		return fmt.Errorf("failed to create ssh session: %w", err)
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
 	for _, channelType := range supportedChannelTypes {
+		innerChannelType := channelType
 		g.Go(func() error {
-			ch := h.ssh.OpenChannelNotifier(channelType)
+			ch := h.ssh.OpenChannelNotifier(innerChannelType)
 			return h.handleOpenChannel(ctx, ch)
 		})
 	}
@@ -155,8 +157,9 @@ func (h *Host) handleOpenChannel(ctx context.Context, incomingChannels <-chan ss
 			// TODO(josebalius): are these requests really discarded?
 			go ssh.DiscardRequests(requests)
 
+			innerChannel := channel
 			go func() {
-				h.logger.Println(fmt.Sprintf("accepted channel: %s", channel.ChannelType()))
+				h.logger.Println(fmt.Sprintf("accepted channel: %s", innerChannel.ChannelType()))
 				if err := h.connectAndRunClientSession(ctx, channelSession); err != nil {
 					sendError(errc, fmt.Errorf("failed to handle channel session: %w", err))
 				}
@@ -168,8 +171,8 @@ func (h *Host) handleOpenChannel(ctx context.Context, incomingChannels <-chan ss
 }
 
 func (h *Host) connectAndRunClientSession(ctx context.Context, channelSession ssh.Channel) error {
-	hostServer := newHostServer(h, channelSession)
-	return hostServer.start(ctx)
+	h.hostServer = newHostServer(h, channelSession)
+	return h.hostServer.start(ctx)
 }
 
 func (h *Host) forwardPort(ctx context.Context, session *ssh.ServerConn, port *TunnelPort) error {
@@ -198,9 +201,9 @@ func (h *Host) forwardFromRemotePort(
 	if localPort <= 0 {
 		return false, errors.New("localPort must be a positive integer")
 	}
-	if h.localForwardedPorts.hasPort(localPort) {
+	if h.localForwardedPorts.HasPort(localPort) {
 		return false, fmt.Errorf("local port %d is already forwarded", localPort)
-	} else if h.localForwardedPorts.hasPort(remotePort) {
+	} else if h.localForwardedPorts.HasPort(remotePort) {
 		return false, fmt.Errorf("remote port %d is already forwarded", remotePort)
 	}
 
@@ -225,12 +228,21 @@ func (h *Host) forwardFromRemotePort(
 
 	if response.Port() != 0 {
 		result = true
+		h.localForwardedPorts.Add(int(response.Port()))
 	}
 
 	return result, nil
 }
 
 func (h *Host) AddPort(ctx context.Context, port TunnelPort) (*TunnelPort, error) {
+	if h.hostServer == nil {
+		return nil, fmt.Errorf("host server is not started")
+	}
+	if h.localForwardedPorts.HasPort(port.PortNumber) {
+		return nil, fmt.Errorf("port already exists")
+	}
+
+	h.forwardPort(ctx, h.hostServer.serverConn, &port)
 	return nil, nil
 }
 

@@ -1,8 +1,8 @@
-package tunnels
+package tunnelssh
 
 import "sync"
 
-type forwardedPorts struct {
+type ForwardedPorts struct {
 	portsMu sync.RWMutex
 	ports   map[int]bool
 
@@ -21,14 +21,14 @@ const (
 	forwardedPortNotificationTypeRemove
 )
 
-func newForwardedPorts() *forwardedPorts {
-	return &forwardedPorts{
+func NewForwardedPorts() *ForwardedPorts {
+	return &ForwardedPorts{
 		ports:  make(map[int]bool),
 		notify: make(chan forwardedPortNotification),
 	}
 }
 
-func (r *forwardedPorts) Add(port int) {
+func (r *ForwardedPorts) Add(port int) {
 	r.portsMu.Lock()
 	defer r.portsMu.Unlock()
 
@@ -45,7 +45,7 @@ func (r *forwardedPorts) Add(port int) {
 	}
 }
 
-func (r *forwardedPorts) hasPort(port int) bool {
+func (r *ForwardedPorts) HasPort(port int) bool {
 	r.portsMu.RLock()
 	defer r.portsMu.RUnlock()
 
