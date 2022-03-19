@@ -24,15 +24,11 @@ type forwardTask func() error
 
 type portForwardingManagerService struct {
 	disposed                                    bool
-	localForwarders                             map[string]string
-	remoteConnectors                            map[string]string
-	channelForwarders                           []string
 	forwardRequestTask                          forwardTask
 	acceptLocalConnectionsForForwardedPorts     bool
 	acceptRemoteConnectionsForNonForwardedPorts bool
 	localForwardedPorts                         *ForwardedPorts
 	remoteForwardedPorts                        *ForwardedPorts
-	tcpListenerFactory                          string
 }
 
 func ForwardToRemotePort() error {
