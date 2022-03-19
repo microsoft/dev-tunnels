@@ -1,4 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
+﻿// <copyright file="TSContractWriter.cs" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
+
+using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,21 +30,42 @@ internal class TSContractWriter : ContractWriter
         s.AppendLine($"// Generated from ../../../{csFilePath}");
         s.AppendLine();
 
+        var importsOffset = s.Length;
+        var imports = new SortedSet<string>();
+
         var members = type.GetMembers();
         if (type.BaseType?.Name == "Enum" || members.All((m) => 
-            m is IFieldSymbol field && field.IsConst && field.Type.Name == "String"))
+            (m is IFieldSymbol field &&
+             ((field.IsConst && field.Type.Name == "String") || field.Name == "All")) ||
+            (m is IMethodSymbol method && method.MethodKind == MethodKind.StaticConstructor)))
         {
-            WriteEnumContract(type, s);
+            WriteEnumContract(s, type);
+        }
+        else if (type.IsStatic && members.All((m) => m.IsStatic))
+        {
+            WriteStaticClassContract(s, type, imports);
         }
         else
         {
-            WriteClassContract(type, s);
+            WriteInterfaceContract(s, type, imports);
+        }
+
+        imports.Remove(type.Name);
+        if (imports.Count > 0)
+        {
+            var importLines = string.Join(Environment.NewLine, imports.Select(
+                (i) => $"import {{ {i} }} from './{ToCamelCase(i!)}';")) +
+                Environment.NewLine + Environment.NewLine;
+            s.Insert(importsOffset, importLines);
         }
 
         File.WriteAllText(filePath, s.ToString());
     }
 
-    private void WriteClassContract(ITypeSymbol type, StringBuilder s)
+    private void WriteInterfaceContract(
+        StringBuilder s,
+        ITypeSymbol type,
+        SortedSet<string> imports)
     {
         var baseTypeName = type.BaseType?.Name;
         if (baseTypeName == nameof(Object))
@@ -48,8 +73,6 @@ internal class TSContractWriter : ContractWriter
             baseTypeName = null;
         }
 
-        var importsOffset = s.Length;
-        var imports = new SortedSet<string>();
         if (!string.IsNullOrEmpty(baseTypeName))
         {
             imports.Add(baseTypeName!);
@@ -61,49 +84,54 @@ internal class TSContractWriter : ContractWriter
 
         s.Append($"export interface {type.Name}{extends} {{");
 
-        foreach (var member in type.GetMembers())
+        foreach (var property in type.GetMembers().OfType<IPropertySymbol>()
+            .Where((p) => !p.IsStatic))
         {
-            if (!(member is IPropertySymbol property))
+            s.AppendLine();
+            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
+
+            var propertyType = property.Type.ToDisplayString();
+            var isNullable = propertyType.EndsWith("?");
+            if (isNullable)
+            {
+                propertyType = propertyType.Substring(0, propertyType.Length - 1);
+            }
+
+            // Make booleans always nullable since undefined is falsy anyway.
+            isNullable |= propertyType == "bool";
+
+            var tsName = ToCamelCase(property.Name);
+            var tsType = GetTSTypeForCSType(propertyType, tsName, imports);
+
+            s.AppendLine($"    {tsName}{(isNullable ? "?" : "")}: {tsType};");
+        }
+
+        s.AppendLine("}");
+
+        var constMemberNames = new List<string>();
+        foreach (var field in type.GetMembers().OfType<IFieldSymbol>()
+            .Where((f) => f.IsConst))
+        {
+            if (field.DeclaredAccessibility == Accessibility.Public)
+            {
+                constMemberNames.Add(ToCamelCase(field.Name));
+            }
+            else if (field.DeclaredAccessibility != Accessibility.Internal)
             {
                 continue;
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
 
-            var propertyType = property.Type.ToDisplayString();
-            if (propertyType.EndsWith("?"))
-            {
-                propertyType = propertyType.Substring(0, propertyType.Length - 1);
-            }
+            s.AppendLine($"export const {ToCamelCase(field.Name)} = '{field.ConstantValue}';");
 
-            var tsName = ToCamelCase(property.Name);
-            var tsType = GetTSTypeForCSType(propertyType, tsName);
-
-            if (propertyType.StartsWith(this.csNamespace + ".") && !imports.Contains(tsType))
-            {
-                var importType = tsType.Replace("?", "").Replace("[]", "");
-                if (importType != type.Name)
-                {
-                    imports.Add(importType);
-                }
-            }
-
-            s.AppendLine($"    {tsName}?: {tsType};");
         }
 
-        if (imports.Count > 0)
-        {
-            var importLines = string.Join(Environment.NewLine, imports.Select(
-                (type) => $"import {{ {type} }} from './{ToCamelCase(type!)}';")) +
-                Environment.NewLine + Environment.NewLine;
-            s.Insert(importsOffset, importLines);
-        }
-
-        s.AppendLine("}");
+        s.Append(ExportStaticMembers(type, constMemberNames));
     }
 
-    private void WriteEnumContract(ITypeSymbol type, StringBuilder s)
+    private void WriteEnumContract(StringBuilder s, ITypeSymbol type)
     {
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
 
@@ -111,13 +139,12 @@ internal class TSContractWriter : ContractWriter
 
         foreach (var member in type.GetMembers())
         {
-            if (!(member is IFieldSymbol field))
+            if (!(member is IFieldSymbol field) || !field.HasConstantValue)
             {
                 continue;
             }
 
             s.AppendLine();
-
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), "    "));
 
             var value = type.BaseType?.Name == "Enum" ?
@@ -126,6 +153,89 @@ internal class TSContractWriter : ContractWriter
         }
 
         s.AppendLine("}");
+
+        s.Append(ExportStaticMembers(type));
+    }
+
+    private void WriteStaticClassContract(
+        StringBuilder s,
+        ITypeSymbol type,
+        SortedSet<string> imports)
+    {
+        s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
+
+        s.Append($"namespace {type.Name} {{");
+
+        foreach (var member in type.GetMembers())
+        {
+            if (!member.IsStatic || !(member is IPropertySymbol property) || !property.IsReadOnly)
+            {
+                continue;
+            }
+
+            s.AppendLine();
+            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
+
+            var propertyType = property.Type.ToDisplayString();
+            var isNullable = propertyType.EndsWith("?");
+            if (isNullable)
+            {
+                propertyType = propertyType.Substring(0, propertyType.Length - 1);
+            }
+
+            // Make booleans always nullable since undefined is falsy anyway.
+            isNullable |= propertyType == "bool";
+
+            var tsName = ToCamelCase(property.Name);
+            var tsType = GetTSTypeForCSType(propertyType, tsName, imports);
+            var value = GetPropertyInitializer(property);
+            s.AppendLine($"    export const {tsName}: {tsType}{(isNullable ? " | null" : "")} = {value};");
+        }
+
+        s.AppendLine("}");
+    }
+
+    private static string ExportStaticMembers(
+        ITypeSymbol type, ICollection<string>? constMemberNames = null)
+    {
+        var s = new StringBuilder();
+        constMemberNames ??= Array.Empty<string>();
+
+        var staticMemberNames = type.GetMembers()
+            .Where((s) => s.IsStatic && s.DeclaredAccessibility == Accessibility.Public &&
+                (s is IPropertySymbol p ||
+                    (s is IMethodSymbol m && m.MethodKind == MethodKind.Ordinary)))
+            .Select((m) => ToCamelCase(m.Name))
+            .ToArray();
+        if (staticMemberNames.Length > 0)
+        {
+            s.AppendLine();
+            s.AppendLine("// Import static members from a non-generated file,");
+            s.AppendLine("// and re-export them as an object with the same name as the interface.");
+            s.AppendLine("import {");
+
+            foreach (var memberName in staticMemberNames)
+            {
+                s.AppendLine($"    {memberName},");
+            }
+
+            s.AppendLine($"}} from './{ToCamelCase(type.Name)}Statics';");
+        }
+
+        if (constMemberNames.Count > 0 || staticMemberNames.Length > 0)
+        {
+            s.AppendLine();
+            s.AppendLine($"export const {type.Name} = {{");
+
+            foreach (var memberName in constMemberNames.Concat(staticMemberNames))
+            {
+                s.AppendLine($"    {memberName},");
+            }
+
+            s.AppendLine("};");
+        }
+
+        return s.ToString();
     }
 
     private static string ToCamelCase(string name)
@@ -142,7 +252,9 @@ internal class TSContractWriter : ContractWriter
 
         comment = comment.Replace("\r", "");
         comment = new Regex("\n *").Replace(comment, " ");
-        comment = new Regex($"<see cref=\".:({this.csNamespace}.)?([^\"]+)\" ?/>")
+        comment = new Regex($"<see cref=\".:({this.csNamespace}\\.)?(\\w+)\\.(\\w+)\" ?/>")
+            .Replace(comment, (m) => $"`{m.Groups[2].Value}.{ToCamelCase(m.Groups[3].Value)}`");
+        comment = new Regex($"<see cref=\".:({this.csNamespace}\\.)?([^\"]+)\" ?/>")
             .Replace(comment, "`$2`");
 
         var summary = new Regex("<summary>(.*)</summary>").Match(comment).Groups[1].Value.Trim();
@@ -170,7 +282,46 @@ internal class TSContractWriter : ContractWriter
         return s.ToString();
     }
 
-    private string GetTSTypeForCSType(string csType, string propertyName)
+    private static string? GetPropertyInitializer(IPropertySymbol property)
+    {
+        var location = property.Locations.Single();
+        var sourceSpan = location.SourceSpan;
+        var sourceText = location.SourceTree!.ToString();
+        var eolIndex = sourceText.IndexOf('\n', sourceSpan.End);
+        var equalsIndex = sourceText.IndexOf('=', sourceSpan.End);
+
+        if (equalsIndex < 0 || equalsIndex > eolIndex)
+        {
+            // The property does not have an initializer.
+            return null;
+        }
+
+        var semicolonIndex = sourceText.IndexOf(';', equalsIndex);
+        if (semicolonIndex < 0)
+        {
+            // Invalid syntax??
+            return null;
+        }
+
+        var csExpression = sourceText.Substring(
+            equalsIndex + 1, semicolonIndex - equalsIndex - 1).Trim();
+
+        // Attempt to convert the CS expression to a TS expression. This involes several
+        // weak assumptions, and will not work for many kinds of expressions. But it might
+        // be good enough.
+        var tsExpression = csExpression
+            .Replace('"', '\'')
+            .Replace("Regex", "RegExp")
+            .Replace("Replace", "replace");
+
+        // Assume any PascaleCase identifiers are referncing other variables in scope.
+        tsExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
+            tsExpression, (m) => ToCamelCase(m.Value));
+
+        return tsExpression;
+    }
+
+    private string GetTSTypeForCSType(string csType, string propertyName, SortedSet<string> imports)
     {
         var suffix = "";
         if (csType.EndsWith("[]"))
@@ -183,15 +334,23 @@ internal class TSContractWriter : ContractWriter
         if (csType.StartsWith(this.csNamespace + "."))
         {
             tsType = csType.Substring(csNamespace.Length + 1);
+
+            if (!imports.Contains(tsType))
+            {
+                imports.Add(tsType);
+            }
         }
         else
         {
             tsType = csType switch
             {
+                "bool" => "boolean",
+                "int" => "number",
                 "uint" => "number",
                 "ushort" => "number",
                 "string" => "string",
                 "System.DateTime" => "Date",
+                "System.Text.RegularExpressions.Regex" => "RegExp",
                 "System.Collections.Generic.IDictionary<string, string>"
                     => $"{{ [{(propertyName == "accessTokens" ? "scope" : "key")}: string]: string }}",
                 "System.Collections.Generic.IDictionary<string, string[]>"

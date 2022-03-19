@@ -18,7 +18,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
         /// in the PROD service environment.
         /// </remarks>
-        private const string ProdFirstPartyAppId = "46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2";
+        internal const string ProdFirstPartyAppId = "46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2";
 
         /// <summary>
         /// First-party app ID: `Visual Studio Tunnel Service - Test`
@@ -27,7 +27,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
         /// in the PPE and DEV service environments.
         /// </remarks>
-        private const string NonProdFirstPartyAppId = "54c45752-bacd-424a-b928-652f3eca2b18";
+        internal const string NonProdFirstPartyAppId = "54c45752-bacd-424a-b928-652f3eca2b18";
 
         /// <summary>
         /// Third-party app ID: `tunnels-prod-app-sp`
@@ -36,7 +36,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used for authenticating internal AAD service principals in the AME tenant,
         /// in the PROD service environment.
         /// </remarks>
-        private const string ProdThirdPartyAppId = "ce65d243-a913-4cae-a7dd-cb52e9f77647";
+        internal const string ProdThirdPartyAppId = "ce65d243-a913-4cae-a7dd-cb52e9f77647";
 
         /// <summary>
         /// Third-party app ID: `tunnels-ppe-app-sp`
@@ -45,7 +45,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used for authenticating internal AAD service principals in the AME tenant,
         /// in the PPE service environment.
         /// </remarks>
-        private const string PpeThirdPartyAppId = "544167a6-f431-4518-aac6-2fd50071928e";
+        internal const string PpeThirdPartyAppId = "544167a6-f431-4518-aac6-2fd50071928e";
 
         /// <summary>
         /// Third-party app ID: `tunnels-dev-app-sp`
@@ -54,7 +54,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used for authenticating internal AAD service principals in the corp tenant (not AME!),
         /// in the DEV service environment.
         /// </remarks>
-        private const string DevThirdPartyAppId = "a118c979-0249-44bb-8f95-eb0457127aeb";
+        internal const string DevThirdPartyAppId = "a118c979-0249-44bb-8f95-eb0457127aeb";
 
         /// <summary>
         /// GitHub App Client ID for 'Visual Studio Tunnel Service'
@@ -63,7 +63,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used by client apps that authenticate tunnel users with GitHub, in the PROD
         /// service environment.
         /// </remarks>
-        private const string ProdGitHubAppClientId = "Iv1.e7b89e013f801f03";
+        internal const string ProdGitHubAppClientId = "Iv1.e7b89e013f801f03";
 
         /// <summary>
         /// GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
@@ -72,7 +72,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
         /// service environments.
         /// </remarks>
-        private const string NonProdGitHubAppClientId = "Iv1.b231c327f1eaa229";
+        internal const string NonProdGitHubAppClientId = "Iv1.b231c327f1eaa229";
 
         private TunnelServiceProperties(
             string serviceUri,
@@ -89,7 +89,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// <summary>
         /// Gets production service properties.
         /// </summary>
-        public static readonly TunnelServiceProperties Production = new TunnelServiceProperties(
+        public static TunnelServiceProperties Production { get; } = new TunnelServiceProperties(
             $"https://global.rel.tunnels.api.visualstudio.com/",
             ProdFirstPartyAppId,
             ProdThirdPartyAppId,
@@ -98,7 +98,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// <summary>
         /// Gets properties for the service in the staging environment (PPE).
         /// </summary>
-        public static readonly TunnelServiceProperties Staging = new TunnelServiceProperties(
+        public static TunnelServiceProperties Staging { get; } = new TunnelServiceProperties(
             "https://global.rel.tunnels.ppe.api.visualstudio.com/",
             NonProdFirstPartyAppId,
             PpeThirdPartyAppId,
@@ -107,7 +107,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// <summary>
         /// Gets properties for the service in the development environment.
         /// </summary>
-        public static readonly TunnelServiceProperties Development = new TunnelServiceProperties(
+        public static TunnelServiceProperties Development { get; } = new TunnelServiceProperties(
             "https://global.ci.tunnels.dev.api.visualstudio.com/",
             NonProdFirstPartyAppId,
             DevThirdPartyAppId,

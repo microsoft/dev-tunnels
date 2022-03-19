@@ -1,8 +1,11 @@
-﻿using Microsoft.CodeAnalysis;
+﻿// <copyright file="ContractWriter.cs" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
+
+using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace Microsoft.VsSaaS.TunnelService.Generator;
 

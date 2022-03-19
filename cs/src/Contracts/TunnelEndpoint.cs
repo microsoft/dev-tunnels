@@ -61,6 +61,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// <summary>
         /// Gets a URI where a web client can connect to a tunnel port. 
         /// </summary>
+        /// <param name="endpoint">A tunnel endpoint containing a port URI format.</param>
         /// <param name="portNumber">The port number to connect to; the port is assumed to be
         /// separately shared by a tunnel host.</param>
         /// <returns>URI for the requested port, or null if the endpoint does not support
@@ -73,14 +74,14 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// connected to the tunnel, then requests to the port URI may result in a 502 Bad Gateway
         /// response.
         /// </remarks>
-        public Uri? GetPortUri(int? portNumber)
+        public static Uri? GetPortUri(TunnelEndpoint endpoint, int? portNumber)
         {
-            if (portNumber == null || string.IsNullOrEmpty(PortUriFormat))
+            if (portNumber == null || string.IsNullOrEmpty(endpoint.PortUriFormat))
             {
                 return null;
             }
 
-            return new Uri(PortUriFormat.Replace(
+            return new Uri(endpoint.PortUriFormat.Replace(
                 PortUriToken, portNumber.Value.ToString(CultureInfo.InvariantCulture)));
         }
 

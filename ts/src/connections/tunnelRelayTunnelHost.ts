@@ -61,13 +61,13 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
 
     public async startServer(tunnel: Tunnel, hostPublicKeys?: string[]): Promise<void> {
         let accessToken = tunnel.accessTokens
-            ? tunnel.accessTokens[TunnelAccessScopes.host]
+            ? tunnel.accessTokens[TunnelAccessScopes.Host]
             : undefined;
         if (!accessToken) {
             this.trace(
                 TraceLevel.Info,
                 0,
-                `There is no access token for ${TunnelAccessScopes.host} scope on the tunnel.`,
+                `There is no access token for ${TunnelAccessScopes.Host} scope on the tunnel.`,
             );
         }
 

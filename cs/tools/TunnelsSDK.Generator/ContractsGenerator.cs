@@ -1,8 +1,11 @@
-﻿using System;
+﻿// <copyright file="ContractsGenerator.cs" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace Microsoft.VsSaaS.TunnelService.Generator;
@@ -10,31 +13,48 @@ namespace Microsoft.VsSaaS.TunnelService.Generator;
 [Generator]
 public class ContractsGenerator : ISourceGenerator
 {
+    private const string DiagnosticPrefix = "BASIS";
+    private const string DiagnosticCategory = "Basis";
+    private const string ContractsNamespace = "Microsoft.VsSaaS.TunnelService.Contracts";
+    private static readonly string[] ExcludedContractTypes = new[]
+    {
+        "TunnelContracts",
+        "ThisAssembly",
+        "Converter",
+    };
+
+    public void Initialize(GeneratorInitializationContext context)
+    {
+#if DEBUG
+        // Note source generators re not covered by normal debugging,
+        // because the generator runs at build time, not at application run-time.
+        // Un-comment the line below to enable debugging at build time.
+        // For more debugging info, see https://nicksnettravels.builttoroam.com/debug-code-gen/
+
+        ////System.Diagnostics.Debugger.Launch();
+#endif
+    }
+
     public void Execute(GeneratorExecutionContext context)
     {
-        var test = new StringBuilder();
-
+        // Path of the ThisAssembly type's location will be like:
+        //   cs/bin/obj/[projectname]/Release/net6.0/[assemblyname].Version.cs
         var thisAssemblyType = context.Compilation.GetSymbolsWithName(
             nameof(ThisAssembly), SymbolFilter.Type).Single();
-
-        // This assembly path will be like:
-        //   cs/bin/obj/[projectname]/Release/net6.0/[assemblyname].Version.cs
         var thisAssemblyPath = thisAssemblyType.Locations.Single().GetLineSpan().Path;
         var repoRoot = Path.GetFullPath(Path.Combine(
             thisAssemblyPath, "..", "..", "..", "..", "..", "..", ".."));
-        test.Append(repoRoot + " ");
 
         var writers = new List<ContractWriter>();
         foreach (var language in ContractWriter.SupportedLanguages)
         {
-            writers.Add(ContractWriter.Create(
-                language, repoRoot, "Microsoft.VsSaaS.TunnelService.Contracts"));
+            writers.Add(ContractWriter.Create(language, repoRoot, ContractsNamespace));
         }
 
         var typeNames = context.Compilation.Assembly.TypeNames;
         foreach (var typeName in typeNames)
         {
-            if (typeName == nameof(ThisAssembly) || typeName == "Converter")
+            if (ExcludedContractTypes.Contains(typeName))
             {
                 continue;
             }
@@ -48,27 +68,34 @@ public class ContractsGenerator : ISourceGenerator
             var type = (ITypeSymbol)types.Single();
             var path = type.Locations.Single().GetLineSpan().Path;
 
-            if (type.ContainingType != null)
+            foreach (var method in type.GetMembers().OfType<IMethodSymbol>()
+                .Where((m) => m.MethodKind == MethodKind.Ordinary))
             {
-                // Contained types will be processed via their containing type.
-                continue;
-            }
-
-            if (type.GetMembers().OfType<IMethodSymbol>().Any((m) =>
-                m.MethodKind == MethodKind.Ordinary && m.Name != "ToString"))
-            {
-                // Don't try to generate types with ordinary non-ToString() methods.
-                continue;
+                if (!method.IsStatic &&
+                    method.Name != "ToString" &&
+                    method.Name != "GetEnumerator")
+                {
+                    var title = "Basis contracts must not have instance methods other than " +
+                            "GetEunerator() or ToString().";
+                    var descriptor = new DiagnosticDescriptor(
+                        id: DiagnosticPrefix + "1000",
+                        title,
+                        messageFormat: title + " Generated contract interfaces cannot support " +
+                            "instance methods. Consider converting the method to static " +
+                            "or other refactoring.",
+                        DiagnosticCategory,
+                        DiagnosticSeverity.Error,
+                        isEnabledByDefault: true);
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(descriptor, method.Locations.Single()));
+                }
             }
 
             foreach (var writer in writers)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
                 writer.WriteContract(type);
             }
         }
-    }
-
-    public void Initialize(GeneratorInitializationContext context)
-    {
     }
 }

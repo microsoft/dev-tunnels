@@ -1,3 +1,5 @@
+// Generated from ../../../cs/src/Contracts/TunnelRelayTunnelEndpoint.cs
+
 import { TunnelEndpoint } from './tunnelEndpoint';
 
 /**
@@ -15,7 +17,8 @@ export interface TunnelRelayTunnelEndpoint extends TunnelEndpoint {
     clientRelayUri?: string;
 
     /**
-     * Gets or sets an array of public keys, which can be used by clients to authenticate the host.
+     * Gets or sets an array of public keys, which can be used by clients to authenticate
+     * the host.
      */
     hostPublicKeys?: string[];
 }

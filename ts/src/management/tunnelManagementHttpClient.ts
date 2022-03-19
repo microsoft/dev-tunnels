@@ -1,6 +1,7 @@
 import {
     Tunnel,
     TunnelConnectionMode,
+    TunnelAccessControl,
     TunnelAccessScopes,
     TunnelEndpoint,
     TunnelPort,
@@ -27,13 +28,13 @@ function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
 }
 
-const manageAccessTokenScope = [TunnelAccessScopes.manage];
-const hostAccessTokenScope = [TunnelAccessScopes.host];
-const hostOrManageAccessTokenScopes = [TunnelAccessScopes.manage, TunnelAccessScopes.host];
+const manageAccessTokenScope = [TunnelAccessScopes.Manage];
+const hostAccessTokenScope = [TunnelAccessScopes.Host];
+const hostOrManageAccessTokenScopes = [TunnelAccessScopes.Manage, TunnelAccessScopes.Host];
 const readAccessTokenScopes = [
-    TunnelAccessScopes.manage,
-    TunnelAccessScopes.host,
-    TunnelAccessScopes.connect,
+    TunnelAccessScopes.Manage,
+    TunnelAccessScopes.Host,
+    TunnelAccessScopes.Connect,
 ];
 
 export class TunnelManagementHttpClient implements TunnelManagementClient {
@@ -376,8 +377,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 if (problemDetails.detail) {
                     errorMessage += ' ' + problemDetails.detail;
                 }
-                if (problemDetails.error) {
-                    errorMessage += JSON.stringify(problemDetails.error);
+                if (problemDetails.errors) {
+                    errorMessage += JSON.stringify(problemDetails.errors);
                 }
             }
         }
@@ -570,12 +571,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         if (options.scopes) {
-            TunnelAccessScopes.validate(options.scopes);
+            TunnelAccessControl.validateScopes(options.scopes);
             queryOptions['scopes'] = options.scopes.join(',');
         }
 
         if (options.tokenScopes) {
-            TunnelAccessScopes.validate(options.tokenScopes);
+            TunnelAccessControl.validateScopes(options.tokenScopes);
             queryOptions['tokenScopes'] = options.tokenScopes.join(',');
         }
 

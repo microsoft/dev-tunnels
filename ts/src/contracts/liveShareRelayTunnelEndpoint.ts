@@ -1,4 +1,5 @@
-import { TunnelConnectionMode } from './tunnelConnectionMode';
+// Generated from ../../../cs/src/Contracts/LiveShareRelayTunnelEndpoint.cs
+
 import { TunnelEndpoint } from './tunnelEndpoint';
 
 /**
@@ -8,7 +9,7 @@ export interface LiveShareRelayTunnelEndpoint extends TunnelEndpoint {
     /**
      * Gets or sets the Live Share workspace ID.
      */
-    workspaceId?: string;
+    workspaceId: string;
 
     /**
      * Gets or sets the Azure Relay URI.
@@ -21,12 +22,14 @@ export interface LiveShareRelayTunnelEndpoint extends TunnelEndpoint {
     relayHostSasToken?: string;
 
     /**
-     * Gets or sets a SAS token that allows clients to connect to the Azure Relay endpoint.
+     * Gets or sets a SAS token that allows clients to connect to the Azure Relay
+     * endpoint.
      */
     relayClientSasToken?: string;
 
     /**
-     * Gets or sets an array of public keys, which can be used by clients to authenticate the host.
+     * Gets or sets an array of public keys, which can be used by clients to authenticate
+     * the host.
      */
-    hostKeys?: string[];
+    hostPublicKeys?: string[];
 }

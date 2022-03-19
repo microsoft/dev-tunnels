@@ -1,12 +1,16 @@
+// Generated from ../../../cs/src/Contracts/TunnelStatus.cs
+
 /**
- * Data contract for Tunnel status.
+ * Data contract for `Tunnel` status.
  */
 export interface TunnelStatus {
     /**
      * Gets or sets the number of hosts currently accepting connections to the tunnel.
-     * This is typically 0 or 1, but may be more than 1 if the tunnel options allow multiple hosts.
+     *
+     * This is typically 0 or 1, but may be more than 1 if the tunnel options allow
+     * multiple hosts.
      */
-    hostConnectionCount?: number;
+    hostConnectionCount: number;
 
     /**
      * Gets or sets the UTC time when a host was last accepting connections to the tunnel,
@@ -17,11 +21,11 @@ export interface TunnelStatus {
     /**
      * Gets or sets the number of clients currently connected to the tunnel.
      */
-    clientConnectionCount?: number;
+    clientConnectionCount: number;
 
     /**
-     * Gets or sets the UTC time when a client last connected to the tunnel, or null if
-     * a client has never connected.
+     * Gets or sets the UTC time when a client last connected to the tunnel, or null if a
+     * client has never connected.
      */
     lastClientConnectionTime?: Date;
 }

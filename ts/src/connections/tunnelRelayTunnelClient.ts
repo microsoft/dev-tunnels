@@ -43,7 +43,7 @@ export class TunnelRelayTunnelClient extends TunnelClientBase {
         }
 
         let accessToken = tunnel.accessTokens
-            ? tunnel.accessTokens[TunnelAccessScopes.connect]
+            ? tunnel.accessTokens[TunnelAccessScopes.Connect]
             : undefined;
 
         await this.connectClientToRelayServer(clientRelayUri, accessToken);

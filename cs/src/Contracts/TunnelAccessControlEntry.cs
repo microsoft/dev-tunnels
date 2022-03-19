@@ -120,24 +120,6 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public string[] Scopes { get; set; }
 
         /// <summary>
-        /// Creates new access control entry that is a (shallow) copy of the specified ACE,
-        /// but with <see cref="IsInherited" /> set to true.
-        /// </summary>
-        public static TunnelAccessControlEntry Inherit(TunnelAccessControlEntry ace)
-        {
-            return new TunnelAccessControlEntry
-            {
-                Type = ace.Type,
-                Provider = ace.Provider,
-                IsDeny = ace.IsDeny,
-                Organization = ace.Organization,
-                Subjects = ace.Subjects,
-                Scopes = ace.Scopes,
-                IsInherited = true,
-            };
-        }
-
-        /// <summary>
         /// Gets a compact textual representation of the access control entry.
         /// </summary>
         public override string ToString()

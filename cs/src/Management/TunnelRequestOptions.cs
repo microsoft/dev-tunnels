@@ -94,13 +94,13 @@ namespace Microsoft.VsSaaS.TunnelService
 
             if (Scopes != null)
             {
-                TunnelAccessScopes.Validate(Scopes);
+                TunnelAccessControl.ValidateScopes(Scopes);
                 queryOptions["scopes"] = string.Join(",", Scopes);
             }
 
             if (TokenScopes != null)
             {
-                TunnelAccessScopes.Validate(TokenScopes);
+                TunnelAccessControl.ValidateScopes(TokenScopes);
                 queryOptions["tokenScopes"] = string.Join(",", TokenScopes);
             }
 
