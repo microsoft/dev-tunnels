@@ -238,7 +238,7 @@ internal class TSContractWriter : ContractWriter
         return s.ToString();
     }
 
-    private static string ToCamelCase(string name)
+    internal static string ToCamelCase(string name)
     {
         return name.Substring(0, 1).ToLowerInvariant() + name.Substring(1);
     }
