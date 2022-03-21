@@ -119,8 +119,9 @@ func (h *Host) StartServer(ctx context.Context, tunnel *Tunnel, hostPublicKeys [
 
 	g, ctx := errgroup.WithContext(ctx)
 	for _, channelType := range supportedChannelTypes {
+		chanType := channelType
 		g.Go(func() error {
-			ch := h.ssh.OpenChannelNotifier(channelType)
+			ch := h.ssh.OpenChannelNotifier(chanType)
 			return h.handleOpenChannel(ctx, ch)
 		})
 	}
@@ -155,8 +156,9 @@ func (h *Host) handleOpenChannel(ctx context.Context, incomingChannels <-chan ss
 			// TODO(josebalius): are these requests really discarded?
 			go ssh.DiscardRequests(requests)
 
+			innerChannel := channel
 			go func() {
-				h.logger.Println(fmt.Sprintf("accepted channel: %s", channel.ChannelType()))
+				h.logger.Println(fmt.Sprintf("accepted channel: %s", innerChannel.ChannelType()))
 				if err := h.connectAndRunClientSession(ctx, channelSession); err != nil {
 					sendError(errc, fmt.Errorf("failed to handle channel session: %w", err))
 				}
