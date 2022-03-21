@@ -130,7 +130,7 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 // ConnectToForwardedPort connects to a forwarded port.
 // It accepts a listener and will forward the connection to the tunnel.
 // This only starts the process of forwarding the port, use WaitForForwardedPort to wait for the port to be forwarded.
-func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listener, port int) error {
+func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listener, port uint16) error {
 	if !c.remoteForwardedPorts.hasPort(port) {
 		return ErrPortNotForwarded
 	}
@@ -165,7 +165,7 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 }
 
 // WaitForForwardedPort waits for the specified port to be forwarded.
-func (c *Client) WaitForForwardedPort(ctx context.Context, port int) error {
+func (c *Client) WaitForForwardedPort(ctx context.Context, port uint16) error {
 	// It's already forwarded there's no need to wait.
 	if c.remoteForwardedPorts.hasPort(port) {
 		return nil
@@ -192,7 +192,7 @@ func awaitError(ctx context.Context, errc chan error) error {
 	}
 }
 
-func (c *Client) handleConnection(ctx context.Context, conn io.ReadWriteCloser, port int) (err error) {
+func (c *Client) handleConnection(ctx context.Context, conn io.ReadWriteCloser, port uint16) (err error) {
 	defer safeClose(conn, &err)
 
 	channel, err := c.openStreamingChannel(ctx, port)
@@ -244,7 +244,7 @@ func (c *Client) nextChannelID() uint32 {
 	return atomic.AddUint32(&c.channels, 1)
 }
 
-func (c *Client) openStreamingChannel(ctx context.Context, port int) (ssh.Channel, error) {
+func (c *Client) openStreamingChannel(ctx context.Context, port uint16) (ssh.Channel, error) {
 	portForwardChannel := messages.NewPortForwardChannel(
 		c.nextChannelID(),
 		"127.0.0.1",

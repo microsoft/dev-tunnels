@@ -442,7 +442,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 	accessEntry := &TunnelAccessControlEntry{
 		Type:     TunnelAccessControlEntryTypeAnonymous,
 		Subjects: []string{"test"},
-		Scopes:   []TunnelAccessScope{"manage"},
+		Scopes:   []string{string(TunnelAccessScopeManage)},
 	}
 	portToAdd.AccessControl.Entries = append(port.AccessControl.Entries, accessEntry)
 

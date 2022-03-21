@@ -1,67 +1,37 @@
+// Generated from ../../../cs/src/Contracts/TunnelPort.cs
+
 package tunnels
 
-import "fmt"
-
+// Data contract for tunnel port objects managed through the tunnel service REST API.
 type TunnelPort struct {
-	ClusterID     string             `json:"ClusterId,omitempty"`
-	TunnelID      string             `json:"TunnelId,omitempty"`
-	PortNumber    int                `json:"PortNumber,omitempty"`
-	Protocol      TunnelPortProtocol `json:"Protocol,omitempty"`
-	AccessTokens  map[string]string
-	AccessControl *TunnelAccessControl `json:"AccessControl,omitempty"`
-	Options       *TunnelOptions
-	Status        *TunnelStatus
-}
+	// Gets or sets the ID of the cluster the tunnel was created in.
+	ClusterID     string `json:"clusterId,omitempty"`
 
-type TunnelPortProtocol string
+	// Gets or sets the generated ID of the tunnel, unique within the cluster.
+	TunnelID      string `json:"tunnelId,omitempty"`
 
-const (
-	TunnelPortProtocolAuto  TunnelPortProtocol = "auto"
-	TunnelPortProtocolTcp   TunnelPortProtocol = "tcp"
-	TunnelPortProtocolUdp   TunnelPortProtocol = "udp"
-	TunnelPortProtocolSsh   TunnelPortProtocol = "ssh"
-	TunnelPortProtocolRdp   TunnelPortProtocol = "rdp"
-	TunnelPortProtocolHttp  TunnelPortProtocol = "http"
-	TunnelPortProtocolHttps TunnelPortProtocol = "https"
-)
+	// Gets or sets the IP port number of the tunnel port.
+	PortNumber    uint16 `json:"portNumber,omitempty"`
 
-func NewTunnelPort(portNumber int, clusterId string, tunnelId string, protocol TunnelPortProtocol) *TunnelPort {
-	port := &TunnelPort{
-		PortNumber: portNumber,
-		ClusterID:  clusterId,
-		TunnelID:   tunnelId,
-		Protocol:   protocol,
-	}
-	if len(port.Protocol) == 0 {
-		port.Protocol = TunnelPortProtocolAuto
-	}
-	port.AccessTokens = make(map[string]string)
-	port.AccessControl = &TunnelAccessControl{}
-	port.Options = &TunnelOptions{}
-	port.Status = &TunnelStatus{}
-	return port
-}
+	// Gets or sets the protocol of the tunnel port.
+	//
+	// Should be one of the string constants from `TunnelProtocol`.
+	Protocol      string `json:"protocol,omitempty"`
 
-func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
-	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
-		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
-	}
-	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
-		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
-	}
-	convertedPort := &TunnelPort{
-		PortNumber:    tunnelPort.PortNumber,
-		Protocol:      tunnelPort.Protocol,
-		Options:       tunnel.Options,
-		AccessControl: &TunnelAccessControl{},
-	}
-	if tunnelPort.AccessControl != nil {
-		for _, entry := range tunnelPort.AccessControl.Entries {
-			if !entry.IsInherited {
-				convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
-			}
-		}
-	}
+	// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
+	//
+	// Unlike the tokens in `Tunnel.AccessTokens`, these tokens are restricted to the
+	// individual port.
+	AccessTokens  map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
 
-	return convertedPort, nil
+	// Gets or sets access control settings for the tunnel port.
+	//
+	// See `TunnelAccessControl` documentation for details about the access control model.
+	AccessControl *TunnelAccessControl `json:"accessControl,omitempty"`
+
+	// Gets or sets options for the tunnel port.
+	Options       *TunnelOptions `json:"options,omitempty"`
+
+	// Gets or sets current connection status of the tunnel port.
+	Status        *TunnelPortStatus `json:"status,omitempty"`
 }

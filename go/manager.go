@@ -418,7 +418,7 @@ func (m *Manager) UpdateTunnelPort(
 }
 
 func (m *Manager) DeleteTunnelPort(
-	ctx context.Context, tunnel *Tunnel, port int, options *TunnelRequestOptions,
+	ctx context.Context, tunnel *Tunnel, port uint16, options *TunnelRequestOptions,
 ) error {
 
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port)

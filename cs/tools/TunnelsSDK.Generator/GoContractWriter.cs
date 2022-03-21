@@ -24,7 +24,7 @@ internal class GoContractWriter : ContractWriter
         var csFilePath = GetRelativePath(type.Locations.Single().GetLineSpan().Path);
 
         var fileName = ToSnakeCase(type.Name) + ".go";
-        var filePath = GetAbsolutePath(Path.Combine("go", "contracts", fileName));
+        var filePath = GetAbsolutePath(Path.Combine("go", fileName));
 
         var s = new StringBuilder();
         s.AppendLine($"// Generated from ../../../{csFilePath}");
@@ -85,6 +85,13 @@ internal class GoContractWriter : ContractWriter
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
         s.Append($"type {type.Name} struct {{");
 
+        var baseTypeName = type.BaseType?.Name;
+        if (baseTypeName != null && baseTypeName != nameof(Object))
+        {
+            s.AppendLine();
+            s.AppendLine($"\t{baseTypeName}");
+        }
+
         var properties = type.GetMembers()
             .OfType<IPropertySymbol>()
             .Where((p) => !p.IsStatic)
@@ -93,13 +100,15 @@ internal class GoContractWriter : ContractWriter
             properties.Select((p) => p.Name.Length).Max();
         foreach (var property in properties)
         {
+            var propertyName = FixPropertyNameCasing(property.Name);
+
             s.AppendLine();
             s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "\t"));
-            var alignment = new string(' ', maxPropertyNameLength - property.Name.Length);
+            var alignment = new string(' ', maxPropertyNameLength - propertyName.Length);
             var propertyType = property.Type.ToDisplayString().Replace("?", "");
-            var goType = GetGoTypeForCSType(propertyType, property.Name, imports);
+            var goType = GetGoTypeForCSType(propertyType, property, imports);
             var jsonTag = GetJsonTagForProperty(property);
-            s.AppendLine($"\t{property.Name}{alignment} {goType} `json:\"{jsonTag}\"`");
+            s.AppendLine($"\t{propertyName}{alignment} {goType} `json:\"{jsonTag}\"`");
         }
 
         s.AppendLine("}");
@@ -109,7 +118,14 @@ internal class GoContractWriter : ContractWriter
     {
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
 
-        s.AppendLine($"type {type.Name} string");
+        string typeName = type.Name;
+        if (type.Name.EndsWith("s"))
+        {
+            typeName = type.Name.Substring(0, type.Name.Length - 1);
+            s.AppendLine($"type {type.Name} []{typeName}");
+        }
+
+        s.AppendLine($"type {typeName} string");
         s.AppendLine();
         s.Append("const (");
 
@@ -125,10 +141,11 @@ internal class GoContractWriter : ContractWriter
             var alignment = new string(' ', maxFieldNameLength - field.Name.Length);
             var value = type.BaseType?.Name == "Enum" ?
                 TSContractWriter.ToCamelCase(field.Name) : field.ConstantValue;
-            s.AppendLine($"\t{type.Name}{field.Name}{alignment} {type.Name} = \"{value}\"");
+            s.AppendLine($"\t{typeName}{field.Name}{alignment} {typeName} = \"{value}\"");
         }
 
         s.AppendLine(")");
+
     }
 
     private void WriteStaticClassContract(
@@ -145,13 +162,23 @@ internal class GoContractWriter : ContractWriter
                 continue;
             }
 
-            s.AppendLine();
-            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "\t"));
+            var propertyName = FixPropertyNameCasing(property.Name);
+            var value = GetPropertyInitializer(type, property);
 
-            var propertyType = property.Type.ToDisplayString().Replace("?", "");
-            var goType = GetGoTypeForCSType(propertyType, property.Name, imports);
-            var value = GetPropertyInitializer(property);
-            s.AppendLine($"var {type.Name}{property.Name} = {value}");
+            if (value != null)
+            {
+                foreach (var package in new[] { "strings", "strconv", "regexp" })
+                {
+                    if (value.Contains(package + ".") && !imports.Contains(package))
+                    {
+                        imports.Add(package);
+                    }
+                }
+
+                s.AppendLine();
+                s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "\t"));
+                s.AppendLine($"var {type.Name}{propertyName} = {value}");
+            }
         }
     }
 
@@ -212,7 +239,7 @@ internal class GoContractWriter : ContractWriter
         return s.ToString();
     }
 
-    private static string? GetPropertyInitializer(IPropertySymbol property)
+    private static string? GetPropertyInitializer(ITypeSymbol type, IPropertySymbol property)
     {
         var location = property.Locations.Single();
         var sourceSpan = location.SourceSpan;
@@ -236,26 +263,30 @@ internal class GoContractWriter : ContractWriter
         var csExpression = sourceText.Substring(
             equalsIndex + 1, semicolonIndex - equalsIndex - 1).Trim();
 
-        // Attempt to convert the CS expression to a TS expression. This involes several
+        // Attempt to convert the CS expression to a Go expression. This involes several
         // weak assumptions, and will not work for many kinds of expressions. But it might
         // be good enough.
-        var tsExpression = csExpression
-            .Replace('"', '\'')
-            .Replace("Regex", "RegExp")
-            .Replace("Replace", "replace");
+        var goExpression = csExpression.Replace("new Regex", "regexp.MustCompile");
+        goExpression = new Regex("(\\w+)\\.Replace\\(([^,]*), ([^)]*)\\)")
+            .Replace(goExpression, "strings.Replace($1, $2, $3, -1)");
 
-        // Assume any PascaleCase identifiers are referncing other variables in scope.
-        tsExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
-            tsExpression, (m) => ToCamelCase(m.Value));
+        // Assume any PascalCase identifiers are referncing other variables in scope.
+        // Contvert integer constants to strings, allowing for integer offsets.
+        goExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
+            goExpression, (m) => $"{type.Name}{m.Value}");
+        goExpression = new Regex("\\(([A-Z][a-z]+){4,7} - \\d\\)").Replace(
+            goExpression, (m) => $"strconv.Itoa{m.Value}");
+        goExpression = new Regex("\\b([A-Z][a-z]+){3,6}Length\\b(?! - \\d)").Replace(
+            goExpression, (m) => $"strconv.Itoa({m.Value})");
+        goExpression = FixPropertyNameCasing(goExpression);
 
-        return tsExpression;
+        return goExpression;
     }
 
     private string GetJsonTagForProperty(IPropertySymbol property)
     {
         var tag = TSContractWriter.ToCamelCase(property.Name);
 
-        // TODO: omitempty
         var jsonIgnoreAttribute = property.GetAttributes()
             .SingleOrDefault((a) => a.AttributeClass!.Name == "JsonIgnoreAttribute");
         if (jsonIgnoreAttribute != null)
@@ -273,7 +304,14 @@ internal class GoContractWriter : ContractWriter
         return tag;
     }
 
-    private string GetGoTypeForCSType(string csType, string propertyName, SortedSet<string> imports)
+    private static string FixPropertyNameCasing(string propertyName)
+    {
+        propertyName = propertyName.Replace("Id", "ID");
+        propertyName = propertyName.Replace("Uri", "URI");
+        return propertyName;
+    }
+
+    private string GetGoTypeForCSType(string csType, IPropertySymbol property, SortedSet<string> imports)
     {
         var prefix = "";
         if (csType.EndsWith("[]"))
@@ -286,7 +324,11 @@ internal class GoContractWriter : ContractWriter
         if (csType.StartsWith(this.csNamespace + "."))
         {
             goType = csType.Substring(csNamespace.Length + 1);
-            prefix += "*";
+
+            if (!property.Type.IsValueType)
+            {
+                prefix += "*";
+            }
         }
         else
         {
@@ -300,7 +342,7 @@ internal class GoContractWriter : ContractWriter
                 "System.DateTime" => "time.Time",
                 "System.Text.RegularExpressions.Regex" => "regexp.Regexp",
                 "System.Collections.Generic.IDictionary<string, string>"
-                    => $"map[{(propertyName == "accessTokens" ? "TunnelAccessScope" : "string")}]string",
+                    => $"map[{(property.Name == "AccessTokens" ? "TunnelAccessScope" : "string")}]string",
                 "System.Collections.Generic.IDictionary<string, string[]>" => "map[string]string",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };

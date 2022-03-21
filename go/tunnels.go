@@ -2,82 +2,11 @@ package tunnels
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/rodaine/table"
 )
 
 const PackageVersion = "0.0.1"
-
-type Tunnel struct {
-	ClusterID     string `json:"ClusterId,omitempty"`
-	TunnelID      string `json:"TunnelId,omitempty"`
-	Name          string `json:"Name,omitempty"`
-	Description   string `json:"Description,omitempty"`
-	Tags          []string
-	Domain        string `json:"Domain,omitempty"`
-	AccessTokens  map[TunnelAccessScope]string
-	AccessControl *TunnelAccessControl
-	Options       *TunnelOptions
-	Status        *TunnelStatus
-	Endpoints     []*TunnelEndpoint
-	Ports         []*TunnelPort `json:"Ports,omitempty"`
-}
-
-type TunnelAccessControl struct {
-	Entries []*TunnelAccessControlEntry `json:"entries,omitempty"`
-}
-
-type TunnelAccessControlEntry struct {
-	Type         TunnelAccessControlEntryType
-	IsInherited  bool
-	IsDeny       bool
-	Subjects     []string
-	Scopes       []TunnelAccessScope
-	Provider     string
-	Organization string
-}
-
-type TunnelAccessControlEntryType string
-
-const (
-	TunnelAccessControlEntryTypeNone            TunnelAccessControlEntryType = "none"
-	TunnelAccessControlEntryTypeAnonymous       TunnelAccessControlEntryType = "anonymous"
-	TunnelAccessControlEntryTypeUsers           TunnelAccessControlEntryType = "users"
-	TunnelAccessControlEntryTypeGroups          TunnelAccessControlEntryType = "groups"
-	TunnelAccessControlEntryTypeOrganizations   TunnelAccessControlEntryType = "organizations"
-	TunnelAccessControlEntryTypeRepositories    TunnelAccessControlEntryType = "repositories"
-	TunnelAccessControlEntryTypePublicKeys      TunnelAccessControlEntryType = "publickeys"
-	TunnelAccessControlEntryTypeIPAddressRanges TunnelAccessControlEntryType = "ipaddressranges"
-)
-
-type TunnelOptions struct {
-	ConnectionModes []TunnelConnectionMode
-}
-
-type TunnelConnectionMode string
-
-const (
-	TunnelConnectionModeLocalNetwork   TunnelConnectionMode = "LocalNetwork"
-	TunnelConnectionModeTunnelRelay    TunnelConnectionMode = "TunnelRelay"
-	TunnelConnectionModeLiveShareRelay TunnelConnectionMode = "LiveShareRelay"
-)
-
-type TunnelStatus struct {
-	HostConectionCount       int
-	LastHostConnectionTime   time.Time
-	ClientConnectionCount    int
-	LastClientConnectionTime time.Time
-}
-
-type TunnelEndpoint struct {
-	ConnectionMode TunnelConnectionMode
-	HostID         string
-	PortURIFormat  string
-	HostRelayURI   string
-	ClientRelayURI string
-	HostPublicKeys []string
-}
 
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
@@ -138,8 +67,49 @@ func (t *Tunnel) table() table.Table {
 		tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
 	}
 	tbl.AddRow("Ports", ports)
-	tbl.AddRow("Host Connections", t.Status.HostConectionCount)
+	tbl.AddRow("Host Connections", t.Status.HostConnectionCount)
 	tbl.AddRow("Client Connections", t.Status.ClientConnectionCount)
 	tbl.AddRow("Available Scopes", accessTokens)
 	return tbl
+}
+
+func NewTunnelPort(portNumber uint16, clusterId string, tunnelId string, protocol TunnelProtocol) *TunnelPort {
+	port := &TunnelPort{
+		PortNumber: portNumber,
+		ClusterID:  clusterId,
+		TunnelID:   tunnelId,
+		Protocol:   string(protocol),
+	}
+	if len(port.Protocol) == 0 {
+		port.Protocol = string(TunnelProtocolAuto)
+	}
+	port.AccessTokens = make(map[TunnelAccessScope]string)
+	port.AccessControl = &TunnelAccessControl{}
+	port.Options = &TunnelOptions{}
+	port.Status = &TunnelPortStatus{}
+	return port
+}
+
+func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
+	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
+		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
+	}
+	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
+		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
+	}
+	convertedPort := &TunnelPort{
+		PortNumber:    tunnelPort.PortNumber,
+		Protocol:      tunnelPort.Protocol,
+		Options:       tunnel.Options,
+		AccessControl: &TunnelAccessControl{},
+	}
+	if tunnelPort.AccessControl != nil {
+		for _, entry := range tunnelPort.AccessControl.Entries {
+			if !entry.IsInherited {
+				convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
+			}
+		}
+	}
+
+	return convertedPort, nil
 }
