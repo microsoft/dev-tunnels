@@ -173,9 +173,6 @@ internal class TSContractWriter : ContractWriter
                 continue;
             }
 
-            s.AppendLine();
-            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
-
             var propertyType = property.Type.ToDisplayString();
             var isNullable = propertyType.EndsWith("?");
             if (isNullable)
@@ -189,7 +186,13 @@ internal class TSContractWriter : ContractWriter
             var tsName = ToCamelCase(property.Name);
             var tsType = GetTSTypeForCSType(propertyType, tsName, imports);
             var value = GetPropertyInitializer(property);
-            s.AppendLine($"    export const {tsName}: {tsType}{(isNullable ? " | null" : "")} = {value};");
+            if (value != null)
+            {
+                s.AppendLine();
+                s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
+                s.AppendLine("    " +
+                    $"export const {tsName}: {tsType}{(isNullable ? " | null" : "")} = {value};");
+            }
         }
 
         s.AppendLine("}");
@@ -314,7 +317,7 @@ internal class TSContractWriter : ContractWriter
             .Replace("Regex", "RegExp")
             .Replace("Replace", "replace");
 
-        // Assume any PascaleCase identifiers are referncing other variables in scope.
+        // Assume any PascalCase identifiers are referncing other variables in scope.
         tsExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
             tsExpression, (m) => ToCamelCase(m.Value));
 
