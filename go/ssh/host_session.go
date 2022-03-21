@@ -35,15 +35,19 @@ func (s *HostSSHSession) Connect(ctx context.Context) error {
 		// they must have a valid tunnel access token already to get this far.
 		User:    "tunnel",
 		Timeout: 10 * time.Second,
-
 		// TODO: Validate host public keys match those published to the service?
 		// For now, the assumption is only a host with access to the tunnel can get a token
 		// that enables listening for tunnel connections.
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Config: ssh.Config{
+			KeyExchanges: []string{"none"},
+			Ciphers:      []string{"none"},
+		},
+		HostKeyAlgorithms: []string{"none"},
 	}
 
 	// This is where the host currently breaks due to a mismatch of key exchange algorithms
-	sshClientConn, chans, reqs, err := ssh.NewClientConn(s.socket, s.hostRelayURI, &clientConfig)
+	sshClientConn, chans, reqs, err := ssh.NewClientConn(s.socket, "", &clientConfig)
 	if err != nil {
 		return fmt.Errorf("error creating ssh client connection: %w", err)
 	}
