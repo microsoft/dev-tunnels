@@ -1,5 +1,4 @@
 steps:
-# Install dotnet SDK as configured in /global.json
 - task: UseDotNet@2
   displayName: "Install DotNet SDK"
   inputs:
@@ -8,7 +7,6 @@ steps:
     performMultiLevelLookup: true
     useGlobalJson: true
 
-# NuGet Authenticate
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
 
@@ -28,7 +26,7 @@ steps:
     command: 'build'
     workingDirectory: 'cs'
     projects: 'cs/TunnelsSDK.sln'
-    arguments: '--configuration release  --no-cache'
+    arguments: '-v:n --no-restore -c Release -p:EnableSigning="$(enableSigning)" -p:SignType="$(signType)"'
 
 - task: DotNetCoreCLI@2
   displayName: "DotNet Test"

@@ -1,7 +1,7 @@
 pool:
-  name: Azure Pipelines
+  name: VSEngSS-MicroBuild2022-1ES
 
-# Publish only if changes to cs directory are committed to main.
+# Trigger only if changes to cs directory are committed to main.
 trigger:
   branches:
     include:
@@ -12,26 +12,33 @@ trigger:
 
 pr: none
 
+variables:
+  TeamName: "Visual Studio"
+  enableSigning: true
+  ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    signType: real
+    publishNugetPackages: ${{ true }}
+  ${{ else }}:
+    signType: test
+    publishNugetPackages: ${{ false }}
+
 steps:
-- template: cs-build-steps.yaml
 
-- task: DotNetCoreCLI@2
-  displayName: Install NBGV tool
+- task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@3
+  displayName: 'Install Signing Plugin'
   inputs:
-    command: custom
-    custom: tool
-    arguments: install --tool-path . nbgv
+    signType: $(signType)
 
-- script: nbgv cloud
-  displayName: Set Version
+- template: cs-build-steps.yaml
 
 - task: DotNetCoreCLI@2
   displayName: "DotNet Pack"
   inputs:
     command: 'pack'
+    nobuild: true
     workingDirectory: 'cs'
     projects: 'cs/dirs.proj'
-    verbosityPack: 'Minimal'
+    verbosityPack: 'Normal'
     packagesToPack: 'cs/**/*.csproj'
     configuration: 'Release'
     packDirectory: '$(Build.ArtifactStagingDirectory)'
@@ -54,3 +61,4 @@ steps:
     publishVstsFeed: VS
     publishPackageMetadata: true
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+    condition: $(publishNugetPackages)
