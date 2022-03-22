@@ -53,3 +53,24 @@ type TunnelAccessControlEntry struct {
 	// These must be one or more values from `TunnelAccessScopes`.
 	Scopes       []string `json:"scopes"`
 }
+
+// Constants for well-known identity providers.
+type TunnelAccessControlEntryProviders []TunnelAccessControlEntryProvider
+type TunnelAccessControlEntryProvider string
+
+const (
+	// Microsoft (AAD) identity provider.
+	TunnelAccessControlEntryProviderMicrosoft TunnelAccessControlEntryProvider = "microsoft"
+
+	// GitHub identity provider.
+	TunnelAccessControlEntryProviderGitHub    TunnelAccessControlEntryProvider = "github"
+
+	// SSH public keys.
+	TunnelAccessControlEntryProviderSsh       TunnelAccessControlEntryProvider = "ssh"
+
+	// IPv4 addresses.
+	TunnelAccessControlEntryProviderIPv4      TunnelAccessControlEntryProvider = "ipv4"
+
+	// IPv6 addresses.
+	TunnelAccessControlEntryProviderIPv6      TunnelAccessControlEntryProvider = "ipv6"
+)

@@ -35,23 +35,7 @@ internal class GoContractWriter : ContractWriter
         var importsOffset = s.Length;
         var imports = new SortedSet<string>();
 
-        var members = type.GetMembers();
-        if (type.BaseType?.Name == "Enum" || members.All((m) => 
-            (m is IFieldSymbol field &&
-             ((field.IsConst && field.Type.Name == "String") || field.Name == "All")) ||
-            (m is IMethodSymbol method &&
-             (method.Name == "Validate" || method.MethodKind == MethodKind.StaticConstructor))))
-        {
-            WriteEnumContract(s, type);
-        }
-        else if (type.IsStatic && members.All((m) => m.IsStatic))
-        {
-            WriteStaticClassContract(s, type, imports);
-        }
-        else
-        {
-            WriteInterfaceContract(s, type, imports);
-        }
+        WriteContractType(s, type, imports);
 
         imports.Remove(type.Name);
         if (imports.Count > 0)
@@ -75,6 +59,40 @@ internal class GoContractWriter : ContractWriter
         }
 
         File.WriteAllText(filePath, s.ToString());
+    }
+
+    private void WriteContractType(
+        StringBuilder s,
+        ITypeSymbol type,
+        SortedSet<string> imports)
+    {
+        var members = type.GetMembers();
+        if (type.BaseType?.Name == "Enum" || members.All((m) =>
+            (m is IFieldSymbol field &&
+             ((field.IsConst && field.Type.Name == "String") || field.Name == "All")) ||
+            (m is IMethodSymbol method &&
+             (method.Name == "Validate" || method.MethodKind == MethodKind.StaticConstructor))))
+        {
+            WriteEnumContract(s, type);
+        }
+        else if (type.IsStatic && members.All((m) => m.IsStatic))
+        {
+            WriteStaticClassContract(s, type, imports);
+        }
+        else
+        {
+            WriteInterfaceContract(s, type, imports);
+        }
+
+        var nestedTypes = type.GetTypeMembers()
+            .Where((t) => !ContractsGenerator.ExcludedContractTypes.Contains(t.Name))
+            .ToArray();
+        foreach (var nestedType in nestedTypes.Where(
+            (t) => !ContractsGenerator.ExcludedContractTypes.Contains(t.Name)))
+        {
+            s.AppendLine();
+            WriteContractType(s, nestedType, imports);
+        }
     }
 
     private void WriteInterfaceContract(
@@ -119,10 +137,16 @@ internal class GoContractWriter : ContractWriter
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
 
         string typeName = type.Name;
-        if (type.Name.EndsWith("s"))
+        if (type.ContainingType != null)
         {
-            typeName = type.Name.Substring(0, type.Name.Length - 1);
-            s.AppendLine($"type {type.Name} []{typeName}");
+            typeName = type.ContainingType.Name + typeName;
+        }
+
+        if (typeName.EndsWith("s"))
+        {
+            var pluralTypeName = typeName;
+            typeName = typeName.Substring(0, typeName.Length - 1);
+            s.AppendLine($"type {pluralTypeName} []{typeName}");
         }
 
         s.AppendLine($"type {typeName} string");

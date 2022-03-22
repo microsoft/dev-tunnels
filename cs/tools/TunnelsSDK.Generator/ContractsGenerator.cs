@@ -16,7 +16,7 @@ public class ContractsGenerator : ISourceGenerator
     private const string DiagnosticPrefix = "BASIS";
     private const string DiagnosticCategory = "Basis";
     private const string ContractsNamespace = "Microsoft.VsSaaS.TunnelService.Contracts";
-    private static readonly string[] ExcludedContractTypes = new[]
+    internal static readonly string[] ExcludedContractTypes = new[]
     {
         "TunnelContracts",
         "ThisAssembly",
@@ -66,6 +66,12 @@ public class ContractsGenerator : ISourceGenerator
             }
 
             var type = (ITypeSymbol)types.Single();
+            if (type.ContainingType != null)
+            {
+                // Nested types will be written as part of their containing type.
+                continue;
+            }
+
             var path = type.Locations.Single().GetLineSpan().Path;
 
             foreach (var method in type.GetMembers().OfType<IMethodSymbol>()

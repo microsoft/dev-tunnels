@@ -33,22 +33,7 @@ internal class TSContractWriter : ContractWriter
         var importsOffset = s.Length;
         var imports = new SortedSet<string>();
 
-        var members = type.GetMembers();
-        if (type.BaseType?.Name == "Enum" || members.All((m) => 
-            (m is IFieldSymbol field &&
-             ((field.IsConst && field.Type.Name == "String") || field.Name == "All")) ||
-            (m is IMethodSymbol method && method.MethodKind == MethodKind.StaticConstructor)))
-        {
-            WriteEnumContract(s, type);
-        }
-        else if (type.IsStatic && members.All((m) => m.IsStatic))
-        {
-            WriteStaticClassContract(s, type, imports);
-        }
-        else
-        {
-            WriteInterfaceContract(s, type, imports);
-        }
+        WriteContractType(s, "", type, imports);
 
         imports.Remove(type.Name);
         if (imports.Count > 0)
@@ -62,8 +47,51 @@ internal class TSContractWriter : ContractWriter
         File.WriteAllText(filePath, s.ToString());
     }
 
+    private void WriteContractType(
+        StringBuilder s,
+        string indent,
+        ITypeSymbol type,
+        SortedSet<string> imports)
+    {
+        var members = type.GetMembers();
+        if (type.BaseType?.Name == "Enum" || members.All((m) =>
+            (m is IFieldSymbol field &&
+             ((field.IsConst && field.Type.Name == "String") || field.Name == "All")) ||
+            (m is IMethodSymbol method && method.MethodKind == MethodKind.StaticConstructor)))
+        {
+            WriteEnumContract(s, indent, type);
+        }
+        else if (type.IsStatic && members.All((m) => m.IsStatic))
+        {
+            WriteStaticClassContract(s, indent, type, imports);
+        }
+        else
+        {
+            WriteInterfaceContract(s, indent, type, imports);
+        }
+
+        var nestedTypes = type.GetTypeMembers()
+            .Where((t) => !ContractsGenerator.ExcludedContractTypes.Contains(t.Name))
+            .ToArray();
+        if (nestedTypes.Length > 0)
+        {
+            s.AppendLine();
+            s.Append($"{indent}namespace {type.Name} {{");
+
+            foreach (var nestedType in nestedTypes.Where(
+                (t) => !ContractsGenerator.ExcludedContractTypes.Contains(t.Name)))
+            {
+                s.AppendLine();
+                WriteContractType(s, indent + "    ", nestedType, imports);
+            }
+
+            s.AppendLine($"{indent}}}");
+        }
+    }
+
     private void WriteInterfaceContract(
         StringBuilder s,
+        string indent,
         ITypeSymbol type,
         SortedSet<string> imports)
     {
@@ -78,17 +106,17 @@ internal class TSContractWriter : ContractWriter
             imports.Add(baseTypeName!);
         }
 
-        s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
+        s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
         var extends = baseTypeName != null ? " extends " + baseTypeName : "";
 
-        s.Append($"export interface {type.Name}{extends} {{");
+        s.Append($"{indent}export interface {type.Name}{extends} {{");
 
         foreach (var property in type.GetMembers().OfType<IPropertySymbol>()
             .Where((p) => !p.IsStatic))
         {
             s.AppendLine();
-            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
+            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), indent + "    "));
 
             var propertyType = property.Type.ToDisplayString();
             var isNullable = propertyType.EndsWith("?");
@@ -103,10 +131,10 @@ internal class TSContractWriter : ContractWriter
             var tsName = ToCamelCase(property.Name);
             var tsType = GetTSTypeForCSType(propertyType, tsName, imports);
 
-            s.AppendLine($"    {tsName}{(isNullable ? "?" : "")}: {tsType};");
+            s.AppendLine($"{indent}    {tsName}{(isNullable ? "?" : "")}: {tsType};");
         }
 
-        s.AppendLine("}");
+        s.AppendLine($"{indent}}}");
 
         var constMemberNames = new List<string>();
         foreach (var field in type.GetMembers().OfType<IFieldSymbol>()
@@ -122,20 +150,21 @@ internal class TSContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
-
-            s.AppendLine($"export const {ToCamelCase(field.Name)} = '{field.ConstantValue}';");
-
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent));
+            s.AppendLine($"{indent}export const {ToCamelCase(field.Name)} = '{field.ConstantValue}';");
         }
 
         s.Append(ExportStaticMembers(type, constMemberNames));
     }
 
-    private void WriteEnumContract(StringBuilder s, ITypeSymbol type)
+    private void WriteEnumContract(
+        StringBuilder s,
+        string indent,
+        ITypeSymbol type)
     {
-        s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
+        s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
-        s.Append($"export enum {type.Name} {{");
+        s.Append($"{indent}export enum {type.Name} {{");
 
         foreach (var member in type.GetMembers())
         {
@@ -145,24 +174,25 @@ internal class TSContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), "    "));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
 
             var value = type.BaseType?.Name == "Enum" ?
                 ToCamelCase(field.Name) : field.ConstantValue;
-            s.AppendLine($"    {field.Name} = '{value}',");
+            s.AppendLine($"{indent}    {field.Name} = '{value}',");
         }
 
-        s.AppendLine("}");
+        s.AppendLine($"{indent}}}");
 
         s.Append(ExportStaticMembers(type));
     }
 
     private void WriteStaticClassContract(
         StringBuilder s,
+        string indent,
         ITypeSymbol type,
         SortedSet<string> imports)
     {
-        s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
+        s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
         s.Append($"namespace {type.Name} {{");
 
@@ -189,8 +219,8 @@ internal class TSContractWriter : ContractWriter
             if (value != null)
             {
                 s.AppendLine();
-                s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
-                s.AppendLine("    " +
+                s.Append(FormatDocComment(property.GetDocumentationCommentXml(), indent + "    "));
+                s.AppendLine($"{indent}    " +
                     $"export const {tsName}: {tsType}{(isNullable ? " | null" : "")} = {value};");
             }
         }
@@ -246,7 +276,7 @@ internal class TSContractWriter : ContractWriter
         return name.Substring(0, 1).ToLowerInvariant() + name.Substring(1);
     }
 
-    private string FormatDocComment(string? comment, string prefix)
+    private string FormatDocComment(string? comment, string indent)
     {
         if (comment == null)
         {
@@ -264,23 +294,23 @@ internal class TSContractWriter : ContractWriter
         var remarks = new Regex("<remarks>(.*)</remarks>").Match(comment).Groups[1].Value.Trim();
 
         var s = new StringBuilder();
-        s.AppendLine(prefix + "/**");
+        s.AppendLine(indent + "/**");
 
-        foreach (var commentLine in WrapComment(summary, 90 - 3 - prefix.Length))
+        foreach (var commentLine in WrapComment(summary, 90 - 3 - indent.Length))
         {
-            s.AppendLine(prefix + " * " + commentLine);
+            s.AppendLine(indent + " * " + commentLine);
         }
 
         if (!string.IsNullOrEmpty(remarks))
         {
-            s.AppendLine(prefix + " *");
-            foreach (var commentLine in WrapComment(remarks, 90 - 3 - prefix.Length))
+            s.AppendLine(indent + " *");
+            foreach (var commentLine in WrapComment(remarks, 90 - 3 - indent.Length))
             {
-                s.AppendLine(prefix + " * " + commentLine);
+                s.AppendLine(indent + " * " + commentLine);
             }
         }
 
-        s.AppendLine(prefix + " */");
+        s.AppendLine(indent + " */");
 
         return s.ToString();
     }
