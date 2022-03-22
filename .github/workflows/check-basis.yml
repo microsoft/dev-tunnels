@@ -12,5 +12,6 @@ jobs:
     - name: Check for Basis
       run: |
         grep -iR basis --exclude-dir=.github --exclude-dir=.git .
-        [[ $? = 1 ]] && exit 0
-        [[ $? = 0 ]] && exit 1
+        EXIT_CODE=$?
+        [[ $EXIT_CODE = 1 ]] && exit 0
+        [[ $EXIT_CODE = 0 ]] && exit 1
