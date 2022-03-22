@@ -15,5 +15,13 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         // The system supports it, but it would only be used in advanced scenarios,
         // and otherwise could cause confusion in case of mistakes.
         // When not enabled, an existing host should be disconnected when a new host connects.
+
+        /// <summary>
+        /// Gets or sets a value indicating whether web-forwarding of this tunnel can run on any cluster (region)
+        /// without redirecting to the home cluster.
+        /// This is only applicable if the tunnel has a name and web-forwarding uses it.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool IsGloballyAvailable { get; set; }
     }
 }
