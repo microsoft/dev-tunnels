@@ -1,0 +1,17 @@
+name: Check Basis
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  no-basis:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Ensure No Basis
+      run: |
+        pwd
+        ls -la
+        grep -iR basis --exclude-dir=.github --exclude-dir=.git .
+        [[ $? = 0 ]] && exit 1
