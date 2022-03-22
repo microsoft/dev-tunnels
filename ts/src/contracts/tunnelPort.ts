@@ -26,22 +26,23 @@ export interface TunnelPort {
     /**
      * Gets or sets the protocol of the tunnel port.
      *
-     * Should be one of the string constants from `TunnelProtocol`.
+     * Should be one of the string constants from {@link TunnelProtocol}.
      */
     protocol?: string;
 
     /**
      * Gets or sets a dictionary mapping from scopes to tunnel access tokens.
      *
-     * Unlike the tokens in `Tunnel.accessTokens`, these tokens are restricted to the
-     * individual port.
+     * Unlike the tokens in {@link Tunnel.accessTokens}, these tokens are restricted to
+     * the individual port.
      */
     accessTokens?: { [scope: string]: string };
 
     /**
      * Gets or sets access control settings for the tunnel port.
      *
-     * See `TunnelAccessControl` documentation for details about the access control model.
+     * See {@link TunnelAccessControl} documentation for details about the access control
+     * model.
      */
     accessControl?: TunnelAccessControl;
 

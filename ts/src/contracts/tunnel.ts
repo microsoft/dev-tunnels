@@ -52,7 +52,8 @@ export interface Tunnel {
     /**
      * Gets or sets access control settings for the tunnel.
      *
-     * See `TunnelAccessControl` documentation for details about the access control model.
+     * See {@link TunnelAccessControl} documentation for details about the access control
+     * model.
      */
     accessControl?: TunnelAccessControl;
 

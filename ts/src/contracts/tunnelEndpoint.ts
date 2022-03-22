@@ -39,15 +39,15 @@ export interface TunnelEndpoint {
 
     /**
      * Gets or sets a string used to format URIs where a web client can connect to ports
-     * of the tunnel. The string includes a `TunnelEndpoint.portUriToken` that must be
-     * replaced with the actual port number.
+     * of the tunnel. The string includes a {@link TunnelEndpoint.portUriToken} that must
+     * be replaced with the actual port number.
      */
     portUriFormat?: string;
 }
 
 /**
- * Token included in `TunnelEndpoint.portUriFormat` that is to be replaced by a specified
- * port number.
+ * Token included in {@link TunnelEndpoint.portUriFormat} that is to be replaced by a
+ * specified port number.
  */
 export const portUriToken = '{port}';
 

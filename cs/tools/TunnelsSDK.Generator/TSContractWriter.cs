@@ -286,9 +286,9 @@ internal class TSContractWriter : ContractWriter
         comment = comment.Replace("\r", "");
         comment = new Regex("\n *").Replace(comment, " ");
         comment = new Regex($"<see cref=\".:({this.csNamespace}\\.)?(\\w+)\\.(\\w+)\" ?/>")
-            .Replace(comment, (m) => $"`{m.Groups[2].Value}.{ToCamelCase(m.Groups[3].Value)}`");
+            .Replace(comment, (m) => $"{{@link {m.Groups[2].Value}.{ToCamelCase(m.Groups[3].Value)}}}");
         comment = new Regex($"<see cref=\".:({this.csNamespace}\\.)?([^\"]+)\" ?/>")
-            .Replace(comment, "`$2`");
+            .Replace(comment, "{@link $2}");
 
         var summary = new Regex("<summary>(.*)</summary>").Match(comment).Groups[1].Value.Trim();
         var remarks = new Regex("<remarks>(.*)</remarks>").Match(comment).Groups[1].Value.Trim();

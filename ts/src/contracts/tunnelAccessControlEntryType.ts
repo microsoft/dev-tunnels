@@ -1,7 +1,7 @@
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntryType.cs
 
 /**
- * Specifies the type of `TunnelAccessControlEntry`.
+ * Specifies the type of {@link TunnelAccessControlEntry}.
  */
 export enum TunnelAccessControlEntryType {
     /**

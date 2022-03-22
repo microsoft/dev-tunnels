@@ -1,7 +1,7 @@
 // Generated from ../../../cs/src/Contracts/TunnelOptions.cs
 
 /**
- * Data contract for `Tunnel` or `TunnelPort` options.
+ * Data contract for {@link Tunnel} or {@link TunnelPort} options.
  */
 export interface TunnelOptions {
     /**

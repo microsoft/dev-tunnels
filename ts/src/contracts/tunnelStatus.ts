@@ -1,7 +1,7 @@
 // Generated from ../../../cs/src/Contracts/TunnelStatus.cs
 
 /**
- * Data contract for `Tunnel` status.
+ * Data contract for {@link Tunnel} status.
  */
 export interface TunnelStatus {
     /**

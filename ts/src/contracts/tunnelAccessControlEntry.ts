@@ -3,7 +3,7 @@
 import { TunnelAccessControlEntryType } from './tunnelAccessControlEntryType';
 
 /**
- * Data contract for an access control entry on a `Tunnel` or `TunnelPort`.
+ * Data contract for an access control entry on a {@link Tunnel} or {@link TunnelPort}.
  *
  * An access control entry (ACE) grants or denies one or more access scopes to one or more
  * subjects. Tunnel ports inherit access control entries from their tunnel, and they may
@@ -22,11 +22,11 @@ export interface TunnelAccessControlEntry {
      * "ssh" or "ipv4".
      *
      * For user, group, or org ACEs, this value is the name of the identity provider of
-     * the user/group/org IDs. It may be one of the well-known provider names in
-     * `TunnelAccessControlEntry.providers`, or (in the future) a custom identity
-     * provider.  For public key ACEs, this value is the type of public key, e.g. "ssh". 
-     * For IP address range ACEs, this value is the IP addrss version, e.g. "ipv4" or
-     * "ipv6".  For anonymous ACEs, this value is null.
+     * the user/group/org IDs. It may be one of the well-known provider names in {@link
+     * TunnelAccessControlEntry.providers}, or (in the future) a custom identity provider.
+     *  For public key ACEs, this value is the type of public key, e.g. "ssh".  For IP
+     * address range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6". 
+     * For anonymous ACEs, this value is null.
      */
     provider?: string;
 
@@ -48,8 +48,8 @@ export interface TunnelAccessControlEntry {
 
     /**
      * Gets or sets an optional organization context for all subjects of this entry. The
-     * use and meaning of this value depends on the `TunnelAccessControlEntry.type` and
-     * `TunnelAccessControlEntry.provider` of this entry.
+     * use and meaning of this value depends on the {@link TunnelAccessControlEntry.type}
+     * and {@link TunnelAccessControlEntry.provider} of this entry.
      *
      * For AAD users and group ACEs, this value is the AAD tenant ID. It is not currently
      * used with any other types of ACEs.
@@ -58,15 +58,15 @@ export interface TunnelAccessControlEntry {
 
     /**
      * Gets or sets the subjects for the entry, such as user or group IDs. The format of
-     * the values depends on the `TunnelAccessControlEntry.type` and
-     * `TunnelAccessControlEntry.provider` of this entry.
+     * the values depends on the {@link TunnelAccessControlEntry.type} and {@link
+     * TunnelAccessControlEntry.provider} of this entry.
      */
     subjects: string[];
 
     /**
      * Gets or sets the access scopes that this entry grants or denies to the subjects.
      *
-     * These must be one or more values from `TunnelAccessScopes`.
+     * These must be one or more values from {@link TunnelAccessScopes}.
      */
     scopes: string[];
 }
