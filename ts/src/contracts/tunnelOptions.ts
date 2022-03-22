@@ -7,5 +7,5 @@ export interface TunnelOptions {
      * without redirecting to the home cluster.
      * This is only applicable if the tunnel has a name and web-forwarding uses it.
      */
-    isGlobalAccess?: boolean;
+    IsGloballyAvailable?: boolean;
 }

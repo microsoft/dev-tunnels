@@ -22,6 +22,6 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// This is only applicable if the tunnel has a name and web-forwarding uses it.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public bool IsGlobalAccess { get; set; }
+        public bool IsGloballyAvailable { get; set; }
     }
 }
