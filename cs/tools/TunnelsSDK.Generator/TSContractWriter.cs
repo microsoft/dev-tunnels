@@ -19,7 +19,7 @@ internal class TSContractWriter : ContractWriter
     {
     }
 
-    public override void WriteContract(ITypeSymbol type)
+    public override void WriteContract(ITypeSymbol type, ICollection<ITypeSymbol> allTypes)
     {
         var csFilePath = GetRelativePath(type.Locations.Single().GetLineSpan().Path);
 
@@ -54,9 +54,9 @@ internal class TSContractWriter : ContractWriter
         SortedSet<string> imports)
     {
         var members = type.GetMembers();
-        if (type.BaseType?.Name == "Enum" || members.All((m) =>
+        if (type.BaseType?.Name == nameof(Enum) || members.All((m) =>
             (m is IFieldSymbol field &&
-             ((field.IsConst && field.Type.Name == "String") || field.Name == "All")) ||
+             ((field.IsConst && field.Type.Name == nameof(String)) || field.Name == "All")) ||
             (m is IMethodSymbol method && method.MethodKind == MethodKind.StaticConstructor)))
         {
             WriteEnumContract(s, indent, type);

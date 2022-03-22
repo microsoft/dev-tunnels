@@ -19,7 +19,7 @@ internal class GoContractWriter : ContractWriter
     {
     }
 
-    public override void WriteContract(ITypeSymbol type)
+    public override void WriteContract(ITypeSymbol type, ICollection<ITypeSymbol> allTypes)
     {
         var csFilePath = GetRelativePath(type.Locations.Single().GetLineSpan().Path);
 
@@ -35,7 +35,10 @@ internal class GoContractWriter : ContractWriter
         var importsOffset = s.Length;
         var imports = new SortedSet<string>();
 
-        WriteContractType(s, type, imports);
+        if (!WriteContractType(s, type, imports, allTypes))
+        {
+            return;
+        }
 
         imports.Remove(type.Name);
         if (imports.Count > 0)
@@ -61,17 +64,17 @@ internal class GoContractWriter : ContractWriter
         File.WriteAllText(filePath, s.ToString());
     }
 
-    private void WriteContractType(
+    private bool WriteContractType(
         StringBuilder s,
         ITypeSymbol type,
-        SortedSet<string> imports)
+        SortedSet<string> imports,
+        ICollection<ITypeSymbol> allTypes)
     {
         var members = type.GetMembers();
-        if (type.BaseType?.Name == "Enum" || members.All((m) =>
+        if (type.BaseType?.Name == nameof(Enum) || members.All((m) =>
             (m is IFieldSymbol field &&
-             ((field.IsConst && field.Type.Name == "String") || field.Name == "All")) ||
-            (m is IMethodSymbol method &&
-             (method.Name == "Validate" || method.MethodKind == MethodKind.StaticConstructor))))
+             ((field.IsConst && field.Type.Name == nameof(String)) || field.Name == "All")) ||
+            (m is IMethodSymbol method && method.MethodKind == MethodKind.StaticConstructor)))
         {
             WriteEnumContract(s, type);
         }
@@ -81,7 +84,13 @@ internal class GoContractWriter : ContractWriter
         }
         else
         {
-            WriteInterfaceContract(s, type, imports);
+            // Derived type interfaces will be generated along with the base type.
+            if (type.BaseType != null && type.BaseType.Name != nameof(Object))
+            {
+                return false;
+            }
+
+            WriteInterfaceContract(s, type, imports, allTypes);
         }
 
         var nestedTypes = type.GetTypeMembers()
@@ -91,24 +100,23 @@ internal class GoContractWriter : ContractWriter
             (t) => !ContractsGenerator.ExcludedContractTypes.Contains(t.Name)))
         {
             s.AppendLine();
-            WriteContractType(s, nestedType, imports);
+            WriteContractType(s, nestedType, imports, allTypes);
         }
+
+        return true;
     }
 
     private void WriteInterfaceContract(
         StringBuilder s,
         ITypeSymbol type,
-        SortedSet<string> imports)
+        SortedSet<string> imports,
+        ICollection<ITypeSymbol> allTypes)
     {
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
         s.Append($"type {type.Name} struct {{");
 
-        var baseTypeName = type.BaseType?.Name;
-        if (baseTypeName != null && baseTypeName != nameof(Object))
-        {
-            s.AppendLine();
-            s.AppendLine($"\t{baseTypeName}");
-        }
+        var derivedTypes = allTypes.Where(
+            (t) => SymbolEqualityComparer.Default.Equals(t.BaseType, type)).ToArray();
 
         var properties = type.GetMembers()
             .OfType<IPropertySymbol>()
@@ -129,7 +137,22 @@ internal class GoContractWriter : ContractWriter
             s.AppendLine($"\t{propertyName}{alignment} {goType} `json:\"{jsonTag}\"`");
         }
 
+        if (derivedTypes.Length > 0)
+        {
+            s.AppendLine();
+            foreach (var derivedType in derivedTypes)
+            {
+                s.AppendLine($"\t{derivedType.Name}");
+            }
+        }
+
         s.AppendLine("}");
+
+        foreach (var derivedType in derivedTypes)
+        {
+            s.AppendLine();
+            WriteInterfaceContract(s, derivedType, imports, allTypes);
+        }
     }
 
     private void WriteEnumContract(StringBuilder s, ITypeSymbol type)

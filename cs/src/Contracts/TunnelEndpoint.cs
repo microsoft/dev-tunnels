@@ -46,6 +46,12 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public string? HostId { get; set; }
 
         /// <summary>
+        /// Gets or sets an array of public keys, which can be used by clients to authenticate
+        /// the host.
+        /// </summary>
+        public string[]? HostPublicKeys { get; set; }
+
+        /// <summary>
         /// Gets or sets a string used to format URIs where a web client can connect to
         /// ports of the tunnel. The string includes a <see cref="PortUriToken"/> that must be
         /// replaced with the actual port number.

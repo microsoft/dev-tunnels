@@ -35,7 +35,9 @@ func TestSuccessfulConnect(t *testing.T) {
 		Endpoints: []*TunnelEndpoint{
 			{
 				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}
@@ -82,7 +84,9 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 		Endpoints: []*TunnelEndpoint{
 			{
 				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}
@@ -175,7 +179,7 @@ func TestPortForwarding(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	streamPort := 8001
+	streamPort := uint16(8001)
 	streamData := "stream-data"
 	stream := bytes.NewBufferString(streamData)
 	pfsChannel := messages.NewPortForwardChannel(1, "127.0.0.1", uint32(streamPort), "", 0)
@@ -191,7 +195,9 @@ func TestPortForwarding(t *testing.T) {
 		Endpoints: []*TunnelEndpoint{
 			{
 				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}

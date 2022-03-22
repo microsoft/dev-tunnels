@@ -32,6 +32,12 @@ export interface TunnelEndpoint {
     hostId?: string;
 
     /**
+     * Gets or sets an array of public keys, which can be used by clients to authenticate
+     * the host.
+     */
+    hostPublicKeys?: string[];
+
+    /**
      * Gets or sets a string used to format URIs where a web client can connect to ports
      * of the tunnel. The string includes a `TunnelEndpoint.portUriToken` that must be
      * replaced with the actual port number.

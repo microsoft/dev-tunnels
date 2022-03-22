@@ -26,10 +26,4 @@ export interface LiveShareRelayTunnelEndpoint extends TunnelEndpoint {
      * endpoint.
      */
     relayClientSasToken?: string;
-
-    /**
-     * Gets or sets an array of public keys, which can be used by clients to authenticate
-     * the host.
-     */
-    hostPublicKeys?: string[];
 }

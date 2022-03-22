@@ -29,7 +29,6 @@ public class ContractsGenerator : ISourceGenerator
         // Note source generators re not covered by normal debugging,
         // because the generator runs at build time, not at application run-time.
         // Un-comment the line below to enable debugging at build time.
-        // For more debugging info, see https://nicksnettravels.builttoroam.com/debug-code-gen/
 
         ////System.Diagnostics.Debugger.Launch();
 #endif
@@ -52,21 +51,17 @@ public class ContractsGenerator : ISourceGenerator
         }
 
         var typeNames = context.Compilation.Assembly.TypeNames;
-        foreach (var typeName in typeNames)
+        var types = typeNames
+            .SelectMany((t) => context.Compilation.GetSymbolsWithName(t, SymbolFilter.Type))
+            .OfType<ITypeSymbol>()
+            .ToArray();
+        foreach (var type in types)
         {
-            if (ExcludedContractTypes.Contains(typeName))
+            if (ExcludedContractTypes.Contains(type!.Name))
             {
                 continue;
             }
-
-            var types = context.Compilation.GetSymbolsWithName(typeName, SymbolFilter.Type);
-            if (types.Count() != 1)
-            {
-                throw new Exception($"Found {types.Count()} instances of type named '{typeName}'.");
-            }
-
-            var type = (ITypeSymbol)types.Single();
-            if (type.ContainingType != null)
+            else if (type.ContainingType != null)
             {
                 // Nested types will be written as part of their containing type.
                 continue;
@@ -100,7 +95,7 @@ public class ContractsGenerator : ISourceGenerator
             foreach (var writer in writers)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
-                writer.WriteContract(type);
+                writer.WriteContract(type, types);
             }
         }
     }

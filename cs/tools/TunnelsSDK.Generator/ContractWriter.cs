@@ -36,7 +36,7 @@ internal abstract class ContractWriter
         this.csNamespace = csNamespace;
     }
 
-    public abstract void WriteContract(ITypeSymbol type);
+    public abstract void WriteContract(ITypeSymbol type, ICollection<ITypeSymbol> allTypes);
 
     protected string GetAbsolutePath(string relativePath)
     {

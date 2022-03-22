@@ -65,7 +65,7 @@ func NewRelayServer(opts ...RelayServerOption) (*RelayServer, error) {
 	return server, nil
 }
 
-func WithForwardedStream(pfc *messages.PortForwardChannel, port int, data *bytes.Buffer) RelayServerOption {
+func WithForwardedStream(pfc *messages.PortForwardChannel, port uint16, data *bytes.Buffer) RelayServerOption {
 	return func(server *RelayServer) {
 		if server.channels == nil {
 			server.channels = make(map[string]channelHandler)
@@ -137,7 +137,7 @@ func (rs *RelayServer) sendError(err error) {
 	}
 }
 
-func (rs *RelayServer) ForwardPort(ctx context.Context, port int) error {
+func (rs *RelayServer) ForwardPort(ctx context.Context, port uint16) error {
 	pfr := messages.NewPortForwardRequest("127.0.0.1", uint32(port))
 	b, err := pfr.Marshal()
 	if err != nil {

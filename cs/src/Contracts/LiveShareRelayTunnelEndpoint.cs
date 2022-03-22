@@ -36,11 +36,5 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Gets or sets a SAS token that allows clients to connect to the Azure Relay endpoint.
         /// </summary>
         public string? RelayClientSasToken { get; set; }
-
-        /// <summary>
-        /// Gets or sets an array of public keys, which can be used by clients to authenticate
-        /// the host.
-        /// </summary>
-        public string[]? HostPublicKeys { get; set; }
     }
 }
