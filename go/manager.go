@@ -440,8 +440,7 @@ func (m *Manager) sendTunnelRequest(
 	if token := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes); token != "" {
 		request.Header.Add("Authorization", token)
 	}
-	request.Header.Add("User-Agent", m.userAgent)
-	request.Header.Add("User-Agent", goUserAgent)
+	request.Header.Add("User-Agent", fmt.Sprintf("%s %s", goUserAgent, m.userAgent))
 	request.Header.Add("Content-Type", "application/json;charset=UTF-8")
 
 	// Add additional headers
