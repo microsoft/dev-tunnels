@@ -157,6 +157,63 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 	}
 }
 
+func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+
+	url, err := url.Parse(uri)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	tunnel := &Tunnel{}
+	options := &TunnelRequestOptions{}
+	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if createdTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully created")
+	} else {
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
+		createdTunnel.table().Print()
+	}
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	generatedName := fmt.Sprintf("test%d", r1.Intn(10000))
+	createdTunnel.Name = generatedName
+	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, options)
+	if err != nil || updatedTunnel.Name != generatedName {
+		t.Errorf("tunnel was not successfully updated")
+	} else {
+		logger.Println("Tunnel updated")
+		updatedTunnel.table().Print()
+	}
+
+	// In the second update we want to update the description without updating the name
+	createdTunnel.Name = ""
+	createdTunnel.Description = "test description"
+	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, options)
+	if err != nil || updatedTunnel.Name != generatedName || createdTunnel.Description != "test description" {
+		t.Errorf("tunnel was not successfully updated")
+	} else {
+		logger.Println("Tunnel updated")
+		updatedTunnel.table().Print()
+	}
+	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
+
+	if err != nil {
+		t.Errorf("tunnel was not successfully deleted")
+	} else {
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
+	}
+}
+
 func TestTunnelCreateGetDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
