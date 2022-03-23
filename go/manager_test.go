@@ -195,6 +195,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 		updatedTunnel.table().Print()
 	}
 
+	// In the second update we want to update the description without updating the name
 	createdTunnel.Name = ""
 	createdTunnel.Description = "test description"
 	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, options)
