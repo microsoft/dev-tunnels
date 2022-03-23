@@ -80,10 +80,7 @@ async function startTunnelRelayConnection() {
         'http://localhost:9900/');
     const tunnel: Tunnel = {
         tunnelId: '3xfp2wn8',
-        clusterId: 'westus2',
-        options: {
-            connectionModes: [TunnelConnectionMode.TunnelRelay],
-        },
+        clusterId: 'westus2'
     };
     let tunnelRequestOptions: TunnelRequestOptions = {
         tokenScopes: ['connect'],
