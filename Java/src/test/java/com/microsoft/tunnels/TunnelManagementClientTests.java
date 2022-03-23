@@ -23,9 +23,9 @@ import org.junit.Test;
 /**
  * TunnelManagementClient tests.
  */
-public class TunnelManagementTests {
+public class TunnelManagementClientTests {
   private static ProductHeaderValue userAgent = new ProductHeaderValue("connection-test",
-      TunnelManagementTests.class.getPackage().getSpecificationVersion());
+      TunnelManagementClientTests.class.getPackage().getSpecificationVersion());
 
   private TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
       userAgent, () -> "");
