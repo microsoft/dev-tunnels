@@ -56,10 +56,7 @@ async function startTunnelRelayHost() {
         ports: [{ portNumber: 8000, protocol: 'auto' }],
         accessControl: {
             entries: [tunnelAccessControlEntry],
-        },
-        options: {
-            connectionModes: [TunnelConnectionMode.TunnelRelay],
-        },
+        }
     };
     let tunnelRequestOptions: TunnelRequestOptions = {
         tokenScopes: ['host'],
