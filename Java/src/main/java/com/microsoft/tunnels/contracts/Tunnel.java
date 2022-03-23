@@ -69,13 +69,13 @@ public class Tunnel {
    * client connections to the tunnel.
    */
   @Expose
-  public Collection<TunnelRelayTunnelEndpoint> endpoints;
+  public TunnelRelayTunnelEndpoint[] endpoints;
 
   /**
    * Gets or sets a list of ports in the tunnel.
    */
   @Expose
-  public Collection<TunnelPort> ports;
+  public TunnelPort[] ports;
 
   /**
    * Gets or sets the time in UTC of tunnel creation.

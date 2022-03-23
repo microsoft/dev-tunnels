@@ -48,7 +48,7 @@ public class ConnectionTest {
     // Set up tunnel.
     Tunnel tunnel = new Tunnel();
     tunnel.accessControl = access;
-    tunnel.ports = Arrays.asList(port);
+    tunnel.ports = new TunnelPort[] {port};
 
     // Configure tunnel request options.
     var requestOptions = new TunnelRequestOptions();

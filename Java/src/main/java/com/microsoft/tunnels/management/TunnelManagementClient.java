@@ -363,9 +363,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (tunnel.ports == null) {
       converted.ports = null;
     } else {
-      converted.ports = tunnel.ports.stream().map((p) -> {
-        return convertTunnelPortForRequest(tunnel, p);
-      }).collect(Collectors.toList());
+      var convertedPorts = new TunnelPort[tunnel.ports.length];
+      for (int i = 0; i < tunnel.ports.length; i++) {
+        convertedPorts[i] = convertTunnelPortForRequest(tunnel, tunnel.ports[i]);
+      }
+      converted.ports = convertedPorts;
     }
     return converted;
   }
@@ -434,10 +436,15 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.endpoints != null) {
-      tunnel.endpoints = tunnel.endpoints.stream().filter((e) -> {
-        return e.hostId != endpoint.hostId || e.connectionMode != endpoint.connectionMode;
-      }).collect(Collectors.toList());
-      tunnel.endpoints.add(result.join());
+      var updatedEndpoints = new ArrayList<TunnelRelayTunnelEndpoint>();
+      for (TunnelRelayTunnelEndpoint e : tunnel.endpoints) {
+        if (e.hostId != endpoint.hostId || e.connectionMode != endpoint.connectionMode) {
+          updatedEndpoints.add(e);
+        }
+      }
+      updatedEndpoints.add(result.join());
+      tunnel.endpoints = updatedEndpoints
+          .toArray(new TunnelRelayTunnelEndpoint[updatedEndpoints.size()]);
     }
     return result;
   }
@@ -469,9 +476,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.endpoints != null) {
-      tunnel.endpoints = tunnel.endpoints.stream().filter((e) -> {
-        return e.hostId != hostId || e.connectionMode != connectionMode;
-      }).collect(Collectors.toList());
+      var updatedEndpoints = new ArrayList<TunnelRelayTunnelEndpoint>();
+      for (TunnelRelayTunnelEndpoint e : tunnel.endpoints) {
+        if (e.hostId != hostId || e.connectionMode != connectionMode) {
+          updatedEndpoints.add(e);
+        }
+      }
+      tunnel.endpoints = updatedEndpoints
+          .toArray(new TunnelRelayTunnelEndpoint[updatedEndpoints.size()]);
     }
     return result;
   }
@@ -536,10 +548,15 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.ports != null) {
-      tunnel.ports = tunnel.ports.stream().filter((p) -> {
-        return p.portNumber != tunnelPort.portNumber;
-      }).collect(Collectors.toList());
-      tunnel.ports.add(result.join());
+      var updatedPorts = new ArrayList<TunnelPort>();
+      for (TunnelPort p : tunnel.ports) {
+        if (p.portNumber != tunnelPort.portNumber) {
+          updatedPorts.add(p);
+        }
+      }
+      updatedPorts.add(result.join());
+      updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
+      tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     }
     return result;
   }
@@ -610,10 +627,15 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.ports != null) {
-      tunnel.ports = tunnel.ports.stream().filter((p) -> {
-        return p.portNumber != tunnelPort.portNumber;
-      }).collect(Collectors.toList());
-      tunnel.ports.add(result.join());
+      var updatedPorts = new ArrayList<TunnelPort>();
+      for (TunnelPort p : tunnel.ports) {
+        if (p.portNumber != tunnelPort.portNumber) {
+          updatedPorts.add(p);
+        }
+      }
+      updatedPorts.add(result.join());
+      updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
+      tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     }
     return result;
   }
@@ -642,9 +664,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.ports != null) {
-      tunnel.ports = tunnel.ports.stream().filter((p) -> {
-        return p.portNumber != portNumber;
-      }).collect(Collectors.toList());
+      var updatedPorts = new ArrayList<TunnelPort>();
+      for (TunnelPort p : tunnel.ports) {
+        if (p.portNumber != portNumber) {
+          updatedPorts.add(p);
+        }
+      }
+      updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
+      tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     }
     return result;
   }
