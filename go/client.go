@@ -26,7 +26,7 @@ type Client struct {
 
 	hostID    string
 	tunnel    *Tunnel
-	endpoints []*TunnelEndpoint
+	endpoints []TunnelEndpoint
 
 	ssh                  *tunnelssh.ClientSSHSession
 	channels             uint32
@@ -62,16 +62,18 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		return nil, ErrNoTunnel
 	}
 
-	if tunnel.Endpoints == nil || len(tunnel.Endpoints) == 0 {
+	if tunnel.Endpoints == nil || len(*tunnel.Endpoints) == 0 {
 		return nil, ErrNoTunnelEndpoints
 	}
 
-	endpointGroups := make(map[string][]*TunnelEndpoint)
-	for _, endpoint := range tunnel.Endpoints {
-		endpointGroups[endpoint.HostID] = append(endpointGroups[endpoint.HostID], endpoint)
+	endpointGroups := make(map[string][]TunnelEndpoint)
+	for _, endpoint := range *tunnel.Endpoints {
+		if (endpoint.HostID != nil) {
+			endpointGroups[*endpoint.HostID] = append(endpointGroups[*endpoint.HostID], endpoint)
+		}
 	}
 
-	var endpointGroup []*TunnelEndpoint
+	var endpointGroup []TunnelEndpoint
 	if hostID != "" {
 		g, ok := endpointGroups[hostID]
 		if !ok {
@@ -80,8 +82,10 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		endpointGroup = g
 	} else if len(endpointGroups) > 1 {
 		return nil, ErrMultipleHosts
+	} else if tunnel.Endpoints == nil || (*tunnel.Endpoints)[0].HostID == nil {
+		return nil, ErrNoConnections
 	} else {
-		endpointGroup = endpointGroups[tunnel.Endpoints[0].HostID]
+		endpointGroup = endpointGroups[*(*tunnel.Endpoints)[0].HostID]
 	}
 
 	c := &Client{
@@ -99,8 +103,16 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 		return nil, ErrNoRelayConnections
 	}
 	tunnelEndpoint := c.endpoints[0]
-	clientRelayURI := tunnelEndpoint.ClientRelayURI
-	accessToken := c.tunnel.AccessTokens[TunnelAccessScopeConnect]
+
+	if tunnelEndpoint.ClientRelayURI == nil {
+		return nil, ErrNoRelayConnections
+	}
+	clientRelayURI := *tunnelEndpoint.ClientRelayURI
+
+	var accessToken string
+	if c.tunnel.AccessTokens != nil {
+		accessToken = (*c.tunnel.AccessTokens)[TunnelAccessScopeConnect]
+	}
 
 	c.logger.Println(fmt.Sprintf("Connecting to client tunnel relay %s", clientRelayURI))
 	c.logger.Println(fmt.Sprintf("Sec-Websocket-Protocol: %s", clientWebSocketSubProtocol))

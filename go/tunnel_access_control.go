@@ -18,5 +18,5 @@ type TunnelAccessControl struct {
 	// The order of entries is significant: later entries override earlier entries that apply
 	// to the same subject. However, deny rules are always processed after allow rules,
 	// therefore an allow rule cannot override a deny rule for the same subject.
-	Entries []*TunnelAccessControlEntry `json:"entries"`
+	Entries []TunnelAccessControlEntry `json:"entries"`
 }

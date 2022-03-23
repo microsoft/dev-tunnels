@@ -7,13 +7,16 @@ import {
     devThirdPartyAppId,
     prodGitHubAppClientId,
     nonProdGitHubAppClientId,
+    prodDnsName,
+    ppeDnsName,
+    devDnsName,
 } from './tunnelServiceProperties';
 
 /**
  * Gets production service properties.
  */
 export const production = <ITunnelServiceProperties>{
-    serviceUri: 'https://global.rel.tunnels.api.visualstudio.com/',
+    serviceUri: `https://${prodDnsName}/`,
     serviceAppId: prodFirstPartyAppId,
     serviceInternalAppId: prodThirdPartyAppId,
     gitHubAppClientId: prodGitHubAppClientId,
@@ -23,7 +26,7 @@ export const production = <ITunnelServiceProperties>{
  * Gets properties for the service in the staging environment (PPE).
  */
 export const staging = <ITunnelServiceProperties>{
-    serviceUri: 'https://global.rel.tunnels.ppe.api.visualstudio.com/',
+    serviceUri: `https://${ppeDnsName}/`,
     serviceAppId: nonProdFirstPartyAppId,
     serviceInternalAppId: ppeThirdPartyAppId,
     gitHubAppClientId: nonProdGitHubAppClientId,
@@ -33,7 +36,7 @@ export const staging = <ITunnelServiceProperties>{
  * Gets properties for the service in the development environment.
  */
 export const development = <ITunnelServiceProperties>{
-    serviceUri: 'https://global.ci.tunnels.dev.api.visualstudio.com/',
+    serviceUri: `https://${devDnsName}/`,
     serviceAppId: nonProdFirstPartyAppId,
     serviceInternalAppId: devThirdPartyAppId,
     gitHubAppClientId: nonProdGitHubAppClientId,

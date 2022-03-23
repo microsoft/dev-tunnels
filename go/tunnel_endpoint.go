@@ -15,7 +15,7 @@ type TunnelEndpoint struct {
 	// This property is required when creating or updating an endpoint.  The subclass type is
 	// also an indication of the connection mode, but this property is necessary to determine
 	// the subclass type when deserializing.
-	ConnectionMode TunnelConnectionMode `json:"connectionMode"`
+	ConnectionMode *TunnelConnectionMode `json:"connectionMode"`
 
 	// Gets or sets the ID of the host that is listening on this endpoint.
 	//
@@ -23,16 +23,16 @@ type TunnelEndpoint struct {
 	// multiple connection modes, the host's ID is the same for all the endpoints it
 	// supports. However different hosts may simultaneously accept connections at different
 	// endpoints for the same tunnel, if enabled in tunnel options.
-	HostID         string `json:"hostId"`
+	HostID         *string `json:"hostId"`
 
 	// Gets or sets an array of public keys, which can be used by clients to authenticate the
 	// host.
-	HostPublicKeys []string `json:"hostPublicKeys"`
+	HostPublicKeys *[]string `json:"hostPublicKeys"`
 
 	// Gets or sets a string used to format URIs where a web client can connect to ports of
 	// the tunnel. The string includes a `TunnelEndpoint.PortUriToken` that must be replaced
 	// with the actual port number.
-	PortURIFormat  string `json:"portUriFormat"`
+	PortURIFormat  *string `json:"portUriFormat"`
 
 	TunnelRelayTunnelEndpoint
 	LocalNetworkTunnelEndpoint
@@ -42,10 +42,10 @@ type TunnelEndpoint struct {
 // Parameters for connecting to a tunnel via the tunnel service's built-in relay function.
 type TunnelRelayTunnelEndpoint struct {
 	// Gets or sets the host URI.
-	HostRelayURI   string `json:"hostRelayUri"`
+	HostRelayURI   *string `json:"hostRelayUri"`
 
 	// Gets or sets the client URI.
-	ClientRelayURI string `json:"clientRelayUri"`
+	ClientRelayURI *string `json:"clientRelayUri"`
 }
 
 // Parameters for connecting to a tunnel via a local network connection.
@@ -70,11 +70,15 @@ type LiveShareRelayTunnelEndpoint struct {
 	WorkspaceID         string `json:"workspaceId"`
 
 	// Gets or sets the Azure Relay URI.
-	RelayURI            string `json:"relayUri"`
+	RelayURI            *string `json:"relayUri"`
 
 	// Gets or sets a SAS token that allows hosts to listen on the Azure Relay endpoint.
-	RelayHostSasToken   string `json:"relayHostSasToken"`
+	RelayHostSasToken   *string `json:"relayHostSasToken"`
 
 	// Gets or sets a SAS token that allows clients to connect to the Azure Relay endpoint.
-	RelayClientSasToken string `json:"relayClientSasToken"`
+	RelayClientSasToken *string `json:"relayClientSasToken"`
 }
+
+// Token included in `TunnelEndpoint.PortUriFormat` that is to be replaced by a specified
+// port number.
+var PortURIToken = "{port}"

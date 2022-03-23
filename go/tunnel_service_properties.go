@@ -26,3 +26,54 @@ type TunnelServiceProperties struct {
 	// when requesting a user token.
 	GitHubAppClientID    string `json:"gitHubAppClientId"`
 }
+
+// Global DNS name of the production tunnel service.
+var prodDnsName = "global.rel.tunnels.api.visualstudio.com"
+
+// Global DNS name of the pre-production tunnel service.
+var ppeDnsName = "global.rel.tunnels.ppe.api.visualstudio.com"
+
+// Global DNS name of the development tunnel service.
+var devDnsName = "global.ci.tunnels.dev.api.visualstudio.com"
+
+// First-party app ID: `Visual Studio Tunnel Service`
+//
+// Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
+// in the PROD service environment.
+var prodFirstPartyAppID = "46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2"
+
+// First-party app ID: `Visual Studio Tunnel Service - Test`
+//
+// Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
+// in the PPE and DEV service environments.
+var nonProdFirstPartyAppID = "54c45752-bacd-424a-b928-652f3eca2b18"
+
+// Third-party app ID: `tunnels-prod-app-sp`
+//
+// Used for authenticating internal AAD service principals in the AME tenant, in the PROD
+// service environment.
+var prodThirdPartyAppID = "ce65d243-a913-4cae-a7dd-cb52e9f77647"
+
+// Third-party app ID: `tunnels-ppe-app-sp`
+//
+// Used for authenticating internal AAD service principals in the AME tenant, in the PPE
+// service environment.
+var ppeThirdPartyAppID = "544167a6-f431-4518-aac6-2fd50071928e"
+
+// Third-party app ID: `tunnels-dev-app-sp`
+//
+// Used for authenticating internal AAD service principals in the corp tenant (not AME!),
+// in the DEV service environment.
+var devThirdPartyAppID = "59892e64-c86f-4450-8707-831cc1738d47"
+
+// GitHub App Client ID for 'Visual Studio Tunnel Service'
+//
+// Used by client apps that authenticate tunnel users with GitHub, in the PROD service
+// environment.
+var prodGitHubAppClientID = "Iv1.e7b89e013f801f03"
+
+// GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
+//
+// Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
+// service environments.
+var nonProdGitHubAppClientID = "Iv1.b231c327f1eaa229"

@@ -131,7 +131,7 @@ internal class GoContractWriter : ContractWriter
             s.AppendLine();
             s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "\t"));
             var alignment = new string(' ', maxPropertyNameLength - propertyName.Length);
-            var propertyType = property.Type.ToDisplayString().Replace("?", "");
+            var propertyType = property.Type.ToDisplayString();
             var goType = GetGoTypeForCSType(propertyType, property, imports);
             var jsonTag = GetJsonTagForProperty(property);
             s.AppendLine($"\t{propertyName}{alignment} {goType} `json:\"{jsonTag}\"`");
@@ -153,6 +153,25 @@ internal class GoContractWriter : ContractWriter
             s.AppendLine();
             WriteInterfaceContract(s, derivedType, imports, allTypes);
         }
+
+        foreach (var field in type.GetMembers().OfType<IFieldSymbol>()
+            .Where((f) => f.IsConst))
+        {
+            var fieldName = FixPropertyNameCasing(field.Name);
+            if (field.DeclaredAccessibility == Accessibility.Internal)
+            {
+                fieldName = TSContractWriter.ToCamelCase(fieldName);
+            }
+            else if (field.DeclaredAccessibility != Accessibility.Public)
+            {
+                continue;
+            }
+
+            s.AppendLine();
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
+            s.AppendLine($"var {fieldName} = \"{field.ConstantValue}\"");
+        }
+
     }
 
     private void WriteEnumContract(StringBuilder s, ITypeSymbol type)
@@ -360,6 +379,12 @@ internal class GoContractWriter : ContractWriter
 
     private string GetGoTypeForCSType(string csType, IPropertySymbol property, SortedSet<string> imports)
     {
+        var isNullable = csType.EndsWith("?");
+        if (isNullable)
+        {
+            csType = csType.Substring(0, csType.Length - 1);
+        }
+
         var prefix = "";
         if (csType.EndsWith("[]"))
         {
@@ -371,11 +396,6 @@ internal class GoContractWriter : ContractWriter
         if (csType.StartsWith(this.csNamespace + "."))
         {
             goType = csType.Substring(csNamespace.Length + 1);
-
-            if (!property.Type.IsValueType)
-            {
-                prefix += "*";
-            }
         }
         else
         {
@@ -390,9 +410,14 @@ internal class GoContractWriter : ContractWriter
                 "System.Text.RegularExpressions.Regex" => "regexp.Regexp",
                 "System.Collections.Generic.IDictionary<string, string>"
                     => $"map[{(property.Name == "AccessTokens" ? "TunnelAccessScope" : "string")}]string",
-                "System.Collections.Generic.IDictionary<string, string[]>" => "map[string]string",
+                "System.Collections.Generic.IDictionary<string, string[]>" => "map[string][]string",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
+        }
+
+        if (isNullable)
+        {
+            prefix = "*" + prefix;
         }
 
         if (goType.Contains('.'))

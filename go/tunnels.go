@@ -25,44 +25,53 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 		Options:       tunnel.Options,
 		AccessControl: tunnel.AccessControl,
 		Endpoints:     tunnel.Endpoints,
-		Ports:         make([]*TunnelPort, 0),
 	}
 
-	for _, port := range tunnel.Ports {
-		convertedPort, err := port.requestObject(tunnel)
-		if err != nil {
-			return nil, err
+	if tunnel.Ports != nil {
+		var convertedPorts []TunnelPort
+		for _, port := range *tunnel.Ports {
+			convertedPort, err := port.requestObject(tunnel)
+			if err != nil {
+				return nil, err
+			}
+			convertedPorts = append(convertedPorts, *convertedPort)
 		}
-		convertedTunnel.Ports = append(convertedTunnel.Ports, convertedPort)
+		convertedTunnel.Ports = &convertedPorts
 	}
 	return convertedTunnel, nil
 }
 
 func (t *Tunnel) table() table.Table {
-	tbl := table.New(" ", " ")
+	tbl := table.New("Tunnel Properties", " ")
 
 	var accessTokens string
-	for scope := range t.AccessTokens {
-		if len(accessTokens) == 0 {
-			accessTokens += string(scope)
-		} else {
-			accessTokens += fmt.Sprintf(", %s", scope)
+	if t.AccessTokens != nil {
+		for scope := range *t.AccessTokens {
+			if len(accessTokens) == 0 {
+				accessTokens += string(scope)
+			} else {
+				accessTokens += fmt.Sprintf(", %s", scope)
+			}
 		}
 	}
 
 	var ports string
-	for _, port := range t.Ports {
-		if len(ports) == 0 {
-			ports += fmt.Sprintf("%d - %s", port.PortNumber, port.Protocol)
-		} else {
-			ports += fmt.Sprintf(", %d - %s", port.PortNumber, port.Protocol)
+	if t.Ports != nil {
+		for _, port := range *t.Ports {
+			if port.PortNumber != nil && port.Protocol != nil {
+				if len(ports) == 0 {
+					ports += fmt.Sprintf("%d - %s", *port.PortNumber, *port.Protocol)
+				} else {
+					ports += fmt.Sprintf(", %d - %s", *port.PortNumber, *port.Protocol)
+				}
+			}
 		}
 	}
-	tbl.AddRow("ClusterId", t.ClusterID)
-	tbl.AddRow("TunnelId", t.TunnelID)
-	tbl.AddRow("Name", t.Name)
-	tbl.AddRow("Description", t.Description)
-	tbl.AddRow("Tags", fmt.Sprintf("%v", t.Tags))
+	tbl.AddRow("ClusterId", *t.ClusterID)
+	tbl.AddRow("TunnelId", *t.TunnelID)
+	tbl.AddRow("Name", *t.Name)
+	tbl.AddRow("Description", *t.Description)
+	tbl.AddRow("Tags", fmt.Sprintf("%v", *t.Tags))
 	if t.AccessControl != nil {
 		tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
 	}
@@ -73,41 +82,67 @@ func (t *Tunnel) table() table.Table {
 	return tbl
 }
 
-func NewTunnelPort(portNumber uint16, clusterId string, tunnelId string, protocol TunnelProtocol) *TunnelPort {
+func (tp *TunnelPort) table() table.Table {
+	tbl := table.New("TunnelPort Properties", " ")
+
+	var accessTokens string
+	if tp.AccessTokens != nil {
+		for scope := range *tp.AccessTokens {
+			if len(accessTokens) == 0 {
+				accessTokens += string(scope)
+			} else {
+				accessTokens += fmt.Sprintf(", %s", scope)
+			}
+		}
+	}
+
+	tbl.AddRow("ClusterId", *tp.ClusterID)
+	tbl.AddRow("TunnelId", *tp.TunnelID)
+	tbl.AddRow("PortNumber", *tp.PortNumber)
+	tbl.AddRow("Protocol", *tp.Protocol)
+	if tp.AccessControl != nil {
+		tbl.AddRow("Access Control", fmt.Sprintf("%v", *tp.AccessControl))
+	}
+	tbl.AddRow("Client Connections", tp.Status.ClientConnectionCount)
+	tbl.AddRow("Last Connection Time", tp.Status.LastClientConnectionTime)
+	return tbl
+}
+
+func NewTunnelPort(portNumber uint16, clusterId *string, tunnelId *string, protocol TunnelProtocol) *TunnelPort {
+	protocolValue := string(protocol)
+	if len(protocolValue) == 0 {
+		protocolValue = string(TunnelProtocolAuto)
+	}
 	port := &TunnelPort{
-		PortNumber: portNumber,
+		PortNumber: &portNumber,
 		ClusterID:  clusterId,
 		TunnelID:   tunnelId,
-		Protocol:   string(protocol),
+		Protocol:   &protocolValue,
 	}
-	if len(port.Protocol) == 0 {
-		port.Protocol = string(TunnelProtocolAuto)
-	}
-	port.AccessTokens = make(map[TunnelAccessScope]string)
-	port.AccessControl = &TunnelAccessControl{}
-	port.Options = &TunnelOptions{}
-	port.Status = &TunnelPortStatus{}
 	return port
 }
 
 func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error) {
-	if tunnelPort.ClusterID != "" && tunnel.ClusterID != "" && tunnelPort.ClusterID != tunnel.ClusterID {
-		return nil, fmt.Errorf("tunnel port cluster ID does not match tunnel")
+	if tunnelPort.ClusterID != nil && tunnel.ClusterID != nil && *tunnelPort.ClusterID != *tunnel.ClusterID {
+		return nil, fmt.Errorf("tunnel port cluster ID '%s' does not match tunnel cluster ID '%s'", *tunnelPort.ClusterID, *tunnel.ClusterID)
 	}
-	if tunnelPort.TunnelID != "" && tunnel.TunnelID != "" && tunnelPort.TunnelID != tunnel.TunnelID {
+	if tunnelPort.TunnelID != nil && tunnel.TunnelID != nil && *tunnelPort.TunnelID != *tunnel.TunnelID {
 		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
 	}
 	convertedPort := &TunnelPort{
-		PortNumber:    tunnelPort.PortNumber,
-		Protocol:      tunnelPort.Protocol,
-		Options:       tunnel.Options,
-		AccessControl: &TunnelAccessControl{},
+		PortNumber: tunnelPort.PortNumber,
+		Protocol:   tunnelPort.Protocol,
+		Options:    tunnelPort.Options,
 	}
 	if tunnelPort.AccessControl != nil {
+		var newEntries []TunnelAccessControlEntry
 		for _, entry := range tunnelPort.AccessControl.Entries {
 			if !entry.IsInherited {
-				convertedPort.AccessControl.Entries = append(convertedPort.AccessControl.Entries, entry)
+				newEntries = append(newEntries, entry)
 			}
+		}
+		convertedPort.AccessControl = &TunnelAccessControl{
+			Entries: newEntries,
 		}
 	}
 

@@ -27,16 +27,17 @@ func TestSuccessfulConnect(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	hostID := "host1"
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		AccessTokens: map[TunnelAccessScope]string{
+		AccessTokens: &map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: accessToken,
 		},
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: &[]TunnelEndpoint{
 			{
-				HostID:         "host1",
+				HostID: &hostID,
 				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
-					ClientRelayURI: hostURL,
+					ClientRelayURI: &hostURL,
 				},
 			},
 		},
@@ -76,16 +77,17 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	hostID := "host1"
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		AccessTokens: map[TunnelAccessScope]string{
+		AccessTokens: &map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: "invalid-access-token",
 		},
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: &[]TunnelEndpoint{
 			{
-				HostID:         "host1",
+				HostID: &hostID,
 				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
-					ClientRelayURI: hostURL,
+					ClientRelayURI: &hostURL,
 				},
 			},
 		},
@@ -116,10 +118,11 @@ func TestReturnsErrWhenEndpointsAreNil(t *testing.T) {
 }
 
 func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
+	hostID := "host1"
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: &[]TunnelEndpoint{
 			{
-				HostID: "host1",
+				HostID: &hostID,
 			},
 		},
 	}
@@ -132,32 +135,36 @@ func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 }
 
 func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
+	hostID1 := "host1"
+	hostID2 := "host1"
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: &[]TunnelEndpoint{
 			{
-				HostID: "host1",
+				HostID: &hostID1,
 			},
 			{
-				HostID: "host2",
+				HostID: &hostID2,
 			},
 		},
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, &tunnel, "host1")
+	_, err := Connect(context.Background(), logger, &tunnel, hostID1)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
 }
 
 func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
+	hostID1 := "host1"
+	hostID2 := "host1"
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: &[]TunnelEndpoint{
 			{
-				HostID: "host1",
+				HostID: &hostID1,
 			},
 			{
-				HostID: "host1",
+				HostID: &hostID2,
 			},
 		},
 	}
@@ -189,14 +196,14 @@ func TestPortForwarding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	hostID := "host1"
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: &[]TunnelEndpoint{
 			{
-				HostID:         "host1",
+				HostID: &hostID,
 				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
-					ClientRelayURI: hostURL,
+					ClientRelayURI: &hostURL,
 				},
 			},
 		},

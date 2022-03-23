@@ -93,6 +93,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Gets or sets an array of endpoints where hosts are currently accepting
         /// client connections to the tunnel.
         /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TunnelEndpoint[]? Endpoints { get; set; }
 
         /// <summary>

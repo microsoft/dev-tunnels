@@ -16,12 +16,12 @@ type TunnelStatus struct {
 
 	// Gets or sets the UTC time when a host was last accepting connections to the tunnel, or
 	// null if a host has never connected.
-	LastHostConnectionTime   time.Time `json:"lastHostConnectionTime,omitempty"`
+	LastHostConnectionTime   *time.Time `json:"lastHostConnectionTime,omitempty"`
 
 	// Gets or sets the number of clients currently connected to the tunnel.
 	ClientConnectionCount    uint32 `json:"clientConnectionCount"`
 
 	// Gets or sets the UTC time when a client last connected to the tunnel, or null if a
 	// client has never connected.
-	LastClientConnectionTime time.Time `json:"lastClientConnectionTime"`
+	LastClientConnectionTime *time.Time `json:"lastClientConnectionTime"`
 }

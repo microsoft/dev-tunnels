@@ -16,5 +16,5 @@ type TunnelPortStatus struct {
 	ClientConnectionCount    uint32 `json:"clientConnectionCount"`
 
 	// Gets or sets the UTC date time when a client was last connected to the port.
-	LastClientConnectionTime time.Time `json:"lastClientConnectionTime,omitempty"`
+	LastClientConnectionTime *time.Time `json:"lastClientConnectionTime,omitempty"`
 }

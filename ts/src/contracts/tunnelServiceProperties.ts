@@ -36,6 +36,21 @@ export interface TunnelServiceProperties {
 }
 
 /**
+ * Global DNS name of the production tunnel service.
+ */
+export const prodDnsName = 'global.rel.tunnels.api.visualstudio.com';
+
+/**
+ * Global DNS name of the pre-production tunnel service.
+ */
+export const ppeDnsName = 'global.rel.tunnels.ppe.api.visualstudio.com';
+
+/**
+ * Global DNS name of the development tunnel service.
+ */
+export const devDnsName = 'global.ci.tunnels.dev.api.visualstudio.com';
+
+/**
  * First-party app ID: `Visual Studio Tunnel Service`
  *
  * Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
