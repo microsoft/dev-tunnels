@@ -13,6 +13,10 @@ var (
 	logger = log.New(os.Stdout, "", log.LstdFlags)
 )
 
+const (
+	userAgentHostTest = "Tunnels-Go-SDK-Tests/Host"
+)
+
 // This tests against the real prod service uri when it creates and manages tunnels
 // We do have a cleanup worker that will delete unused tunnels so its not horrible for the test to break mid run
 // This is a work in progress
@@ -22,7 +26,7 @@ func TestSuccessfulHost(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentHostTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

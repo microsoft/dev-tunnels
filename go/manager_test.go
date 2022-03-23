@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	uri = "https://global.rel.tunnels.api.visualstudio.com/"
+	uri                  = "https://global.rel.tunnels.api.visualstudio.com/"
+	userAgentManagerTest = "Tunnels-Go-SDK-Tests/Manager"
 )
 
 var (
@@ -31,7 +32,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -67,7 +68,7 @@ func TestListTunnels(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -118,7 +119,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -164,7 +165,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -211,7 +212,7 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -270,7 +271,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -348,7 +349,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -440,7 +441,7 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -519,7 +520,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager("Tunnels-Go-SDK", getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
