@@ -104,7 +104,7 @@
       </ItemGroup>
       <ItemGroup Condition="false">
         <!-- All projects need to be rebuilt if the version changes. -->
-        <Content Include="$(MSBuildThisFileDirectory)version.json" Link="version.json">
+        <Content Include="$(MSBuildThisFileDirectory)..\version.json" Link="version.json">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
           <Visible>false</Visible> <!-- Hide from VS solution explorer -->
           <Pack>false</Pack> <!--Exclude from NuGet Packages -->
