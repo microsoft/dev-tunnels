@@ -109,7 +109,7 @@ namespace Microsoft.VsSaaS.TunnelService
             // The `SocketsHttpHandler` or `HttpClientHandler` automatic redirection is disabled
             // because they do not keep the Authorization header when redirecting. This handler
             // will keep all headers when redirecting, and also supports switching the behavior
-            // on a per-request basis.
+            // per-request.
             httpHandler = new FollowRedirectsHttpHandler(httpHandler);
 
             this.httpClient = new HttpClient(httpHandler, disposeHandler: false)
