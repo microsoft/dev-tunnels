@@ -13,8 +13,8 @@ namespace Microsoft.VsSaaS.TunnelService.Generator;
 [Generator]
 public class ContractsGenerator : ISourceGenerator
 {
-    private const string DiagnosticPrefix = "BASIS";
-    private const string DiagnosticCategory = "Basis";
+    private const string DiagnosticPrefix = "TUN";
+    private const string DiagnosticCategory = "Tunnels";
     private const string ContractsNamespace = "Microsoft.VsSaaS.TunnelService.Contracts";
     internal static readonly string[] ExcludedContractTypes = new[]
     {
@@ -76,8 +76,8 @@ public class ContractsGenerator : ISourceGenerator
                     method.Name != "ToString" &&
                     method.Name != "GetEnumerator")
                 {
-                    var title = "Basis contracts must not have instance methods other than " +
-                            "GetEunerator() or ToString().";
+                    var title = "Tunnel contracts must not have instance methods other than " +
+                            "GetEnumerator() or ToString().";
                     var descriptor = new DiagnosticDescriptor(
                         id: DiagnosticPrefix + "1000",
                         title,

@@ -1,4 +1,4 @@
-﻿// <copyright file="TSContractWriter.cs" company="Microsoft">
+﻿// <copyright file="GoContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
