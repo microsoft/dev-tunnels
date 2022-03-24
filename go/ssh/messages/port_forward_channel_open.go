@@ -28,7 +28,7 @@ func NewPortForwardChannel(senderChannel uint32, host string, port uint32, origi
 	}
 }
 
-func (pfs *PortForwardChannel) Type() string {
+func (pfc *PortForwardChannel) Type() string {
 	return PortForwardChannelType
 }
 
