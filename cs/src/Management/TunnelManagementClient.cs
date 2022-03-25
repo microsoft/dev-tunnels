@@ -31,6 +31,7 @@ namespace Microsoft.VsSaaS.TunnelService
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
         private const string TunnelAuthenticationScheme = "Tunnel";
+        private const string RequestIdHeaderName = "VsSaaS-Request-Id";
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
@@ -327,6 +328,11 @@ namespace Microsoft.VsSaaS.TunnelService
             }
 
             errorMessage ??= "Tunnel service response status code: " + response.StatusCode;
+
+            if (response.Headers.TryGetValues(RequestIdHeaderName, out var requestId))
+            {
+                errorMessage += $"\nRequest ID: {requestId.First()}";
+            }
 
             try
             {
