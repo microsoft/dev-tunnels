@@ -360,6 +360,11 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
         }
 
+        const requestIdHeaderName = 'VsSaaS-Request-Id';
+        if (error.response?.headers && error.response.headers[requestIdHeaderName]) {
+            errorMessage += `\nRequest ID: ${error.response.headers[requestIdHeaderName]}`;
+        }
+
         return errorMessage;
     }
 
