@@ -16,6 +16,7 @@ import { TunnelRequestOptions } from './tunnelRequestOptions';
 import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
+import { SshAuthenticationType } from '@vs/vs-ssh';
 
 const tunnelsApiPath = '/api/v1/tunnels';
 const endpointsApiSubPath = '/endpoints';
@@ -41,7 +42,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private readonly baseAddress: string;
     private readonly accessTokenCallback: () => Promise<string | null>;
 
-    public trace: (msg: string) => void = (msg) => {};
+    public trace: (msg: string) => void = (msg) => { };
 
     /**
      * Initializes a new instance of the `TunnelManagementHttpClient` class
@@ -58,7 +59,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * service.
      */
     constructor(
-        private userAgent: ProductHeaderValue | string,
+        private userAgent: ProductHeaderValue[] | ProductHeaderValue | string,
         accessTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
@@ -67,7 +68,22 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             throw new TypeError('User agent must be provided.');
         }
 
-        if (typeof userAgent !== 'string') {
+        if (Array.isArray(userAgent)) {
+            userAgent.forEach(userAgent => {
+                if (!userAgent.name) {
+                    throw new TypeError('Invalid user agent. The name must be provided.');
+                }
+
+                if (typeof userAgent.name !== 'string') {
+                    throw new TypeError('Invalid user agent. The name must be a string.');
+                }
+
+                if (userAgent.version && typeof userAgent.version !== 'string') {
+                    throw new TypeError('Invalid user agent. The version must be a string.');
+                }
+            })
+        }
+        else if (typeof userAgent !== 'string') {
             if (!userAgent.name) {
                 throw new TypeError('Invalid user agent. The name must be provided.');
             }
@@ -476,6 +492,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         copyAdditionalHeaders(options?.additionalHeaders);
 
         const userAgentPrefix = headers['User-Agent'] ? headers['User-Agent'] + ' ' : '';
+        if (Array.isArray(this.userAgent)) {
+            var combinedUserAgents = "";
+            this.userAgent.forEach(userAgent => {
+                combinedUserAgents = `${combinedUserAgents}${userAgent.name}/${userAgent.version ?? 'unknown'} `
+            })
+            this.userAgent = combinedUserAgents.trim()
+        }
         const userAgentString =
             typeof this.userAgent === 'string'
                 ? this.userAgent
