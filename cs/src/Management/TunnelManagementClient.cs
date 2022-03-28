@@ -135,7 +135,9 @@ namespace Microsoft.VsSaaS.TunnelService
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null)
         {
-            UserAgents = Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
+            Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
+            UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
+
             this.accessTokenCallback = accessTokenCallback ??
                 (() => Task.FromResult<AuthenticationHeaderValue?>(null));
 
