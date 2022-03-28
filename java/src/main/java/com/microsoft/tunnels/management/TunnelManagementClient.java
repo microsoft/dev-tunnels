@@ -65,24 +65,24 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       TunnelAccessScopes.Connect
   };
 
-  private ProductHeaderValue userAgent;
+  private ProductHeaderValue[] userAgents;
   private Supplier<String> accessTokenCallback;
   private String baseAddress;
 
-  public TunnelManagementClient(ProductHeaderValue userAgent) {
-    this(userAgent, null, null);
+  public TunnelManagementClient(ProductHeaderValue[] userAgents) {
+    this(userAgents, null, null);
   }
 
   public TunnelManagementClient(
-      ProductHeaderValue userAgent,
+      ProductHeaderValue[] userAgents,
       Supplier<String> accessTokenCallback) {
-    this(userAgent, accessTokenCallback, null);
+    this(userAgents, accessTokenCallback, null);
   }
 
   /**
    * Initiates a new instance of the TunnelManagementClient class.
    *
-   * @param userAgent           User-Agent header given as a
+   * @param userAgents          List of User-Agent headers given as a
    *                            {@link ProductHeaderValue}.
    * @param accessTokenCallback A callback which should resolve to the
    *                            Authentication header value.
@@ -90,10 +90,13 @@ public class TunnelManagementClient implements ITunnelManagementClient {
    *                            production service url.
    */
   public TunnelManagementClient(
-      ProductHeaderValue userAgent,
+      ProductHeaderValue[] userAgents,
       Supplier<String> accessTokenCallback,
       String tunnelServiceUri) {
-    this.userAgent = userAgent;
+    if (userAgents.length == 0){
+      throw new IllegalArgumentException("user agents cannot be empty");
+    }
+    this.userAgents = userAgents;
     this.accessTokenCallback = accessTokenCallback != null ? accessTokenCallback : () -> "";
     this.baseAddress = tunnelServiceUri != null ? tunnelServiceUri : prodServiceUri;
   }
@@ -139,9 +142,12 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         }
       }
     }
-
-    String userAgentString = this.userAgent.productName
-        + "/" + this.userAgent.version + " " + SDK_USER_AGENT;
+    String userAgentString = "";
+    for (ProductHeaderValue userAgent : this.userAgents){
+      userAgentString = userAgent.productName
+        + "/" + userAgent.version + " " + userAgentString;
+    }
+    userAgentString = userAgentString + SDK_USER_AGENT;
     var requestBuilder = HttpRequest.newBuilder()
         .uri(uri)
         .header(USER_AGENT_HEADER, userAgentString)

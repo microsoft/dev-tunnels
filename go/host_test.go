@@ -10,11 +10,8 @@ import (
 )
 
 var (
-	logger = log.New(os.Stdout, "", log.LstdFlags)
-)
-
-const (
-	userAgentHostTest = "Tunnels-Go-SDK-Tests/Host"
+	logger            = log.New(os.Stdout, "", log.LstdFlags)
+	userAgentHostTest = []UserAgent{UserAgent{name: "Tunnels-Go-SDK-Tests/Host", version: PackageVersion}}
 )
 
 // This tests against the real prod service uri when it creates and manages tunnels

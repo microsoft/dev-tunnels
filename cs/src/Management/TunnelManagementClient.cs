@@ -47,7 +47,7 @@ namespace Microsoft.VsSaaS.TunnelService
         };
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
-            TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Visual-Studio-Tunnel-Service-SDK") !;
+            TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Visual-Studio-Tunnel-Service-SDK")!;
 
         private readonly HttpClient httpClient;
         private readonly Func<Task<AuthenticationHeaderValue?>> accessTokenCallback;
@@ -64,7 +64,25 @@ namespace Microsoft.VsSaaS.TunnelService
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
             Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null)
-            : this(userAgent, accessTokenCallback, tunnelServiceUri: null, httpHandler: null)
+            : this(new[] { userAgent }, accessTokenCallback, tunnelServiceUri: null, httpHandler: null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
+        /// with an optional client authentication callback.
+        /// </summary>
+        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
+        /// case that this SDK is used in a program, such as a CLI, that has users that want 
+        /// to be differentiated. </param>
+        /// <param name="accessTokenCallback">Optional async callback for retrieving a client
+        /// authentication header, for AAD or GitHub user authentication. This may be null
+        /// for anonymous tunnel clients, or if tunnel access tokens will be specified via
+        /// <see cref="TunnelRequestOptions.AccessToken"/>.</param>
+        public TunnelManagementClient(
+            ProductInfoHeaderValue[] userAgents,
+            Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null)
+            : this(userAgents, accessTokenCallback, tunnelServiceUri: null, httpHandler: null)
         {
         }
 
@@ -89,8 +107,37 @@ namespace Microsoft.VsSaaS.TunnelService
             Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null)
+            : this(new[] { userAgent }, accessTokenCallback, tunnelServiceUri, httpHandler)
         {
-            UserAgent = Requires.NotNull(userAgent, nameof(userAgent));
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
+        /// with a client authentication callback, service URI, and HTTP handler.
+        /// </summary>
+        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
+        /// case that this SDK is used in a program, such as a CLI, that has users that want 
+        /// to be differentiated. </param>
+        /// <param name="accessTokenCallback">Optional async callback for retrieving a client
+        /// authentication header value with access token, for AAD or GitHub user authentication.
+        /// This may be null for anonymous tunnel clients, or if tunnel access tokens will be
+        /// specified via <see cref="TunnelRequestOptions.AccessToken"/>.</param>
+        /// <param name="tunnelServiceUri">Optional tunnel service URI (not including any path),
+        /// or null to use the default global service URI.</param>
+        /// <param name="httpHandler">Optional HTTP handler or handler chain that will be invoked
+        /// for HTTPS requests to the tunnel service. The <see cref="SocketsHttpHandler"/> or
+        /// <see cref="HttpClientHandler"/> specified (or at the end of the chain) must have
+        /// automatic redirection disabled. The provided HTTP handler will not be disposed
+        /// by <see cref="Dispose"/>.</param>
+        public TunnelManagementClient(
+            ProductInfoHeaderValue[] userAgents,
+            Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null,
+            Uri? tunnelServiceUri = null,
+            HttpMessageHandler? httpHandler = null)
+        {
+            Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
+            UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
+
             this.accessTokenCallback = accessTokenCallback ??
                 (() => Task.FromResult<AuthenticationHeaderValue?>(null));
 
@@ -164,7 +211,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// </summary>
         public IEnumerable<KeyValuePair<string, string>>? AdditionalRequestHeaders { get; set; }
 
-        private ProductInfoHeaderValue UserAgent { get;  }
+        private ProductInfoHeaderValue[] UserAgents { get; }
 
         /// <summary>
         /// Sends an HTTP request for a tunnel, with authorization header from either tunnel
@@ -212,7 +259,10 @@ namespace Microsoft.VsSaaS.TunnelService
                 request.Headers.Add(headerNameAndValue.Key, headerNameAndValue.Value);
             }
 
-            request.Headers.UserAgent.Add(UserAgent);
+            foreach (ProductInfoHeaderValue userAgent in UserAgents)
+            {
+                request.Headers.UserAgent.Add(userAgent);
+            }
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
             if (requestObject != null)
@@ -687,7 +737,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 endpoint,
                 HostAccessTokenScope,
                 allowNotFound: false,
-                cancellation)) !;
+                cancellation))!;
 
             if (tunnel.Endpoints != null)
             {
@@ -793,7 +843,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 HostOrManageAccessTokenScopes,
                 allowNotFound: false,
-                cancellation)) !;
+                cancellation))!;
 
             if (tunnel.Ports != null)
             {
@@ -837,7 +887,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 HostOrManageAccessTokenScopes,
                 allowNotFound: false,
-                cancellation)) !;
+                cancellation))!;
 
             if (tunnel.Ports != null)
             {

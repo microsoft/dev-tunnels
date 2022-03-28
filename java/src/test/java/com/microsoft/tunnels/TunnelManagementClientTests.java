@@ -28,7 +28,7 @@ public class TunnelManagementClientTests {
       TunnelManagementClientTests.class.getPackage().getSpecificationVersion());
 
   private TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
-      userAgent, () -> "");
+      new ProductHeaderValue[]{userAgent}, () -> "");
 
   @Test
   public void createTunnel() {

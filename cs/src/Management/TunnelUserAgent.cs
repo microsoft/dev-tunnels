@@ -8,7 +8,7 @@ using System.Reflection;
 namespace Microsoft.VsSaaS.TunnelService;
 
 /// <summary>
-/// User Agent helper for <see cref="TunnelManagementClient.UserAgent"/>.
+/// User Agent helper for <see cref="TunnelManagementClient.UserAgents"/>.
 /// </summary>
 public static class TunnelUserAgent
 {
