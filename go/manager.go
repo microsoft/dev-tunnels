@@ -45,6 +45,9 @@ type Manager struct {
 }
 
 func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
+	if len(userAgents) == 0 {
+		return nil, fmt.Errorf("user agents cannot be empty")
+	}
 	if tp == nil {
 		tp = func() string {
 			return ""
@@ -446,6 +449,9 @@ func (m *Manager) sendTunnelRequest(
 	for _, userAgent := range m.userAgents {
 		if len(userAgent.version) == 0 {
 			userAgent.version = "unknown"
+		}
+		if len(userAgent.name) == 0 {
+			return nil, fmt.Errorf("userAgent name cannot be empty")
 		}
 		userAgentString = fmt.Sprintf("%s%s/%s ", userAgentString, userAgent.name, userAgent.version)
 	}
