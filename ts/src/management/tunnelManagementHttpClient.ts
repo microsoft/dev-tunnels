@@ -59,17 +59,17 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * service.
      */
     constructor(
-        private userAgent: ProductHeaderValue[] | ProductHeaderValue | string,
+        private userAgents: ProductHeaderValue[] | ProductHeaderValue | string,
         accessTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
     ) {
-        if (!userAgent) {
+        if (!userAgents) {
             throw new TypeError('User agent must be provided.');
         }
 
-        if (Array.isArray(userAgent)) {
-            userAgent.forEach(userAgent => {
+        if (Array.isArray(userAgents)) {
+            userAgents.forEach(userAgent => {
                 if (!userAgent.name) {
                     throw new TypeError('Invalid user agent. The name must be provided.');
                 }
@@ -83,16 +83,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 }
             })
         }
-        else if (typeof userAgent !== 'string') {
-            if (!userAgent.name) {
+        else if (typeof userAgents !== 'string') {
+            if (!userAgents.name) {
                 throw new TypeError('Invalid user agent. The name must be provided.');
             }
 
-            if (typeof userAgent.name !== 'string') {
+            if (typeof userAgents.name !== 'string') {
                 throw new TypeError('Invalid user agent. The name must be a string.');
             }
 
-            if (userAgent.version && typeof userAgent.version !== 'string') {
+            if (userAgents.version && typeof userAgents.version !== 'string') {
                 throw new TypeError('Invalid user agent. The version must be a string.');
             }
         }
@@ -492,17 +492,17 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         copyAdditionalHeaders(options?.additionalHeaders);
 
         const userAgentPrefix = headers['User-Agent'] ? headers['User-Agent'] + ' ' : '';
-        if (Array.isArray(this.userAgent)) {
+        if (Array.isArray(this.userAgents)) {
             var combinedUserAgents = "";
-            this.userAgent.forEach(userAgent => {
+            this.userAgents.forEach(userAgent => {
                 combinedUserAgents = `${combinedUserAgents}${userAgent.name}/${userAgent.version ?? 'unknown'} `
             })
-            this.userAgent = combinedUserAgents.trim()
+            this.userAgents = combinedUserAgents.trim()
         }
         const userAgentString =
-            typeof this.userAgent === 'string'
-                ? this.userAgent
-                : `${this.userAgent.name}/${this.userAgent.version ?? 'unknown'}`;
+            typeof this.userAgents === 'string'
+                ? this.userAgents
+                : `${this.userAgents.name}/${this.userAgents.version ?? 'unknown'}`;
         headers['User-Agent'] = `${userAgentPrefix}${userAgentString} ${tunnelSdkUserAgent}`;
 
         // Get axios config
