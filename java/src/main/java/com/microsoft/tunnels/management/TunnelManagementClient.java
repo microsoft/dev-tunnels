@@ -94,7 +94,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       Supplier<String> accessTokenCallback,
       String tunnelServiceUri) {
     if (userAgents.length == 0){
-      throw new Exception("user agents cannot be empty");
+      throw new IllegalArgumentException("user agents cannot be empty");
     }
     this.userAgents = userAgents;
     this.accessTokenCallback = accessTokenCallback != null ? accessTokenCallback : () -> "";
