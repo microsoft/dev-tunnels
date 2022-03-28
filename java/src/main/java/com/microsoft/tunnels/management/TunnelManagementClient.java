@@ -82,7 +82,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   /**
    * Initiates a new instance of the TunnelManagementClient class.
    *
-   * @param userAgent           User-Agent header given as a
+   * @param userAgents          List of User-Agent headers given as a
    *                            {@link ProductHeaderValue}.
    * @param accessTokenCallback A callback which should resolve to the
    *                            Authentication header value.
