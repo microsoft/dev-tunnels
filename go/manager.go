@@ -31,18 +31,20 @@ var (
 	readAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost, TunnelAccessScopeConnect}
 )
 
+type UserAgent struct {
+	name    string
+	version string
+}
+
 type Manager struct {
 	tokenProvider     tokenProviderfn
 	httpClient        *http.Client
 	uri               *url.URL
 	additionalHeaders map[string]string
-	userAgent         string
+	userAgents        []UserAgent
 }
 
-func NewManager(userAgent string, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
-	if len(userAgent) == 0 {
-		return nil, fmt.Errorf("userAgent cannot be empty")
-	}
+func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
 	if tp == nil {
 		tp = func() string {
 			return ""
@@ -55,7 +57,7 @@ func NewManager(userAgent string, tp tokenProviderfn, tunnelServiceUrl *url.URL,
 	} else {
 		client = httpHandler
 	}
-	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgent: userAgent}, nil
+	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents}, nil
 }
 
 func (m *Manager) ListTunnels(
@@ -440,7 +442,15 @@ func (m *Manager) sendTunnelRequest(
 	if token := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes); token != "" {
 		request.Header.Add("Authorization", token)
 	}
-	request.Header.Add("User-Agent", fmt.Sprintf("%s %s", goUserAgent, m.userAgent))
+	userAgentString := ""
+	for _, userAgent := range m.userAgents {
+		if len(userAgent.version) == 0 {
+			userAgent.version = "unknown"
+		}
+		userAgentString = fmt.Sprintf("%s%s/%s ", userAgentString, userAgent.name, userAgent.version)
+	}
+	userAgentString = strings.TrimSpace(userAgentString)
+	request.Header.Add("User-Agent", fmt.Sprintf("%s %s", goUserAgent, userAgentString))
 	request.Header.Add("Content-Type", "application/json;charset=UTF-8")
 
 	// Add additional headers

@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	uri                  = "https://global.rel.tunnels.api.visualstudio.com/"
-	userAgentManagerTest = "Tunnels-Go-SDK-Tests/Manager"
+	uri = "https://global.rel.tunnels.api.visualstudio.com/"
 )
 
 var (
-	ctx = context.Background()
+	ctx                  = context.Background()
+	userAgentManagerTest = []UserAgent{UserAgent{name: "Tunnels-Go-SDK-Tests/Manager", version: PackageVersion}}
 )
 
 func getAccessToken() string {
