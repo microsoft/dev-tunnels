@@ -29,9 +29,6 @@ type Session struct {
 
 	requestHandlersMu sync.RWMutex
 	requestHandlers   map[string]requestHandlerFunc
-
-	reader io.Reader
-	writer io.Writer
 }
 
 // NewSession creates a new session.
@@ -66,16 +63,6 @@ func (s *Session) Connect(ctx context.Context) (err error) {
 	s.Session, err = sshClient.NewSession()
 	if err != nil {
 		return fmt.Errorf("error creating ssh client session: %w", err)
-	}
-
-	s.reader, err = s.Session.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("error creating ssh session reader: %w", err)
-	}
-
-	s.writer, err = s.Session.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("error creating ssh session writer: %w", err)
 	}
 
 	return nil
@@ -155,14 +142,6 @@ func (s *Session) handleRequests(ctx context.Context, reqs <-chan SSHRequest) {
 			handler(ctx, req)
 		}
 	}
-}
-
-func (s *Session) Read(p []byte) (n int, err error) {
-	return s.reader.Read(p)
-}
-
-func (s *Session) Write(p []byte) (n int, err error) {
-	return s.writer.Write(p)
 }
 
 // TODO(josebalius): Deprecate SSHSession struct.
