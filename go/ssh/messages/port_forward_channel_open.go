@@ -6,6 +6,8 @@ import (
 	"io"
 )
 
+const PortForwardChannelType = "forwarded-tcpip"
+
 type PortForwardChannel struct {
 	channelOpen         *channelOpen
 	host                string
@@ -27,7 +29,7 @@ func NewPortForwardChannel(senderChannel uint32, host string, port uint32, origi
 }
 
 func (pfc *PortForwardChannel) Type() string {
-	return "forwarded-tcpip"
+	return PortForwardChannelType
 }
 
 func (pfc *PortForwardChannel) Port() uint32 {
