@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -258,6 +259,70 @@ func TestPortForwarding(t *testing.T) {
 		t.Fatal("test timed out")
 	case err := <-relayServer.Err():
 		t.Errorf("relay server error: %v", err)
+	case err := <-done:
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+	}
+}
+
+func TestSuccessfulConnectJake(t *testing.T) {
+	ctx := context.Background()
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+
+	url, err := url.Parse(uri)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	options := &TunnelRequestOptions{IncludePorts: true, Scopes: []TunnelAccessScope{"connect"}, TokenScopes: []TunnelAccessScope{"connect"}}
+
+	newTunnel := &Tunnel{
+		TunnelID:  "hjmgvccn",
+		ClusterID: "usw2",
+	}
+	getTunnel, err := managementClient.GetTunnel(ctx, newTunnel, options)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if getTunnel.TunnelID == "" {
+		t.Errorf("tunnel was not successfully found")
+	} else {
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
+	}
+
+	done := make(chan error)
+	go func() {
+		fmt.Println("hello")
+		c, err := Connect(context.Background(), logger, getTunnel, "")
+		if err != nil {
+			done <- fmt.Errorf("connect failed: %v", err)
+			return
+		}
+		if c == nil {
+			done <- errors.New("nil connection")
+			return
+		}
+
+		listen, err := net.Listen("tcp", ":5001")
+		if err != nil {
+			done <- fmt.Errorf("failed to listen: %v", err)
+		}
+		defer listen.Close()
+		go c.ConnectToForwardedPort(ctx, listen, 5000)
+
+		c.WaitForForwardedPort(ctx, 5000)
+		time.Sleep(2 * time.Minute)
+		done <- nil
+	}()
+
+	select {
 	case err := <-done:
 		if err != nil {
 			t.Errorf(err.Error())
