@@ -52,7 +52,7 @@ export abstract class TunnelHostBase implements TunnelHost {
 
     constructor(managementClient: TunnelManagementClient) {
         this.managementClient = managementClient;
-        const publicKey = SshAlgorithms.publicKey.rsaWithSha512!;
+        const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
         }
