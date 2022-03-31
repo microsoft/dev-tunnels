@@ -50,7 +50,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <summary>
         /// Private key used for connections.
         /// </summary>
-        protected IKeyPair HostPrivateKey { get; } = SshAlgorithms.PublicKey.RsaWithSha512.GenerateKeyPair();
+        protected IKeyPair HostPrivateKey { get; } = SshAlgorithms.PublicKey.ECDsaSha2Nistp384.GenerateKeyPair();
 
         /// <summary>
         /// Management client used for connections
