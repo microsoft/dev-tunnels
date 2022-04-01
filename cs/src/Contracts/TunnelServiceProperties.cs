@@ -54,7 +54,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Used for authenticating internal AAD service principals in the corp tenant (not AME!),
         /// in the DEV service environment.
         /// </remarks>
-        private const string DevThirdPartyAppId = "59892e64-c86f-4450-8707-831cc1738d47";
+        private const string DevThirdPartyAppId = "a118c979-0249-44bb-8f95-eb0457127aeb";
 
         /// <summary>
         /// GitHub App Client ID for 'Visual Studio Tunnel Service'
