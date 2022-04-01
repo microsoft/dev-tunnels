@@ -39,21 +39,6 @@ func (pfc *PortForwardChannel) Port() uint32 {
 func (pfc *PortForwardChannel) Marshal() ([]byte, error) {
 	var buff []byte
 	buf := bytes.NewBuffer(buff)
-	// if err := writeString(buf, pfc.channelType); err != nil {
-	// 	return nil, fmt.Errorf("error writing channel type: %w", err)
-	// }
-	// if err := writeUint32(buf, pfc.senderChannel); err != nil {
-	// 	return nil, fmt.Errorf("error writing port: %w", err)
-	// }
-	// if err := writeUint32(buf, pfc.initialWindowSize); err != nil {
-	// 	return nil, fmt.Errorf("error writing window size: %w", err)
-	// }
-	// if err := writeUint32(buf, pfc.maximumPacketSize); err != nil {
-	// 	return nil, fmt.Errorf("error writing max packet size: %w", err)
-	// }
-	// if err := writeUint32(buf, uint32(pfc.messageType)); err != nil {
-	// 	return nil, fmt.Errorf("error writing message type: %w", err)
-	// }
 	if err := writeString(buf, pfc.host); err != nil {
 		return nil, fmt.Errorf("error writing host: %w", err)
 	}
