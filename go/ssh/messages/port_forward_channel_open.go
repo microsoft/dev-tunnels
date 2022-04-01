@@ -56,11 +56,6 @@ func (pfc *PortForwardChannel) Marshal() ([]byte, error) {
 }
 
 func (pfc *PortForwardChannel) Unmarshal(buf io.Reader) (err error) {
-	co := new(channelOpen)
-	if err := co.unmarshal(buf); err != nil {
-		return fmt.Errorf("error unmarshaling channel open: %w", err)
-	}
-
 	pfc.host, err = readString(buf)
 	if err != nil {
 		return fmt.Errorf("error reading host: %w", err)
