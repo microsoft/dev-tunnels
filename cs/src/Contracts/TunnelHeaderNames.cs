@@ -21,4 +21,9 @@ public static class TunnelHeaderNames
     /// Request ID header that nginx ingress controller adds to all requests if it's not there.
     /// </summary>
     public const string XRequestID = "X-Request-ID";
+
+    /// <summary>
+    /// Github Ssh public key which can be used to validate if it belongs to tunnel's owner.
+    /// </summary>
+    public const string XGithubSshKey = "X-Github-Ssh-Key";
 }
