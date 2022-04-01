@@ -283,7 +283,7 @@ func TestSuccessfulConnectJake(t *testing.T) {
 	options := &TunnelRequestOptions{IncludePorts: true, Scopes: []TunnelAccessScope{"connect"}, TokenScopes: []TunnelAccessScope{"connect"}}
 
 	newTunnel := &Tunnel{
-		TunnelID:  "hjmgvccn",
+		TunnelID:  "gnppzwbd",
 		ClusterID: "usw2",
 	}
 	getTunnel, err := managementClient.GetTunnel(ctx, newTunnel, options)
@@ -310,15 +310,15 @@ func TestSuccessfulConnectJake(t *testing.T) {
 			return
 		}
 
-		listen, err := net.Listen("tcp", ":5001")
+		listen, err := net.Listen("tcp", ":5011")
 		if err != nil {
 			done <- fmt.Errorf("failed to listen: %v", err)
 		}
 		defer listen.Close()
-		go c.ConnectToForwardedPort(ctx, listen, 5000)
+		go c.ConnectToForwardedPort(ctx, listen, 6001)
 
-		c.WaitForForwardedPort(ctx, 5000)
-		time.Sleep(2 * time.Minute)
+		c.WaitForForwardedPort(ctx, 6001)
+		time.Sleep(20 * time.Minute)
 		done <- nil
 	}()
 
