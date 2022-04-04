@@ -36,8 +36,6 @@ func (pfc *PortForwardChannel) Port() uint32 {
 	return pfc.port
 }
 
-// Marshal returns the byte representation of the PortForwardChannel.
-// This does not include the channelOpen as it is already included in the ssh message.
 func (pfc *PortForwardChannel) Marshal() ([]byte, error) {
 	b, err := pfc.channelOpen.marshal()
 	if err != nil {
