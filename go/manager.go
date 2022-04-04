@@ -22,6 +22,7 @@ const (
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
 	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK/" + PackageVersion
+	defaultUrl                 = "https://global.rel.tunnels.api.visualstudio.com/"
 )
 
 var (
@@ -56,6 +57,14 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 			return ""
 		}
 	}
+	if tunnelServiceUrl == nil {
+		url, err := url.Parse(defaultUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing default url %w", err)
+		}
+		tunnelServiceUrl = url
+	}
+
 	var client *http.Client
 	if httpHandler == nil {
 		client = &http.Client{}
