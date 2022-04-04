@@ -32,11 +32,13 @@ var (
 	readAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost, TunnelAccessScopeConnect}
 )
 
+// UserAgent contains the name and version of the client.
 type UserAgent struct {
 	name    string
 	version string
 }
 
+// Manager is used to interact with the Visual Studio Tunnel Service APIs.
 type Manager struct {
 	tokenProvider     tokenProviderfn
 	httpClient        *http.Client
