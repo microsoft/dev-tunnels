@@ -44,6 +44,9 @@ type Manager struct {
 	userAgents        []UserAgent
 }
 
+// Creates a new Manager used for interacting with the Tunnels APIs.
+// tokenProvider is an optional paramater containing a function that returns the access token to use for the request.
+// If no tunnelServiceUrl or httpClient is provided, the default values will be used.
 func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
 	if len(userAgents) == 0 {
 		return nil, fmt.Errorf("user agents cannot be empty")
