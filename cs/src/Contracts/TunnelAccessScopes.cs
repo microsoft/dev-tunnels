@@ -34,6 +34,11 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public const string Connect = "connect";
 
         /// <summary>
+        /// Allows relay service principle to access tunnels.
+        /// </summary>
+        public const string RelayRole = "relay";
+
+        /// <summary>
         /// Array of all access scopes.
         /// </summary>
         public static readonly string[] All = new[]
