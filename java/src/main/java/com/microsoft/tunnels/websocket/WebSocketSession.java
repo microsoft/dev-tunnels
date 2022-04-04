@@ -67,6 +67,7 @@ public class WebSocketSession extends AbstractCloseable implements IoSession {
   protected SocketAddress remoteAddr;
   protected ChannelFuture prev;
   protected Adapter adapter;
+  protected InboundAdapter inboundAdapter;
 
   private final SocketAddress acceptanceAddress;
 
@@ -79,6 +80,7 @@ public class WebSocketSession extends AbstractCloseable implements IoSession {
     this.id = service.sessionSeq.incrementAndGet();
     this.acceptanceAddress = acceptanceAddress;
     this.adapter = new Adapter(webSocketUri, accessToken);
+    this.inboundAdapter = new InboundAdapter();
   }
 
   @Override
@@ -139,8 +141,7 @@ public class WebSocketSession extends AbstractCloseable implements IoSession {
     ChannelPromise next = context.newPromise();
     prev.addListener(whatever -> {
       if (context != null) {
-        // TODO new BinaryWebSocketFrame(buf) ?
-        context.writeAndFlush(buf, next);
+        context.writeAndFlush(new BinaryWebSocketFrame(buf), next);
       }
     });
     prev = next;
@@ -291,7 +292,6 @@ public class WebSocketSession extends AbstractCloseable implements IoSession {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
       // from websocket handler
       handshaker.handshake(ctx.channel());
-      WebSocketSession.this.channelActive(ctx);
     }
 
     @Override
@@ -318,6 +318,7 @@ public class WebSocketSession extends AbstractCloseable implements IoSession {
           handshaker.finishHandshake(ch, (FullHttpResponse) msg);
           System.out.println("WebSocket Client connected!");
           handshakeFuture.setSuccess();
+          WebSocketSession.this.channelActive(ctx);
         } catch (WebSocketHandshakeException e) {
           System.out.println("WebSocket Client failed to connect");
           handshakeFuture.setFailure(e);
@@ -342,6 +343,39 @@ public class WebSocketSession extends AbstractCloseable implements IoSession {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
       handshakeFuture = ctx.newPromise();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+      WebSocketSession.this.exceptionCaught(ctx, cause);
+    }
+  }
+
+  /**
+   * Simple netty adapter to use as a bridge.
+   */
+  protected class InboundAdapter extends ChannelInboundHandlerAdapter {
+
+    public InboundAdapter() {
+      super();
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+      WebSocketSession.this.channelActive(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+      WebSocketSession.this.channelInactive(ctx);
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+
+      BinaryWebSocketFrame frame = (BinaryWebSocketFrame) msg;
+      WebSocketSession.this.channelRead(ctx, frame.content());
+
     }
 
     @Override

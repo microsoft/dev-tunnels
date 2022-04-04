@@ -36,7 +36,6 @@ public class WebSocketServiceFactory extends NettyIoServiceFactory {
 
   @Override
   public IoAcceptor createAcceptor(IoHandler handler) {
-    // TODO - needed for tunnel hosting.
-    throw new java.lang.UnsupportedOperationException("WebSocketAcceptor not implemented.");
+    return new WebSocketAcceptor(this, handler);
   }
 }
