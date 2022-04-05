@@ -43,7 +43,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private readonly accessTokenCallback: () => Promise<string | null>;
     private readonly userAgents: string;
 
-    public trace: (msg: string) => void = (msg) => { };
+    public trace: (msg: string) => void = (msg) => {};
 
     /**
      * Initializes a new instance of the `TunnelManagementHttpClient` class
@@ -70,12 +70,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         if (Array.isArray(userAgents)) {
-            if (userAgents.length == 0) {
+            if (userAgents.length === 0) {
                 throw new TypeError('User agents cannot be empty.');
             }
-            var combinedUserAgents = "";
+            let combinedUserAgents = '';
 
-            userAgents.forEach(userAgent => {
+            userAgents.forEach((userAgent) => {
                 if (typeof userAgent !== 'string') {
                     if (!userAgent.name) {
                         throw new TypeError('Invalid user agent. The name must be provided.');
@@ -88,15 +88,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                     if (userAgent.version && typeof userAgent.version !== 'string') {
                         throw new TypeError('Invalid user agent. The version must be a string.');
                     }
-                    combinedUserAgents = `${combinedUserAgents}${userAgent.name}/${userAgent.version ?? 'unknown'} `
+                    combinedUserAgents = `${combinedUserAgents}${
+                        userAgent.name
+                    }/${userAgent.version ?? 'unknown'} `;
+                } else {
+                    combinedUserAgents = `${combinedUserAgents}${userAgent} `;
                 }
-                else {
-                    combinedUserAgents = `${combinedUserAgents}${userAgent} `
-                }
-            })
-            this.userAgents = combinedUserAgents.trim()
-        }
-        else if (typeof userAgents !== 'string') {
+            });
+            this.userAgents = combinedUserAgents.trim();
+        } else if (typeof userAgents !== 'string') {
             if (!userAgents.name) {
                 throw new TypeError('Invalid user agent. The name must be provided.');
             }
@@ -108,10 +108,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             if (userAgents.version && typeof userAgents.version !== 'string') {
                 throw new TypeError('Invalid user agent. The version must be a string.');
             }
-            this.userAgents = `${userAgents.name}/${userAgents.version ?? 'unknown'}`
-        }
-        else {
-            this.userAgents = userAgents
+            this.userAgents = `${userAgents.name}/${userAgents.version ?? 'unknown'}`;
+        } else {
+            this.userAgents = userAgents;
         }
 
         this.accessTokenCallback = accessTokenCallback ?? (() => Promise.resolve(null));
