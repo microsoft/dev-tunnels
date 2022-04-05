@@ -31,6 +31,7 @@ type Client struct {
 	ssh                  *tunnelssh.ClientSSHSession
 	channels             uint32
 	remoteForwardedPorts *remoteForwardedPorts
+	connectedPorts       *remoteForwardedPorts
 }
 
 var (
@@ -90,6 +91,7 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		tunnel:               tunnel,
 		endpoints:            endpointGroup,
 		remoteForwardedPorts: newRemoteForwardedPorts(),
+		connectedPorts:       newRemoteForwardedPorts(),
 	}
 	return c.connect(ctx)
 }
@@ -154,7 +156,7 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 			}
 
 			go func() {
-				if err := c.handleConnection(ctx, conn, port); err != nil {
+				if err := c.handleConnection(ctx, conn, port, c.connectedPorts); err != nil {
 					sendError(err)
 				}
 			}()
@@ -167,15 +169,16 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 // WaitForForwardedPort waits for the specified port to be forwarded.
 func (c *Client) WaitForForwardedPort(ctx context.Context, port int) error {
 	// It's already forwarded there's no need to wait.
-	if c.remoteForwardedPorts.hasPort(port) {
+	if c.connectedPorts.hasPort(port) {
 		return nil
 	}
 
+	// TODO: fix for case where this is called for multiple ports at a time
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case n := <-c.remoteForwardedPorts.notify:
+		case n := <-c.connectedPorts.notify:
 			if n.port == port && n.notificationType == remoteForwardedPortNotificationTypeAdd {
 				return nil
 			}
@@ -192,7 +195,7 @@ func awaitError(ctx context.Context, errc chan error) error {
 	}
 }
 
-func (c *Client) handleConnection(ctx context.Context, conn io.ReadWriteCloser, port int) (err error) {
+func (c *Client) handleConnection(ctx context.Context, conn io.ReadWriteCloser, port int, connectedPorts *remoteForwardedPorts) (err error) {
 	defer safeClose(conn, &err)
 
 	channel, err := c.openStreamingChannel(ctx, port)
@@ -219,6 +222,7 @@ func (c *Client) handleConnection(ctx context.Context, conn io.ReadWriteCloser, 
 	go copyConn(conn, channel)
 	go copyConn(channel, conn)
 
+	connectedPorts.Add(port)
 	// Wait until context is cancelled or both copies are done.
 	// Discard errors from io.Copy; they should not cause (e.g.) failures.
 	for i := 0; ; {
