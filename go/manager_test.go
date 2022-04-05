@@ -143,8 +143,10 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 	r1 := rand.New(s1)
 	generatedName := fmt.Sprintf("test%d", r1.Intn(10000))
 	createdTunnel.Name = generatedName
-	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, options)
-	if err != nil || updatedTunnel.Name != generatedName {
+	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Name"}, options)
+	if err != nil {
+		t.Errorf("tunnel was not successfully updated: %s", err.Error())
+	} else if updatedTunnel.Name != generatedName {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Println("Tunnel updated")
@@ -189,8 +191,10 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	r1 := rand.New(s1)
 	generatedName := fmt.Sprintf("test%d", r1.Intn(10000))
 	createdTunnel.Name = generatedName
-	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, options)
-	if err != nil || updatedTunnel.Name != generatedName {
+	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Name"}, options)
+	if err != nil {
+		t.Errorf("tunnel was not successfully updated: %s", err.Error())
+	} else if updatedTunnel.Name != generatedName {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Println("Tunnel updated")
@@ -200,8 +204,10 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	// In the second update we want to update the description without updating the name
 	createdTunnel.Name = ""
 	createdTunnel.Description = "test description"
-	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, options)
-	if err != nil || updatedTunnel.Name != generatedName || createdTunnel.Description != "test description" {
+	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Name", "Description"}, options)
+	if err != nil {
+		t.Errorf("tunnel was not successfully updated: %s", err.Error())
+	} else if updatedTunnel.Name != generatedName || createdTunnel.Description != "test description" {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Println("Tunnel updated")
@@ -458,7 +464,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 	}
 	portToAdd.AccessControl.Entries = append(port.AccessControl.Entries, accessEntry)
 
-	port, err = managementClient.UpdateTunnelPort(ctx, createdTunnel, portToAdd, options)
+	port, err = managementClient.UpdateTunnelPort(ctx, createdTunnel, portToAdd, nil, options)
 	if err != nil {
 		t.Errorf("port was not successfully updated: %s", err)
 	} else if len(port.AccessControl.Entries) != 1 {
@@ -616,7 +622,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		ConnectionMode: TunnelConnectionModeLiveShareRelay,
 	}
 
-	updatedEndpoint, err := managementClient.UpdateTunnelEndpoint(ctx, createdTunnel, endpoint, options)
+	updatedEndpoint, err := managementClient.UpdateTunnelEndpoint(ctx, createdTunnel, endpoint, nil, options)
 
 	if err != nil {
 		t.Errorf(err.Error())
