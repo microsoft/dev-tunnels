@@ -19,6 +19,14 @@ steps:
     customCommand: 'run build -- --release'
 
 - task: Npm@1
+  displayName: Lint
+  inputs:
+    command: custom
+    workingDir: ts
+    verbose: false
+    customCommand: 'run eslint'
+
+- task: Npm@1
   displayName: Run unit tests
   inputs:
     command: custom
