@@ -10,11 +10,11 @@ steps:
     workingDir: ts
 
 - task: Npm@1
-  displayName: Build
+  displayName: Compile
   inputs:
     command: custom
     workingDir: ts
-    customCommand: 'run build'
+    customCommand: 'run compile'
 
 - task: Npm@1
   displayName: Lint
@@ -24,11 +24,11 @@ steps:
     customCommand: 'run eslint'
 
 - task: Npm@1
-  displayName: Compile
+  displayName: Build
   inputs:
     command: custom
     workingDir: ts
-    customCommand: 'run compile'
+    customCommand: 'run build'
 
 - task: Npm@1
   displayName: Run unit tests
