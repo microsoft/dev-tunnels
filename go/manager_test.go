@@ -11,13 +11,9 @@ import (
 	"time"
 )
 
-const (
-	uri = "https://global.rel.tunnels.api.visualstudio.com/"
-)
-
 var (
 	ctx                  = context.Background()
-	userAgentManagerTest = []UserAgent{UserAgent{name: "Tunnels-Go-SDK-Tests/Manager", version: PackageVersion}}
+	userAgentManagerTest = []UserAgent{{name: "Tunnels-Go-SDK-Tests/Manager", version: PackageVersion}}
 )
 
 func getAccessToken() string {
@@ -27,7 +23,7 @@ func getAccessToken() string {
 func TestTunnelCreateDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -63,7 +59,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 func TestListTunnels(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -114,7 +110,7 @@ func TestListTunnels(t *testing.T) {
 func TestTunnelCreateUpdateDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -160,7 +156,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -217,7 +213,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 func TestTunnelCreateGetDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -264,7 +260,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 func TestTunnelAddPort(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -323,7 +319,7 @@ func TestTunnelAddPort(t *testing.T) {
 func TestTunnelDeletePort(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -401,7 +397,7 @@ func TestTunnelDeletePort(t *testing.T) {
 func TestTunnelUpdatePort(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -493,7 +489,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 func TestTunnelListPorts(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -572,7 +568,7 @@ func TestTunnelListPorts(t *testing.T) {
 func TestTunnelEndpoints(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

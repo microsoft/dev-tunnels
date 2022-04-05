@@ -325,6 +325,15 @@ namespace Microsoft.VsSaaS.TunnelService
         {
             if (e.Request is not PortForwardChannelOpenMessage portForwardRequest)
             {
+                if (e.Request is ChannelOpenMessage channelOpenMessage)
+                {
+                    // This allows the Go SDK to open an unused terminal channel
+                    if (channelOpenMessage.ChannelType == "session")
+                    {
+                        return;
+                    }
+                }
+
                 Trace.Warning("Rejecting request to open non-portforwarding channel.");
                 e.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
                 return;

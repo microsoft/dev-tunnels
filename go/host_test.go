@@ -11,14 +11,14 @@ import (
 
 var (
 	logger            = log.New(os.Stdout, "", log.LstdFlags)
-	userAgentHostTest = []UserAgent{UserAgent{name: "Tunnels-Go-SDK-Tests/Host", version: PackageVersion}}
+	userAgentHostTest = []UserAgent{{name: "Tunnels-Go-SDK-Tests/Host", version: PackageVersion}}
 )
 
 // This tests against the real prod service uri when it creates and manages tunnels
 // We do have a cleanup worker that will delete unused tunnels so its not horrible for the test to break mid run
 // This is a work in progress
 func TestSuccessfulHost(t *testing.T) {
-	url, err := url.Parse(uri)
+	url, err := url.Parse(defaultUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
