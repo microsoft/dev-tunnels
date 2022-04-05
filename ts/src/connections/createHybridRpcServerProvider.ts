@@ -2,7 +2,7 @@ import * as rpc from 'vscode-jsonrpc';
 import * as ssh from '@vs/vs-ssh';
 
 import { connection as WebSocketConnection } from 'websocket';
-import { isNode, SshHelpers } from './sshHelpers';
+import { isNode, SshHelpers, DNE } from './sshHelpers';
 import { HybridConnectionsWebSocketServer } from './hybridConnectionsWebSocketServer';
 
 const hyCoWebSocket = require('hyco-websocket');
