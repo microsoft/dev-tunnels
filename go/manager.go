@@ -22,6 +22,7 @@ const (
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
 	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK/" + PackageVersion
+	defaultUrl                 = "https://global.rel.tunnels.api.visualstudio.com/"
 )
 
 var (
@@ -31,11 +32,13 @@ var (
 	readAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost, TunnelAccessScopeConnect}
 )
 
+// UserAgent contains the name and version of the client.
 type UserAgent struct {
 	name    string
 	version string
 }
 
+// Manager is used to interact with the Visual Studio Tunnel Service APIs.
 type Manager struct {
 	tokenProvider     tokenProviderfn
 	httpClient        *http.Client
@@ -44,6 +47,9 @@ type Manager struct {
 	userAgents        []UserAgent
 }
 
+// Creates a new Manager used for interacting with the Tunnels APIs.
+// tokenProvider is an optional paramater containing a function that returns the access token to use for the request.
+// If no tunnelServiceUrl or httpClient is provided, the default values will be used.
 func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
 	if len(userAgents) == 0 {
 		return nil, fmt.Errorf("user agents cannot be empty")
@@ -53,6 +59,15 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 			return ""
 		}
 	}
+
+	if tunnelServiceUrl == nil {
+		url, err := url.Parse(defaultUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing default url %w", err)
+		}
+		tunnelServiceUrl = url
+	}
+
 	var client *http.Client
 	if httpHandler == nil {
 		client = &http.Client{}
@@ -60,6 +75,7 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 	} else {
 		client = httpHandler
 	}
+
 	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents}, nil
 }
 

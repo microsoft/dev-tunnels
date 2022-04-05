@@ -36,13 +36,11 @@ func (pfc *PortForwardChannel) Port() uint32 {
 	return pfc.port
 }
 
+// Marshal returns the byte representation of the PortForwardChannel.
+// This does not include the channelOpen as it is already included in the ssh message.
 func (pfc *PortForwardChannel) Marshal() ([]byte, error) {
-	b, err := pfc.channelOpen.marshal()
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling channel open: %w", err)
-	}
-
-	buf := bytes.NewBuffer(b)
+	var buff []byte
+	buf := bytes.NewBuffer(buff)
 	if err := writeString(buf, pfc.host); err != nil {
 		return nil, fmt.Errorf("error writing host: %w", err)
 	}
@@ -59,12 +57,9 @@ func (pfc *PortForwardChannel) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Unmarshal parses the byte representation of the PortForwardChannel.
+// This does not include the channelOpen.
 func (pfc *PortForwardChannel) Unmarshal(buf io.Reader) (err error) {
-	co := new(channelOpen)
-	if err := co.unmarshal(buf); err != nil {
-		return fmt.Errorf("error unmarshaling channel open: %w", err)
-	}
-
 	pfc.host, err = readString(buf)
 	if err != nil {
 		return fmt.Errorf("error reading host: %w", err)
