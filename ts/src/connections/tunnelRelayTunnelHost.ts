@@ -21,13 +21,9 @@ import {
     PromiseCompletionSource,
     CancellationError,
     ObjectDisposedError,
-} from '@vs/vs-ssh';
-import {
-    PortForwardChannelOpenMessage,
-    PortForwardingService,
-    SshServer,
     ChannelOpenMessage,
-} from '@vs/vs-ssh-tcp';
+} from '@vs/vs-ssh';
+import { PortForwardChannelOpenMessage, PortForwardingService } from '@vs/vs-ssh-tcp';
 import { CancellationToken, CancellationTokenSource, Disposable } from 'vscode-jsonrpc';
 import { TunnelRelayStreamFactory, DefaultTunnelRelayStreamFactory, SessionPortKey } from '.';
 import { MultiModeTunnelHost } from './multiModeTunnelHost';
