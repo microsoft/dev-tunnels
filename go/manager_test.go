@@ -41,10 +41,10 @@ func TestTunnelCreateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
 
@@ -53,7 +53,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
@@ -77,10 +77,10 @@ func TestListTunnels(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
 	var token string
@@ -92,7 +92,7 @@ func TestListTunnels(t *testing.T) {
 	options = &TunnelRequestOptions{
 		AccessToken: token,
 	}
-	tunnels, err := managementClient.ListTunnels(ctx, nil, nil, options)
+	tunnels, err := managementClient.ListTunnels(ctx, "", "", options)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -100,10 +100,8 @@ func TestListTunnels(t *testing.T) {
 		t.Errorf("tunnel was not successfully listed")
 	}
 	for _, tunnel := range tunnels {
-		if tunnel.TunnelID != nil {
-			logger.Println(fmt.Sprintf("found tunnel with id %s", *tunnel.TunnelID))
-			tunnel.table().Print()
-		}
+		logger.Println(fmt.Sprintf("found tunnel with id %s", tunnel.TunnelID))
+		tunnel.table().Print()
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
@@ -111,7 +109,7 @@ func TestListTunnels(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
@@ -135,18 +133,18 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 	generatedName := fmt.Sprintf("test%d", r1.Intn(10000))
-	createdTunnel.Name = &generatedName
+	createdTunnel.Name = generatedName
 	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, options)
-	if err != nil || updatedTunnel.Name == nil || *updatedTunnel.Name != generatedName {
+	if err != nil || updatedTunnel.Name != generatedName {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Println("Tunnel updated")
@@ -157,7 +155,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
@@ -238,10 +236,10 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
 
@@ -250,10 +248,10 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
@@ -261,7 +259,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", getTunnel.TunnelID))
 	}
 }
 
@@ -285,19 +283,19 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
-	portToAdd := NewTunnelPort(3000, nil, nil, "auto")
+	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %d", *port.PortNumber))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
 	port.table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -305,10 +303,10 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
 
@@ -321,7 +319,7 @@ func TestTunnelAddPort(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
@@ -345,19 +343,19 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
-	portToAdd := NewTunnelPort(3000, nil, nil, "auto")
+	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %d", *port.PortNumber))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
 	port.table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -365,10 +363,10 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
 
@@ -377,17 +375,17 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Deleted port: %d", *port.PortNumber))
+	logger.Println(fmt.Sprintf("Deleted port: %d", port.PortNumber))
 
 	getTunnel, err = managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
 
@@ -400,7 +398,7 @@ func TestTunnelDeletePort(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
@@ -424,19 +422,19 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
-	portToAdd := NewTunnelPort(3000, nil, nil, "auto")
+	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %d", *port.PortNumber))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
 	port.table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -444,10 +442,10 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
 	accessEntry := TunnelAccessControlEntry{
@@ -472,10 +470,10 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
 	if getTunnel.Ports == nil || len((*getTunnel.Ports)[0].AccessControl.Entries) != 1 {
@@ -496,7 +494,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
@@ -520,29 +518,29 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
-	portToAdd := NewTunnelPort(3000, nil, nil, "auto")
+	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
 
-	logger.Println(fmt.Sprintf("Created port: %d", *port.PortNumber))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
 	port.table().Print()
 
-	portToAdd = NewTunnelPort(3001, nil, nil, "auto")
+	portToAdd = NewTunnelPort(3001, "", "", "auto")
 	port, err = managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %d", *port.PortNumber))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
 	port.table().Print()
 
 	ports, err := managementClient.ListTunnelPorts(ctx, createdTunnel, options)
@@ -554,7 +552,7 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf("ports not successfully listed")
 	}
 	for _, port := range ports {
-		logger.Println(fmt.Sprintf("Port: %d", *port.PortNumber))
+		logger.Println(fmt.Sprintf("Port: %d", port.PortNumber))
 		port.table().Print()
 	}
 
@@ -563,10 +561,10 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
 
@@ -579,7 +577,7 @@ func TestTunnelListPorts(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", createdTunnel.TunnelID))
 	}
 }
 
@@ -605,19 +603,17 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if createdTunnel.TunnelID == nil {
+	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Println(fmt.Sprintf("Created tunnel with id %s", *createdTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
 
 	// Create and add endpoint
-	hostID := "test"
-	connectionMode := TunnelConnectionModeLiveShareRelay
 	endpoint := &TunnelEndpoint{
-		HostID:         &hostID,
-		ConnectionMode: &connectionMode,
+		HostID:         "test",
+		ConnectionMode: TunnelConnectionModeLiveShareRelay,
 	}
 
 	updatedEndpoint, err := managementClient.UpdateTunnelEndpoint(ctx, createdTunnel, endpoint, options)
@@ -626,22 +622,17 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if updatedEndpoint.HostID == nil {
-		t.Errorf("updated endpoint did not have a host ID")
-		return
-	}
-
-	logger.Println(fmt.Sprintf("updated endpoint %s", *updatedEndpoint.HostID))
+	logger.Println(fmt.Sprintf("updated endpoint %s", updatedEndpoint.HostID))
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
 	if getTunnel.Endpoints == nil || len(*getTunnel.Endpoints) != 1 {
 		t.Errorf("endpoint was not successfully updated")
@@ -658,10 +649,10 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if getTunnel.TunnelID == nil {
+	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
 	if getTunnel.Endpoints == nil || len(*getTunnel.Endpoints) != 0 {
 		t.Errorf("endpoint was not successfully deleted")
@@ -672,6 +663,6 @@ func TestTunnelEndpoints(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", *getTunnel.TunnelID))
+		logger.Println(fmt.Sprintf("Deleted tunnel with id %s", getTunnel.TunnelID))
 	}
 }

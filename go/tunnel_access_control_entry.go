@@ -21,7 +21,7 @@ type TunnelAccessControlEntry struct {
 	// For public key ACEs, this value is the type of public key, e.g. "ssh".  For IP address
 	// range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6".  For anonymous
 	// ACEs, this value is null.
-	Provider     *string `json:"provider"`
+	Provider     string `json:"provider,omitempty"`
 
 	// Gets or sets a value indicating whether this is an access control entry on a tunnel
 	// port that is inherited from the tunnel's access control list.
@@ -41,7 +41,7 @@ type TunnelAccessControlEntry struct {
 	//
 	// For AAD users and group ACEs, this value is the AAD tenant ID. It is not currently
 	// used with any other types of ACEs.
-	Organization *string `json:"organization"`
+	Organization string `json:"organization,omitempty"`
 
 	// Gets or sets the subjects for the entry, such as user or group IDs. The format of the
 	// values depends on the `TunnelAccessControlEntry.Type` and

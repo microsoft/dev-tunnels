@@ -34,8 +34,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// <summary>
         /// Gets or sets the IP port number of the tunnel port.
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ushort? PortNumber { get; set; }
+        public ushort PortNumber { get; set; }
 
         /// <summary>
         /// Gets or sets the protocol of the tunnel port.

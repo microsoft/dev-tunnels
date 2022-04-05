@@ -68,9 +68,7 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 
 	endpointGroups := make(map[string][]TunnelEndpoint)
 	for _, endpoint := range *tunnel.Endpoints {
-		if (endpoint.HostID != nil) {
-			endpointGroups[*endpoint.HostID] = append(endpointGroups[*endpoint.HostID], endpoint)
-		}
+		endpointGroups[endpoint.HostID] = append(endpointGroups[endpoint.HostID], endpoint)
 	}
 
 	var endpointGroup []TunnelEndpoint
@@ -82,10 +80,10 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		endpointGroup = g
 	} else if len(endpointGroups) > 1 {
 		return nil, ErrMultipleHosts
-	} else if tunnel.Endpoints == nil || (*tunnel.Endpoints)[0].HostID == nil {
+	} else if tunnel.Endpoints == nil {
 		return nil, ErrNoConnections
 	} else {
-		endpointGroup = endpointGroups[*(*tunnel.Endpoints)[0].HostID]
+		endpointGroup = endpointGroups[(*tunnel.Endpoints)[0].HostID]
 	}
 
 	c := &Client{
@@ -103,11 +101,7 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 		return nil, ErrNoRelayConnections
 	}
 	tunnelEndpoint := c.endpoints[0]
-
-	if tunnelEndpoint.ClientRelayURI == nil {
-		return nil, ErrNoRelayConnections
-	}
-	clientRelayURI := *tunnelEndpoint.ClientRelayURI
+	clientRelayURI := tunnelEndpoint.ClientRelayURI
 
 	var accessToken string
 	if c.tunnel.AccessTokens != nil {

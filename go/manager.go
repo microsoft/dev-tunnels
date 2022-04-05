@@ -104,14 +104,14 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 }
 
 func (m *Manager) ListTunnels(
-	ctx context.Context, clusterID *string, domain *string, options *TunnelRequestOptions,
+	ctx context.Context, clusterID string, domain string, options *TunnelRequestOptions,
 ) (ts []*Tunnel, err error) {
 	queryParams := url.Values{}
-	if clusterID == nil {
+	if clusterID == "" {
 		queryParams.Add("global", "true")
 	}
-	if domain != nil {
-		queryParams.Add("domain", *domain)
+	if domain != "" {
+		queryParams.Add("domain", domain)
 	}
 	url := m.buildUri(clusterID, tunnelsApiPath, options, queryParams.Encode())
 	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, readAccessTokenScope, false)
@@ -128,14 +128,14 @@ func (m *Manager) ListTunnels(
 }
 
 func (m *Manager) SearchTunnels(
-	ctx context.Context, tags []string, requireAllTags bool, clusterID *string, domain *string, options *TunnelRequestOptions,
+	ctx context.Context, tags []string, requireAllTags bool, clusterID string, domain string, options *TunnelRequestOptions,
 ) (ts []*Tunnel, err error) {
 	queryParams := url.Values{}
-	if clusterID == nil {
+	if clusterID == "" {
 		queryParams.Add("global", "true")
 	}
-	if domain != nil {
-		queryParams.Add("domain", *domain)
+	if domain != "" {
+		queryParams.Add("domain", domain)
 	}
 	queryParams.Add("allTags", strconv.FormatBool(requireAllTags))
 	tagString := strings.Join(tags, ",")
@@ -179,7 +179,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
-	if tunnel.TunnelID != nil {
+	if tunnel.TunnelID != "" {
 		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
 	}
 	url := m.buildUri(tunnel.ClusterID, tunnelsApiPath, options, "")
@@ -252,13 +252,10 @@ func (m *Manager) UpdateTunnelEndpoint(
 	if endpoint == nil {
 		return nil, fmt.Errorf("endpoint must be provided and must not be nil")
 	}
-	if endpoint.HostID == nil {
+	if endpoint.HostID == "" {
 		return nil, fmt.Errorf("endpoint hostId must be provided and must not be nil")
 	}
-	if endpoint.ConnectionMode == nil {
-		return nil, fmt.Errorf("endpoint ConnectionMode must be provided and must not be nil")
-	}
-	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%s/%s", endpointsApiSubPath, *endpoint.HostID, *endpoint.ConnectionMode), options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%s/%s", endpointsApiSubPath, endpoint.HostID, endpoint.ConnectionMode), options, "")
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -310,8 +307,7 @@ func (m *Manager) DeleteTunnelEndpoints(
 	if tunnel.Endpoints != nil {
 		var newEndpoints []TunnelEndpoint
 		for _, ep := range *tunnel.Endpoints {
-			if (ep.HostID != nil && *ep.HostID != hostID) ||
-				(ep.ConnectionMode != nil && *ep.ConnectionMode != connectionMode) {
+			if ep.HostID != hostID || ep.ConnectionMode != connectionMode {
 				newEndpoints = append(newEndpoints, ep)
 			}
 		}
@@ -407,13 +403,10 @@ func (m *Manager) CreateTunnelPort(
 func (m *Manager) UpdateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
-	if port.ClusterID != nil && tunnel.ClusterID != nil && *port.ClusterID != *tunnel.ClusterID {
+	if port.ClusterID != "" && tunnel.ClusterID != "" && port.ClusterID != tunnel.ClusterID {
 		return nil, fmt.Errorf("cluster ids do not match")
 	}
-	if port.PortNumber == nil {
-		return nil, fmt.Errorf("missing port number")
-	}
-	path := fmt.Sprintf("%s/%d", portsApiSubPath, *port.PortNumber)
+	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "")
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
@@ -468,7 +461,7 @@ func (m *Manager) DeleteTunnelPort(
 	if tunnel.Ports != nil {
 		var newPorts []TunnelPort
 		for _, p := range *tunnel.Ports {
-			if p.PortNumber != nil && *p.PortNumber != port {
+			if p.PortNumber != port {
 				newPorts = append(newPorts, p)
 			}
 		}
@@ -549,19 +542,19 @@ func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {
 		return nil, fmt.Errorf("failed to unmarshal ProblemDetails")
 	}
 
-	if problemDetails.Title == nil && problemDetails.Detail == nil {
+	if problemDetails.Title == "" && problemDetails.Detail == "" {
 		return nil, fmt.Errorf("empty ProblemDetails")
 	}
 
 	var errorMessage string
-	if problemDetails.Title != nil {
-		errorMessage += *problemDetails.Title
+	if problemDetails.Title != "" {
+		errorMessage += problemDetails.Title
 	}
-	if problemDetails.Detail != nil {
+	if problemDetails.Detail != "" {
 		if len(errorMessage) > 0 {
 			errorMessage += " "
 		}
-		errorMessage += *problemDetails.Detail
+		errorMessage += problemDetails.Detail
 	}
 	if problemDetails.Errors != nil {
 		for errorKey, errorDetail := range *problemDetails.Errors {
@@ -592,13 +585,13 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 	return token
 }
 
-func (m *Manager) buildUri(clusterId *string, path string, options *TunnelRequestOptions, query string) *url.URL {
+func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) *url.URL {
 	baseAddress := m.uri
-	if clusterId != nil {
-		if !strings.HasPrefix(baseAddress.Host, "localhost") && !strings.HasPrefix(baseAddress.Host, *clusterId) {
+	if clusterId != "" {
+		if !strings.HasPrefix(baseAddress.Host, "localhost") && !strings.HasPrefix(baseAddress.Host, clusterId) {
 			// A specific cluster ID was specified (while not running on localhost).
 			// Prepend the cluster ID to the hostname, and optionally strip a global prefix.
-			baseAddress.Host = fmt.Sprintf("%s.%s", *clusterId, baseAddress.Host)
+			baseAddress.Host = fmt.Sprintf("%s.%s", clusterId, baseAddress.Host)
 			baseAddress.Host = strings.Replace(baseAddress.Host, "global.", "", 1)
 		}
 	}
@@ -623,12 +616,12 @@ func (m *Manager) buildTunnelSpecificUri(tunnel *Tunnel, path string, options *T
 		return nil, fmt.Errorf("tunnel cannot be nil to make uri")
 	}
 	switch {
-	case tunnel.ClusterID != nil && tunnel.TunnelID != nil:
-		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, *tunnel.TunnelID)
-	case tunnel.Name != nil:
-		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, *tunnel.Name)
-		if tunnel.Domain != nil {
-			tunnelPath = fmt.Sprintf("%s/%s.%s", tunnelsApiPath, *tunnel.Name, *tunnel.Domain)
+	case tunnel.ClusterID != "" && tunnel.TunnelID != "":
+		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID)
+	case tunnel.Name != "":
+		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.Name)
+		if tunnel.Domain != "" {
+			tunnelPath = fmt.Sprintf("%s/%s.%s", tunnelsApiPath, tunnel.Name, tunnel.Domain)
 		}
 	default:
 		return nil, fmt.Errorf("tunnel must have either a name or cluster id and tunnel id")

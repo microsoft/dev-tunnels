@@ -73,6 +73,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         ///
         /// For anonymous ACEs, this value is null.
         /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Provider { get; set; }
 
         /// <summary>
@@ -103,6 +104,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// For AAD users and group ACEs, this value is the AAD tenant ID. It is not currently used
         /// with any other types of ACEs.
         /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Organization { get; set; }
 
         /// <summary>

@@ -13,18 +13,18 @@ type TunnelAccessSubject struct {
 	//
 	// The ID is typically a guid or integer that is unique within the scope of the identity
 	// provider or organization, and never changes for that subject.
-	ID             *string `json:"id,omitempty"`
+	ID             string `json:"id,omitempty"`
 
 	// Gets or sets the subject organization ID, which may be required if an organization is
 	// not implied by the authentication context.
-	OrganizationID *string `json:"organizationId,omitempty"`
+	OrganizationID string `json:"organizationId,omitempty"`
 
 	// Gets or sets the partial or full subject name.
 	//
 	// When resolving a subject name to ID, a partial name may be provided, and the full name
 	// is returned if the partial name was successfully resolved. When formatting a subject
 	// ID to name, the full name is returned if the ID was found.
-	Name           *string `json:"name,omitempty"`
+	Name           string `json:"name,omitempty"`
 
 	// Gets or sets an array of possible subject matches, if a partial name was provided and
 	// did not resolve to a single subject.

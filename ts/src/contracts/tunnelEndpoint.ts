@@ -19,7 +19,7 @@ export interface TunnelEndpoint {
      * is also an indication of the connection mode, but this property is necessary to
      * determine the subclass type when deserializing.
      */
-    connectionMode?: TunnelConnectionMode;
+    connectionMode: TunnelConnectionMode;
 
     /**
      * Gets or sets the ID of the host that is listening on this endpoint.
@@ -29,7 +29,7 @@ export interface TunnelEndpoint {
      * it supports. However different hosts may simultaneously accept connections at
      * different endpoints for the same tunnel, if enabled in tunnel options.
      */
-    hostId?: string;
+    hostId: string;
 
     /**
      * Gets or sets an array of public keys, which can be used by clients to authenticate

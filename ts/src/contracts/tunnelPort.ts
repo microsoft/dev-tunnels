@@ -21,7 +21,7 @@ export interface TunnelPort {
     /**
      * Gets or sets the IP port number of the tunnel port.
      */
-    portNumber?: number;
+    portNumber: number;
 
     /**
      * Gets or sets the protocol of the tunnel port.

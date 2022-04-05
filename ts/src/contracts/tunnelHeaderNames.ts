@@ -17,4 +17,10 @@ export enum TunnelHeaderNames {
      * there.
      */
     XRequestID = 'X-Request-ID',
+
+    /**
+     * Github Ssh public key which can be used to validate if it belongs to tunnel's
+     * owner.
+     */
+    XGithubSshKey = 'X-Github-Ssh-Key',
 }

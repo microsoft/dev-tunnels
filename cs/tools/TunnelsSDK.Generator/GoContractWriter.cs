@@ -413,6 +413,14 @@ internal class GoContractWriter : ContractWriter
                 "System.Collections.Generic.IDictionary<string, string[]>" => "map[string][]string",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
+
+            if (!goType.StartsWith("map[") && !goType.Contains("."))
+            {
+                // Struct members of type string and other basic types are conventionally not
+                // represented as pointers in Go. That makes partial resource updtes more challening,
+                // but a different approach will be used there.
+                isNullable = false;
+            }
         }
 
         if (isNullable)

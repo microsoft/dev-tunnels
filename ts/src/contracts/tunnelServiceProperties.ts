@@ -88,7 +88,7 @@ export const ppeThirdPartyAppId = '544167a6-f431-4518-aac6-2fd50071928e';
  * Used for authenticating internal AAD service principals in the corp tenant (not AME!),
  * in the DEV service environment.
  */
-export const devThirdPartyAppId = '59892e64-c86f-4450-8707-831cc1738d47';
+export const devThirdPartyAppId = 'a118c979-0249-44bb-8f95-eb0457127aeb';
 
 /**
  * GitHub App Client ID for 'Visual Studio Tunnel Service'

@@ -16,4 +16,7 @@ const (
 	// Request ID header that nginx ingress controller adds to all requests if it's not
 	// there.
 	TunnelHeaderNameXRequestID           TunnelHeaderName = "X-Request-ID"
+
+	// Github Ssh public key which can be used to validate if it belongs to tunnel's owner.
+	TunnelHeaderNameXGithubSshKey        TunnelHeaderName = "X-Github-Ssh-Key"
 )

@@ -9,26 +9,26 @@ import (
 // Data contract for tunnel objects managed through the tunnel service REST API.
 type Tunnel struct {
 	// Gets or sets the ID of the cluster the tunnel was created in.
-	ClusterID     *string `json:"clusterId,omitempty"`
+	ClusterID     string `json:"clusterId,omitempty"`
 
 	// Gets or sets the generated ID of the tunnel, unique within the cluster.
-	TunnelID      *string `json:"tunnelId,omitempty"`
+	TunnelID      string `json:"tunnelId,omitempty"`
 
 	// Gets or sets the optional short name (alias) of the tunnel.
 	//
 	// The name must be globally unique within the parent domain, and must be a valid
 	// subdomain.
-	Name          *string `json:"name,omitempty"`
+	Name          string `json:"name,omitempty"`
 
 	// Gets or sets the description of the tunnel.
-	Description   *string `json:"description,omitempty"`
+	Description   string `json:"description,omitempty"`
 
 	// Gets or sets the tags of the tunnel.
-	Tags          *[]string `json:"tags,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
 
 	// Gets or sets the optional parent domain of the tunnel, if it is not using the default
 	// parent domain.
-	Domain        *string `json:"domain"`
+	Domain        string `json:"domain,omitempty"`
 
 	// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
 	AccessTokens  *map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
