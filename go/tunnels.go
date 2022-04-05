@@ -27,17 +27,16 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 		Endpoints:     tunnel.Endpoints,
 	}
 
-	if tunnel.Ports != nil {
-		var convertedPorts []TunnelPort
-		for _, port := range *tunnel.Ports {
-			convertedPort, err := port.requestObject(tunnel)
-			if err != nil {
-				return nil, err
-			}
-			convertedPorts = append(convertedPorts, *convertedPort)
+	var convertedPorts []TunnelPort
+	for _, port := range tunnel.Ports {
+		convertedPort, err := port.requestObject(tunnel)
+		if err != nil {
+			return nil, err
 		}
-		convertedTunnel.Ports = &convertedPorts
+		convertedPorts = append(convertedPorts, *convertedPort)
 	}
+	convertedTunnel.Ports = convertedPorts
+
 	return convertedTunnel, nil
 }
 
@@ -45,24 +44,20 @@ func (t *Tunnel) table() table.Table {
 	tbl := table.New("Tunnel Properties", " ")
 
 	var accessTokens string
-	if t.AccessTokens != nil {
-		for scope := range *t.AccessTokens {
-			if len(accessTokens) == 0 {
-				accessTokens += string(scope)
-			} else {
-				accessTokens += fmt.Sprintf(", %s", scope)
-			}
+	for scope := range t.AccessTokens {
+		if len(accessTokens) == 0 {
+			accessTokens += string(scope)
+		} else {
+			accessTokens += fmt.Sprintf(", %s", scope)
 		}
 	}
 
 	var ports string
-	if t.Ports != nil {
-		for _, port := range *t.Ports {
-			if len(ports) == 0 {
-				ports += fmt.Sprintf("%d - %s", port.PortNumber, port.Protocol)
-			} else {
-				ports += fmt.Sprintf(", %d - %s", port.PortNumber, port.Protocol)
-			}
+	for _, port := range t.Ports {
+		if len(ports) == 0 {
+			ports += fmt.Sprintf("%d - %s", port.PortNumber, port.Protocol)
+		} else {
+			ports += fmt.Sprintf(", %d - %s", port.PortNumber, port.Protocol)
 		}
 	}
 	tbl.AddRow("ClusterId", t.ClusterID)
@@ -84,13 +79,11 @@ func (tp *TunnelPort) table() table.Table {
 	tbl := table.New("TunnelPort Properties", " ")
 
 	var accessTokens string
-	if tp.AccessTokens != nil {
-		for scope := range *tp.AccessTokens {
-			if len(accessTokens) == 0 {
-				accessTokens += string(scope)
-			} else {
-				accessTokens += fmt.Sprintf(", %s", scope)
-			}
+	for scope := range tp.AccessTokens {
+		if len(accessTokens) == 0 {
+			accessTokens += string(scope)
+		} else {
+			accessTokens += fmt.Sprintf(", %s", scope)
 		}
 	}
 

@@ -22,7 +22,7 @@ type TunnelPort struct {
 	//
 	// Unlike the tokens in `Tunnel.AccessTokens`, these tokens are restricted to the
 	// individual port.
-	AccessTokens  *map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
+	AccessTokens  map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
 
 	// Gets or sets access control settings for the tunnel port.
 	//

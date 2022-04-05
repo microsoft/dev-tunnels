@@ -30,5 +30,5 @@ type TunnelAccessSubject struct {
 	// did not resolve to a single subject.
 	//
 	// This property applies only when resolving subject names to IDs.
-	Matches        *[]TunnelAccessSubject `json:"matches,omitempty"`
+	Matches        []TunnelAccessSubject `json:"matches,omitempty"`
 }

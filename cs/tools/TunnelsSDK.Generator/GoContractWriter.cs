@@ -148,7 +148,7 @@ internal class GoContractWriter : ContractWriter
 
         s.AppendLine("}");
 
-        foreach (var derivedType in derivedTypes)
+        foreach (var derivedType in derivedTypes.OrderBy((t) => t.Name))
         {
             s.AppendLine();
             WriteInterfaceContract(s, derivedType, imports, allTypes);
@@ -390,6 +390,7 @@ internal class GoContractWriter : ContractWriter
         {
             prefix = "[]";
             csType = csType.Substring(0, csType.Length - 2);
+            isNullable = false;
         }
 
         string goType;
@@ -414,11 +415,11 @@ internal class GoContractWriter : ContractWriter
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
 
-            if (!goType.StartsWith("map[") && !goType.Contains("."))
+            if (!goType.Contains("."))
             {
-                // Struct members of type string and other basic types are conventionally not
-                // represented as pointers in Go. That makes partial resource updtes more challening,
-                // but a different approach will be used there.
+                // Struct members of type string and other basic types, arrays, and maps are
+                // conventionally not represented as pointers in Go. An implication is that partial
+                // resource updates may require custom marshalling to omit non-updated fields.
                 isNullable = false;
             }
         }

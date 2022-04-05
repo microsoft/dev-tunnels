@@ -16,5 +16,5 @@ type ProblemDetails struct {
 	Detail string `json:"detail,omitempty"`
 
 	// Gets or sets additional details about individual request properties.
-	Errors *map[string][]string `json:"errors,omitempty"`
+	Errors map[string][]string `json:"errors,omitempty"`
 }

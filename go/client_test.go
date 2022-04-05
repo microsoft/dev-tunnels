@@ -29,10 +29,10 @@ func TestSuccessfulConnect(t *testing.T) {
 
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		AccessTokens: &map[TunnelAccessScope]string{
+		AccessTokens: map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: accessToken,
 		},
-		Endpoints: &[]TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
@@ -78,10 +78,10 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		AccessTokens: &map[TunnelAccessScope]string{
+		AccessTokens: map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: "invalid-access-token",
 		},
-		Endpoints: &[]TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
@@ -117,7 +117,7 @@ func TestReturnsErrWhenEndpointsAreNil(t *testing.T) {
 
 func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: &[]TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -133,7 +133,7 @@ func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 
 func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: &[]TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -152,7 +152,7 @@ func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 
 func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: &[]TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -191,7 +191,7 @@ func TestPortForwarding(t *testing.T) {
 	}
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		Endpoints: &[]TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{

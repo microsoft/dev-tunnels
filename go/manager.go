@@ -268,16 +268,15 @@ func (m *Manager) UpdateTunnelEndpoint(
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
 	}
 
-	if tunnel.Endpoints != nil {
-		var newEndpoints []TunnelEndpoint
-		for _, ep := range *tunnel.Endpoints {
-			if ep.HostID != endpoint.HostID || ep.ConnectionMode != endpoint.ConnectionMode {
-				newEndpoints = append(newEndpoints, ep)
-			}
+	var newEndpoints []TunnelEndpoint
+	for _, ep := range tunnel.Endpoints {
+		if ep.HostID != endpoint.HostID || ep.ConnectionMode != endpoint.ConnectionMode {
+			newEndpoints = append(newEndpoints, ep)
 		}
-		newEndpoints = append(newEndpoints, *te)
-		tunnel.Endpoints = &newEndpoints
 	}
+	newEndpoints = append(newEndpoints, *te)
+	tunnel.Endpoints = newEndpoints
+
 	return te, err
 }
 
@@ -301,15 +300,14 @@ func (m *Manager) DeleteTunnelEndpoints(
 		return fmt.Errorf("error sending delete tunnel endpoint request: %w", err)
 	}
 
-	if tunnel.Endpoints != nil {
-		var newEndpoints []TunnelEndpoint
-		for _, ep := range *tunnel.Endpoints {
-			if ep.HostID != hostID || ep.ConnectionMode != connectionMode {
-				newEndpoints = append(newEndpoints, ep)
-			}
+	var newEndpoints []TunnelEndpoint
+	for _, ep := range tunnel.Endpoints {
+		if ep.HostID != hostID || ep.ConnectionMode != connectionMode {
+			newEndpoints = append(newEndpoints, ep)
 		}
-		tunnel.Endpoints = &newEndpoints
 	}
+	tunnel.Endpoints = newEndpoints
+
 	return err
 }
 
@@ -380,20 +378,15 @@ func (m *Manager) CreateTunnelPort(
 	}
 
 	// Updated local tunnel ports
-	if tunnel.Ports != nil {
-		var newPorts []TunnelPort
-		for _, p := range *tunnel.Ports {
-			if p.PortNumber != tp.PortNumber {
-				newPorts = append(newPorts, p)
-			}
+	var newPorts []TunnelPort
+	for _, p := range tunnel.Ports {
+		if p.PortNumber != tp.PortNumber {
+			newPorts = append(newPorts, p)
 		}
-		newPorts = append(newPorts, *tp)
-		tunnel.Ports = &newPorts
-	} else {
-		var newPorts []TunnelPort
-		newPorts = append(newPorts, *tp)
-		tunnel.Ports = &newPorts
 	}
+	newPorts = append(newPorts, *tp)
+	tunnel.Ports = newPorts
+
 	return tp, nil
 }
 
@@ -426,16 +419,15 @@ func (m *Manager) UpdateTunnelPort(
 	}
 
 	// Updated local tunnel ports
-	if tunnel.Ports != nil {
-		var newPorts []TunnelPort
-		for _, p := range *tunnel.Ports {
-			if p.PortNumber != tp.PortNumber {
-				newPorts = append(newPorts, p)
-			}
+	var newPorts []TunnelPort
+	for _, p := range tunnel.Ports {
+		if p.PortNumber != tp.PortNumber {
+			newPorts = append(newPorts, p)
 		}
-		newPorts = append(newPorts, *tp)
-		tunnel.Ports = &newPorts
 	}
+	newPorts = append(newPorts, *tp)
+	tunnel.Ports = newPorts
+
 	return tp, nil
 }
 
@@ -455,15 +447,13 @@ func (m *Manager) DeleteTunnelPort(
 	}
 
 	// Updated local tunnel ports
-	if tunnel.Ports != nil {
-		var newPorts []TunnelPort
-		for _, p := range *tunnel.Ports {
-			if p.PortNumber != port {
-				newPorts = append(newPorts, p)
-			}
+	var newPorts []TunnelPort
+	for _, p := range tunnel.Ports {
+		if p.PortNumber != port {
+			newPorts = append(newPorts, p)
 		}
-		tunnel.Ports = &newPorts
 	}
+	tunnel.Ports = newPorts
 	return nil
 }
 
@@ -561,15 +551,14 @@ func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {
 		}
 		errorMessage += problemDetails.Detail
 	}
-	if problemDetails.Errors != nil {
-		for errorKey, errorDetail := range *problemDetails.Errors {
-			errorMessage += "\n\t" + errorKey + ": "
-			for _, errorDetailMessage := range errorDetail {
-				errorMessage += " "
-				errorMessage += errorDetailMessage
-			}
+	for errorKey, errorDetail := range problemDetails.Errors {
+		errorMessage += "\n\t" + errorKey + ": "
+		for _, errorDetailMessage := range errorDetail {
+			errorMessage += " "
+			errorMessage += errorDetailMessage
 		}
 	}
+
 	return &errorMessage, nil
 }
 
@@ -580,9 +569,9 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 	if token == "" {
 		token = m.tokenProvider()
 	}
-	if token == "" && tunnel != nil && tunnel.AccessTokens != nil {
+	if token == "" && tunnel != nil {
 		for _, scope := range scopes {
-			if tunnelToken, ok := (*tunnel.AccessTokens)[scope]; ok {
+			if tunnelToken, ok := tunnel.AccessTokens[scope]; ok {
 				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelToken)
 			}
 		}

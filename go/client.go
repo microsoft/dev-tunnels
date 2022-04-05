@@ -62,12 +62,12 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		return nil, ErrNoTunnel
 	}
 
-	if tunnel.Endpoints == nil || len(*tunnel.Endpoints) == 0 {
+	if len(tunnel.Endpoints) == 0 {
 		return nil, ErrNoTunnelEndpoints
 	}
 
 	endpointGroups := make(map[string][]TunnelEndpoint)
-	for _, endpoint := range *tunnel.Endpoints {
+	for _, endpoint := range tunnel.Endpoints {
 		endpointGroups[endpoint.HostID] = append(endpointGroups[endpoint.HostID], endpoint)
 	}
 
@@ -80,10 +80,8 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		endpointGroup = g
 	} else if len(endpointGroups) > 1 {
 		return nil, ErrMultipleHosts
-	} else if tunnel.Endpoints == nil {
-		return nil, ErrNoConnections
 	} else {
-		endpointGroup = endpointGroups[(*tunnel.Endpoints)[0].HostID]
+		endpointGroup = endpointGroups[tunnel.Endpoints[0].HostID]
 	}
 
 	c := &Client{
@@ -103,10 +101,7 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 	tunnelEndpoint := c.endpoints[0]
 	clientRelayURI := tunnelEndpoint.ClientRelayURI
 
-	var accessToken string
-	if c.tunnel.AccessTokens != nil {
-		accessToken = (*c.tunnel.AccessTokens)[TunnelAccessScopeConnect]
-	}
+	accessToken := c.tunnel.AccessTokens[TunnelAccessScopeConnect]
 
 	c.logger.Println(fmt.Sprintf("Connecting to client tunnel relay %s", clientRelayURI))
 	c.logger.Println(fmt.Sprintf("Sec-Websocket-Protocol: %s", clientWebSocketSubProtocol))

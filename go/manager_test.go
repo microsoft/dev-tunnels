@@ -85,7 +85,7 @@ func TestListTunnels(t *testing.T) {
 	}
 	var token string
 	if createdTunnel.AccessTokens != nil {
-		token = (*createdTunnel.AccessTokens)["manage"]
+		token = createdTunnel.AccessTokens["manage"]
 	} else {
 		logger.Println("Did not get token for created tunnel")
 	}
@@ -316,7 +316,7 @@ func TestTunnelAddPort(t *testing.T) {
 		getTunnel.table().Print()
 	}
 
-	if getTunnel.Ports == nil || len(*getTunnel.Ports) != 1 {
+	if len(getTunnel.Ports) != 1 {
 		t.Errorf("port was not successfully added to tunnel")
 	}
 
@@ -395,7 +395,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		getTunnel.table().Print()
 	}
 
-	if getTunnel.Ports != nil && len(*getTunnel.Ports) != 0 {
+	if len(getTunnel.Ports) != 0 {
 		t.Errorf("port was not successfully deleted")
 	}
 
@@ -482,7 +482,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
-	if getTunnel.Ports == nil || len((*getTunnel.Ports)[0].AccessControl.Entries) != 1 {
+	if len(getTunnel.Ports[0].AccessControl.Entries) != 1 {
 		t.Errorf("tunnel port was not successfully updated, access control was not changed")
 	}
 
@@ -574,7 +574,7 @@ func TestTunnelListPorts(t *testing.T) {
 		getTunnel.table().Print()
 	}
 
-	if getTunnel.Ports == nil || len(*getTunnel.Ports) != 2 {
+	if len(getTunnel.Ports) != 2 {
 		t.Errorf("port was not successfully added to tunnel")
 	}
 
@@ -640,7 +640,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	} else {
 		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
-	if getTunnel.Endpoints == nil || len(*getTunnel.Endpoints) != 1 {
+	if len(getTunnel.Endpoints) != 1 {
 		t.Errorf("endpoint was not successfully updated")
 	}
 
@@ -660,7 +660,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	} else {
 		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
-	if getTunnel.Endpoints == nil || len(*getTunnel.Endpoints) != 0 {
+	if len(getTunnel.Endpoints) != 0 {
 		t.Errorf("endpoint was not successfully deleted")
 	}
 

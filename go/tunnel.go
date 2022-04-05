@@ -31,7 +31,7 @@ type Tunnel struct {
 	Domain        string `json:"domain,omitempty"`
 
 	// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
-	AccessTokens  *map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
+	AccessTokens  map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
 
 	// Gets or sets access control settings for the tunnel.
 	//
@@ -46,7 +46,7 @@ type Tunnel struct {
 
 	// Gets or sets an array of endpoints where hosts are currently accepting client
 	// connections to the tunnel.
-	Endpoints     *[]TunnelEndpoint `json:"endpoints,omitempty"`
+	Endpoints     []TunnelEndpoint `json:"endpoints,omitempty"`
 
 	// Gets or sets a list of ports in the tunnel.
 	//
@@ -55,7 +55,7 @@ type Tunnel struct {
 	// creating a tunnel. It is omitted when listing (multiple) tunnels, or when updating
 	// tunnel properties. (For the latter, use APIs to create/update/delete individual ports
 	// instead.)
-	Ports         *[]TunnelPort `json:"ports,omitempty"`
+	Ports         []TunnelPort `json:"ports,omitempty"`
 
 	// Gets or sets the time in UTC of tunnel creation.
 	Created       *time.Time `json:"created,omitempty"`
