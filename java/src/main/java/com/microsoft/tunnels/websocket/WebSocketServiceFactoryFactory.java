@@ -35,7 +35,8 @@ public class WebSocketServiceFactoryFactory extends AbstractIoServiceFactoryFact
   @Override
   public IoServiceFactory create(FactoryManager manager) {
     Objects.requireNonNull(manager, "No factory manager provided");
-    IoServiceFactory factory = new WebSocketServiceFactory(eventLoopGroup, webSocketUri, accessToken);
+    IoServiceFactory factory = new WebSocketServiceFactory(
+        eventLoopGroup, webSocketUri, accessToken);
     factory.setIoServiceEventListener(manager.getIoServiceEventListener());
     return factory;
   }
