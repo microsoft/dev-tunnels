@@ -16,3 +16,6 @@ pr:
 
 steps:
 - template: typescript-build-steps.yaml
+
+- task: ComponentGovernanceComponentDetection@0
+  displayName: Component Governance

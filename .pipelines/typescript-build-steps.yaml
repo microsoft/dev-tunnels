@@ -43,6 +43,3 @@ steps:
     command: custom
     workingDir: ts
     customCommand: 'run pack --release'
-
-- task: ComponentGovernanceComponentDetection@0
-  displayName: Component Governance
