@@ -156,32 +156,27 @@ export abstract class TunnelHostBase implements TunnelHost {
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort): Promise<boolean> {
-        try{
-            let sessionId = pfs.session.sessionId;
-            if (!sessionId) {
-                throw new Error('No session id');
-            }
+        let sessionId = pfs.session.sessionId;
+        if (!sessionId) {
+            throw new Error('No session id');
+        }
 
-            // When forwarding from a Remote port we assume that the RemotePortNumber
-            // and requested LocalPortNumber are the same.
-            let forwarder = await pfs.forwardFromRemotePort(
-                this.loopbackIp,
-                Number(port.portNumber),
-                this.loopbackIp,
-                Number(port.portNumber),
-            );
-            if (!forwarder) {
-                // The forwarding request was rejected by the client.
-                return false;
-            }
-
-            const key = new SessionPortKey(sessionId, Number(forwarder.remotePort));
-            this.remoteForwarders[key.toString()] = forwarder;
-            return true;
-        } catch (ex){
-            this.trace(TraceLevel.Error, 0, `Error forwarding port: ${ex}`);
+        // When forwarding from a Remote port we assume that the RemotePortNumber
+        // and requested LocalPortNumber are the same.
+        let forwarder = await pfs.forwardFromRemotePort(
+            this.loopbackIp,
+            Number(port.portNumber),
+            this.loopbackIp,
+            Number(port.portNumber),
+        );
+        if (!forwarder) {
+            // The forwarding request was rejected by the client.
             return false;
         }
+
+        const key = new SessionPortKey(sessionId, Number(forwarder.remotePort));
+        this.remoteForwarders[key.toString()] = forwarder;
+        return true;
     }
 
     public abstract dispose(): Promise<void>;
