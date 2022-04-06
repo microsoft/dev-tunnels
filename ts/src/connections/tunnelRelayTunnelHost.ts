@@ -223,9 +223,9 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
     private onSshClientAuthenticated(session: SshServerSession) {
         let pfs = session.activateService(PortForwardingService);
         if (this.tunnel && this.tunnel.ports) {
-            this.tunnel.ports.forEach((port) => {
+            this.tunnel.ports.forEach(async (port) => {
                 if (port.portNumber) {
-                    this.forwardPort(pfs, port);
+                    await this.forwardPort(pfs, port);
                 }
             });
         }

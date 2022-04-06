@@ -306,7 +306,7 @@ namespace Microsoft.VsSaaS.TunnelService
             }
         }
 
-        private void OnSshClientAuthenticated(object? sender, EventArgs e)
+        private async void OnSshClientAuthenticated(object? sender, EventArgs e)
         {
             // After the client session authenicated, automatically start forwarding existing ports.
             var session = (SshServerSession)sender!;
@@ -316,7 +316,7 @@ namespace Microsoft.VsSaaS.TunnelService
             {
                 if (port.PortNumber != null)
                 {
-                    _ = ForwardPortAsync(pfs, port, CancellationToken.None);
+                    _ =  await ForwardPortAsync(pfs, port, CancellationToken.None);
                 }
             }
         }
