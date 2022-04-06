@@ -178,35 +178,27 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelPort port,
             CancellationToken cancellation)
         {
-            try{
-                var sessionId = Requires.NotNull(pfs.Session.SessionId!, nameof(pfs.Session.SessionId));
-                Requires.Argument(port.PortNumber.HasValue, nameof(port.PortNumber), "A port is required.");
+            var sessionId = Requires.NotNull(pfs.Session.SessionId!, nameof(pfs.Session.SessionId));
+            Requires.Argument(port.PortNumber.HasValue, nameof(port.PortNumber), "A port is required.");
 
-                // When forwarding from a Remote port we assume that the RemotePortNumber
-                // and requested LocalPortNumber are the same.
-                var forwarder = await pfs.ForwardFromRemotePortAsync(
-                    IPAddress.Loopback,
-                    (int)port.PortNumber,
-                    IPAddress.Loopback.ToString(),
-                    (int)port.PortNumber,
-                    cancellation);
-                if (forwarder == null)
-                {
-                    // The forwarding request was rejected by the client.
-                    return false;
-                }
-
-                RemoteForwarders.TryAdd(
-                    new SessionPortKey(sessionId, (ushort)forwarder.RemotePort),
-                    forwarder);
-                return true;
-            }
-            catch(Exception ex)
+            // When forwarding from a Remote port we assume that the RemotePortNumber
+            // and requested LocalPortNumber are the same.
+            var forwarder = await pfs.ForwardFromRemotePortAsync(
+                IPAddress.Loopback,
+                (int)port.PortNumber,
+                IPAddress.Loopback.ToString(),
+                (int)port.PortNumber,
+                cancellation);
+            if (forwarder == null)
             {
-                Trace.TraceEvent(TraceEventType.Error, 0, "Error running client SSH session: {0}", ex.Message);
+                // The forwarding request was rejected by the client.
                 return false;
             }
-            
+
+            RemoteForwarders.TryAdd(
+                new SessionPortKey(sessionId, (ushort)forwarder.RemotePort),
+                forwarder);
+            return true;
         }
     }
 }
