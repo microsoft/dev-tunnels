@@ -230,7 +230,6 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
                     } catch (ex){
                         this.trace(TraceLevel.Error, 0, `Error forwarding port ${port.portNumber}: ${ex}`);
                     }
-                    
                 }
             });
         }
