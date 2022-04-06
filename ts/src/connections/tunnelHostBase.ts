@@ -1,6 +1,6 @@
 import { TunnelPort, Tunnel } from '@vs/tunnels-contracts';
 import { TunnelManagementClient } from '@vs/tunnels-management';
-import { KeyPair, SshAlgorithms, SshServerSession, Trace, TraceLevel } from '@vs/vs-ssh';
+import { KeyPair, SshAlgorithms, SshServerSession, Trace } from '@vs/vs-ssh';
 import { PortForwardingService, RemotePortForwarder } from '@vs/vs-ssh-tcp';
 import { SessionPortKey } from './sessionPortKey';
 import { TunnelHost } from './tunnelHost';
