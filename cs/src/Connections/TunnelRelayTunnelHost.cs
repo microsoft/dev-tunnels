@@ -316,7 +316,19 @@ namespace Microsoft.VsSaaS.TunnelService
             {
                 if (port.PortNumber != null)
                 {
-                    _ =  await ForwardPortAsync(pfs, port, CancellationToken.None);
+                    try
+                    {
+                        await ForwardPortAsync(pfs, port, CancellationToken.None);
+                    }
+                    catch (Exception exception)
+                    {
+                        Trace.TraceEvent(
+                            TraceEventType.Error,
+                            0,
+                            "Error forwarding port {0} to client: {1}",
+                            port.PortNumber,
+                            exception.Message);
+                    }
                 }
             }
         }
