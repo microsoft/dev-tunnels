@@ -225,7 +225,12 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
         if (this.tunnel && this.tunnel.ports) {
             this.tunnel.ports.forEach(async (port) => {
                 if (port.portNumber) {
-                    await this.forwardPort(pfs, port);
+                    try{
+                        await this.forwardPort(pfs, port);
+                    } catch (ex){
+                        this.trace(TraceLevel.Error, 0, `Error forwarding port ${port.portNumber}: ${ex}`);
+                    }
+                    
                 }
             });
         }
