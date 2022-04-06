@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelHeaderNames.cs
+/* eslint-disable */
 
 /**
  * Header names for http requests that Tunnel Service can handle

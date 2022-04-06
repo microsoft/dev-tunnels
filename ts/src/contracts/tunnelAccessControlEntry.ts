@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntry.cs
+/* eslint-disable */
 
 import { TunnelAccessControlEntryType } from './tunnelAccessControlEntryType';
 
@@ -25,7 +26,7 @@ export interface TunnelAccessControlEntry {
      * the user/group/org IDs. It may be one of the well-known provider names in {@link
      * TunnelAccessControlEntry.providers}, or (in the future) a custom identity provider.
      *  For public key ACEs, this value is the type of public key, e.g. "ssh".  For IP
-     * address range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6". 
+     * address range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6".
      * For anonymous ACEs, this value is null.
      */
     provider?: string;

@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/ProblemDetails.cs
+/* eslint-disable */
 
 /**
  * Structure of error details returned by the tunnel service, including validation errors.

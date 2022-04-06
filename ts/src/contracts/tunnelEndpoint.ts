@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelEndpoint.cs
+/* eslint-disable */
 
 import { TunnelConnectionMode } from './tunnelConnectionMode';
 

@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelAccessScopes.cs
+/* eslint-disable */
 
 /**
  * Defines scopes for tunnel access tokens.

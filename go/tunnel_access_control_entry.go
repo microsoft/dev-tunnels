@@ -17,7 +17,7 @@ type TunnelAccessControlEntry struct {
 	//
 	// For user, group, or org ACEs, this value is the name of the identity provider of the
 	// user/group/org IDs. It may be one of the well-known provider names in
-	// `TunnelAccessControlEntry.Providers`, or (in the future) a custom identity provider. 
+	// `TunnelAccessControlEntry.Providers`, or (in the future) a custom identity provider.
 	// For public key ACEs, this value is the type of public key, e.g. "ssh".  For IP address
 	// range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6".  For anonymous
 	// ACEs, this value is null.

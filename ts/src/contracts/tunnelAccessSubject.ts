@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelAccessSubject.cs
+/* eslint-disable */
 
 import { TunnelAccessControlEntryType } from './tunnelAccessControlEntryType';
 

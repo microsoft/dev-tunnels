@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelStatus.cs
+/* eslint-disable */
 
 /**
  * Data contract for {@link Tunnel} status.

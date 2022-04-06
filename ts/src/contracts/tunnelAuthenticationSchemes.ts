@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelAuthenticationSchemes.cs
+/* eslint-disable */
 
 /**
  * Defines string constants for authentication schemes supported by tunnel service APIs.

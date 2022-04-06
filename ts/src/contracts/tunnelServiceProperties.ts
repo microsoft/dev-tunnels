@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelServiceProperties.cs
+/* eslint-disable */
 
 /**
  * Provides environment-dependent properties about the service.

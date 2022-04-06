@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/LocalNetworkTunnelEndpoint.cs
+/* eslint-disable */
 
 import { TunnelEndpoint } from './tunnelEndpoint';
 

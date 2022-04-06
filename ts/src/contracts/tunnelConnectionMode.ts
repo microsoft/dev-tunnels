@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelConnectionMode.cs
+/* eslint-disable */
 
 /**
  * Specifies the connection protocol / implementation for a tunnel.

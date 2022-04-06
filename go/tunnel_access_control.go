@@ -7,7 +7,7 @@ package tunnels
 // Tunnels and tunnel ports can each optionally have an access-control property set on
 // them. An access-control object contains a list (ACL) of entries (ACEs) that specify the
 // access scopes granted or denied to some subjects. Tunnel ports inherit the ACL from the
-// tunnel, though ports may include ACEs that augment or override the inherited rules. 
+// tunnel, though ports may include ACEs that augment or override the inherited rules.
 // Currently there is no capability to define "roles" for tunnel access (where a role
 // specifies a set of related access scopes), and assign roles to users. That feature may
 // be added in the future. (It should be represented as a separate `RoleAssignments`

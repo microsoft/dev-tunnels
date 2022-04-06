@@ -28,6 +28,7 @@ internal class TSContractWriter : ContractWriter
 
         var s = new StringBuilder();
         s.AppendLine($"// Generated from ../../../{csFilePath}");
+        s.AppendLine("/* eslint-disable */");
         s.AppendLine();
 
         var importsOffset = s.Length;

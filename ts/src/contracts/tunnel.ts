@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/Tunnel.cs
+/* eslint-disable */
 
 import { TunnelAccessControl } from './tunnelAccessControl';
 import { TunnelEndpoint } from './tunnelEndpoint';

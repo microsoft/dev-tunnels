@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntryType.cs
+/* eslint-disable */
 
 /**
  * Specifies the type of {@link TunnelAccessControlEntry}.

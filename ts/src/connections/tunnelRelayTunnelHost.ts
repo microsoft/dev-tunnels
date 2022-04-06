@@ -21,7 +21,6 @@ import {
     PromiseCompletionSource,
     CancellationError,
     ObjectDisposedError,
-    ChannelOpenMessage,
 } from '@vs/vs-ssh';
 import { PortForwardChannelOpenMessage, PortForwardingService } from '@vs/vs-ssh-tcp';
 import { CancellationToken, CancellationTokenSource, Disposable } from 'vscode-jsonrpc';
@@ -240,10 +239,8 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
     private onSshChannelOpening(e: SshChannelOpeningEventArgs, session: any) {
         if (!(e.request instanceof PortForwardChannelOpenMessage)) {
             // This is to let the Go SDK open an unused session channel
-            if (e.request instanceof ChannelOpenMessage) {
-                if (e.request.channelType === 'session') {
-                    return;
-                }
+            if (e.request.channelType === 'session') {
+                return;
             }
             this.trace(
                 TraceLevel.Warning,

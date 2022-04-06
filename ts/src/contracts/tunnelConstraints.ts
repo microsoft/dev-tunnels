@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/TunnelConstraints.cs
+/* eslint-disable */
 
 /**
  * Tunnel constraints.

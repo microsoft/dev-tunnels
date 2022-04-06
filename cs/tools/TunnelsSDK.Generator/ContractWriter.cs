@@ -68,10 +68,10 @@ internal abstract class ContractWriter
                 i = comment.IndexOf(' ');
             }
 
-            yield return comment.Substring(0, i);
+            yield return comment.Substring(0, i).TrimEnd();
             comment = comment.Substring(i + 1);
         }
 
-        yield return comment;
+        yield return comment.TrimEnd();
     }
 }

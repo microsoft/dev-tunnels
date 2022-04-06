@@ -1,4 +1,5 @@
 // Generated from ../../../cs/src/Contracts/ServiceVersionDetails.cs
+/* eslint-disable */
 
 /**
  * Data contract for service version details.
