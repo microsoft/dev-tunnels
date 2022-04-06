@@ -26,7 +26,6 @@
 		"axios": "^0.21.1",
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
-		"hyco-websocket": "^1.0.5",
 		"uuid": "^3.3.3",
 		"vscode-jsonrpc": "^4.0.0"
 	},
