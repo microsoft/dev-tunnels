@@ -43,7 +43,6 @@
 		"@typescript-eslint/parser": "^4.14.2",
 		"@vs/mocha-trx-reporter": "^1.0.4987",
 		"brfs": "^2.0.2",
-		"browserify": "^16.2.3",
 		"chalk": "^2.4.2",
 		"eslint": "^7.19.0",
 		"eslint-config-prettier": "^7.2.0",
