@@ -34,9 +34,9 @@ type TunnelEndpoint struct {
 	// with the actual port number.
 	PortURIFormat  string `json:"portUriFormat,omitempty"`
 
-	TunnelRelayTunnelEndpoint
-	LocalNetworkTunnelEndpoint
 	LiveShareRelayTunnelEndpoint
+	LocalNetworkTunnelEndpoint
+	TunnelRelayTunnelEndpoint
 }
 
 // Parameters for connecting to a tunnel via a Live Share Azure Relay.

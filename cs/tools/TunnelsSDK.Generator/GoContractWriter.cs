@@ -140,7 +140,7 @@ internal class GoContractWriter : ContractWriter
         if (derivedTypes.Length > 0)
         {
             s.AppendLine();
-            foreach (var derivedType in derivedTypes)
+            foreach (var derivedType in derivedTypes.OrderBy((t) => t.Name))
             {
                 s.AppendLine($"\t{derivedType.Name}");
             }
