@@ -4,6 +4,7 @@ import (
 	"net/url"
 )
 
+// Options that are sent in requests to the tunnels service
 type TunnelRequestOptions struct {
 	AccessToken       string
 	AdditionalHeaders map[string]string
