@@ -1,7 +1,5 @@
 package com.microsoft.tunnels.websocket;
 
-import java.net.URI;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -16,24 +14,29 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 
-/**
- * Handles the initial websocket upgrade and converts subsequent websocket
- * frames to byte buffers for the ssh session.
- */
+import java.net.URI;
+
 public class WebSocketConnectionHandler extends SimpleChannelInboundHandler<Object> {
-  private final String SUBPROTOCOL = "tunnel-relay-client";
+  private final String subprotocol = "tunnel-relay-client";
   private final WebSocketClientHandshaker handshaker;
   private ChannelPromise handshakeFuture;
   private WebSocketSession session;
 
-  public WebSocketConnectionHandler(WebSocketSession session, URI webSocketUri, String accessToken) {
+  /**
+   * Handles the initial websocket upgrade and converts subsequent websocket
+   * frames to byte buffers for the ssh session.
+   */
+  public WebSocketConnectionHandler(
+      WebSocketSession session,
+      URI webSocketUri,
+      String accessToken) {
     super();
     HttpHeaders headers = new DefaultHttpHeaders();
     headers.set("Authorization", "tunnel " + accessToken);
     this.handshaker = WebSocketClientHandshakerFactory.newHandshaker(
         webSocketUri,
         WebSocketVersion.V13,
-        SUBPROTOCOL,
+        subprotocol,
         true,
         headers);
     this.session = session;

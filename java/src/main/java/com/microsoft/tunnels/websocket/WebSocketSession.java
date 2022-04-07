@@ -1,5 +1,11 @@
 package com.microsoft.tunnels.websocket;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+
 import java.net.SocketAddress;
 import java.net.URI;
 
@@ -9,16 +15,13 @@ import org.apache.sshd.common.util.buffer.Buffer;
 import org.apache.sshd.netty.NettyIoService;
 import org.apache.sshd.netty.NettyIoSession;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-
 public class WebSocketSession extends NettyIoSession {
   protected WebSocketConnectionHandler webSocketConnectionHandler;
   protected WebSocketInboundAdapter webSocketInboundAdapter;
 
+  /**
+   * Creates a modified Netty session to handle websocket messages.
+   */
   public WebSocketSession(
       NettyIoService service,
       IoHandler handler,

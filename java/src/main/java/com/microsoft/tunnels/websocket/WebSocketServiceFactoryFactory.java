@@ -4,6 +4,7 @@ import io.netty.channel.EventLoopGroup;
 
 import java.net.URI;
 import java.util.Objects;
+
 import org.apache.sshd.common.FactoryManager;
 import org.apache.sshd.common.io.AbstractIoServiceFactoryFactory;
 import org.apache.sshd.common.io.IoServiceFactory;
@@ -22,6 +23,9 @@ public class WebSocketServiceFactoryFactory extends AbstractIoServiceFactoryFact
     this(null, webSocketUri, accessToken);
   }
 
+  /**
+   * Creates the WebSocketServiceFactory.
+   */
   public WebSocketServiceFactoryFactory(
       EventLoopGroup eventLoopGroup,
       URI webSocketUri,

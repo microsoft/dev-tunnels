@@ -19,6 +19,9 @@ public class WebSocketServiceFactory extends NettyIoServiceFactory {
     this(null, null, null);
   }
 
+  /**
+   * Creates the websocket connector and acceptor.
+   */
   public WebSocketServiceFactory(EventLoopGroup group, URI webSocketUri, String accessToken) {
     super(group);
     this.webSocketUri = webSocketUri;

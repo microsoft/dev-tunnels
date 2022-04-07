@@ -1,5 +1,9 @@
 package com.microsoft.tunnels.websocket;
 
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
+
 import java.net.SocketAddress;
 
 import org.apache.sshd.common.io.IoHandler;
@@ -7,12 +11,12 @@ import org.apache.sshd.common.io.IoServiceEventListener;
 import org.apache.sshd.common.util.GenericUtils;
 import org.apache.sshd.netty.NettyIoAcceptor;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-
 public class WebSocketAcceptor extends NettyIoAcceptor {
   private WebSocketSession webSocketSession;
+
+  /**
+   * Modifies the NettyIoAcceptor to create a websocket session.
+   */
   public WebSocketAcceptor(WebSocketServiceFactory factory, IoHandler handler) {
     super(factory, handler);
     bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {

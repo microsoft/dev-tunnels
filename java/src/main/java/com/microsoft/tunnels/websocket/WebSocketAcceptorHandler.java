@@ -7,10 +7,10 @@ import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 /**
  * Converts the WebSocket frame to a ByteBuffer for the ssh session.
  */
-public class WebSocketInboundAdapter extends ChannelInboundHandlerAdapter {
+public class WebSocketAcceptorHandler extends ChannelInboundHandlerAdapter {
   private WebSocketSession session;
 
-  public WebSocketInboundAdapter(WebSocketSession session) {
+  public WebSocketAcceptorHandler(WebSocketSession session) {
     super();
     this.session = session;
   }

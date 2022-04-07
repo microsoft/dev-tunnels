@@ -1,14 +1,5 @@
 package com.microsoft.tunnels.websocket;
 
-import java.net.SocketAddress;
-import java.net.URI;
-
-import org.apache.sshd.common.AttributeRepository;
-import org.apache.sshd.common.io.IoConnectFuture;
-import org.apache.sshd.common.io.IoHandler;
-import org.apache.sshd.common.io.IoServiceEventListener;
-import org.apache.sshd.netty.NettyIoConnector;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -22,11 +13,23 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
+import java.net.SocketAddress;
+import java.net.URI;
+
+import org.apache.sshd.common.AttributeRepository;
+import org.apache.sshd.common.io.IoConnectFuture;
+import org.apache.sshd.common.io.IoHandler;
+import org.apache.sshd.common.io.IoServiceEventListener;
+import org.apache.sshd.netty.NettyIoConnector;
+
 public class WebSocketConnector extends NettyIoConnector {
   protected final URI webSocketUri;
   protected final String accessToken;
   protected WebSocketSession webSocketSession;
 
+  /**
+   * Modifies the NettyIoConnector to create a websocket session.
+   */
   public WebSocketConnector(WebSocketServiceFactory factory, IoHandler handler) {
     super(factory, handler);
     this.webSocketUri = factory.webSocketUri;
@@ -74,7 +77,12 @@ public class WebSocketConnector extends NettyIoConnector {
         } catch (Exception e) {
           if (listener != null) {
             try {
-              listener.abortEstablishedConnection(WebSocketConnector.this, local, context, remote, e);
+              listener.abortEstablishedConnection(
+                  WebSocketConnector.this,
+                  local,
+                  context,
+                  remote,
+                  e);
             } catch (Exception exc) {
               if (log.isDebugEnabled()) {
                 log.debug("initChannel(" + ch + ") listener=" + listener
