@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
