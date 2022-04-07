@@ -1,10 +1,9 @@
 package com.microsoft.tunnels.websocket;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -16,7 +15,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 import java.net.URI;
 
-public class WebSocketConnectionHandler extends SimpleChannelInboundHandler<Object> {
+public class WebSocketConnectionHandler extends ChannelInboundHandlerAdapter {
   private final String subprotocol = "tunnel-relay-client";
   private final WebSocketClientHandshaker handshaker;
   private ChannelPromise handshakeFuture;
@@ -42,6 +41,10 @@ public class WebSocketConnectionHandler extends SimpleChannelInboundHandler<Obje
     this.session = session;
   }
 
+  /**
+   * Calling channelActive on the session itself is deferred until the websocket
+   * handshake is complete in the initial channelRead
+   */
   @Override
   public void channelActive(ChannelHandlerContext ctx) throws Exception {
     handshaker.handshake(ctx.channel());
@@ -55,25 +58,17 @@ public class WebSocketConnectionHandler extends SimpleChannelInboundHandler<Obje
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
     if (!handshaker.isHandshakeComplete()) {
-      this.channelRead0(ctx, msg);
-    } else if (msg instanceof BinaryWebSocketFrame) {
-      BinaryWebSocketFrame frame = (BinaryWebSocketFrame) msg;
-      session.channelRead(ctx, frame.content());
-    }
-  }
-
-  @Override
-  public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-    Channel ch = ctx.channel();
-    if (!handshaker.isHandshakeComplete()) {
       try {
-        handshaker.finishHandshake(ch, (FullHttpResponse) msg);
+        handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
         handshakeFuture.setSuccess();
         session.channelActive(ctx);
       } catch (WebSocketHandshakeException e) {
         handshakeFuture.setFailure(e);
       }
       return;
+    } else if (msg instanceof BinaryWebSocketFrame) {
+      BinaryWebSocketFrame frame = (BinaryWebSocketFrame) msg;
+      session.channelRead(ctx, frame.content());
     }
   }
 
