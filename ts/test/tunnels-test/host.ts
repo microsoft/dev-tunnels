@@ -46,10 +46,11 @@ async function startTunnelRelayHost() {
             rejectUnauthorized: false,
         }),
     );
-    let tunnelAccessControlEntry = new TunnelAccessControlEntry();
-    tunnelAccessControlEntry.type = TunnelAccessControlEntryType.Anonymous;
-    tunnelAccessControlEntry.subjects = [];
-    tunnelAccessControlEntry.scopes = ['connect'];
+    let tunnelAccessControlEntry: TunnelAccessControlEntry = {
+        type: TunnelAccessControlEntryType.Anonymous,
+        subjects: [],
+        scopes: ['connect'],
+    };
 
     const tunnel: Tunnel = {
         clusterId: 'westus2',

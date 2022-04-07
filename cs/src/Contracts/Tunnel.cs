@@ -58,6 +58,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Gets or sets the optional parent domain of the tunnel, if it is not using
         /// the default parent domain.
         /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Domain { get; set; }
 
         /// <summary>
@@ -93,6 +94,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Gets or sets an array of endpoints where hosts are currently accepting
         /// client connections to the tunnel.
         /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TunnelEndpoint[]? Endpoints { get; set; }
 
         /// <summary>

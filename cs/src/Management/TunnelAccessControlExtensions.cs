@@ -227,7 +227,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 scopes.Length > 0,
                 nameof(scopes),
                 "Scopes array must not be empty.");
-            TunnelAccessScopes.Validate(scopes);
+            TunnelAccessControl.ValidateScopes(scopes);
         }
     }
 }

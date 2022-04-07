@@ -314,21 +314,18 @@ namespace Microsoft.VsSaaS.TunnelService
 
             foreach (TunnelPort port in Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>())
             {
-                if (port.PortNumber != null)
+                try
                 {
-                    try
-                    {
-                        await ForwardPortAsync(pfs, port, CancellationToken.None);
-                    }
-                    catch (Exception exception)
-                    {
-                        Trace.TraceEvent(
-                            TraceEventType.Error,
-                            0,
-                            "Error forwarding port {0} to client: {1}",
-                            port.PortNumber,
-                            exception.Message);
-                    }
+                    await ForwardPortAsync(pfs, port, CancellationToken.None);
+                }
+                catch (Exception exception)
+                {
+                    Trace.TraceEvent(
+                        TraceEventType.Error,
+                        0,
+                        "Error forwarding port {0} to client: {1}",
+                        port.PortNumber,
+                        exception.Message);
                 }
             }
         }

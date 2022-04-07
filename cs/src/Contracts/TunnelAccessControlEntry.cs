@@ -73,6 +73,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         ///
         /// For anonymous ACEs, this value is null.
         /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Provider { get; set; }
 
         /// <summary>
@@ -103,6 +104,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// For AAD users and group ACEs, this value is the AAD tenant ID. It is not currently used
         /// with any other types of ACEs.
         /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Organization { get; set; }
 
         /// <summary>
@@ -118,24 +120,6 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// These must be one or more values from <see cref="TunnelAccessScopes" />.
         /// </remarks>
         public string[] Scopes { get; set; }
-
-        /// <summary>
-        /// Creates new access control entry that is a (shallow) copy of the specified ACE,
-        /// but with <see cref="IsInherited" /> set to true.
-        /// </summary>
-        public static TunnelAccessControlEntry Inherit(TunnelAccessControlEntry ace)
-        {
-            return new TunnelAccessControlEntry
-            {
-                Type = ace.Type,
-                Provider = ace.Provider,
-                IsDeny = ace.IsDeny,
-                Organization = ace.Organization,
-                Subjects = ace.Subjects,
-                Scopes = ace.Scopes,
-                IsInherited = true,
-            };
-        }
 
         /// <summary>
         /// Gets a compact textual representation of the access control entry.

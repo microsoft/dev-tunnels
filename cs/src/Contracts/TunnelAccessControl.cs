@@ -71,6 +71,50 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
             GetEnumerator();
 
         /// <summary>
+        /// Checks that all items in an array of scopes are valid.
+        /// </summary>
+        /// <param name="scopes">List of scopes to validate.</param>
+        /// <param name="validScopes">Optional subset of scopes to be considered valid;
+        /// if omitted then all defined scopes are valid.</param>
+        /// <exception cref="ArgumentException">A scope is not valid.</exception>
+        public static void ValidateScopes(
+            IEnumerable<string> scopes,
+            IEnumerable<string>? validScopes = null)
+        {
+            if (scopes == null)
+            {
+                throw new ArgumentNullException(nameof(scopes));
+            }
+
+            foreach (var scope in scopes)
+            {
+                if (string.IsNullOrEmpty(scope))
+                {
+                    throw new ArgumentException(
+                        $"Tunnel access scopes include a null/empty item.", nameof(scopes));
+                }
+                else if (!TunnelAccessScopes.All.Contains(scope))
+                {
+                    throw new ArgumentException(
+                        $"Invalid tunnel access scope: {scope}", nameof(scopes));
+                }
+            }
+
+            if (validScopes != null)
+            {
+                foreach (var scope in scopes)
+                {
+                    if (!validScopes.Contains(scope))
+                    {
+                        throw new ArgumentException(
+                            $"Tunnel access scope is invalid for current request: {scope}",
+                            nameof(scopes));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets a compact textual representation of all the access control entries.
         /// </summary>
         public override string ToString()

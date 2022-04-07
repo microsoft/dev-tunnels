@@ -21,7 +21,6 @@ import {
     PromiseCompletionSource,
     CancellationError,
     ObjectDisposedError,
-    ChannelOpenMessage,
 } from '@vs/vs-ssh';
 import { PortForwardChannelOpenMessage, PortForwardingService } from '@vs/vs-ssh-tcp';
 import { CancellationToken, CancellationTokenSource, Disposable } from 'vscode-jsonrpc';
@@ -61,13 +60,13 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
 
     public async startServer(tunnel: Tunnel, hostPublicKeys?: string[]): Promise<void> {
         let accessToken = tunnel.accessTokens
-            ? tunnel.accessTokens[TunnelAccessScopes.host]
+            ? tunnel.accessTokens[TunnelAccessScopes.Host]
             : undefined;
         if (!accessToken) {
             this.trace(
                 TraceLevel.Info,
                 0,
-                `There is no access token for ${TunnelAccessScopes.host} scope on the tunnel.`,
+                `There is no access token for ${TunnelAccessScopes.Host} scope on the tunnel.`,
             );
         }
 
@@ -224,16 +223,14 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
         let pfs = session.activateService(PortForwardingService);
         if (this.tunnel && this.tunnel.ports) {
             this.tunnel.ports.forEach(async (port) => {
-                if (port.portNumber) {
-                    try {
-                        await this.forwardPort(pfs, port);
-                    } catch (ex) {
-                        this.trace(
-                            TraceLevel.Error,
-                            0,
-                            `Error forwarding port ${port.portNumber}: ${ex}`,
-                        );
-                    }
+                try {
+                    await this.forwardPort(pfs, port);
+                } catch (ex) {
+                    this.trace(
+                        TraceLevel.Error,
+                        0,
+                        `Error forwarding port ${port.portNumber}: ${ex}`,
+                    );
                 }
             });
         }
@@ -242,10 +239,8 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
     private onSshChannelOpening(e: SshChannelOpeningEventArgs, session: any) {
         if (!(e.request instanceof PortForwardChannelOpenMessage)) {
             // This is to let the Go SDK open an unused session channel
-            if (e.request instanceof ChannelOpenMessage) {
-                if (e.request.channelType === 'session') {
-                    return;
-                }
+            if (e.request.channelType === 'session') {
+                return;
             }
             this.trace(
                 TraceLevel.Warning,

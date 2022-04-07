@@ -31,7 +31,7 @@ export interface TunnelManagementClient {
         requireAllTags: boolean,
         clusterId?: string,
         options?: TunnelRequestOptions,
-    ): Promise<TunnelPort[]>;
+    ): Promise<Tunnel[]>;
 
     /**
      * Gets one tunnel by ID or name.

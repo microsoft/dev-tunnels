@@ -43,46 +43,5 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
             Inspect,
             Connect,
         };
-
-        /// <summary>
-        /// Checks that all items in an array of scopes are valid.
-        /// </summary>
-        /// <exception cref="ArgumentException">A scope is not valid.</exception>
-        public static void Validate(
-            IEnumerable<string> scopes,
-            IEnumerable<string>? validScopes = null)
-        {
-            if (scopes == null)
-            {
-                throw new ArgumentNullException(nameof(scopes));
-            }
-
-            foreach (var scope in scopes)
-            {
-                if (string.IsNullOrEmpty(scope))
-                {
-                    throw new ArgumentException(
-                        $"Tunnel access scopes include a null/empty item.", nameof(scopes));
-                }
-                else if (!TunnelAccessScopes.All.Contains(scope))
-                {
-                    throw new ArgumentException(
-                        $"Invalid tunnel access scope: {scope}", nameof(scopes));
-                }
-            }
-
-            if (validScopes != null)
-            {
-                foreach (var scope in scopes)
-                {
-                    if (!validScopes.Contains(scope))
-                    {
-                        throw new ArgumentException(
-                            $"Tunnel access scope is invalid for current request: {scope}",
-                            nameof(scopes));
-                    }
-                }
-            }
-        }
     }
 }

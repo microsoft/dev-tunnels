@@ -8,9 +8,31 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 )
+
+var ServiceProperties = TunnelServiceProperties{
+	ServiceURI:           fmt.Sprintf("https://%s/", prodDnsName),
+	ServiceAppID:         prodFirstPartyAppID,
+	ServiceInternalAppID: prodThirdPartyAppID,
+	GitHubAppClientID:    prodGitHubAppClientID,
+}
+
+var PpeServiceProperties = TunnelServiceProperties{
+	ServiceURI:           fmt.Sprintf("https://%s/", ppeDnsName),
+	ServiceAppID:         nonProdFirstPartyAppID,
+	ServiceInternalAppID: ppeThirdPartyAppID,
+	GitHubAppClientID:    nonProdGitHubAppClientID,
+}
+
+var DevServiceProperties = TunnelServiceProperties{
+	ServiceURI:           fmt.Sprintf("https://%s/", devDnsName),
+	ServiceAppID:         nonProdFirstPartyAppID,
+	ServiceInternalAppID: devThirdPartyAppID,
+	GitHubAppClientID:    nonProdGitHubAppClientID,
+}
 
 type tokenProviderfn func() string
 
@@ -22,7 +44,10 @@ const (
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
 	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK/" + PackageVersion
-	defaultUrl                 = "https://global.rel.tunnels.api.visualstudio.com/"
+)
+
+var (
+	defaultServiceUrl = ServiceProperties.ServiceURI
 )
 
 var (
@@ -61,7 +86,7 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 	}
 
 	if tunnelServiceUrl == nil {
-		url, err := url.Parse(defaultUrl)
+		url, err := url.Parse(defaultServiceUrl)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing default url %w", err)
 		}
@@ -83,14 +108,14 @@ func (m *Manager) ListTunnels(
 	ctx context.Context, clusterID string, domain string, options *TunnelRequestOptions,
 ) (ts []*Tunnel, err error) {
 	queryParams := url.Values{}
-	if len(clusterID) == 0 {
+	if clusterID == "" {
 		queryParams.Add("global", "true")
 	}
-	if len(domain) > 0 {
+	if domain != "" {
 		queryParams.Add("domain", domain)
 	}
 	url := m.buildUri(clusterID, tunnelsApiPath, options, queryParams.Encode())
-	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, readAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, nil, readAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel request: %w", err)
 	}
@@ -107,10 +132,10 @@ func (m *Manager) SearchTunnels(
 	ctx context.Context, tags []string, requireAllTags bool, clusterID string, domain string, options *TunnelRequestOptions,
 ) (ts []*Tunnel, err error) {
 	queryParams := url.Values{}
-	if len(clusterID) == 0 {
+	if clusterID == "" {
 		queryParams.Add("global", "true")
 	}
-	if len(domain) > 0 {
+	if domain != "" {
 		queryParams.Add("domain", domain)
 	}
 	queryParams.Add("allTags", strconv.FormatBool(requireAllTags))
@@ -118,7 +143,7 @@ func (m *Manager) SearchTunnels(
 	queryParams.Add("tags", tagString)
 
 	url := m.buildUri(clusterID, tunnelsApiPath, options, queryParams.Encode())
-	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, readAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, nil, readAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending search tunnel request: %w", err)
 	}
@@ -137,7 +162,7 @@ func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *Tunnel
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, readAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScope, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending get tunnel request: %w", err)
 	}
@@ -163,7 +188,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, manageAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, nil, manageAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
 	}
@@ -177,7 +202,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	return t, err
 }
 
-func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
+func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields []string, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
@@ -191,7 +216,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, manageAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, updateFields, manageAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending update tunnel request: %w", err)
 	}
@@ -210,11 +235,7 @@ func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if err != nil {
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
-	convertedTunnel, err := tunnel.requestObject()
-	if err != nil {
-		return fmt.Errorf("error converting tunnel for request: %w", err)
-	}
-	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, convertedTunnel, manageAccessTokenScope, true)
+	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, nil, manageAccessTokenScope, true)
 	if err != nil {
 		return fmt.Errorf("error sending delete tunnel request: %w", err)
 	}
@@ -223,7 +244,7 @@ func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 }
 
 func (m *Manager) UpdateTunnelEndpoint(
-	ctx context.Context, tunnel *Tunnel, endpoint *TunnelEndpoint, options *TunnelRequestOptions,
+	ctx context.Context, tunnel *Tunnel, endpoint *TunnelEndpoint, updateFields []string, options *TunnelRequestOptions,
 ) (te *TunnelEndpoint, err error) {
 	if endpoint == nil {
 		return nil, fmt.Errorf("endpoint must be provided and must not be nil")
@@ -236,7 +257,7 @@ func (m *Manager) UpdateTunnelEndpoint(
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, endpoint, hostAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, endpoint, updateFields, hostAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending update tunnel endpoint request: %w", err)
 	}
@@ -247,16 +268,15 @@ func (m *Manager) UpdateTunnelEndpoint(
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
 	}
 
-	if tunnel.Endpoints != nil {
-		var newEndpoints []*TunnelEndpoint
-		for _, ep := range tunnel.Endpoints {
-			if ep.HostID != endpoint.HostID || ep.ConnectionMode != endpoint.ConnectionMode {
-				newEndpoints = append(newEndpoints, ep)
-			}
+	var newEndpoints []TunnelEndpoint
+	for _, ep := range tunnel.Endpoints {
+		if ep.HostID != endpoint.HostID || ep.ConnectionMode != endpoint.ConnectionMode {
+			newEndpoints = append(newEndpoints, ep)
 		}
-		newEndpoints = append(newEndpoints, te)
-		tunnel.Endpoints = newEndpoints
 	}
+	newEndpoints = append(newEndpoints, *te)
+	tunnel.Endpoints = newEndpoints
+
 	return te, err
 }
 
@@ -275,20 +295,19 @@ func (m *Manager) DeleteTunnelEndpoints(
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, hostAccessTokenScope, true)
+	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, nil, hostAccessTokenScope, true)
 	if err != nil {
 		return fmt.Errorf("error sending delete tunnel endpoint request: %w", err)
 	}
 
-	if tunnel.Endpoints != nil {
-		var newEndpoints []*TunnelEndpoint
-		for _, ep := range tunnel.Endpoints {
-			if ep.HostID != hostID || ep.ConnectionMode != connectionMode {
-				newEndpoints = append(newEndpoints, ep)
-			}
+	var newEndpoints []TunnelEndpoint
+	for _, ep := range tunnel.Endpoints {
+		if ep.HostID != hostID || ep.ConnectionMode != connectionMode {
+			newEndpoints = append(newEndpoints, ep)
 		}
-		tunnel.Endpoints = newEndpoints
 	}
+	tunnel.Endpoints = newEndpoints
+
 	return err
 }
 
@@ -300,7 +319,7 @@ func (m *Manager) ListTunnelPorts(
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, readAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel ports request: %w", err)
 	}
@@ -321,7 +340,7 @@ func (m *Manager) GetTunnelPort(
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, readAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScope, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending get tunnel port request: %w", err)
 	}
@@ -347,7 +366,7 @@ func (m *Manager) CreateTunnelPort(
 		return nil, fmt.Errorf("error converting port for request: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedPort, hostOrManageAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedPort, nil, hostOrManageAccessTokenScope, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel port request: %w", err)
 	}
@@ -359,24 +378,20 @@ func (m *Manager) CreateTunnelPort(
 	}
 
 	// Updated local tunnel ports
-	if tunnel.Ports != nil {
-		var newPorts []*TunnelPort
-		for _, p := range tunnel.Ports {
-			if p.PortNumber != tp.PortNumber {
-				newPorts = append(newPorts, p)
-			}
+	var newPorts []TunnelPort
+	for _, p := range tunnel.Ports {
+		if p.PortNumber != tp.PortNumber {
+			newPorts = append(newPorts, p)
 		}
-		newPorts = append(newPorts, tp)
-		tunnel.Ports = newPorts
-	} else {
-		tunnel.Ports = make([]*TunnelPort, 1)
-		tunnel.Ports[0] = tp
 	}
+	newPorts = append(newPorts, *tp)
+	tunnel.Ports = newPorts
+
 	return tp, nil
 }
 
 func (m *Manager) UpdateTunnelPort(
-	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
+	ctx context.Context, tunnel *Tunnel, port *TunnelPort, updateFields []string, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
 	if port.ClusterID != "" && tunnel.ClusterID != "" && port.ClusterID != tunnel.ClusterID {
 		return nil, fmt.Errorf("cluster ids do not match")
@@ -392,7 +407,7 @@ func (m *Manager) UpdateTunnelPort(
 		return nil, fmt.Errorf("error converting port for request: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedPort, hostOrManageAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedPort, updateFields, hostOrManageAccessTokenScope, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending update tunnel port request: %w", err)
 	}
@@ -404,21 +419,20 @@ func (m *Manager) UpdateTunnelPort(
 	}
 
 	// Updated local tunnel ports
-	if tunnel.Ports != nil {
-		var newPorts []*TunnelPort
-		for _, p := range tunnel.Ports {
-			if p.PortNumber != tp.PortNumber {
-				newPorts = append(newPorts, p)
-			}
+	var newPorts []TunnelPort
+	for _, p := range tunnel.Ports {
+		if p.PortNumber != tp.PortNumber {
+			newPorts = append(newPorts, p)
 		}
-		newPorts = append(newPorts, tp)
-		tunnel.Ports = newPorts
 	}
+	newPorts = append(newPorts, *tp)
+	tunnel.Ports = newPorts
+
 	return tp, nil
 }
 
 func (m *Manager) DeleteTunnelPort(
-	ctx context.Context, tunnel *Tunnel, port int, options *TunnelRequestOptions,
+	ctx context.Context, tunnel *Tunnel, port uint16, options *TunnelRequestOptions,
 ) error {
 
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port)
@@ -427,28 +441,34 @@ func (m *Manager) DeleteTunnelPort(
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, hostOrManageAccessTokenScope, true)
+	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, nil, hostOrManageAccessTokenScope, true)
 	if err != nil {
 		return fmt.Errorf("error sending get tunnel request: %w", err)
 	}
 
 	// Updated local tunnel ports
-	if tunnel.Ports != nil {
-		var newPorts []*TunnelPort
-		for _, p := range tunnel.Ports {
-			if p.PortNumber != port {
-				newPorts = append(newPorts, p)
-			}
+	var newPorts []TunnelPort
+	for _, p := range tunnel.Ports {
+		if p.PortNumber != port {
+			newPorts = append(newPorts, p)
 		}
-		tunnel.Ports = newPorts
 	}
+	tunnel.Ports = newPorts
 	return nil
 }
 
 func (m *Manager) sendTunnelRequest(
-	ctx context.Context, tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, method string, uri *url.URL, requestObject interface{}, accessTokenScopes []TunnelAccessScope, allowNotFound bool,
+	ctx context.Context,
+	tunnel *Tunnel,
+	tunnelRequestOptions *TunnelRequestOptions,
+	method string,
+	uri *url.URL,
+	requestObject interface{},
+	partialFields []string,
+	accessTokenScopes []TunnelAccessScope,
+	allowNotFound bool,
 ) ([]byte, error) {
-	tunnelJson, err := json.Marshal(requestObject)
+	tunnelJson, err := partialMarshal(requestObject, partialFields)
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel to json: %w", err)
 	}
@@ -488,23 +508,68 @@ func (m *Manager) sendTunnelRequest(
 		return nil, fmt.Errorf("error sending request: %w", err)
 	}
 
+	defer result.Body.Close()
+
 	// Handle non 200s responses
 	if result.StatusCode > 300 {
-		return nil, fmt.Errorf("unsuccessful request, response: %d: %s", result.StatusCode, http.StatusText(result.StatusCode))
+		errorMessage, err := m.readProblemDetails(result)
+		if err == nil && errorMessage != nil {
+			return nil, fmt.Errorf("unsuccessful request, response: %d %s\n\t%s",
+				result.StatusCode, http.StatusText(result.StatusCode), *errorMessage)
+		} else {
+			return nil, fmt.Errorf("unsuccessful request, response: %d: %s",
+				result.StatusCode, http.StatusText(result.StatusCode))
+		}
 	}
 
-	defer result.Body.Close()
 	return io.ReadAll(result.Body)
+}
+
+func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {
+	errorBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body")
+	}
+
+	var problemDetails *ProblemDetails
+	err = json.Unmarshal(errorBody, &problemDetails)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal ProblemDetails")
+	}
+
+	if problemDetails.Title == "" && problemDetails.Detail == "" {
+		return nil, fmt.Errorf("empty ProblemDetails")
+	}
+
+	var errorMessage string
+	if problemDetails.Title != "" {
+		errorMessage += problemDetails.Title
+	}
+	if problemDetails.Detail != "" {
+		if len(errorMessage) > 0 {
+			errorMessage += " "
+		}
+		errorMessage += problemDetails.Detail
+	}
+	for errorKey, errorDetail := range problemDetails.Errors {
+		errorMessage += "\n\t" + errorKey + ": "
+		for _, errorDetailMessage := range errorDetail {
+			errorMessage += " "
+			errorMessage += errorDetailMessage
+		}
+	}
+
+	return &errorMessage, nil
 }
 
 func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) (token string) {
 	if tunnelRequestOptions.AccessToken != "" {
-		token = tunnelRequestOptions.AccessToken
+		token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelRequestOptions.AccessToken)
 	}
 	if token == "" {
 		token = m.tokenProvider()
 	}
-	if token == "" && tunnel != nil && tunnel.AccessTokens != nil {
+	if token == "" && tunnel != nil {
 		for _, scope := range scopes {
 			if tunnelToken, ok := tunnel.AccessTokens[scope]; ok {
 				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelToken)
@@ -556,4 +621,31 @@ func (m *Manager) buildTunnelSpecificUri(tunnel *Tunnel, path string, options *T
 		return nil, fmt.Errorf("tunnel must have either a name or cluster id and tunnel id")
 	}
 	return m.buildUri(tunnel.ClusterID, tunnelPath+path, options, query), nil
+}
+
+// The omitempty JSON tags on string fields make it impossible to intentionally supply
+// empty string values when updating. As a workaround, this method marshals a given
+// list of fields regardless of whether they are empty.
+func partialMarshal(value interface{}, fields []string) ([]byte, error) {
+	if len(fields) == 0 {
+		return json.Marshal(value)
+	}
+
+	reflectValue := reflect.Indirect(reflect.ValueOf(value))
+	reflectType := reflectValue.Type()
+
+	m := map[string]interface{}{}
+
+	for _, name := range fields {
+		field, found := reflectType.FieldByName(name)
+		if !found {
+			return nil, fmt.Errorf("field '%s' not found in type '%s'", name, reflectType.Name())
+		}
+
+		jsonKey := strings.Split(field.Tag.Get("json"), ",")[0]
+		value := reflectValue.FieldByIndex(field.Index).Interface()
+		m[jsonKey] = value
+	}
+
+	return json.Marshal(m)
 }

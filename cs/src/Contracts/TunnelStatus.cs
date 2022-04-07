@@ -17,7 +17,8 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// </summary>
         /// <remarks>
         /// This is typically 0 or 1, but may be more than 1 if the tunnel options allow
-        /// multiple hosts.</remarks>
+        /// multiple hosts.
+        /// </remarks>
         public uint HostConnectionCount { get; set; }
 
         /// <summary>
