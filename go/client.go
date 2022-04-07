@@ -131,11 +131,30 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 // ConnectToForwardedPort connects to a forwarded port.
 // It accepts a listener and will forward the connection to the tunnel.
 // This only starts the process of forwarding the port, use WaitForForwardedPort to wait for the port to be forwarded.
-func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listener, port uint16) error {
+func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Listener, port uint16) (*net.Listener, error) {
 	if !c.remoteForwardedPorts.hasPort(port) {
-		return ErrPortNotForwarded
+		return nil, ErrPortNotForwarded
 	}
-
+	if listenerIn == nil {
+		var i uint16 = 0
+		for i < 10 {
+			portNum := port + i
+			listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
+			if err == nil {
+				listenerIn = &listener
+				break
+			}
+			i++
+		}
+		if listenerIn == nil {
+			listener, err := net.Listen("tcp", ":0")
+			if err != nil {
+				return nil, fmt.Errorf("error creating listener %w:", err)
+			}
+			listenerIn = &listener
+		}
+	}
+	listener := *listenerIn
 	errc := make(chan error, 1)
 	sendError := func(err error) {
 		// Use non-blocking send, to avoid goroutines getting
@@ -145,6 +164,7 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 		default:
 		}
 	}
+	fmt.Printf("Client connected at %v to host port %v\n", listener.Addr(), port)
 
 	go func() {
 		for {
@@ -162,7 +182,7 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 		}
 	}()
 
-	return awaitError(ctx, errc)
+	return listenerIn, awaitError(ctx, errc)
 }
 
 // WaitForForwardedPort waits for the specified port to be forwarded.

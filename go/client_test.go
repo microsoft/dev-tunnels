@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -231,8 +232,8 @@ func TestPortForwarding(t *testing.T) {
 			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
 			return
 		}
-
-		done <- c.ConnectToForwardedPort(ctx, listen, streamPort)
+		_, err = c.ConnectToForwardedPort(ctx, &listen, streamPort)
+		done <- err
 	}()
 
 	go func() {
