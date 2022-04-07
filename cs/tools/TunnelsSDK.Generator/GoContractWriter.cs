@@ -219,7 +219,8 @@ internal class GoContractWriter : ContractWriter
         ITypeSymbol type,
         SortedSet<string> imports)
     {
-        s.Remove(s.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+        var constLines = new List<string>();
+        var varLines = new List<string>();
 
         foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
         {
@@ -241,10 +242,29 @@ internal class GoContractWriter : ContractWriter
                     }
                 }
 
-                s.AppendLine();
-                s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "\t"));
-                s.AppendLine($"var {type.Name}{propertyName} = {value}");
+                var lines = (value.All((c) => char.IsDigit(c)) ||
+                    (value.StartsWith("\"") && value.EndsWith("\""))) ? constLines : varLines;
+                lines.Add(FormatDocComment(property.GetDocumentationCommentXml(), "\t")
+                    .Replace("// Gets a ", "// A ").TrimEnd());
+                lines.Add($"\t{type.Name}{propertyName} = {value}");
+                lines.Add(string.Empty);
             }
+        }
+
+        if (constLines.Count > 0)
+        {
+            constLines.RemoveAt(constLines.Count - 1);
+            s.AppendLine("const (");
+            constLines.ForEach((line) => s.AppendLine(line));
+            s.AppendLine(")");
+        }
+
+        if (varLines.Count > 0)
+        {
+            varLines.RemoveAt(varLines.Count - 1);
+            s.AppendLine("var (");
+            varLines.ForEach((line) => s.AppendLine(line));
+            s.AppendLine(")");
         }
     }
 
@@ -344,7 +364,10 @@ internal class GoContractWriter : ContractWriter
             goExpression, (m) => $"strconv.Itoa{m.Value}");
         goExpression = new Regex("\\b([A-Z][a-z]+){3,6}Length\\b(?! - \\d)").Replace(
             goExpression, (m) => $"strconv.Itoa({m.Value})");
+        goExpression = new Regex("\"(([^\"]*\\\\)+[^\"]*)\"").Replace(
+            goExpression, (m) => $"`{m.Groups[1].Value.Replace("\\\\", "\\")}`");
         goExpression = FixPropertyNameCasing(goExpression);
+        goExpression = goExpression.Replace("        ", "\t\t");
 
         return goExpression;
     }
