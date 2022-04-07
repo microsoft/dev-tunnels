@@ -1,3 +1,6 @@
+// Generated from ../../../cs/src/Contracts/Tunnel.cs
+/* eslint-disable */
+
 import { TunnelAccessControl } from './tunnelAccessControl';
 import { TunnelEndpoint } from './tunnelEndpoint';
 import { TunnelOptions } from './tunnelOptions';
@@ -20,7 +23,9 @@ export interface Tunnel {
 
     /**
      * Gets or sets the optional short name (alias) of the tunnel.
-     * The name must be globally unique within the parent domain, and must be a valid subdomain.
+     *
+     * The name must be globally unique within the parent domain, and must be a valid
+     * subdomain.
      */
     name?: string;
 
@@ -35,8 +40,8 @@ export interface Tunnel {
     tags?: string[];
 
     /**
-     * Gets or sets the optional parent domain of the tunnel,
-     * if it is not using the default parent domain.
+     * Gets or sets the optional parent domain of the tunnel, if it is not using the
+     * default parent domain.
      */
     domain?: string;
 
@@ -47,6 +52,9 @@ export interface Tunnel {
 
     /**
      * Gets or sets access control settings for the tunnel.
+     *
+     * See {@link TunnelAccessControl} documentation for details about the access control
+     * model.
      */
     accessControl?: TunnelAccessControl;
 
@@ -61,13 +69,24 @@ export interface Tunnel {
     status?: TunnelStatus;
 
     /**
-     * Gets or sets an array of endpoints where hosts are currently accepting
-     * client connections to the tunnel.
+     * Gets or sets an array of endpoints where hosts are currently accepting client
+     * connections to the tunnel.
      */
     endpoints?: TunnelEndpoint[];
 
     /**
      * Gets or sets a list of ports in the tunnel.
+     *
+     * This optional property enables getting info about all ports in a tunnel at the same
+     * time as getting tunnel info, or creating one or more ports at the same time as
+     * creating a tunnel. It is omitted when listing (multiple) tunnels, or when updating
+     * tunnel properties. (For the latter, use APIs to create/update/delete individual
+     * ports instead.)
      */
     ports?: TunnelPort[];
+
+    /**
+     * Gets or sets the time in UTC of tunnel creation.
+     */
+    created?: Date;
 }

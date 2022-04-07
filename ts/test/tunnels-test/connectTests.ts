@@ -34,7 +34,7 @@ export class MetricsTests {
                 {
                     ClusterId: 'localhost',
                     TunnelId: 'test',
-                    PortNumber: 2000,
+                    portNumber: 2000,
                 } as TunnelPort,
             ],
         } as Tunnel);

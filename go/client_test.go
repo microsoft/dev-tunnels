@@ -32,10 +32,12 @@ func TestSuccessfulConnect(t *testing.T) {
 		AccessTokens: map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: accessToken,
 		},
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
-				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				HostID: "host1",
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}
@@ -79,10 +81,12 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 		AccessTokens: map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: "invalid-access-token",
 		},
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
-				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				HostID: "host1",
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}
@@ -113,7 +117,7 @@ func TestReturnsErrWhenEndpointsAreNil(t *testing.T) {
 
 func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -129,7 +133,7 @@ func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 
 func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -148,7 +152,7 @@ func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 
 func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -175,7 +179,7 @@ func TestPortForwarding(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	streamPort := 8001
+	streamPort := uint16(8001)
 	streamData := "stream-data"
 	stream := bytes.NewBufferString(streamData)
 	pfsChannel := messages.NewPortForwardChannel(1, "127.0.0.1", uint32(streamPort), "", 0)
@@ -185,13 +189,14 @@ func TestPortForwarding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
-				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				HostID: "host1",
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}

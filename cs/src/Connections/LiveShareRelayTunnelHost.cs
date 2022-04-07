@@ -253,14 +253,11 @@ namespace Microsoft.VsSaaS.TunnelService
 
             foreach (TunnelPort port in Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>())
             {
-                if (port.PortNumber != null)
+                var forwarder = await pfs.ForwardFromRemotePortAsync(
+                    IPAddress.Loopback, (int)port.PortNumber, IPAddress.Loopback.ToString(), (int)port.PortNumber, CancellationToken.None);
+                if (forwarder != null && sessionId != null)
                 {
-                    var forwarder = await pfs.ForwardFromRemotePortAsync(
-                        IPAddress.Loopback, (int)port.PortNumber, IPAddress.Loopback.ToString(), (int)port.PortNumber, CancellationToken.None);
-                    if (forwarder != null && sessionId != null)
-                    {
-                        RemoteForwarders.TryAdd(new SessionPortKey(sessionId, (ushort)forwarder.RemotePort), forwarder);
-                    }
+                    RemoteForwarders.TryAdd(new SessionPortKey(sessionId, (ushort)forwarder.RemotePort), forwarder);
                 }
             }
         }
@@ -382,7 +379,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var tcpClient = new TcpClient();
             try
             {
-                await tcpClient.ConnectAsync(IPAddress.Loopback, (int)tunnelPort.PortNumber!);
+                await tcpClient.ConnectAsync(IPAddress.Loopback, (int)tunnelPort.PortNumber);
             }
             catch (SocketException sockex)
             {
@@ -534,11 +531,11 @@ namespace Microsoft.VsSaaS.TunnelService
 
                 var sharedServers = Host.Tunnel?.Ports?.Select((p) => new LiveShare.SharedServer
                 {
-                    SourcePort = (int)p.PortNumber!,
-                    DestinationPort = (int)p.PortNumber!,
+                    SourcePort = (int)p.PortNumber,
+                    DestinationPort = (int)p.PortNumber,
                     StreamName = "pfs",
-                    StreamCondition = p.PortNumber.Value.ToString(),
-                    SessionName = p.PortNumber.Value.ToString(),
+                    StreamCondition = p.PortNumber.ToString(),
+                    SessionName = p.PortNumber.ToString(),
                     HasTLSHandshakePassed = isHttps(p),
                     Privacy =
                         p.AccessControl?.IsAnonymousAllowed(TunnelAccessScopes.Connect) == true ?

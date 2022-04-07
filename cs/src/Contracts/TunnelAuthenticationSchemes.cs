@@ -7,7 +7,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts;
 /// <summary>
 /// Defines string constants for authentication schemes supported by tunnel service APIs.
 /// </summary>
-public class TunnelAuthenticationSchemes
+public static class TunnelAuthenticationSchemes
 {
     /// <summary>
     /// Authentication scheme for AAD (or Microsoft account) access tokens.

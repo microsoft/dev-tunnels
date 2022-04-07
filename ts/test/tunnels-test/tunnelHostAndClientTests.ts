@@ -50,8 +50,8 @@ export class TunnelHostAndClientTests {
             tunnelId: 'test',
             clusterId: 'localhost',
             accessTokens: {
-                [TunnelAccessScopes.host]: 'mock-host-token',
-                [TunnelAccessScopes.connect]: 'mock-connect-token',
+                [TunnelAccessScopes.Host]: 'mock-host-token',
+                [TunnelAccessScopes.Connect]: 'mock-connect-token',
             },
             endpoints: [
                 {

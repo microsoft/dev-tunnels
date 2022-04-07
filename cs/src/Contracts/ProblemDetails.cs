@@ -12,8 +12,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
     /// </summary>
     /// <remarks>
     /// This object may be returned with a response status code of 400 (or other 4xx code).
-    ///
-    /// Compatible with RFC 7807 Problem Details (https://tools.ietf.org/html/rfc7807) and
+    /// It is compatible with RFC 7807 Problem Details (https://tools.ietf.org/html/rfc7807) and
     /// https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.problemdetails
     /// but doesn't require adding a dependency on that package.
     /// </remarks>

@@ -13,7 +13,7 @@ import (
 )
 
 type portForwardingManager interface {
-	Add(port int)
+	Add(port uint16)
 }
 
 type ClientSSHSession struct {
@@ -92,7 +92,7 @@ func (s *ClientSSHSession) handlePortForwardRequest(r *ssh.Request) {
 		return
 	}
 
-	s.pf.Add(int(req.Port()))
+	s.pf.Add(uint16(req.Port()))
 	reply := messages.NewPortForwardSuccess(req.Port())
 	b, err := reply.Marshal()
 	if err != nil {

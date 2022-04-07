@@ -1,5 +1,8 @@
+// Generated from ../../../cs/src/Contracts/TunnelProtocol.cs
+/* eslint-disable */
+
 /**
- * Defines possible values for the protocol of a TunnelPort.
+ * Defines possible values for the protocol of a {@link TunnelPort}.
  */
 export enum TunnelProtocol {
     /**

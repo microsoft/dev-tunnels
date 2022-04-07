@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	serviceUrl           = ServiceProperties.ServiceURI
 	ctx                  = context.Background()
 	userAgentManagerTest = []UserAgent{{name: "Tunnels-Go-SDK-Tests/Manager", version: PackageVersion}}
 )
@@ -23,7 +24,7 @@ func getAccessToken() string {
 func TestTunnelCreateDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -59,7 +60,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 func TestListTunnels(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -82,7 +83,12 @@ func TestListTunnels(t *testing.T) {
 		logger.Println(fmt.Sprintf("Created tunnel with id %s", createdTunnel.TunnelID))
 		createdTunnel.table().Print()
 	}
-	token := fmt.Sprintf("Tunnel %s", createdTunnel.AccessTokens["manage"])
+	var token string
+	if createdTunnel.AccessTokens != nil {
+		token = createdTunnel.AccessTokens["manage"]
+	} else {
+		logger.Println("Did not get token for created tunnel")
+	}
 	options = &TunnelRequestOptions{
 		AccessToken: token,
 	}
@@ -110,7 +116,7 @@ func TestListTunnels(t *testing.T) {
 func TestTunnelCreateUpdateDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -137,8 +143,10 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 	r1 := rand.New(s1)
 	generatedName := fmt.Sprintf("test%d", r1.Intn(10000))
 	createdTunnel.Name = generatedName
-	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, options)
-	if err != nil || updatedTunnel.Name != generatedName {
+	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Name"}, options)
+	if err != nil {
+		t.Errorf("tunnel was not successfully updated: %s", err.Error())
+	} else if updatedTunnel.Name != generatedName {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Println("Tunnel updated")
@@ -156,7 +164,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -183,8 +191,10 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	r1 := rand.New(s1)
 	generatedName := fmt.Sprintf("test%d", r1.Intn(10000))
 	createdTunnel.Name = generatedName
-	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, options)
-	if err != nil || updatedTunnel.Name != generatedName {
+	updatedTunnel, err := managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Name"}, options)
+	if err != nil {
+		t.Errorf("tunnel was not successfully updated: %s", err.Error())
+	} else if updatedTunnel.Name != generatedName {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Println("Tunnel updated")
@@ -194,8 +204,10 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	// In the second update we want to update the description without updating the name
 	createdTunnel.Name = ""
 	createdTunnel.Description = "test description"
-	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, options)
-	if err != nil || updatedTunnel.Name != generatedName || createdTunnel.Description != "test description" {
+	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Name", "Description"}, options)
+	if err != nil {
+		t.Errorf("tunnel was not successfully updated: %s", err.Error())
+	} else if updatedTunnel.Name != generatedName || createdTunnel.Description != "test description" {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Println("Tunnel updated")
@@ -213,7 +225,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 func TestTunnelCreateGetDelete(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -260,7 +272,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 func TestTunnelAddPort(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -289,7 +301,8 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %+v", *port))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
+	port.table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -319,7 +332,7 @@ func TestTunnelAddPort(t *testing.T) {
 func TestTunnelDeletePort(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -348,7 +361,8 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %+v", *port))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
+	port.table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -367,7 +381,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Deleted port: %+v", *port))
+	logger.Println(fmt.Sprintf("Deleted port: %d", port.PortNumber))
 
 	getTunnel, err = managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -397,7 +411,7 @@ func TestTunnelDeletePort(t *testing.T) {
 func TestTunnelUpdatePort(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -426,7 +440,8 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %+v", *port))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
+	port.table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -439,16 +454,19 @@ func TestTunnelUpdatePort(t *testing.T) {
 		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 		getTunnel.table().Print()
 	}
-	accessEntry := &TunnelAccessControlEntry{
+	accessEntry := TunnelAccessControlEntry{
 		Type:     TunnelAccessControlEntryTypeAnonymous,
-		Subjects: []string{"test"},
-		Scopes:   []TunnelAccessScope{"manage"},
+		Subjects: []string{},
+		Scopes:   []string{string(TunnelAccessScopeManage)},
+	}
+	portToAdd.AccessControl = &TunnelAccessControl{
+		Entries: make([]TunnelAccessControlEntry, 0),
 	}
 	portToAdd.AccessControl.Entries = append(port.AccessControl.Entries, accessEntry)
 
-	port, err = managementClient.UpdateTunnelPort(ctx, createdTunnel, portToAdd, options)
+	port, err = managementClient.UpdateTunnelPort(ctx, createdTunnel, portToAdd, nil, options)
 	if err != nil {
-		t.Errorf("port was not successfully updated")
+		t.Errorf("port was not successfully updated: %s", err)
 	} else if len(port.AccessControl.Entries) != 1 {
 		t.Errorf("port was not successfully updated")
 	}
@@ -489,7 +507,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 func TestTunnelListPorts(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -518,7 +536,9 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %+v", *port))
+
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
+	port.table().Print()
 
 	portToAdd = NewTunnelPort(3001, "", "", "auto")
 	port, err = managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -526,7 +546,8 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Println(fmt.Sprintf("Created port: %+v", *port))
+	logger.Println(fmt.Sprintf("Created port: %d", port.PortNumber))
+	port.table().Print()
 
 	ports, err := managementClient.ListTunnelPorts(ctx, createdTunnel, options)
 	if err != nil {
@@ -537,7 +558,8 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf("ports not successfully listed")
 	}
 	for _, port := range ports {
-		logger.Println(fmt.Sprintf("%+v", port))
+		logger.Println(fmt.Sprintf("Port: %d", port.PortNumber))
+		port.table().Print()
 	}
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -568,7 +590,7 @@ func TestTunnelListPorts(t *testing.T) {
 func TestTunnelEndpoints(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	url, err := url.Parse(defaultUrl)
+	url, err := url.Parse(serviceUrl)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -600,7 +622,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		ConnectionMode: TunnelConnectionModeLiveShareRelay,
 	}
 
-	updatedEndpoint, err := managementClient.UpdateTunnelEndpoint(ctx, createdTunnel, endpoint, options)
+	updatedEndpoint, err := managementClient.UpdateTunnelEndpoint(ctx, createdTunnel, endpoint, nil, options)
 
 	if err != nil {
 		t.Errorf(err.Error())
