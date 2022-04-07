@@ -17,7 +17,7 @@ import org.apache.sshd.netty.NettyIoSession;
 
 public class WebSocketSession extends NettyIoSession {
   protected WebSocketConnectionHandler webSocketConnectionHandler;
-  protected WebSocketInboundAdapter webSocketInboundAdapter;
+  protected WebSocketAcceptorHandler webSocketAcceptorHandler;
 
   /**
    * Creates a modified Netty session to handle websocket messages.
@@ -33,7 +33,7 @@ public class WebSocketSession extends NettyIoSession {
         this,
         webSocketUri,
         accessToken);
-    this.webSocketInboundAdapter = new WebSocketInboundAdapter(this);
+    this.webSocketAcceptorHandler = new WebSocketAcceptorHandler(this);
   }
 
   @Override
@@ -43,7 +43,7 @@ public class WebSocketSession extends NettyIoSession {
     buf.writeBytes(buffer.array(), buffer.rpos(), bufLen);
     DefaultIoWriteFuture msg = new DefaultIoWriteFuture(getRemoteAddress(), null);
     ChannelPromise next = context.newPromise();
-    prev.addListener(whatever -> {
+    prev.addListener((whatever) -> {
       if (context != null) {
         context.writeAndFlush(new BinaryWebSocketFrame(buf), next);
       }

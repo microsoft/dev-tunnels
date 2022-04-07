@@ -39,7 +39,7 @@ public class WebSocketAcceptor extends NettyIoAcceptor {
           ChannelPipeline p = ch.pipeline();
           webSocketSession = new WebSocketSession(WebSocketAcceptor.this, handler, service,
               factory.webSocketUri, factory.accessToken);
-          p.addLast(webSocketSession.webSocketInboundAdapter);
+          p.addLast(webSocketSession.webSocketAcceptorHandler);
         } catch (Exception e) {
           if (listener != null) {
             try {
