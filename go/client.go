@@ -130,8 +130,8 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 
 // ConnectToForwardedPort connects to a forwarded port.
 // It accepts a listener and will forward the connection to the tunnel.
-// This will return an error if the port is not yet forwarded, it is common
-// practice to call WaitForForwardedPort before this function.
+// This will return an error if the port is not yet forwarded,
+// the caller should first call WaitForForwardedPort.
 func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listener, port uint16) error {
 	if !c.remoteForwardedPorts.hasPort(port) {
 		return ErrPortNotForwarded
