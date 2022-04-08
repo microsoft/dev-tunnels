@@ -19,7 +19,6 @@ const (
 	portToConnect1                = 5001
 	portToConnect1ListenerAddress = 5030
 	portToConnect2                = 5002
-	portToConnect2ListenerAddress = 5031
 )
 
 var (
@@ -101,22 +100,16 @@ func main() {
 		// wait for port to be forwarded and then connect
 		c.WaitForForwardedPort(ctx, portToConnect1)
 		go func() {
-			done <- c.ConnectToForwardedPort(ctx, listen, portToConnect1)
+			_, err := c.ConnectToForwardedPort(ctx, &listen, portToConnect1)
+			done <- err
 		}()
-
-		// create listener to connect to port using supplied port number
-		listen2, err := net.Listen("tcp", fmt.Sprintf(":%d", portToConnect2ListenerAddress))
-
-		// send listener to channel to be closed at end of run
-		listeners <- listen2
-		if err != nil {
-			done <- fmt.Errorf("failed to listen: %v", err)
-		}
 
 		// wait for port to be forwarded and then connect
 		c.WaitForForwardedPort(ctx, portToConnect2)
 		go func() {
-			done <- c.ConnectToForwardedPort(ctx, listen2, portToConnect2)
+			listener, err := c.ConnectToForwardedPort(ctx, nil, portToConnect2)
+			listeners <- *listener
+			done <- err
 		}()
 	}()
 	for {
