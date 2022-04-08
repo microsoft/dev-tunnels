@@ -132,7 +132,7 @@ func (m *Manager) ListTunnels(
 }
 
 // Search tunnels that the authenticated user has access to based on tags
-// If requreAllTags is true then tunnels returned must contain all tags in the tags slice
+// If requireAllTags is true then tunnels returned must contain all tags in the tags slice
 // Returns a slice of the found tunnels or an error if the search fails
 func (m *Manager) SearchTunnels(
 	ctx context.Context, tags []string, requireAllTags bool, clusterID string, domain string, options *TunnelRequestOptions,
