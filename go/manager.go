@@ -59,8 +59,8 @@ var (
 
 // UserAgent contains the name and version of the client.
 type UserAgent struct {
-	name    string
-	version string
+	Name    string
+	Version string
 }
 
 // Manager is used to interact with the Visual Studio Tunnel Service APIs.
@@ -483,13 +483,13 @@ func (m *Manager) sendTunnelRequest(
 	}
 	userAgentString := ""
 	for _, userAgent := range m.userAgents {
-		if len(userAgent.version) == 0 {
-			userAgent.version = "unknown"
+		if len(userAgent.Version) == 0 {
+			userAgent.Version = "unknown"
 		}
-		if len(userAgent.name) == 0 {
+		if len(userAgent.Name) == 0 {
 			return nil, fmt.Errorf("userAgent name cannot be empty")
 		}
-		userAgentString = fmt.Sprintf("%s%s/%s ", userAgentString, userAgent.name, userAgent.version)
+		userAgentString = fmt.Sprintf("%s%s/%s ", userAgentString, userAgent.Name, userAgent.Version)
 	}
 	userAgentString = strings.TrimSpace(userAgentString)
 	request.Header.Add("User-Agent", fmt.Sprintf("%s %s", goUserAgent, userAgentString))
