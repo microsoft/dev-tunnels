@@ -167,7 +167,7 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 }
 
 // WaitForForwardedPort waits for the specified port to be forwarded.
-// It is common practice to call this function before ConnectToForwardedPort
+// It is common practice to call this function before ConnectToForwardedPort.
 func (c *Client) WaitForForwardedPort(ctx context.Context, port uint16) error {
 	// It's already forwarded there's no need to wait.
 	if c.remoteForwardedPorts.hasPort(port) {
