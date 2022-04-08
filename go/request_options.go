@@ -4,9 +4,9 @@ import (
 	"net/url"
 )
 
-// Options that are sent in requests to the tunnels service
+// Options that are sent in requests to the tunnels service.
 type TunnelRequestOptions struct {
-	// Token used for authentication for service
+	// Token used for authentication for service.
 	AccessToken string
 
 	// Additional headers to be included in the request.
@@ -18,13 +18,13 @@ type TunnelRequestOptions struct {
 	// Flag that requests tunnel ports when retrieving a tunnel object.
 	IncludePorts bool
 
-	// List of scopes that are needed for the current request
+	// List of scopes that are needed for the current request.
 	Scopes TunnelAccessScopes
 
 	// List of token scopes that are requested when retrieving a tunnel or tunnel port object.
 	TokenScopes TunnelAccessScopes
 
-	// If there is another tunnel with the name requested in updateTunnel, try to acquire the name from the other tunnel
+	// If there is another tunnel with the name requested in updateTunnel, try to acquire the name from the other tunnel.
 	ForceRename bool
 }
 
