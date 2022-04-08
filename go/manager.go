@@ -163,7 +163,7 @@ func (m *Manager) SearchTunnels(
 }
 
 // Gets a tunnel by id or name
-// If getting a tunenl by name the domain must be provided if the tunnel is not in the default domain.
+// If getting a tunnel by name the domain must be provided if the tunnel is not in the default domain.
 // Returns the requested tunnel or an error if the tunnel is not found
 func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
