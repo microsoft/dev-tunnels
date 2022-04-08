@@ -85,15 +85,32 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
         /// <summary>
         /// Gets or sets a value indicating whether this entry is a deny rule that blocks access
-        /// to the specified users. Otherwise it is an allow role.
+        /// to the specified users. Otherwise it is an allow rule.
         /// </summary>
         /// <remarks>
         /// All deny rules (including inherited rules) are processed after all allow rules.
-        /// Therefore a deny rule cannot be overridden by an allow rule that is later in the list
-        /// or on a more-specific resource.
+        /// Therefore a deny ACE cannot be overridden by an allow ACE that is later in the list or
+        /// on a more-specific resource. In other words, inherited deny ACEs cannot be overridden.
         /// </remarks>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool IsDeny { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this entry applies to all subjects that are NOT
+        /// in the <see cref="Subjects"/> list.
+        /// </summary>
+        /// <remarks>
+        /// Examples: an inverse organizations ACE applies to all users who are not members of
+        /// the listed organization(s); an inverse anonymous ACE applies to all authenticated users;
+        /// an inverse IP address ranges ACE applies to all clients that are not within any of the
+        /// listed IP address ranges. The inverse option is often useful in policies in combination
+        /// with <see cref="IsDeny"/>, for example a policy could deny access to users who are not
+        /// members of an organization or are outside of an IP address range, effectively blocking
+        /// any tunnels from allowing outside access (because inherited deny ACEs cannot be
+        /// overridden).
+        /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool IsInverse { get; set; }
 
         /// <summary>
         /// Gets or sets an optional organization context for all subjects of this entry. The use

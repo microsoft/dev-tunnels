@@ -11,6 +11,8 @@ import org.apache.maven.shared.utils.StringUtils;
  */
 public class TunnelAccessScopes {
   @Expose
+  public static String Create = "create";
+  @Expose
   public static String Manage = "manage";
   @Expose
   public static String Host = "host";

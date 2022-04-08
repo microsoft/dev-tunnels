@@ -352,12 +352,6 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   }
 
   private Tunnel convertTunnelForRequest(Tunnel tunnel) {
-    if (tunnel.accessControl != null
-        && tunnel.accessControl.entries != null
-        && tunnel.accessControl.entries.stream().anyMatch(e -> e.isInherited)) {
-      throw new IllegalArgumentException("Tunnel access control cannot include inherited entries.");
-    }
-
     Tunnel converted = new Tunnel();
     converted.name = tunnel.name;
     converted.domain = tunnel.domain;
@@ -366,6 +360,12 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.options = tunnel.options;
     converted.accessControl = tunnel.accessControl;
     converted.endpoints = tunnel.endpoints;
+    if (tunnel.accessControl == null && tunnel.accessControl.entries != null) {
+      converted.accessControl = new TunnelAccessControl(
+          tunnel.accessControl.entries.stream()
+              .filter((e) -> !e.isInherited)
+              .collect(Collectors.toList()));
+    }
     if (tunnel.ports == null) {
       converted.ports = null;
     } else {
@@ -586,9 +586,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.portNumber = tunnelPort.portNumber;
     converted.protocol = tunnelPort.protocol;
     converted.options = tunnelPort.options;
-    if (tunnelPort.accessControl == null) {
-      converted.accessControl = null;
-    } else if (tunnelPort.accessControl.entries != null) {
+    if (tunnelPort.accessControl != null && tunnelPort.accessControl.entries != null) {
       converted.accessControl = new TunnelAccessControl(
           tunnelPort.accessControl.entries.stream()
               .filter((e) -> !e.isInherited)
