@@ -28,8 +28,11 @@ var (
 	ctx       = context.Background()
 )
 
-// Put your tunnels access token in the return statement
+// Put your tunnels access token in the return statement or set the TUNNELS_TOKEN env variable
 func getAccessToken() string {
+	if token := os.Getenv("TUNNELS_TOKEN"); token != "" {
+		return token
+	}
 	return ""
 }
 
