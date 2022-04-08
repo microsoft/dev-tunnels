@@ -214,7 +214,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	return t, err
 }
 
-// Updates a tunnels properties, to update a field te field name must be included in updateFields
+// Updates a tunnel's properties, to update a field the field name must be included in updateFields
 // Returns the updated tunnel or an error if the update fails
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields []string, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	if tunnel == nil {
