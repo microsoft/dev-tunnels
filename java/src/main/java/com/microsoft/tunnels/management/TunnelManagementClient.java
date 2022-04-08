@@ -360,7 +360,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.options = tunnel.options;
     converted.accessControl = tunnel.accessControl;
     converted.endpoints = tunnel.endpoints;
-    if (tunnel.accessControl == null && tunnel.accessControl.entries != null) {
+    if (tunnel.accessControl != null && tunnel.accessControl.entries != null) {
       converted.accessControl = new TunnelAccessControl(
           tunnel.accessControl.entries.stream()
               .filter((e) -> !e.isInherited)
