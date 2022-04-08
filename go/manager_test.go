@@ -14,7 +14,7 @@ import (
 var (
 	serviceUrl           = ServiceProperties.ServiceURI
 	ctx                  = context.Background()
-	userAgentManagerTest = []UserAgent{{name: "Tunnels-Go-SDK-Tests/Manager", version: PackageVersion}}
+	userAgentManagerTest = []UserAgent{{Name: "Tunnels-Go-SDK-Tests/Manager", Version: PackageVersion}}
 )
 
 func getAccessToken() string {
