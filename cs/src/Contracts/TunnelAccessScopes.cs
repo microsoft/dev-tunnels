@@ -45,6 +45,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// </summary>
         public static readonly string[] All = new[]
         {
+            Create,
             Manage,
             Host,
             Inspect,
