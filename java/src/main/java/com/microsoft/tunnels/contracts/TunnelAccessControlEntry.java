@@ -15,10 +15,15 @@ public class TunnelAccessControlEntry {
 
   /**
    * Gets or sets a value indicating whether this entry is a deny rule that blocks
-   * access
-   * to the specified users. Otherwise it is an allow role.
+   * access to the specified users. Otherwise it is an allow rule.
    */
   public boolean isDeny;
+
+  /**
+   * Gets or sets a value indicating whether this entry applies to all subjects that are NOT
+   * in the subjects list.
+   */
+  public boolean isInverse;
 
   /**
    * Gets or sets the subjects for the entry, such as user or group IDs.
