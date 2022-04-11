@@ -7,7 +7,7 @@ import java.net.URI;
 import org.apache.sshd.common.io.IoAcceptor;
 import org.apache.sshd.common.io.IoConnector;
 import org.apache.sshd.common.io.IoHandler;
-
+import org.apache.sshd.netty.NettyIoAcceptor;
 import org.apache.sshd.netty.NettyIoServiceFactory;
 
 public class WebSocketServiceFactory extends NettyIoServiceFactory {
@@ -39,6 +39,6 @@ public class WebSocketServiceFactory extends NettyIoServiceFactory {
 
   @Override
   public IoAcceptor createAcceptor(IoHandler handler) {
-    return new WebSocketAcceptor(this, handler);
+    return new NettyIoAcceptor(this, handler);
   }
 }

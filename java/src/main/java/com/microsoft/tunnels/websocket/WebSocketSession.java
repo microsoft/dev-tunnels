@@ -17,7 +17,6 @@ import org.apache.sshd.netty.NettyIoSession;
 
 public class WebSocketSession extends NettyIoSession {
   protected WebSocketConnectionHandler webSocketConnectionHandler;
-  protected WebSocketAcceptorHandler webSocketAcceptorHandler;
 
   /**
    * Creates a modified Netty session to handle websocket messages.
@@ -33,7 +32,6 @@ public class WebSocketSession extends NettyIoSession {
         this,
         webSocketUri,
         accessToken);
-    this.webSocketAcceptorHandler = new WebSocketAcceptorHandler(this);
   }
 
   @Override
