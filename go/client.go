@@ -57,7 +57,7 @@ var (
 )
 
 // Connect connects to a tunnel and returns a connected client.
-func NewClient(logger *log.Logger, tunnel *Tunnel, hostID string, acceptLocalConnectionsForForwardedPorts bool) (*Client, error) {
+func NewClient(logger *log.Logger, tunnel *Tunnel, acceptLocalConnectionsForForwardedPorts bool) (*Client, error) {
 	if tunnel == nil {
 		return nil, ErrNoTunnel
 	}
@@ -66,40 +66,40 @@ func NewClient(logger *log.Logger, tunnel *Tunnel, hostID string, acceptLocalCon
 		return nil, ErrNoTunnelEndpoints
 	}
 
-	endpointGroups := make(map[string][]TunnelEndpoint)
-	for _, endpoint := range tunnel.Endpoints {
-		endpointGroups[endpoint.HostID] = append(endpointGroups[endpoint.HostID], endpoint)
-	}
-
-	var endpointGroup []TunnelEndpoint
-	if hostID != "" {
-		g, ok := endpointGroups[hostID]
-		if !ok {
-			return nil, ErrNoConnections
-		}
-		endpointGroup = g
-	} else if len(endpointGroups) > 1 {
-		return nil, ErrMultipleHosts
-	} else {
-		endpointGroup = endpointGroups[tunnel.Endpoints[0].HostID]
-	}
-
 	c := &Client{
 		logger:                                  logger,
-		hostID:                                  hostID,
 		tunnel:                                  tunnel,
-		endpoints:                               endpointGroup,
+		endpoints:                               tunnel.Endpoints,
 		remoteForwardedPorts:                    newRemoteForwardedPorts(),
 		acceptLocalConnectionsForForwardedPorts: acceptLocalConnectionsForForwardedPorts,
 	}
 	return c, nil
 }
 
-func (c *Client) Connect(ctx context.Context) error {
+func (c *Client) Connect(ctx context.Context, hostID string) error {
+	endpointGroups := make(map[string][]TunnelEndpoint)
+	for _, endpoint := range c.tunnel.Endpoints {
+		endpointGroups[endpoint.HostID] = append(endpointGroups[endpoint.HostID], endpoint)
+	}
+
+	var endpointGroup []TunnelEndpoint
+	c.hostID = hostID
+	if hostID != "" {
+		g, ok := endpointGroups[hostID]
+		if !ok {
+			return ErrNoConnections
+		}
+		endpointGroup = g
+	} else if len(endpointGroups) > 1 {
+		return ErrMultipleHosts
+	} else {
+		endpointGroup = endpointGroups[c.tunnel.Endpoints[0].HostID]
+	}
+
 	if len(c.endpoints) != 1 {
 		return ErrNoRelayConnections
 	}
-	tunnelEndpoint := c.endpoints[0]
+	tunnelEndpoint := endpointGroup[0]
 	clientRelayURI := tunnelEndpoint.ClientRelayURI
 
 	accessToken := c.tunnel.AccessTokens[TunnelAccessScopeConnect]

@@ -73,8 +73,8 @@ func main() {
 
 	go func() {
 		// start client connection to tunnel
-		c, err := tunnels.NewClient(logger, getTunnel, "", true)
-		c.Connect(ctx)
+		c, err := tunnels.NewClient(logger, getTunnel, true)
+		c.Connect(ctx, "")
 		if err != nil {
 			done <- fmt.Errorf("connect failed: %v", err)
 			return
