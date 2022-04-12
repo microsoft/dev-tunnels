@@ -153,7 +153,7 @@ func (s *ClientSSHSession) forwardPort(ctx context.Context, port uint16) error {
 		listener = innerListener
 	}
 	addressSlice := strings.Split(listener.Addr().String(), ":")
-	portNum, err := strconv.Atoi(addressSlice[len(addressSlice)-1])
+	portNum, err := strconv.ParseUint(addressSlice[len(addressSlice)-1], 10, 16)
 	if err != nil {
 		return fmt.Errorf("error getting port number: %w", err)
 	}
