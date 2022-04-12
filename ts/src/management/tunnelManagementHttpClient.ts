@@ -526,17 +526,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     private convertTunnelForRequest(tunnel: Tunnel): Tunnel {
-        if (tunnel.accessControl && tunnel.accessControl.entries.some((ace) => ace.isInherited)) {
-            throw new Error('Tunnel access control cannot include inherited entries.');
-        }
-
         const convertedTunnel: Tunnel = {
             name: tunnel.name,
             domain: tunnel.domain,
             description: tunnel.description,
             tags: tunnel.tags,
             options: tunnel.options,
-            accessControl: tunnel.accessControl,
+            accessControl: !tunnel.accessControl
+                ? undefined
+                : { entries: tunnel.accessControl.entries.filter((ace) => !ace.isInherited) },
             endpoints: tunnel.endpoints,
             ports: tunnel.ports?.map((p) => this.convertTunnelPortForRequest(tunnel, p)),
         };

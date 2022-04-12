@@ -4,14 +4,28 @@ import (
 	"net/url"
 )
 
+// Options that are sent in requests to the tunnels service.
 type TunnelRequestOptions struct {
-	AccessToken       string
+	// Token used for authentication for service.
+	AccessToken string
+
+	// Additional headers to be included in the request.
 	AdditionalHeaders map[string]string
-	FollowRedirects   bool
-	IncludePorts      bool
-	Scopes            TunnelAccessScopes
-	TokenScopes       TunnelAccessScopes
-	ForceRename       bool
+
+	// Indicates whether HTTP redirect responses will be automatically followed.
+	FollowRedirects bool
+
+	// Flag that requests tunnel ports when retrieving a tunnel object.
+	IncludePorts bool
+
+	// List of scopes that are needed for the current request.
+	Scopes TunnelAccessScopes
+
+	// List of token scopes that are requested when retrieving a tunnel or tunnel port object.
+	TokenScopes TunnelAccessScopes
+
+	// If there is another tunnel with the name requested in updateTunnel, try to acquire the name from the other tunnel.
+	ForceRename bool
 }
 
 func (options *TunnelRequestOptions) queryString() string {

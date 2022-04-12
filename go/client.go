@@ -132,6 +132,8 @@ func (c *Client) Connect(ctx context.Context) error {
 // Opens a stream connected to a remote port for clients which cannot or do not want to forward local TCP ports.
 // Returns a readWriteCloser which can be used to read and write to the remote port.
 // Set AcceptLocalConnectionsForForwardedPorts to false in ConnectAsync to ensure TCP listeners are not created
+// This will return an error if the port is not yet forwarded,
+// the caller should first call WaitForForwardedPort.
 func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Listener, port uint16) (io.ReadWriteCloser, chan error) {
 	rwc := new(buffer)
 	errc := make(chan error, 1)
@@ -158,6 +160,7 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Lis
 }
 
 // WaitForForwardedPort waits for the specified port to be forwarded.
+// It is common practice to call this function before ConnectToForwardedPort.
 func (c *Client) WaitForForwardedPort(ctx context.Context, port uint16) error {
 	// It's already forwarded there's no need to wait.
 	if c.remoteForwardedPorts.hasPort(port) {

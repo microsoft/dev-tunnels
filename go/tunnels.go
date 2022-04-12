@@ -18,13 +18,23 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	}
 
 	convertedTunnel := &Tunnel{
-		Name:          tunnel.Name,
-		Domain:        tunnel.Domain,
-		Description:   tunnel.Description,
-		Tags:          tunnel.Tags,
-		Options:       tunnel.Options,
-		AccessControl: tunnel.AccessControl,
-		Endpoints:     tunnel.Endpoints,
+		Name:        tunnel.Name,
+		Domain:      tunnel.Domain,
+		Description: tunnel.Description,
+		Tags:        tunnel.Tags,
+		Options:     tunnel.Options,
+		Endpoints:   tunnel.Endpoints,
+	}
+	if tunnel.AccessControl != nil {
+		var newEntries []TunnelAccessControlEntry
+		for _, entry := range tunnel.AccessControl.Entries {
+			if !entry.IsInherited {
+				newEntries = append(newEntries, entry)
+			}
+		}
+		convertedTunnel.AccessControl = &TunnelAccessControl{
+			Entries: newEntries,
+		}
 	}
 
 	var convertedPorts []TunnelPort

@@ -960,7 +960,8 @@ namespace Microsoft.VsSaaS.TunnelService
                 Description = tunnel.Description,
                 Tags = tunnel.Tags,
                 Options = tunnel.Options,
-                AccessControl = tunnel.AccessControl,
+                AccessControl = tunnel.AccessControl == null ? null : new TunnelAccessControl(
+                    tunnel.AccessControl.Where((ace) => !ace.IsInherited)),
                 Endpoints = tunnel.Endpoints,
                 Ports = tunnel.Ports?
                     .Select((p) => ConvertTunnelPortForRequest(tunnel, p))

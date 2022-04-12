@@ -7,6 +7,11 @@ type TunnelAccessScopes []TunnelAccessScope
 type TunnelAccessScope string
 
 const (
+	// Allows creating tunnels. This scope is valid only in policies at the global, domain,
+	// or organization level; it is not relevant to an already-created tunnel or tunnel port.
+	// (Creation of ports requires "manage" or "host" access to the tunnel.)
+	TunnelAccessScopeCreate  TunnelAccessScope = "create"
+
 	// Allows management operations on tunnels and tunnel ports.
 	TunnelAccessScopeManage  TunnelAccessScope = "manage"
 

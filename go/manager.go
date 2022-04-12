@@ -75,6 +75,7 @@ type Manager struct {
 // Creates a new Manager used for interacting with the Tunnels APIs.
 // tokenProvider is an optional paramater containing a function that returns the access token to use for the request.
 // If no tunnelServiceUrl or httpClient is provided, the default values will be used.
+// Can return error if userAgent is empty or url is invalid.
 func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
 	if len(userAgents) == 0 {
 		return nil, fmt.Errorf("user agents cannot be empty")
@@ -104,6 +105,8 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents}, nil
 }
 
+// Lists all tunnels owned by the authenticated user.
+// Returns a list of tunnels or an error if the search fails.
 func (m *Manager) ListTunnels(
 	ctx context.Context, clusterID string, domain string, options *TunnelRequestOptions,
 ) (ts []*Tunnel, err error) {
@@ -128,6 +131,9 @@ func (m *Manager) ListTunnels(
 	return ts, nil
 }
 
+// Search tunnels that the authenticated user has access to based on tags.
+// If requireAllTags is true then tunnels returned must contain all tags in the tags slice.
+// Returns a slice of the found tunnels or an error if the search fails.
 func (m *Manager) SearchTunnels(
 	ctx context.Context, tags []string, requireAllTags bool, clusterID string, domain string, options *TunnelRequestOptions,
 ) (ts []*Tunnel, err error) {
@@ -156,6 +162,9 @@ func (m *Manager) SearchTunnels(
 	return ts, nil
 }
 
+// Gets a tunnel by id or name.
+// If getting a tunnel by name the domain must be provided if the tunnel is not in the default domain.
+// Returns the requested tunnel or an error if the tunnel is not found.
 func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
 	if err != nil {
@@ -176,6 +185,9 @@ func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *Tunnel
 	return t, err
 }
 
+// Creates a new tunnel with the properties specified in tunnel.
+// Tunnel fields may be nil but the tunnel struct must not be nil.
+// Returns the created tunnel or an error if the create fails.
 func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
@@ -202,6 +214,8 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	return t, err
 }
 
+// Updates a tunnel's properties, to update a field the field name must be included in updateFields.
+// Returns the updated tunnel or an error if the update fails.
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields []string, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
@@ -230,6 +244,8 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 	return t, err
 }
 
+// Deletes a tunnel.
+// Returns error if delete fails.
 func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) error {
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
 	if err != nil {
@@ -243,6 +259,8 @@ func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	return nil
 }
 
+// Updates an endpoint on a tunnel.
+// Returns the updated endpoint or an error if the update fails.
 func (m *Manager) UpdateTunnelEndpoint(
 	ctx context.Context, tunnel *Tunnel, endpoint *TunnelEndpoint, updateFields []string, options *TunnelRequestOptions,
 ) (te *TunnelEndpoint, err error) {
@@ -280,6 +298,8 @@ func (m *Manager) UpdateTunnelEndpoint(
 	return te, err
 }
 
+// Deletes endpoints on a tunnel.
+// Returns error if the delete fails.
 func (m *Manager) DeleteTunnelEndpoints(
 	ctx context.Context, tunnel *Tunnel, hostID string, connectionMode TunnelConnectionMode, options *TunnelRequestOptions,
 ) error {
@@ -311,6 +331,7 @@ func (m *Manager) DeleteTunnelEndpoints(
 	return err
 }
 
+// Lists all ports on the tunnel.
 func (m *Manager) ListTunnelPorts(
 	ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions,
 ) (tp []*TunnelPort, err error) {
@@ -353,6 +374,8 @@ func (m *Manager) GetTunnelPort(
 	return tp, nil
 }
 
+// Creates a port on the tunnel.
+// Returns the created port or error if create fails.
 func (m *Manager) CreateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
@@ -390,6 +413,8 @@ func (m *Manager) CreateTunnelPort(
 	return tp, nil
 }
 
+// Updates a tunnel port.
+// Returns the updated port or an error if the update fails.
 func (m *Manager) UpdateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, updateFields []string, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
@@ -431,6 +456,8 @@ func (m *Manager) UpdateTunnelPort(
 	return tp, nil
 }
 
+// Deletes a tunnel port.
+// Returns error if the delete fails.
 func (m *Manager) DeleteTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port uint16, options *TunnelRequestOptions,
 ) error {
