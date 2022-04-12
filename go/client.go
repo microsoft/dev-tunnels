@@ -131,7 +131,7 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 
 // Opens a stream connected to a remote port for clients which cannot or do not want to forward local TCP ports.
 // Set AcceptLocalConnectionsForForwardedPorts to false in ConnectAsync to ensure TCP listeners are not created
-func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Listener, port uint16) (*net.Listener, error) {
+func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Listener, port uint16) (*buffer, error) {
 	rwc := new(buffer)
 	errc := make(chan error, 1)
 	sendError := func(err error) {
@@ -153,7 +153,7 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Lis
 		}
 	}()
 
-	return listenerIn, awaitError(ctx, errc)
+	return rwc, awaitError(ctx, errc)
 }
 
 // WaitForForwardedPort waits for the specified port to be forwarded.
