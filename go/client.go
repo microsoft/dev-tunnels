@@ -57,7 +57,7 @@ var (
 )
 
 // Connect connects to a tunnel and returns a connected client.
-func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID string, acceptLocalConnectionsForForwardedPorts bool) (*Client, error) {
+func NewClient(logger *log.Logger, tunnel *Tunnel, hostID string, acceptLocalConnectionsForForwardedPorts bool) (*Client, error) {
 	if tunnel == nil {
 		return nil, ErrNoTunnel
 	}
@@ -92,25 +92,25 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		remoteForwardedPorts:                    newRemoteForwardedPorts(),
 		acceptLocalConnectionsForForwardedPorts: acceptLocalConnectionsForForwardedPorts,
 	}
-	return c.connect(ctx)
+	return c, nil
 }
 
-func (c *Client) connect(ctx context.Context) (*Client, error) {
+func (c *Client) Connect(ctx context.Context) error {
 	if len(c.endpoints) != 1 {
-		return nil, ErrNoRelayConnections
+		return ErrNoRelayConnections
 	}
 	tunnelEndpoint := c.endpoints[0]
 	clientRelayURI := tunnelEndpoint.ClientRelayURI
 
 	accessToken := c.tunnel.AccessTokens[TunnelAccessScopeConnect]
 
-	c.logger.Println(fmt.Sprintf("Connecting to client tunnel relay %s", clientRelayURI))
-	c.logger.Println(fmt.Sprintf("Sec-Websocket-Protocol: %s", clientWebSocketSubProtocol))
+	c.logger.Printf(fmt.Sprintf("Connecting to client tunnel relay %s", clientRelayURI))
+	c.logger.Printf(fmt.Sprintf("Sec-Websocket-Protocol: %s", clientWebSocketSubProtocol))
 	protocols := []string{clientWebSocketSubProtocol}
 
 	var headers http.Header
 	if accessToken != "" {
-		c.logger.Println(fmt.Sprintf("Authorization: tunnel %s", accessToken))
+		c.logger.Printf(fmt.Sprintf("Authorization: tunnel %s", accessToken))
 		headers = make(http.Header)
 
 		headers.Add("Authorization", fmt.Sprintf("tunnel %s", accessToken))
@@ -118,15 +118,15 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 
 	sock := newSocket(clientRelayURI, protocols, headers, nil)
 	if err := sock.connect(ctx); err != nil {
-		return nil, fmt.Errorf("failed to connect to client relay: %w", err)
+		return fmt.Errorf("failed to connect to client relay: %w", err)
 	}
 
 	c.ssh = tunnelssh.NewClientSSHSession(sock, c.remoteForwardedPorts, c.acceptLocalConnectionsForForwardedPorts, c.logger)
 	if err := c.ssh.Connect(ctx); err != nil {
-		return nil, fmt.Errorf("failed to create ssh session: %w", err)
+		return fmt.Errorf("failed to create ssh session: %w", err)
 	}
 
-	return c, nil
+	return nil
 }
 
 // Opens a stream connected to a remote port for clients which cannot or do not want to forward local TCP ports.

@@ -45,7 +45,8 @@ func TestSuccessfulConnect(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	done := make(chan error)
 	go func() {
-		c, err := Connect(context.Background(), logger, &tunnel, "", true)
+		c, err := NewClient(logger, &tunnel, "", true)
+		c.Connect(ctx)
 		if err != nil {
 			done <- fmt.Errorf("connect failed: %v", err)
 			return
@@ -92,7 +93,8 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err = Connect(context.Background(), logger, &tunnel, "", true)
+	c, _ := NewClient(logger, &tunnel, "", true)
+	err = c.Connect(ctx)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -100,7 +102,7 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 
 func TestReturnsErrWhenTunnelIsNil(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, nil, "", true)
+	_, err := NewClient(logger, nil, "", true)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -109,7 +111,7 @@ func TestReturnsErrWhenTunnelIsNil(t *testing.T) {
 func TestReturnsErrWhenEndpointsAreNil(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	tunnel := Tunnel{}
-	_, err := Connect(context.Background(), logger, &tunnel, "", true)
+	_, err := NewClient(logger, &tunnel, "", true)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -125,7 +127,7 @@ func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, &tunnel, "host2", true)
+	_, err := NewClient(logger, &tunnel, "host2", true)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -144,7 +146,7 @@ func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, &tunnel, "host1", true)
+	_, err := NewClient(logger, &tunnel, "host1", true)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -163,7 +165,7 @@ func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, &tunnel, "", true)
+	_, err := NewClient(logger, &tunnel, "", true)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -207,18 +209,14 @@ func TestPortForwarding(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	done := make(chan error)
 	go func() {
-		c, err := Connect(ctx, logger, &tunnel, "", true)
+		c, err := NewClient(logger, &tunnel, "", true)
+		c.Connect(ctx)
 		if err != nil {
 			done <- fmt.Errorf("connect failed: %v", err)
 			return
 		}
 		if c == nil {
 			done <- errors.New("nil connection")
-			return
-		}
-
-		if err := relayServer.ForwardPort(ctx, streamPort); err != nil {
-			done <- fmt.Errorf("forward port failed: %v", err)
 			return
 		}
 
