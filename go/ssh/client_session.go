@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -156,7 +157,11 @@ func (s *ClientSSHSession) forwardPort(ctx context.Context, port uint16) error {
 	if err != nil {
 		return fmt.Errorf("error getting port number: %w", err)
 	}
-	s.forwardedPorts[port] = uint16(portNum)
+	if portNum > 0 && portNum <= math.MaxUint16 {
+		s.forwardedPorts[port] = uint16(portNum)
+	} else {
+		return fmt.Errorf("port number %d is out of bounds", portNum)
+	}
 
 	errc := make(chan error, 1)
 	sendError := func(err error) {
