@@ -146,7 +146,8 @@ func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := NewClient(logger, &tunnel, "host1", true)
+	c, _ := NewClient(logger, &tunnel, "host1", true)
+	err := c.Connect(ctx)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -165,7 +166,8 @@ func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := NewClient(logger, &tunnel, "", true)
+	c, _ := NewClient(logger, &tunnel, "", true)
+	err := c.Connect(ctx)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -203,7 +205,7 @@ func TestPortForwarding(t *testing.T) {
 		},
 	}
 
-	ctx, cancel = context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
