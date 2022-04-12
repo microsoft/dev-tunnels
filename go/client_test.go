@@ -201,7 +201,7 @@ func TestPortForwarding(t *testing.T) {
 		},
 	}
 
-	ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
@@ -231,8 +231,13 @@ func TestPortForwarding(t *testing.T) {
 			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
 			return
 		}
-		_, err = c.ConnectToForwardedPort(ctx, &listen, streamPort)
-		done <- err
+		_, errc := c.ConnectToForwardedPort(ctx, &listen, streamPort)
+		select {
+		case err := <-errc:
+			done <- err
+		default:
+			done <- nil
+		}
 	}()
 
 	go func() {
