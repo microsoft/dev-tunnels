@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"sync/atomic"
 
 	"net/http"
 
@@ -29,8 +28,9 @@ type Client struct {
 	endpoints []TunnelEndpoint
 
 	ssh                  *tunnelssh.ClientSSHSession
-	channels             uint32
 	remoteForwardedPorts *remoteForwardedPorts
+
+	acceptLocalConnectionsForForwardedPorts bool
 }
 
 var (
@@ -57,7 +57,7 @@ var (
 )
 
 // Connect connects to a tunnel and returns a connected client.
-func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID string) (*Client, error) {
+func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID string, acceptLocalConnectionsForForwardedPorts bool) (*Client, error) {
 	if tunnel == nil {
 		return nil, ErrNoTunnel
 	}
@@ -85,11 +85,12 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 	}
 
 	c := &Client{
-		logger:               logger,
-		hostID:               hostID,
-		tunnel:               tunnel,
-		endpoints:            endpointGroup,
-		remoteForwardedPorts: newRemoteForwardedPorts(),
+		logger:                                  logger,
+		hostID:                                  hostID,
+		tunnel:                                  tunnel,
+		endpoints:                               endpointGroup,
+		remoteForwardedPorts:                    newRemoteForwardedPorts(),
+		acceptLocalConnectionsForForwardedPorts: acceptLocalConnectionsForForwardedPorts,
 	}
 	return c.connect(ctx)
 }
@@ -120,7 +121,7 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 		return nil, fmt.Errorf("failed to connect to client relay: %w", err)
 	}
 
-	c.ssh = tunnelssh.NewClientSSHSession(sock, c.remoteForwardedPorts, c.logger)
+	c.ssh = tunnelssh.NewClientSSHSession(sock, c.remoteForwardedPorts, c.acceptLocalConnectionsForForwardedPorts, c.logger)
 	if err := c.ssh.Connect(ctx); err != nil {
 		return nil, fmt.Errorf("failed to create ssh session: %w", err)
 	}
@@ -128,34 +129,10 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 	return c, nil
 }
 
-// ConnectToForwardedPort connects to a forwarded port.
-// It accepts a listener and will forward the connection to the tunnel.
-// If no listener is provided, a listener will be created and returned
-// Listener that are returned must be closed after use
+// Opens a stream connected to a remote port for clients which cannot or do not want to forward local TCP ports.
+// Set AcceptLocalConnectionsForForwardedPorts to false in ConnectAsync to ensure TCP listeners are not created
 func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Listener, port uint16) (*net.Listener, error) {
-	if !c.remoteForwardedPorts.hasPort(port) {
-		return nil, ErrPortNotForwarded
-	}
-	if listenerIn == nil {
-		var i uint16 = 0
-		for i < 10 {
-			portNum := port + i
-			listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
-			if err == nil {
-				listenerIn = &listener
-				break
-			}
-			i++
-		}
-		if listenerIn == nil {
-			listener, err := net.Listen("tcp", ":0")
-			if err != nil {
-				return nil, fmt.Errorf("error creating listener %w:", err)
-			}
-			listenerIn = &listener
-		}
-	}
-	listener := *listenerIn
+	rwc := new(buffer)
 	errc := make(chan error, 1)
 	sendError := func(err error) {
 		// Use non-blocking send, to avoid goroutines getting
@@ -165,18 +142,11 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Lis
 		default:
 		}
 	}
-	fmt.Printf("Client connected at %v to host port %v\n", listener.Addr(), port)
 
 	go func() {
 		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				sendError(err)
-				return
-			}
-
 			go func() {
-				if err := c.handleConnection(ctx, conn, port); err != nil {
+				if err := c.handleConnection(ctx, rwc, port); err != nil {
 					sendError(err)
 				}
 			}()
@@ -262,13 +232,9 @@ func safeClose(c io.Closer, err *error) {
 	}
 }
 
-func (c *Client) nextChannelID() uint32 {
-	return atomic.AddUint32(&c.channels, 1)
-}
-
 func (c *Client) openStreamingChannel(ctx context.Context, port uint16) (ssh.Channel, error) {
 	portForwardChannel := messages.NewPortForwardChannel(
-		c.nextChannelID(),
+		c.ssh.NextChannelID(),
 		"127.0.0.1",
 		uint32(port),
 		"",
@@ -285,4 +251,8 @@ func (c *Client) openStreamingChannel(ctx context.Context, port uint16) (ssh.Cha
 	}
 
 	return channel, nil
+}
+
+func (c *Client) Close() error {
+	return c.ssh.Close()
 }

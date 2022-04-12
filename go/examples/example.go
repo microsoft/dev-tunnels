@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/url"
 	"os"
 
@@ -14,11 +13,8 @@ import (
 
 // Set the tunnelId and cluster Id for the tunnels you want to connect to
 const (
-	tunnelId                      = "l52bmg0h"
-	clusterId                     = "usw2"
-	portToConnect1                = 5001
-	portToConnect1ListenerAddress = 5030
-	portToConnect2                = 5002
+	tunnelId  = ""
+	clusterId = "usw2"
 )
 
 var (
@@ -74,11 +70,10 @@ func main() {
 
 	// create channels for errors and listeners
 	done := make(chan error)
-	listeners := make(chan net.Listener, 2)
 
 	go func() {
 		// start client connection to tunnel
-		c, err := tunnels.Connect(context.Background(), logger, getTunnel, "")
+		c, err := tunnels.Connect(context.Background(), logger, getTunnel, "", true)
 		if err != nil {
 			done <- fmt.Errorf("connect failed: %v", err)
 			return
@@ -87,30 +82,6 @@ func main() {
 			done <- errors.New("nil connection")
 			return
 		}
-
-		// create listener to connect to port using supplied port number
-		listen, err := net.Listen("tcp", fmt.Sprintf(":%d", portToConnect1ListenerAddress))
-
-		// send listener to channel to be closed at end of run
-		listeners <- listen
-		if err != nil {
-			done <- fmt.Errorf("failed to listen: %v", err)
-		}
-
-		// wait for port to be forwarded and then connect
-		c.WaitForForwardedPort(ctx, portToConnect1)
-		go func() {
-			_, err := c.ConnectToForwardedPort(ctx, &listen, portToConnect1)
-			done <- err
-		}()
-
-		// wait for port to be forwarded and then connect
-		c.WaitForForwardedPort(ctx, portToConnect2)
-		go func() {
-			listener, err := c.ConnectToForwardedPort(ctx, nil, portToConnect2)
-			listeners <- *listener
-			done <- err
-		}()
 	}()
 	for {
 		select {
@@ -118,12 +89,9 @@ func main() {
 			if err != nil {
 				fmt.Println(fmt.Errorf(err.Error()))
 			}
-			break
+			return
 		case <-ctx.Done():
-			break
-		case listener := <-listeners:
-			defer listener.Close()
+			return
 		}
 	}
-
 }
