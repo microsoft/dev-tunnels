@@ -65,7 +65,7 @@ func main() {
 		fmt.Println(fmt.Errorf(err.Error()))
 		return
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
+		logger.Printf(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
 
 	// create channels for errors and listeners

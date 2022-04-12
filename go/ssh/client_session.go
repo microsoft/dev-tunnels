@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,6 +28,7 @@ type ClientSSHSession struct {
 	listeners       []net.Listener
 	channels        uint32
 	acceptLocalConn bool
+	forwardedPorts  map[uint16]uint16
 }
 
 func NewClientSSHSession(socket net.Conn, pf portForwardingManager, acceptLocalConn bool, logger *log.Logger) *ClientSSHSession {
@@ -37,6 +40,7 @@ func NewClientSSHSession(socket net.Conn, pf portForwardingManager, acceptLocalC
 		pf:              pf,
 		acceptLocalConn: acceptLocalConn,
 		listeners:       make([]net.Listener, 0),
+		forwardedPorts:  make(map[uint16]uint16),
 	}
 }
 
@@ -96,7 +100,7 @@ func (s *ClientSSHSession) handlePortForwardRequest(r *ssh.Request) {
 	req := new(messages.PortForwardRequest)
 	buf := bytes.NewReader(r.Payload)
 	if err := req.Unmarshal(buf); err != nil {
-		s.logger.Println(fmt.Sprintf("error unmarshalling port forward request: %s", err))
+		s.logger.Printf(fmt.Sprintf("error unmarshalling port forward request: %s", err))
 		r.Reply(false, nil)
 		return
 	}
@@ -109,7 +113,7 @@ func (s *ClientSSHSession) handlePortForwardRequest(r *ssh.Request) {
 	reply := messages.NewPortForwardSuccess(req.Port())
 	b, err := reply.Marshal()
 	if err != nil {
-		s.logger.Println(fmt.Sprintf("error marshaling port forward success response: %s", err))
+		s.logger.Printf(fmt.Sprintf("error marshaling port forward success response: %s", err))
 		r.Reply(false, nil)
 		return
 	}
@@ -147,6 +151,12 @@ func (s *ClientSSHSession) forwardPort(ctx context.Context, port uint16) error {
 		}
 		listener = innerListener
 	}
+	addressSlice := strings.Split(listener.Addr().String(), ":")
+	portNum, err := strconv.Atoi(addressSlice[len(addressSlice)-1])
+	if err != nil {
+		return fmt.Errorf("error getting port number: %w", err)
+	}
+	s.forwardedPorts[port] = uint16(portNum)
 
 	errc := make(chan error, 1)
 	sendError := func(err error) {
