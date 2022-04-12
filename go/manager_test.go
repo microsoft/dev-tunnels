@@ -23,7 +23,7 @@ func getAccessToken() string {
 
 func TestTunnelCreateDelete(t *testing.T) {
 	token := os.Getenv("repo-token")
-	fmt.Printf("test: %s", token)
+	fmt.Printf("test: %s token /n", token)
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	url, err := url.Parse(serviceUrl)
