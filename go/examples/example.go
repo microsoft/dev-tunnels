@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/url"
 	"os"
 
@@ -14,12 +13,8 @@ import (
 
 // Set the tunnelId and cluster Id for the tunnels you want to connect to
 const (
-	tunnelId                      = "l52bmg0h"
-	clusterId                     = "usw2"
-	portToConnect1                = 5001
-	portToConnect1ListenerAddress = 5030
-	portToConnect2                = 5002
-	portToConnect2ListenerAddress = 5031
+	tunnelId  = ""
+	clusterId = "usw2"
 )
 
 var (
@@ -70,16 +65,16 @@ func main() {
 		fmt.Println(fmt.Errorf(err.Error()))
 		return
 	} else {
-		logger.Println(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
+		logger.Printf(fmt.Sprintf("Got tunnel with id %s", getTunnel.TunnelID))
 	}
 
 	// create channels for errors and listeners
 	done := make(chan error)
-	listeners := make(chan net.Listener, 2)
 
 	go func() {
 		// start client connection to tunnel
-		c, err := tunnels.Connect(context.Background(), logger, getTunnel, "")
+		c, err := tunnels.NewClient(logger, getTunnel, true)
+		c.Connect(ctx, "")
 		if err != nil {
 			done <- fmt.Errorf("connect failed: %v", err)
 			return
@@ -88,36 +83,6 @@ func main() {
 			done <- errors.New("nil connection")
 			return
 		}
-
-		// create listener to connect to port using supplied port number
-		listen, err := net.Listen("tcp", fmt.Sprintf(":%d", portToConnect1ListenerAddress))
-
-		// send listener to channel to be closed at end of run
-		listeners <- listen
-		if err != nil {
-			done <- fmt.Errorf("failed to listen: %v", err)
-		}
-
-		// wait for port to be forwarded and then connect
-		c.WaitForForwardedPort(ctx, portToConnect1)
-		go func() {
-			done <- c.ConnectToForwardedPort(ctx, listen, portToConnect1)
-		}()
-
-		// create listener to connect to port using supplied port number
-		listen2, err := net.Listen("tcp", fmt.Sprintf(":%d", portToConnect2ListenerAddress))
-
-		// send listener to channel to be closed at end of run
-		listeners <- listen2
-		if err != nil {
-			done <- fmt.Errorf("failed to listen: %v", err)
-		}
-
-		// wait for port to be forwarded and then connect
-		c.WaitForForwardedPort(ctx, portToConnect2)
-		go func() {
-			done <- c.ConnectToForwardedPort(ctx, listen2, portToConnect2)
-		}()
 	}()
 	for {
 		select {
@@ -125,12 +90,9 @@ func main() {
 			if err != nil {
 				fmt.Println(fmt.Errorf(err.Error()))
 			}
-			break
+			return
 		case <-ctx.Done():
-			break
-		case listener := <-listeners:
-			defer listener.Close()
+			return
 		}
 	}
-
 }

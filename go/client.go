@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"sync/atomic"
 
 	"net/http"
 
@@ -29,8 +28,9 @@ type Client struct {
 	endpoints []TunnelEndpoint
 
 	ssh                  *tunnelssh.ClientSSHSession
-	channels             uint32
 	remoteForwardedPorts *remoteForwardedPorts
+
+	acceptLocalConnectionsForForwardedPorts bool
 }
 
 var (
@@ -57,7 +57,7 @@ var (
 )
 
 // Connect connects to a tunnel and returns a connected client.
-func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID string) (*Client, error) {
+func NewClient(logger *log.Logger, tunnel *Tunnel, acceptLocalConnectionsForForwardedPorts bool) (*Client, error) {
 	if tunnel == nil {
 		return nil, ErrNoTunnel
 	}
@@ -66,50 +66,51 @@ func Connect(ctx context.Context, logger *log.Logger, tunnel *Tunnel, hostID str
 		return nil, ErrNoTunnelEndpoints
 	}
 
+	c := &Client{
+		logger:                                  logger,
+		tunnel:                                  tunnel,
+		endpoints:                               tunnel.Endpoints,
+		remoteForwardedPorts:                    newRemoteForwardedPorts(),
+		acceptLocalConnectionsForForwardedPorts: acceptLocalConnectionsForForwardedPorts,
+	}
+	return c, nil
+}
+
+func (c *Client) Connect(ctx context.Context, hostID string) error {
 	endpointGroups := make(map[string][]TunnelEndpoint)
-	for _, endpoint := range tunnel.Endpoints {
+	for _, endpoint := range c.tunnel.Endpoints {
 		endpointGroups[endpoint.HostID] = append(endpointGroups[endpoint.HostID], endpoint)
 	}
 
 	var endpointGroup []TunnelEndpoint
+	c.hostID = hostID
 	if hostID != "" {
 		g, ok := endpointGroups[hostID]
 		if !ok {
-			return nil, ErrNoConnections
+			return ErrNoConnections
 		}
 		endpointGroup = g
 	} else if len(endpointGroups) > 1 {
-		return nil, ErrMultipleHosts
+		return ErrMultipleHosts
 	} else {
-		endpointGroup = endpointGroups[tunnel.Endpoints[0].HostID]
+		endpointGroup = endpointGroups[c.tunnel.Endpoints[0].HostID]
 	}
 
-	c := &Client{
-		logger:               logger,
-		hostID:               hostID,
-		tunnel:               tunnel,
-		endpoints:            endpointGroup,
-		remoteForwardedPorts: newRemoteForwardedPorts(),
-	}
-	return c.connect(ctx)
-}
-
-func (c *Client) connect(ctx context.Context) (*Client, error) {
 	if len(c.endpoints) != 1 {
-		return nil, ErrNoRelayConnections
+		return ErrNoRelayConnections
 	}
-	tunnelEndpoint := c.endpoints[0]
+	tunnelEndpoint := endpointGroup[0]
 	clientRelayURI := tunnelEndpoint.ClientRelayURI
 
 	accessToken := c.tunnel.AccessTokens[TunnelAccessScopeConnect]
 
-	c.logger.Println(fmt.Sprintf("Connecting to client tunnel relay %s", clientRelayURI))
-	c.logger.Println(fmt.Sprintf("Sec-Websocket-Protocol: %s", clientWebSocketSubProtocol))
+	c.logger.Printf(fmt.Sprintf("Connecting to client tunnel relay %s", clientRelayURI))
+	c.logger.Printf(fmt.Sprintf("Sec-Websocket-Protocol: %s", clientWebSocketSubProtocol))
 	protocols := []string{clientWebSocketSubProtocol}
 
 	var headers http.Header
 	if accessToken != "" {
-		c.logger.Println(fmt.Sprintf("Authorization: tunnel %s", accessToken))
+		c.logger.Printf(fmt.Sprintf("Authorization: tunnel %s", accessToken))
 		headers = make(http.Header)
 
 		headers.Add("Authorization", fmt.Sprintf("tunnel %s", accessToken))
@@ -117,26 +118,24 @@ func (c *Client) connect(ctx context.Context) (*Client, error) {
 
 	sock := newSocket(clientRelayURI, protocols, headers, nil)
 	if err := sock.connect(ctx); err != nil {
-		return nil, fmt.Errorf("failed to connect to client relay: %w", err)
+		return fmt.Errorf("failed to connect to client relay: %w", err)
 	}
 
-	c.ssh = tunnelssh.NewClientSSHSession(sock, c.remoteForwardedPorts, c.logger)
+	c.ssh = tunnelssh.NewClientSSHSession(sock, c.remoteForwardedPorts, c.acceptLocalConnectionsForForwardedPorts, c.logger)
 	if err := c.ssh.Connect(ctx); err != nil {
-		return nil, fmt.Errorf("failed to create ssh session: %w", err)
+		return fmt.Errorf("failed to create ssh session: %w", err)
 	}
 
-	return c, nil
+	return nil
 }
 
-// ConnectToForwardedPort connects to a forwarded port.
-// It accepts a listener and will forward the connection to the tunnel.
+// Opens a stream connected to a remote port for clients which cannot or do not want to forward local TCP ports.
+// Returns a readWriteCloser which can be used to read and write to the remote port.
+// Set AcceptLocalConnectionsForForwardedPorts to false in ConnectAsync to ensure TCP listeners are not created
 // This will return an error if the port is not yet forwarded,
 // the caller should first call WaitForForwardedPort.
-func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listener, port uint16) error {
-	if !c.remoteForwardedPorts.hasPort(port) {
-		return ErrPortNotForwarded
-	}
-
+func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.Listener, port uint16) (io.ReadWriteCloser, chan error) {
+	rwc := new(buffer)
 	errc := make(chan error, 1)
 	sendError := func(err error) {
 		// Use non-blocking send, to avoid goroutines getting
@@ -149,21 +148,15 @@ func (c *Client) ConnectToForwardedPort(ctx context.Context, listener net.Listen
 
 	go func() {
 		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				sendError(err)
-				return
-			}
-
 			go func() {
-				if err := c.handleConnection(ctx, conn, port); err != nil {
+				if err := c.handleConnection(ctx, rwc, port); err != nil {
 					sendError(err)
 				}
 			}()
 		}
 	}()
 
-	return awaitError(ctx, errc)
+	return io.ReadWriteCloser(rwc), errc
 }
 
 // WaitForForwardedPort waits for the specified port to be forwarded.
@@ -243,13 +236,9 @@ func safeClose(c io.Closer, err *error) {
 	}
 }
 
-func (c *Client) nextChannelID() uint32 {
-	return atomic.AddUint32(&c.channels, 1)
-}
-
 func (c *Client) openStreamingChannel(ctx context.Context, port uint16) (ssh.Channel, error) {
 	portForwardChannel := messages.NewPortForwardChannel(
-		c.nextChannelID(),
+		c.ssh.NextChannelID(),
 		"127.0.0.1",
 		uint32(port),
 		"",
@@ -266,4 +255,8 @@ func (c *Client) openStreamingChannel(ctx context.Context, port uint16) (ssh.Cha
 	}
 
 	return channel, nil
+}
+
+func (c *Client) Close() error {
+	return c.ssh.Close()
 }
