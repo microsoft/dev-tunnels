@@ -18,7 +18,7 @@ var (
 )
 
 func getAccessToken() string {
-	return os.Getenv("repo-token")
+	return fmt.Sprintf("Bearer %s", os.Getenv("repo-token"))
 }
 
 func TestTunnelCreateDelete(t *testing.T) {
