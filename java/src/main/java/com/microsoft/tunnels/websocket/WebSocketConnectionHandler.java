@@ -7,7 +7,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
@@ -57,18 +59,28 @@ public class WebSocketConnectionHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-    if (!handshaker.isHandshakeComplete()) {
-      try {
-        handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
-        handshakeFuture.setSuccess();
-        session.channelActive(ctx);
-      } catch (WebSocketHandshakeException e) {
-        handshakeFuture.setFailure(e);
+    if (msg instanceof HttpMessage) {
+      if (!handshaker.isHandshakeComplete()) {
+        try {
+          handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
+          handshakeFuture.setSuccess();
+          session.channelActive(ctx);
+        } catch (WebSocketHandshakeException e) {
+          handshakeFuture.setFailure(e);
+        }
+        return;
+      } else {
+        throw new Error("Unexpected HTTP Message: " + msg.toString());
       }
-      return;
     } else if (msg instanceof BinaryWebSocketFrame) {
       BinaryWebSocketFrame frame = (BinaryWebSocketFrame) msg;
       session.channelRead(ctx, frame.content());
+      return;
+    } else if (msg instanceof PongWebSocketFrame) {
+      // ignore keep alive message response.
+      return;
+    } else {
+      throw new Error("Unexpected message: " + msg.toString() + " of type: " + msg.getClass().getName());
     }
   }
 
