@@ -1,7 +1,13 @@
 name: Publish package to GitHub Packages
+
 on:
   release:
     types: [created]
+
+defaults:
+  run:
+    working-directory: java
+
 jobs:
   publish:
     runs-on: ubuntu-latest
