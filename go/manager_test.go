@@ -21,6 +21,10 @@ func getAccessToken() string {
 	return ""
 }
 
+// These tests do not automatically run in the PR check github action
+// beacuse they require authentication. If you want to run these tests
+// you must first generate a tunnels access token and paste it in the
+// getAccessToken return value.
 func TestTunnelCreateDelete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
