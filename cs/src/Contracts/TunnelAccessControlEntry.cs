@@ -160,7 +160,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
             if (Subjects.Length > 0)
             {
-                s.Append($" ({string.Join(", ", Subjects)})");
+                s.Append($" {(IsInverse ? "~" : "")}({string.Join(", ", Subjects)})");
             }
 
             return s.ToString();
