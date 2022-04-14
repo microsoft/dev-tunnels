@@ -151,7 +151,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
             }
 
             s.Append(IsDeny ? '-' : '+');
-            s.Append(GetEntryTypeLabel(Type, Provider, Subjects.Length != 1));
+            s.Append(GetEntryTypeLabel(Type, Provider, IsInverse, plural: Subjects.Length != 1));
 
             if (Scopes.Length > 0)
             {
@@ -160,7 +160,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
             if (Subjects.Length > 0)
             {
-                s.Append($" ({string.Join(", ", Subjects)})");
+                s.Append($" {(IsInverse ? "~" : string.Empty)}({string.Join(", ", Subjects)})");
             }
 
             return s.ToString();
@@ -169,6 +169,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         private static string GetEntryTypeLabel(
             TunnelAccessControlEntryType entryType,
             string? provider,
+            bool isInverse,
             bool plural)
         {
             if (entryType == TunnelAccessControlEntryType.Anonymous)
@@ -178,7 +179,8 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
             var label = entryType switch
             {
-                TunnelAccessControlEntryType.Anonymous => "Anonymous",
+                TunnelAccessControlEntryType.Anonymous =>
+                    isInverse ? "Authenticated Users" : "Anonymous",
                 TunnelAccessControlEntryType.Users => "User",
                 TunnelAccessControlEntryType.Groups =>
                     provider == Providers.GitHub ? "Team" : "Group",
