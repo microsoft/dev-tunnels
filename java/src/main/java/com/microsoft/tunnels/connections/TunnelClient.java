@@ -49,14 +49,17 @@ public class TunnelClient {
       Tunnel tunnel,
       String hostId) {
     if (session != null) {
-      throw new IllegalStateException("Already connected. Use separate instances to connect to multiple tunnels.");
+      throw new IllegalStateException(
+          "Already connected. Use separate instances to connect to multiple tunnels.");
     }
     if (tunnel.endpoints == null || tunnel.endpoints.length == 0) {
-      throw new IllegalStateException("No hosts are currently accepting connections for the tunnel.");
+      throw new IllegalStateException(
+          "No hosts are currently accepting connections for the tunnel.");
     }
 
     var endpoint = groupEndpoints(tunnel, hostId).stream().findFirst().orElseThrow(() -> {
-      throw new IllegalStateException("The specified host is not currently accepting connections to the tunnel.");
+      throw new IllegalStateException(
+          "The specified host is not currently accepting connections to the tunnel.");
     });
 
     SshClient client = createConfiguredSshClient(tunnel, endpoint);
@@ -72,16 +75,22 @@ public class TunnelClient {
           .verify(sshSessionTimeoutMs)
           .getSession();
     } catch (IOException e) {
-      throw new Error("Error verifying ssh session.", e);
+      throw new SshException("Error verifying the ssh session.", e);
     }
 
     try {
       session.auth().verify(sshAuthTimeoutMs);
     } catch (IOException e) {
-      throw new Error("Error authenticating ssh session.", e);
+      throw new SshException("Error authenticating the ssh session.", e);
     }
   }
 
+  /**
+   * Creates an {@link SshClient} and configures it to connect to the endpoint's
+   * clientRelayUri.
+   *
+   * @return the created {@link SshClient}.
+   */
   private SshClient createConfiguredSshClient(Tunnel tunnel, TunnelRelayTunnelEndpoint endpoint) {
     SshClient client = SshClient.setUpDefaultClient();
     // Allows filtering based on request type or address. Currently allows all
@@ -92,9 +101,16 @@ public class TunnelClient {
       client.setIoServiceFactoryFactory(
           new WebSocketServiceFactoryFactory(new URI(endpoint.clientRelayUri), accessToken));
     } catch (URISyntaxException e) {
-      throw new Error("Error parsing tunnel clientRelayUri: " + endpoint.clientRelayUri);
+      // This would likely only occur as the result of manually created tunnel being
+      // passed rather than one retrieved from the service.
+      throw new IllegalArgumentException(
+          "Error parsing tunnel clientRelayUri. "
+              + "Check that the tunnel endpoint is correct: "
+              + endpoint.clientRelayUri,
+          e);
     }
-    // Add the handler for tcpip-forward requests.
+    // Add the handler for tcpip-forward requests. getGlobalRequestHandlers returns
+    // an unmodifiable collection so we have to copy it.
     List<RequestHandler<ConnectionService>> oldGlobals = client.getGlobalRequestHandlers();
     List<RequestHandler<ConnectionService>> newGlobals = new ArrayList<>();
     if (oldGlobals.size() > 0) {
@@ -111,10 +127,12 @@ public class TunnelClient {
     if (hostId != null) {
       return endpointGroups.get(hostId);
     } else if (endpointGroups.size() > 1) {
-      throw new IllegalStateException("There are multiple hosts for the tunnel. Specify a host ID to connect to.");
+      throw new IllegalStateException(
+          "There are multiple hosts for the tunnel. Specify a host ID to connect to.");
     } else {
       return endpointGroups.values().stream().findFirst().orElseThrow(() -> {
-        throw new IllegalStateException("No host is currently accepting connections to the tunnel.");
+        throw new IllegalStateException(
+            "No host is currently accepting connections to the tunnel.");
       });
     }
   }

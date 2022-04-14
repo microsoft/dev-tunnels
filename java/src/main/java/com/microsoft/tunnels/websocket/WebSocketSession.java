@@ -41,7 +41,7 @@ public class WebSocketSession extends NettyIoSession {
     buf.writeBytes(buffer.array(), buffer.rpos(), bufLen);
     DefaultIoWriteFuture msg = new DefaultIoWriteFuture(getRemoteAddress(), null);
     ChannelPromise next = context.newPromise();
-    prev.addListener((whatever) -> {
+    prev.addListener((unused) -> {
       if (context != null) {
         context.writeAndFlush(new BinaryWebSocketFrame(buf), next);
       }

@@ -37,7 +37,7 @@ public class WebSocketConnector extends NettyIoConnector {
     webSocketSession = new WebSocketSession(
         WebSocketConnector.this,
         handler,
-        null,
+        null, /* acceptanceAddress */
         factory.webSocketUri,
         factory.accessToken);
 
@@ -108,7 +108,10 @@ public class WebSocketConnector extends NettyIoConnector {
     }
 
     IoConnectFuture future = new DefaultIoConnectFuture(address, null);
-    var relayPort = webSocketUri.getHost().equals("localhost") ? 9921 : 443;
+    var relayPort = webSocketUri.getPort();
+    if (relayPort == -1 && webSocketUri.getScheme().equals("wss")) {
+      relayPort = 443;
+    }
     ChannelFuture chf = bootstrap.connect(webSocketUri.getHost(), relayPort);
 
     Channel channel = chf.channel();
