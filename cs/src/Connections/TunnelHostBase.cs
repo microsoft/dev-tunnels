@@ -179,7 +179,6 @@ namespace Microsoft.VsSaaS.TunnelService
             CancellationToken cancellation)
         {
             var sessionId = Requires.NotNull(pfs.Session.SessionId!, nameof(pfs.Session.SessionId));
-            Requires.Argument(port.PortNumber.HasValue, nameof(port.PortNumber), "A port is required.");
 
             // When forwarding from a Remote port we assume that the RemotePortNumber
             // and requested LocalPortNumber are the same.

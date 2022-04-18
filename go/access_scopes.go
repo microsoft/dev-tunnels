@@ -2,16 +2,6 @@ package tunnels
 
 import "fmt"
 
-type TunnelAccessScopes []TunnelAccessScope
-type TunnelAccessScope string
-
-const (
-	TunnelAccessScopeManage  TunnelAccessScope = "manage"
-	TunnelAccessScopeHost    TunnelAccessScope = "host"
-	TunnelAccessScopeInspect TunnelAccessScope = "inspect"
-	TunnelAccessScopeConnect TunnelAccessScope = "connect"
-)
-
 var (
 	allScopes = map[TunnelAccessScope]bool{
 		TunnelAccessScopeManage:  true,

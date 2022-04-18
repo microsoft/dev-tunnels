@@ -1,6 +1,7 @@
 import {
     Tunnel,
     TunnelConnectionMode,
+    TunnelAccessControl,
     TunnelAccessScopes,
     TunnelEndpoint,
     TunnelPort,
@@ -27,13 +28,13 @@ function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
 }
 
-const manageAccessTokenScope = [TunnelAccessScopes.manage];
-const hostAccessTokenScope = [TunnelAccessScopes.host];
-const hostOrManageAccessTokenScopes = [TunnelAccessScopes.manage, TunnelAccessScopes.host];
+const manageAccessTokenScope = [TunnelAccessScopes.Manage];
+const hostAccessTokenScope = [TunnelAccessScopes.Host];
+const hostOrManageAccessTokenScopes = [TunnelAccessScopes.Manage, TunnelAccessScopes.Host];
 const readAccessTokenScopes = [
-    TunnelAccessScopes.manage,
-    TunnelAccessScopes.host,
-    TunnelAccessScopes.connect,
+    TunnelAccessScopes.Manage,
+    TunnelAccessScopes.Host,
+    TunnelAccessScopes.Connect,
 ];
 
 export class TunnelManagementHttpClient implements TunnelManagementClient {
@@ -43,7 +44,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private readonly accessTokenCallback: () => Promise<string | null>;
     private readonly userAgents: string;
 
-    public trace: (msg: string) => void = (msg) => { };
+    public trace: (msg: string) => void = (msg) => {};
 
     /**
      * Initializes a new instance of the `TunnelManagementHttpClient` class
@@ -70,12 +71,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         if (Array.isArray(userAgents)) {
-            if (userAgents.length == 0) {
+            if (userAgents.length === 0) {
                 throw new TypeError('User agents cannot be empty.');
             }
-            var combinedUserAgents = "";
+            let combinedUserAgents = '';
 
-            userAgents.forEach(userAgent => {
+            userAgents.forEach((userAgent) => {
                 if (typeof userAgent !== 'string') {
                     if (!userAgent.name) {
                         throw new TypeError('Invalid user agent. The name must be provided.');
@@ -88,15 +89,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                     if (userAgent.version && typeof userAgent.version !== 'string') {
                         throw new TypeError('Invalid user agent. The version must be a string.');
                     }
-                    combinedUserAgents = `${combinedUserAgents}${userAgent.name}/${userAgent.version ?? 'unknown'} `
+                    combinedUserAgents = `${combinedUserAgents}${
+                        userAgent.name
+                    }/${userAgent.version ?? 'unknown'} `;
+                } else {
+                    combinedUserAgents = `${combinedUserAgents}${userAgent} `;
                 }
-                else {
-                    combinedUserAgents = `${combinedUserAgents}${userAgent} `
-                }
-            })
-            this.userAgents = combinedUserAgents.trim()
-        }
-        else if (typeof userAgents !== 'string') {
+            });
+            this.userAgents = combinedUserAgents.trim();
+        } else if (typeof userAgents !== 'string') {
             if (!userAgents.name) {
                 throw new TypeError('Invalid user agent. The name must be provided.');
             }
@@ -108,10 +109,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             if (userAgents.version && typeof userAgents.version !== 'string') {
                 throw new TypeError('Invalid user agent. The version must be a string.');
             }
-            this.userAgents = `${userAgents.name}/${userAgents.version ?? 'unknown'}`
-        }
-        else {
-            this.userAgents = userAgents
+            this.userAgents = `${userAgents.name}/${userAgents.version ?? 'unknown'}`;
+        } else {
+            this.userAgents = userAgents;
         }
 
         this.accessTokenCallback = accessTokenCallback ?? (() => Promise.resolve(null));
@@ -377,8 +377,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 if (problemDetails.detail) {
                     errorMessage += ' ' + problemDetails.detail;
                 }
-                if (problemDetails.error) {
-                    errorMessage += JSON.stringify(problemDetails.error);
+                if (problemDetails.errors) {
+                    errorMessage += JSON.stringify(problemDetails.errors);
                 }
             }
         }
@@ -526,17 +526,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     private convertTunnelForRequest(tunnel: Tunnel): Tunnel {
-        if (tunnel.accessControl && tunnel.accessControl.entries.some((ace) => ace.isInherited)) {
-            throw new Error('Tunnel access control cannot include inherited entries.');
-        }
-
         const convertedTunnel: Tunnel = {
             name: tunnel.name,
             domain: tunnel.domain,
             description: tunnel.description,
             tags: tunnel.tags,
             options: tunnel.options,
-            accessControl: tunnel.accessControl,
+            accessControl: !tunnel.accessControl
+                ? undefined
+                : { entries: tunnel.accessControl.entries.filter((ace) => !ace.isInherited) },
             endpoints: tunnel.endpoints,
             ports: tunnel.ports?.map((p) => this.convertTunnelPortForRequest(tunnel, p)),
         };
@@ -571,12 +569,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         if (options.scopes) {
-            TunnelAccessScopes.validate(options.scopes);
+            TunnelAccessControl.validateScopes(options.scopes);
             queryOptions['scopes'] = options.scopes.join(',');
         }
 
         if (options.tokenScopes) {
-            TunnelAccessScopes.validate(options.tokenScopes);
+            TunnelAccessControl.validateScopes(options.tokenScopes);
             queryOptions['tokenScopes'] = options.tokenScopes.join(',');
         }
 

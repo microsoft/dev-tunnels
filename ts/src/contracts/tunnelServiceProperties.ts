@@ -1,82 +1,124 @@
+// Generated from ../../../cs/src/Contracts/TunnelServiceProperties.cs
+/* eslint-disable */
+
 /**
  * Provides environment-dependent properties about the service.
  */
-export class TunnelServiceProperties {
-    private static readonly prodAppId = '46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2';
-    private static readonly nonProdAppId = '54c45752-bacd-424a-b928-652f3eca2b18';
-    private static readonly nonProdGitHubAppClientId = 'Iv1.b231c327f1eaa229';
-    private static readonly prodGitHubAppClientId = 'Iv1.e7b89e013f801f03';
-
+export interface TunnelServiceProperties {
     /**
      * Gets the base URI of the service.
      */
-    public readonly serviceUri: string;
+    serviceUri: string;
 
     /**
-     * Gets the AAD AppId for the service.
+     * Gets the public AAD AppId for the service.
+     *
+     * Clients specify this AppId as the audience property when authenticating to the
+     * service.
      */
-    public readonly serviceAppId: string;
+    serviceAppId: string;
+
+    /**
+     * Gets the internal AAD AppId for the service.
+     *
+     * Other internal services specify this AppId as the audience property when
+     * authenticating to the tunnel service. Production services must be in the AME tenant
+     * to use this appid.
+     */
+    serviceInternalAppId: string;
 
     /**
      * Gets the client ID for the service's GitHub app.
      *
+     * Clients apps that authenticate tunnel users with GitHub specify this as the client
+     * ID when requesting a user token.
      */
-    public readonly githubAppClientId: string;
-
-    private constructor(serviceUri: string, serviceAppId: string, gitHubAppClientId: string) {
-        this.serviceUri = serviceUri;
-        this.serviceAppId = serviceAppId;
-        this.githubAppClientId = gitHubAppClientId;
-    }
-
-    /**
-     * Gets production service properties.
-     */
-    public static readonly production = new TunnelServiceProperties(
-        'https://global.rel.tunnels.api.visualstudio.com/',
-        TunnelServiceProperties.prodAppId,
-        TunnelServiceProperties.prodGitHubAppClientId,
-    );
-
-    /**
-     * Gets properties for the service in the staging environment (PPE).
-     */
-    public static readonly staging = new TunnelServiceProperties(
-        'https://global.rel.tunnels.ppe.api.visualstudio.com/',
-        TunnelServiceProperties.nonProdAppId,
-        TunnelServiceProperties.nonProdGitHubAppClientId,
-    );
-
-    /**
-     * Gets properties for the service in the development environment.
-     */
-    public static readonly development = new TunnelServiceProperties(
-        'https://global.ci.tunnels.dev.api.visualstudio.com/',
-        TunnelServiceProperties.nonProdAppId,
-        TunnelServiceProperties.nonProdGitHubAppClientId,
-    );
-
-    /**
-     * @param environmentName
-     * @returns Properties for the service in the specified environment.
-     */
-    public static environment(environmentName: string): TunnelServiceProperties {
-        if (!environmentName) {
-            throw new Error(`Invalid argument: ${environmentName}`);
-        }
-
-        switch (environmentName.toLowerCase()) {
-            case 'prod':
-            case 'production':
-                return this.production;
-            case 'ppe':
-            case 'preprod':
-                return this.staging;
-            case 'dev':
-            case 'development':
-                return this.development;
-            default:
-                throw new Error(`Invalid service environment: ${environmentName}`);
-        }
-    }
+    gitHubAppClientId: string;
 }
+
+/**
+ * Global DNS name of the production tunnel service.
+ */
+export const prodDnsName = 'global.rel.tunnels.api.visualstudio.com';
+
+/**
+ * Global DNS name of the pre-production tunnel service.
+ */
+export const ppeDnsName = 'global.rel.tunnels.ppe.api.visualstudio.com';
+
+/**
+ * Global DNS name of the development tunnel service.
+ */
+export const devDnsName = 'global.ci.tunnels.dev.api.visualstudio.com';
+
+/**
+ * First-party app ID: `Visual Studio Tunnel Service`
+ *
+ * Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
+ * in the PROD service environment.
+ */
+export const prodFirstPartyAppId = '46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2';
+
+/**
+ * First-party app ID: `Visual Studio Tunnel Service - Test`
+ *
+ * Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
+ * in the PPE and DEV service environments.
+ */
+export const nonProdFirstPartyAppId = '54c45752-bacd-424a-b928-652f3eca2b18';
+
+/**
+ * Third-party app ID: `tunnels-prod-app-sp`
+ *
+ * Used for authenticating internal AAD service principals in the AME tenant, in the PROD
+ * service environment.
+ */
+export const prodThirdPartyAppId = 'ce65d243-a913-4cae-a7dd-cb52e9f77647';
+
+/**
+ * Third-party app ID: `tunnels-ppe-app-sp`
+ *
+ * Used for authenticating internal AAD service principals in the AME tenant, in the PPE
+ * service environment.
+ */
+export const ppeThirdPartyAppId = '544167a6-f431-4518-aac6-2fd50071928e';
+
+/**
+ * Third-party app ID: `tunnels-dev-app-sp`
+ *
+ * Used for authenticating internal AAD service principals in the corp tenant (not AME!),
+ * in the DEV service environment.
+ */
+export const devThirdPartyAppId = 'a118c979-0249-44bb-8f95-eb0457127aeb';
+
+/**
+ * GitHub App Client ID for 'Visual Studio Tunnel Service'
+ *
+ * Used by client apps that authenticate tunnel users with GitHub, in the PROD service
+ * environment.
+ */
+export const prodGitHubAppClientId = 'Iv1.e7b89e013f801f03';
+
+/**
+ * GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
+ *
+ * Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
+ * service environments.
+ */
+export const nonProdGitHubAppClientId = 'Iv1.b231c327f1eaa229';
+
+// Import static members from a non-generated file,
+// and re-export them as an object with the same name as the interface.
+import {
+    production,
+    staging,
+    development,
+    environment,
+} from './tunnelServicePropertiesStatics';
+
+export const TunnelServiceProperties = {
+    production,
+    staging,
+    development,
+    environment,
+};

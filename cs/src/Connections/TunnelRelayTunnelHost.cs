@@ -306,7 +306,7 @@ namespace Microsoft.VsSaaS.TunnelService
             }
         }
 
-        private void OnSshClientAuthenticated(object? sender, EventArgs e)
+        private async void OnSshClientAuthenticated(object? sender, EventArgs e)
         {
             // After the client session authenicated, automatically start forwarding existing ports.
             var session = (SshServerSession)sender!;
@@ -314,9 +314,18 @@ namespace Microsoft.VsSaaS.TunnelService
 
             foreach (TunnelPort port in Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>())
             {
-                if (port.PortNumber != null)
+                try
                 {
-                    _ = ForwardPortAsync(pfs, port, CancellationToken.None);
+                    await ForwardPortAsync(pfs, port, CancellationToken.None);
+                }
+                catch (Exception exception)
+                {
+                    Trace.TraceEvent(
+                        TraceEventType.Error,
+                        0,
+                        "Error forwarding port {0} to client: {1}",
+                        port.PortNumber,
+                        exception.Message);
                 }
             }
         }
@@ -325,6 +334,15 @@ namespace Microsoft.VsSaaS.TunnelService
         {
             if (e.Request is not PortForwardChannelOpenMessage portForwardRequest)
             {
+                if (e.Request is ChannelOpenMessage channelOpenMessage)
+                {
+                    // This allows the Go SDK to open an unused terminal channel
+                    if (channelOpenMessage.ChannelType == "session")
+                    {
+                        return;
+                    }
+                }
+
                 Trace.Warning("Rejecting request to open non-portforwarding channel.");
                 e.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
                 return;

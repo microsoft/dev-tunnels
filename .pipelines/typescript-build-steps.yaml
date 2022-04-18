@@ -8,22 +8,33 @@ steps:
   displayName: 'Restore npm packages'
   inputs:
     workingDir: ts
-    verbose: false
+
+- task: Npm@1
+  displayName: Compile
+  inputs:
+    command: custom
+    workingDir: ts
+    customCommand: 'run compile'
+
+- task: Npm@1
+  displayName: Lint
+  inputs:
+    command: custom
+    workingDir: ts
+    customCommand: 'run eslint'
 
 - task: Npm@1
   displayName: Build
   inputs:
     command: custom
     workingDir: ts
-    verbose: false
-    customCommand: 'run build -- --release'
+    customCommand: 'run build'
 
 - task: Npm@1
   displayName: Run unit tests
   inputs:
     command: custom
     workingDir: ts
-    verbose: false
     customCommand: 'run test'
 
 - task: Npm@1
@@ -31,5 +42,4 @@ steps:
   inputs:
     command: custom
     workingDir: ts
-    verbose: false
     customCommand: 'run pack --release'

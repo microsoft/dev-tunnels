@@ -32,10 +32,12 @@ func TestSuccessfulConnect(t *testing.T) {
 		AccessTokens: map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: accessToken,
 		},
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
-				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				HostID: "host1",
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}
@@ -43,7 +45,8 @@ func TestSuccessfulConnect(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	done := make(chan error)
 	go func() {
-		c, err := Connect(context.Background(), logger, &tunnel, "")
+		c, err := NewClient(logger, &tunnel, true)
+		c.Connect(ctx, "")
 		if err != nil {
 			done <- fmt.Errorf("connect failed: %v", err)
 			return
@@ -79,16 +82,19 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 		AccessTokens: map[TunnelAccessScope]string{
 			TunnelAccessScopeConnect: "invalid-access-token",
 		},
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
-				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				HostID: "host1",
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err = Connect(context.Background(), logger, &tunnel, "")
+	c, _ := NewClient(logger, &tunnel, true)
+	err = c.Connect(ctx, "")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -96,7 +102,7 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 
 func TestReturnsErrWhenTunnelIsNil(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, nil, "")
+	_, err := NewClient(logger, nil, true)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -105,7 +111,7 @@ func TestReturnsErrWhenTunnelIsNil(t *testing.T) {
 func TestReturnsErrWhenEndpointsAreNil(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	tunnel := Tunnel{}
-	_, err := Connect(context.Background(), logger, &tunnel, "")
+	_, err := NewClient(logger, &tunnel, true)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -113,7 +119,7 @@ func TestReturnsErrWhenEndpointsAreNil(t *testing.T) {
 
 func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -121,7 +127,8 @@ func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, &tunnel, "host2")
+	c, _ := NewClient(logger, &tunnel, true)
+	err := c.Connect(ctx, "host2")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -129,7 +136,7 @@ func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 
 func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -140,7 +147,8 @@ func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, &tunnel, "host1")
+	c, _ := NewClient(logger, &tunnel, true)
+	err := c.Connect(ctx, "host1")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -148,7 +156,7 @@ func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 
 func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
 				HostID: "host1",
 			},
@@ -159,7 +167,8 @@ func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 	}
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	_, err := Connect(context.Background(), logger, &tunnel, "")
+	c, _ := NewClient(logger, &tunnel, true)
+	err := c.Connect(ctx, "")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -175,7 +184,7 @@ func TestPortForwarding(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	streamPort := 8001
+	streamPort := uint16(8001)
 	streamData := "stream-data"
 	stream := bytes.NewBufferString(streamData)
 	pfsChannel := messages.NewPortForwardChannel(1, "127.0.0.1", uint32(streamPort), "", 0)
@@ -185,13 +194,14 @@ func TestPortForwarding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	hostURL := strings.Replace(relayServer.URL(), "http://", "ws://", 1)
 	tunnel := Tunnel{
-		Endpoints: []*TunnelEndpoint{
+		Endpoints: []TunnelEndpoint{
 			{
-				HostID:         "host1",
-				ClientRelayURI: hostURL,
+				HostID: "host1",
+				TunnelRelayTunnelEndpoint: TunnelRelayTunnelEndpoint{
+					ClientRelayURI: hostURL,
+				},
 			},
 		},
 	}
@@ -202,7 +212,8 @@ func TestPortForwarding(t *testing.T) {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	done := make(chan error)
 	go func() {
-		c, err := Connect(ctx, logger, &tunnel, "")
+		c, err := NewClient(logger, &tunnel, true)
+		c.Connect(ctx, "")
 		if err != nil {
 			done <- fmt.Errorf("connect failed: %v", err)
 			return
@@ -211,7 +222,6 @@ func TestPortForwarding(t *testing.T) {
 			done <- errors.New("nil connection")
 			return
 		}
-
 		if err := relayServer.ForwardPort(ctx, streamPort); err != nil {
 			done <- fmt.Errorf("forward port failed: %v", err)
 			return
@@ -226,8 +236,13 @@ func TestPortForwarding(t *testing.T) {
 			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
 			return
 		}
-
-		done <- c.ConnectToForwardedPort(ctx, listen, streamPort)
+		_, errc := c.ConnectToForwardedPort(ctx, &listen, streamPort)
+		select {
+		case err := <-errc:
+			done <- err
+		default:
+			done <- nil
+		}
 	}()
 
 	go func() {

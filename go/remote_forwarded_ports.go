@@ -4,13 +4,13 @@ import "sync"
 
 type remoteForwardedPorts struct {
 	portsMu sync.RWMutex
-	ports   map[int]bool
+	ports   map[uint16]bool
 
 	notify chan remoteForwardedPortNotification
 }
 
 type remoteForwardedPortNotification struct {
-	port             int
+	port             uint16
 	notificationType remoteForwardedPortNotificationType
 }
 
@@ -23,12 +23,12 @@ const (
 
 func newRemoteForwardedPorts() *remoteForwardedPorts {
 	return &remoteForwardedPorts{
-		ports:  make(map[int]bool),
+		ports:  make(map[uint16]bool),
 		notify: make(chan remoteForwardedPortNotification),
 	}
 }
 
-func (r *remoteForwardedPorts) Add(port int) {
+func (r *remoteForwardedPorts) Add(port uint16) {
 	r.portsMu.Lock()
 	defer r.portsMu.Unlock()
 
@@ -45,7 +45,7 @@ func (r *remoteForwardedPorts) Add(port int) {
 	}
 }
 
-func (r *remoteForwardedPorts) hasPort(port int) bool {
+func (r *remoteForwardedPorts) hasPort(port uint16) bool {
 	r.portsMu.RLock()
 	defer r.portsMu.RUnlock()
 

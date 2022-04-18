@@ -73,6 +73,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         ///
         /// For anonymous ACEs, this value is null.
         /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Provider { get; set; }
 
         /// <summary>
@@ -84,15 +85,32 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
         /// <summary>
         /// Gets or sets a value indicating whether this entry is a deny rule that blocks access
-        /// to the specified users. Otherwise it is an allow role.
+        /// to the specified users. Otherwise it is an allow rule.
         /// </summary>
         /// <remarks>
         /// All deny rules (including inherited rules) are processed after all allow rules.
-        /// Therefore a deny rule cannot be overridden by an allow rule that is later in the list
-        /// or on a more-specific resource.
+        /// Therefore a deny ACE cannot be overridden by an allow ACE that is later in the list or
+        /// on a more-specific resource. In other words, inherited deny ACEs cannot be overridden.
         /// </remarks>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool IsDeny { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this entry applies to all subjects that are NOT
+        /// in the <see cref="Subjects"/> list.
+        /// </summary>
+        /// <remarks>
+        /// Examples: an inverse organizations ACE applies to all users who are not members of
+        /// the listed organization(s); an inverse anonymous ACE applies to all authenticated users;
+        /// an inverse IP address ranges ACE applies to all clients that are not within any of the
+        /// listed IP address ranges. The inverse option is often useful in policies in combination
+        /// with <see cref="IsDeny"/>, for example a policy could deny access to users who are not
+        /// members of an organization or are outside of an IP address range, effectively blocking
+        /// any tunnels from allowing outside access (because inherited deny ACEs cannot be
+        /// overridden).
+        /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool IsInverse { get; set; }
 
         /// <summary>
         /// Gets or sets an optional organization context for all subjects of this entry. The use
@@ -103,6 +121,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// For AAD users and group ACEs, this value is the AAD tenant ID. It is not currently used
         /// with any other types of ACEs.
         /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Organization { get; set; }
 
         /// <summary>
@@ -120,24 +139,6 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public string[] Scopes { get; set; }
 
         /// <summary>
-        /// Creates new access control entry that is a (shallow) copy of the specified ACE,
-        /// but with <see cref="IsInherited" /> set to true.
-        /// </summary>
-        public static TunnelAccessControlEntry Inherit(TunnelAccessControlEntry ace)
-        {
-            return new TunnelAccessControlEntry
-            {
-                Type = ace.Type,
-                Provider = ace.Provider,
-                IsDeny = ace.IsDeny,
-                Organization = ace.Organization,
-                Subjects = ace.Subjects,
-                Scopes = ace.Scopes,
-                IsInherited = true,
-            };
-        }
-
-        /// <summary>
         /// Gets a compact textual representation of the access control entry.
         /// </summary>
         public override string ToString()
@@ -150,7 +151,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
             }
 
             s.Append(IsDeny ? '-' : '+');
-            s.Append(GetEntryTypeLabel(Type, Provider, Subjects.Length != 1));
+            s.Append(GetEntryTypeLabel(Type, Provider, IsInverse, plural: Subjects.Length != 1));
 
             if (Scopes.Length > 0)
             {
@@ -159,7 +160,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
             if (Subjects.Length > 0)
             {
-                s.Append($" ({string.Join(", ", Subjects)})");
+                s.Append($" {(IsInverse ? "~" : string.Empty)}({string.Join(", ", Subjects)})");
             }
 
             return s.ToString();
@@ -168,6 +169,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         private static string GetEntryTypeLabel(
             TunnelAccessControlEntryType entryType,
             string? provider,
+            bool isInverse,
             bool plural)
         {
             if (entryType == TunnelAccessControlEntryType.Anonymous)
@@ -177,7 +179,8 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
             var label = entryType switch
             {
-                TunnelAccessControlEntryType.Anonymous => "Anonymous",
+                TunnelAccessControlEntryType.Anonymous =>
+                    isInverse ? "Authenticated Users" : "Anonymous",
                 TunnelAccessControlEntryType.Users => "User",
                 TunnelAccessControlEntryType.Groups =>
                     provider == Providers.GitHub ? "Team" : "Group",

@@ -52,7 +52,7 @@ export class LiveShareRelayTokenProvider {
                 let endpoint = endpoints && endpoints.length > 0 ? endpoints[0] : undefined;
                 if (endpoint) {
                     sasToken =
-                        this.tokenScope === TunnelAccessScopes.host
+                        this.tokenScope === TunnelAccessScopes.Host
                             ? endpoint.relayHostSasToken
                             : endpoint.relayClientSasToken;
                 }

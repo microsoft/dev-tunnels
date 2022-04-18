@@ -26,7 +26,6 @@
 		"axios": "^0.21.1",
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
-		"hyco-websocket": "^1.0.5",
 		"uuid": "^3.3.3",
 		"vscode-jsonrpc": "^4.0.0"
 	},
@@ -50,7 +49,7 @@
 		"eslint-plugin-prettier": "^3.3.1",
 		"mocha": "^9.1.2",
 		"mocha-multi-reporters": "^1.1.7",
-		"moment": "^2.24.0",
+		"moment": "^2.29.2",
 		"nerdbank-gitversioning": "^3.1.91",
 		"prettier": "^1.19.1",
 		"source-map-support": "^0.5.11",
