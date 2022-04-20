@@ -109,8 +109,14 @@ public class WebSocketConnector extends NettyIoConnector {
 
     IoConnectFuture future = new DefaultIoConnectFuture(address, null);
     var relayPort = webSocketUri.getPort();
-    if (relayPort == -1 && webSocketUri.getScheme().equals("wss")) {
-      relayPort = 443;
+    if (relayPort == -1) {
+      if (webSocketUri.getScheme().equals("wss")) {
+        relayPort = 443;
+      } else if (webSocketUri.getScheme().equals("ws")) {
+        relayPort = 80;
+      } else {
+        throw new IllegalStateException("Unexpected tunnel relay client uri scheme: " + webSocketUri);
+      }
     }
     ChannelFuture chf = bootstrap.connect(webSocketUri.getHost(), relayPort);
 
