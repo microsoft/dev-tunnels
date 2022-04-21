@@ -946,13 +946,6 @@ namespace Microsoft.VsSaaS.TunnelService
         /// </summary>
         private Tunnel ConvertTunnelForRequest(Tunnel tunnel)
         {
-            if (tunnel.AccessControl?.Any((ace) => ace.IsInherited) == true)
-            {
-                throw new ArgumentException(
-                    "Tunnel access control cannot include inherited entries.",
-                    nameof(tunnel.AccessControl));
-            }
-
             return new Tunnel
             {
                 Name = tunnel.Name,
