@@ -9,14 +9,6 @@ import (
 const PackageVersion = "0.0.1"
 
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
-	if tunnel.AccessControl != nil && tunnel.AccessControl.Entries != nil {
-		for _, access := range tunnel.AccessControl.Entries {
-			if access.IsInherited {
-				return nil, fmt.Errorf("tunnel access control cannot include inherited entries")
-			}
-		}
-	}
-
 	convertedTunnel := &Tunnel{
 		Name:        tunnel.Name,
 		Domain:      tunnel.Domain,
