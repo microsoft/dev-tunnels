@@ -18,7 +18,6 @@ import org.apache.sshd.client.session.ClientSession;
 import org.apache.sshd.common.channel.RequestHandler;
 import org.apache.sshd.common.session.ConnectionService;
 import org.apache.sshd.server.forward.AcceptAllForwardingFilter;
-import org.apache.sshd.server.global.TcpipForwardHandler;
 
 public class TunnelClient {
   private static final int sshSessionTimeoutMs = 10000;
@@ -34,8 +33,8 @@ public class TunnelClient {
    * @param tunnel Tunnel to connect to.
    * @return
    */
-  public void Connect(Tunnel tunnel) {
-    Connect(tunnel, null);
+  public void connect(Tunnel tunnel) {
+    connect(tunnel, null);
   }
 
   /**
@@ -45,7 +44,7 @@ public class TunnelClient {
    * @param hostId ID of the host connected to the tunnel.
    * @return
    */
-  public void Connect(
+  public void connect(
       Tunnel tunnel,
       String hostId) {
     if (session != null) {
@@ -116,7 +115,7 @@ public class TunnelClient {
     if (oldGlobals.size() > 0) {
       newGlobals.addAll(oldGlobals);
     }
-    newGlobals.add(new TcpipForwardHandler());
+    newGlobals.add(new PortForwardHandler());
     client.setGlobalRequestHandlers(newGlobals);
     return client;
   }
