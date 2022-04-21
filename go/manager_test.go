@@ -52,7 +52,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
@@ -91,7 +91,7 @@ func TestListTunnels(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 	var token string
 	if createdTunnel.AccessTokens != nil {
@@ -111,7 +111,7 @@ func TestListTunnels(t *testing.T) {
 	}
 	for _, tunnel := range tunnels {
 		logger.Printf("found tunnel with id %s", tunnel.TunnelID)
-		tunnel.table().Print()
+		tunnel.Table().Print()
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
@@ -150,7 +150,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
@@ -163,7 +163,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Printf("Tunnel updated")
-		updatedTunnel.table().Print()
+		updatedTunnel.Table().Print()
 	}
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
 
@@ -201,7 +201,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
@@ -214,7 +214,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Printf("Tunnel updated")
-		updatedTunnel.table().Print()
+		updatedTunnel.Table().Print()
 	}
 
 	// In the second update we want to update the description without updating the name
@@ -227,7 +227,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
 		logger.Printf("Tunnel updated")
-		updatedTunnel.table().Print()
+		updatedTunnel.Table().Print()
 	}
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
 
@@ -265,7 +265,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -316,7 +316,7 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -325,7 +325,7 @@ func TestTunnelAddPort(t *testing.T) {
 		return
 	}
 	logger.Printf("Created port: %d", port.PortNumber)
-	port.table().Print()
+	port.Table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -336,7 +336,7 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf("tunnel was not successfully found")
 	} else {
 		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.table().Print()
+		getTunnel.Table().Print()
 	}
 
 	if len(getTunnel.Ports) != 1 {
@@ -380,7 +380,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -389,7 +389,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		return
 	}
 	logger.Printf("Created port: %d", port.PortNumber)
-	port.table().Print()
+	port.Table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -400,7 +400,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf("tunnel was not successfully found")
 	} else {
 		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.table().Print()
+		getTunnel.Table().Print()
 	}
 
 	err = managementClient.DeleteTunnelPort(ctx, createdTunnel, 3000, options)
@@ -419,7 +419,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf("tunnel was not successfully found")
 	} else {
 		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.table().Print()
+		getTunnel.Table().Print()
 	}
 
 	if len(getTunnel.Ports) != 0 {
@@ -463,7 +463,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -472,7 +472,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 		return
 	}
 	logger.Printf("Created port: %d", port.PortNumber)
-	port.table().Print()
+	port.Table().Print()
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -483,7 +483,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf("tunnel was not successfully found")
 	} else {
 		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.table().Print()
+		getTunnel.Table().Print()
 	}
 	accessEntry := TunnelAccessControlEntry{
 		Type:     TunnelAccessControlEntryTypeAnonymous,
@@ -511,7 +511,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf("tunnel was not successfully found")
 	} else {
 		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.table().Print()
+		getTunnel.Table().Print()
 	}
 	if len(getTunnel.Ports[0].AccessControl.Entries) != 1 {
 		t.Errorf("tunnel port was not successfully updated, access control was not changed")
@@ -563,7 +563,7 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -573,7 +573,7 @@ func TestTunnelListPorts(t *testing.T) {
 	}
 
 	logger.Printf("Created port: %d", port.PortNumber)
-	port.table().Print()
+	port.Table().Print()
 
 	portToAdd = NewTunnelPort(3001, "", "", "auto")
 	port, err = managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -582,7 +582,7 @@ func TestTunnelListPorts(t *testing.T) {
 		return
 	}
 	logger.Printf("Created port: %d", port.PortNumber)
-	port.table().Print()
+	port.Table().Print()
 
 	ports, err := managementClient.ListTunnelPorts(ctx, createdTunnel, options)
 	if err != nil {
@@ -594,7 +594,7 @@ func TestTunnelListPorts(t *testing.T) {
 	}
 	for _, port := range ports {
 		logger.Printf("Port: %d", port.PortNumber)
-		port.table().Print()
+		port.Table().Print()
 	}
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -606,7 +606,7 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf("tunnel was not successfully found")
 	} else {
 		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.table().Print()
+		getTunnel.Table().Print()
 	}
 
 	if len(getTunnel.Ports) != 2 {
@@ -652,7 +652,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf("tunnel was not successfully created")
 	} else {
 		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.table().Print()
+		createdTunnel.Table().Print()
 	}
 
 	// Create and add endpoint
