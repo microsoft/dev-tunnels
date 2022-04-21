@@ -16,7 +16,7 @@ import org.apache.sshd.common.util.net.SshdSocketAddress;
 /**
  * Handler for "tcpip-forward" global request.
  */
-public class PortForwardHandler extends AbstractConnectionServiceRequestHandler {
+public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler {
   public static final String REQUEST = "tcpip-forward";
 
   /**
@@ -25,9 +25,9 @@ public class PortForwardHandler extends AbstractConnectionServiceRequestHandler 
   public static final IntUnaryOperator RESPONSE_BUFFER_GROWTH_FACTOR = Int2IntFunction.add(
       Byte.SIZE);
 
-  public static final PortForwardHandler INSTANCE = new PortForwardHandler();
+  public static final TcpipForwardRequestHandler INSTANCE = new TcpipForwardRequestHandler();
 
-  public PortForwardHandler() {
+  public TcpipForwardRequestHandler() {
     super();
   }
 
