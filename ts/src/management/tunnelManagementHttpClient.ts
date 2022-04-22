@@ -17,7 +17,6 @@ import { TunnelRequestOptions } from './tunnelRequestOptions';
 import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
-import { SshAuthenticationType } from '@vs/vs-ssh';
 
 const tunnelsApiPath = '/api/v1/tunnels';
 const endpointsApiSubPath = '/endpoints';
@@ -132,7 +131,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         clusterId?: string,
         options?: TunnelRequestOptions,
     ): Promise<Tunnel[]> {
-        const query = clusterId ? 'global=true' : undefined;
+        const query = clusterId ? undefined : 'global=true';
         const uri = this.buildUri(clusterId, tunnelsApiPath, options, query);
 
         const config = await this.getAxiosRequestConfig(undefined, options, readAccessTokenScopes);
@@ -435,11 +434,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         baseAddress = `${baseAddress.replace(/\/$/, '')}${path}`;
 
-        if (options) {
-            let optionsQuery = this.tunnelRequestOptionsToQueryString(options);
-            if (optionsQuery) {
-                baseAddress += `?${optionsQuery}`;
-            }
+        let optionsQuery = this.tunnelRequestOptionsToQueryString(options, query);
+        if (optionsQuery) {
+            baseAddress += `?${optionsQuery}`;
         }
 
         return baseAddress;
@@ -561,31 +558,41 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         };
     }
 
-    private tunnelRequestOptionsToQueryString(options: TunnelRequestOptions) {
+    private tunnelRequestOptionsToQueryString(
+        options?: TunnelRequestOptions,
+        additionalQuery?: string,
+    ) {
         let queryOptions: any = {};
+        const queryItems = [];
 
-        if (options.includePorts) {
-            queryOptions['includePorts'] = 'true';
+        if (options) {
+            if (options.includePorts) {
+                queryOptions['includePorts'] = 'true';
+            }
+
+            if (options.scopes) {
+                TunnelAccessControl.validateScopes(options.scopes);
+                queryOptions['scopes'] = options.scopes.join(',');
+            }
+
+            if (options.tokenScopes) {
+                TunnelAccessControl.validateScopes(options.tokenScopes);
+                queryOptions['tokenScopes'] = options.tokenScopes.join(',');
+            }
+
+            queryItems.push(
+                Object.keys(queryOptions).map((key) => {
+                    const value = queryOptions[key];
+                    return `${key}=${encodeURI(value)}`;
+                }),
+            );
         }
 
-        if (options.scopes) {
-            TunnelAccessControl.validateScopes(options.scopes);
-            queryOptions['scopes'] = options.scopes.join(',');
+        if (additionalQuery) {
+            queryItems.push(additionalQuery);
         }
 
-        if (options.tokenScopes) {
-            TunnelAccessControl.validateScopes(options.tokenScopes);
-            queryOptions['tokenScopes'] = options.tokenScopes.join(',');
-        }
-
-        const queryString = Object.keys(queryOptions)
-            .map((key) => {
-                const value = queryOptions[key];
-
-                return `${key}=${encodeURI(value)}`;
-            })
-            .join('&');
-
+        const queryString = queryItems.join('&');
         return queryString;
     }
 
