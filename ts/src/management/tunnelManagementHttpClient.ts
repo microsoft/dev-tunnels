@@ -581,7 +581,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
 
             queryItems.push(
-                Object.keys(queryOptions).map((key) => {
+                ...Object.keys(queryOptions).map((key) => {
                     const value = queryOptions[key];
                     return `${key}=${encodeURI(value)}`;
                 }),
