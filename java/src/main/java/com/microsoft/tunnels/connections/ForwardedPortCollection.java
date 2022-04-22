@@ -34,4 +34,18 @@ public class ForwardedPortCollection extends ArrayList<ForwardedPort> {
   public ForwardedPortEventListener getForwardedPortEventListenerListener() {
     return forwardedPortEventListener;
   }
+
+  public void addPort(ForwardedPort port) {
+    if (this.stream().anyMatch(p -> p.remotePort == port.remotePort)) {
+      throw new IllegalStateException("Port has already been added to the collection.");
+    }
+    this.add(port);
+    forwardedPortEventListener.onForwardedPortAdded(port);
+  }
+
+  public void removePort(ForwardedPort port) {
+    if (this.removeIf(p -> p.remotePort == port.remotePort)) {
+      forwardedPortEventListener.onForwardedPortRemoved(port);
+    }
+  }
 }

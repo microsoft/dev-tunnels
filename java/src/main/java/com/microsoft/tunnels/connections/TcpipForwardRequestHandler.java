@@ -14,7 +14,13 @@ import org.apache.sshd.common.util.functors.Int2IntFunction;
 import org.apache.sshd.common.util.net.SshdSocketAddress;
 
 /**
- * Handler for "tcpip-forward" global request.
+ * Handler for &quot;tcpip-forward&quot; global request.
+ *
+ * <p>
+ * Modified from org.apache.sshd.server.global.TcpipForwardRequestHandler to
+ * track the requested
+ * port since the default implementation only keeps track of the local port.
+ * </p>
  */
 public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler {
   public static final String REQUEST = "tcpip-forward";
@@ -25,10 +31,14 @@ public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequest
   public static final IntUnaryOperator RESPONSE_BUFFER_GROWTH_FACTOR = Int2IntFunction.add(
       Byte.SIZE);
 
-  public static final TcpipForwardRequestHandler INSTANCE = new TcpipForwardRequestHandler();
+  public static final TcpipForwardRequestHandler INSTANCE = new TcpipForwardRequestHandler(
+      new ForwardedPortCollection());
 
-  public TcpipForwardRequestHandler() {
+  public ForwardedPortCollection forwardedPorts;
+
+  public TcpipForwardRequestHandler(ForwardedPortCollection forwardedPorts) {
     super();
+    this.forwardedPorts = forwardedPorts;
   }
 
   @Override
@@ -42,7 +52,8 @@ public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequest
         connectionService.getForwarder(), "No TCP/IP forwarder");
 
     String address = buffer.getString();
-    int port = buffer.getInt();
+    int requested = buffer.getInt();
+    int port = requested;
     SshdSocketAddress socketAddress = null;
     SshdSocketAddress bound = null;
     // If the port is in use we will get a bind exception so we increment the port
@@ -73,7 +84,8 @@ public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequest
           connectionService, request, wantReply, socketAddress, bound);
     }
 
-    // If we somehow still failed to bind to a port after multiple tries, reply with failure.
+    // If we somehow still failed to bind to a port after multiple tries, reply with
+    // failure.
     if (bound == null) {
       return Result.ReplyFailure;
     }
@@ -85,6 +97,7 @@ public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequest
       buffer.putInt(port);
       session.writePacket(buffer);
     }
+    forwardedPorts.addPort(new ForwardedPort(port, requested));
     return Result.Replied;
   }
 }

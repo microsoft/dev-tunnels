@@ -16,10 +16,7 @@ import java.util.stream.Collectors;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.session.ClientSession;
 import org.apache.sshd.common.channel.RequestHandler;
-import org.apache.sshd.common.forward.PortForwardingEventListener;
 import org.apache.sshd.common.session.ConnectionService;
-import org.apache.sshd.common.session.Session;
-import org.apache.sshd.common.util.net.SshdSocketAddress;
 import org.apache.sshd.server.forward.AcceptAllForwardingFilter;
 
 public class TunnelClient {
@@ -27,7 +24,24 @@ public class TunnelClient {
   private static final int sshAuthTimeoutMs = 10000;
 
   private ClientSession session = null;
-  public SshClient sshClient = null;
+  private SshClient sshClient = null;
+
+  /**
+   * <p>
+   * By default the ssh library will only start local port forwarding for a
+   * requested port.
+   * </p>
+   * <p>
+   * We provide custom implementations of TcpipForwardRequestHandler and
+   * CancelTcpipForwardHandler that allow different local ports to be selected if
+   * the requested port is in
+   * use.
+   * </p>
+   * <p>
+   * That tracking is mapped here since TunnelClient consumers also have reason to
+   * track port added/removed events.
+   * </p>
+   */
   public ForwardedPortCollection forwardedPorts = new ForwardedPortCollection();
 
   public TunnelClient() {
@@ -71,11 +85,13 @@ public class TunnelClient {
     sshClient.start();
 
     try {
-      // The SshClient API doesn't have a connect method that doesn't require a
-      // username/host/port.
-      // However we are using a custom connector (WebSocketConnector) which is
-      // ultimately what starts
-      // the session, and it only uses the username.
+      /*
+       * The SshClient API doesn't have a connect method that doesn't require a
+       * username/host/port.
+       * However we are using a custom connector (WebSocketConnector) which is
+       * ultimately what starts
+       * the session, and it only uses the username.
+       */
       session = sshClient.connect("tunnel@host:1")
           .verify(sshSessionTimeoutMs)
           .getSession();
@@ -121,35 +137,9 @@ public class TunnelClient {
     if (oldGlobals.size() > 0) {
       newGlobals.addAll(oldGlobals);
     }
-    newGlobals.add(new TcpipForwardRequestHandler());
+    newGlobals.add(new TcpipForwardRequestHandler(forwardedPorts));
+    newGlobals.add(new CancelTcpipForwardHandler(forwardedPorts));
     client.setGlobalRequestHandlers(newGlobals);
-    client.addPortForwardingEventListener(new PortForwardingEventListener() {
-      @Override
-      public void establishedExplicitTunnel(Session session, SshdSocketAddress local, SshdSocketAddress remote,
-          boolean localForwarding,
-          SshdSocketAddress boundAddress, Throwable reason) {
-        if (boundAddress != null) {
-          // The PortForwardingEventListener interface indicates that the remote port may be null when this event is fired.
-          var forwardedPort = new ForwardedPort(boundAddress.getPort(), remote != null ? remote.getPort() : null);
-          forwardedPorts.add(forwardedPort);
-          forwardedPorts.getForwardedPortEventListenerListener().onForwardedPortAdded(forwardedPort);
-        }
-      }
-
-      @Override
-      public void tornDownExplicitTunnel(Session session, SshdSocketAddress address, boolean localForwarding,
-          SshdSocketAddress remoteAddress,
-          Throwable reason) {
-        if (address != null) {
-          for (ForwardedPort port : forwardedPorts) {
-            if (port.localPort == address.getPort()) {
-              forwardedPorts.remove(port);
-              forwardedPorts.getForwardedPortEventListenerListener().onForwardedPortRemoved(port);
-            }
-          }
-        }
-      }
-    });
     return client;
   }
 
@@ -167,5 +157,9 @@ public class TunnelClient {
             "No host is currently accepting connections to the tunnel.");
       });
     }
+  }
+
+  public void stop() {
+    this.sshClient.stop();
   }
 }
