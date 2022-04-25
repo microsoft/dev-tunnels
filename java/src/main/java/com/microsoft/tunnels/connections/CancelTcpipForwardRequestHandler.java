@@ -21,7 +21,7 @@ import org.apache.sshd.common.util.net.SshdSocketAddress;
  * port since the default implementation only keeps track of the local port.
  * </p>
  */
-public class CancelTcpipForwardHandler extends AbstractConnectionServiceRequestHandler {
+public class CancelTcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler {
   public static final String REQUEST = "cancel-tcpip-forward";
   /**
    * Default growth factor function used to resize response buffers.
@@ -29,12 +29,12 @@ public class CancelTcpipForwardHandler extends AbstractConnectionServiceRequestH
   public static final IntUnaryOperator RESPONSE_BUFFER_GROWTH_FACTOR = Int2IntFunction
       .add(Byte.SIZE);
 
-  public static final CancelTcpipForwardHandler INSTANCE = new CancelTcpipForwardHandler(
-      new ForwardedPortCollection());
+  public static final CancelTcpipForwardRequestHandler INSTANCE = new CancelTcpipForwardRequestHandler(
+      new ForwardedPortsCollection());
 
-  private ForwardedPortCollection forwardedPorts;
+  private ForwardedPortsCollection forwardedPorts;
 
-  public CancelTcpipForwardHandler(ForwardedPortCollection forwardedPorts) {
+  public CancelTcpipForwardRequestHandler(ForwardedPortsCollection forwardedPorts) {
     super();
     this.forwardedPorts = forwardedPorts;
   }
@@ -58,11 +58,13 @@ public class CancelTcpipForwardHandler extends AbstractConnectionServiceRequestH
     Forwarder forwarder = Objects.requireNonNull(connectionService.getForwarder(),
         "No TCP/IP forwarder");
 
-    // local ports can be chosen dynamically so we have to keep track of which remote
+    // local ports can be chosen dynamically so we have to keep track of which
+    // remote
     // port the local port is associated with.
     ForwardedPort forwardedPort = this.forwardedPorts
+        .getPorts()
         .stream()
-        .filter(p -> p.remotePort == port)
+        .filter(p -> p.getRemotePort() == port)
         .findFirst()
         .orElse(null);
     if (forwardedPort != null) {

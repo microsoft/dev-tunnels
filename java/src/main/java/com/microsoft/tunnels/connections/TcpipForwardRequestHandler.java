@@ -32,11 +32,11 @@ public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequest
       Byte.SIZE);
 
   public static final TcpipForwardRequestHandler INSTANCE = new TcpipForwardRequestHandler(
-      new ForwardedPortCollection());
+      new ForwardedPortsCollection());
 
-  public ForwardedPortCollection forwardedPorts;
+  public ForwardedPortsCollection forwardedPorts;
 
-  public TcpipForwardRequestHandler(ForwardedPortCollection forwardedPorts) {
+  public TcpipForwardRequestHandler(ForwardedPortsCollection forwardedPorts) {
     super();
     this.forwardedPorts = forwardedPorts;
   }

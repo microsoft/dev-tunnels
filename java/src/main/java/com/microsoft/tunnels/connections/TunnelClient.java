@@ -42,9 +42,13 @@ public class TunnelClient {
    * track port added/removed events.
    * </p>
    */
-  public ForwardedPortCollection forwardedPorts = new ForwardedPortCollection();
+  private ForwardedPortsCollection forwardedPorts = new ForwardedPortsCollection();
 
   public TunnelClient() {
+  }
+
+  public ForwardedPortsCollection getForwardedPorts() {
+    return forwardedPorts;
   }
 
   /**
@@ -138,7 +142,7 @@ public class TunnelClient {
       newGlobals.addAll(oldGlobals);
     }
     newGlobals.add(new TcpipForwardRequestHandler(forwardedPorts));
-    newGlobals.add(new CancelTcpipForwardHandler(forwardedPorts));
+    newGlobals.add(new CancelTcpipForwardRequestHandler(forwardedPorts));
     client.setGlobalRequestHandlers(newGlobals);
     return client;
   }
