@@ -42,7 +42,7 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	return convertedTunnel, nil
 }
 
-func (t *Tunnel) table() table.Table {
+func (t *Tunnel) Table() table.Table {
 	tbl := table.New("Tunnel Properties", " ")
 
 	var accessTokens string
@@ -77,7 +77,7 @@ func (t *Tunnel) table() table.Table {
 	return tbl
 }
 
-func (tp *TunnelPort) table() table.Table {
+func (tp *TunnelPort) Table() table.Table {
 	tbl := table.New("TunnelPort Properties", " ")
 
 	var accessTokens string
