@@ -12,7 +12,7 @@ public class ForwardedPortsCollection {
   private List<ForwardedPortEventListener> listeners = new ArrayList<ForwardedPortEventListener>();
   private List<ForwardedPort> ports = new ArrayList<ForwardedPort>();
 
-  public List<ForwardedPort> getPorts() {
+  List<ForwardedPort> getPorts() {
     return ports;
   }
 
@@ -47,7 +47,7 @@ public class ForwardedPortsCollection {
     listeners.remove(listener);
   }
 
-  public void addPort(ForwardedPort port) {
+  void addPort(ForwardedPort port) {
     if (ports.stream().anyMatch(p -> p.getRemotePort() == port.getRemotePort())) {
       throw new IllegalStateException("Port has already been added to the collection.");
     }
@@ -57,7 +57,7 @@ public class ForwardedPortsCollection {
     }
   }
 
-  public void removePort(ForwardedPort port) {
+  void removePort(ForwardedPort port) {
     if (ports.removeIf(p -> p.getRemotePort() == port.getRemotePort())) {
       for (ForwardedPortEventListener listener : listeners) {
         listener.onForwardedPortRemoved(port);

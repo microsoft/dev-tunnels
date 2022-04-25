@@ -21,7 +21,7 @@ import org.apache.sshd.common.util.net.SshdSocketAddress;
  * port since the default implementation only keeps track of the local port.
  * </p>
  */
-public class CancelTcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler {
+class CancelTcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler {
   public static final String REQUEST = "cancel-tcpip-forward";
   /**
    * Default growth factor function used to resize response buffers.

@@ -22,7 +22,7 @@ import org.apache.sshd.common.util.net.SshdSocketAddress;
  * port since the default implementation only keeps track of the local port.
  * </p>
  */
-public class TcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler {
+class TcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler {
   public static final String REQUEST = "tcpip-forward";
 
   /**
