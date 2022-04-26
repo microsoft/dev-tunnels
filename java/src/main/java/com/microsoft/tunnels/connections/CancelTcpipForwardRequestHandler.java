@@ -62,7 +62,6 @@ class CancelTcpipForwardRequestHandler extends AbstractConnectionServiceRequestH
     // remote
     // port the local port is associated with.
     ForwardedPort forwardedPort = this.forwardedPorts
-        .getPorts()
         .stream()
         .filter(p -> p.getRemotePort() == port)
         .findFirst()

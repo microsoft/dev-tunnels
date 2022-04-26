@@ -1,26 +1,29 @@
 package com.microsoft.tunnels.connections;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * An ArrayList of {@link ForwardedPort}s and holder for a
- * {@link ForwardedPortEventListener}.
- *
+ * An unmodifiable list of {@link ForwardedPort}s.
+ * Also keeps a list of {@link ForwardedPortEventListener}s to be called when a
+ * port is added or removed.
  */
-public class ForwardedPortsCollection {
+public class ForwardedPortsCollection extends AbstractList<ForwardedPort> {
   private List<ForwardedPortEventListener> listeners = new ArrayList<ForwardedPortEventListener>();
   private List<ForwardedPort> ports = new ArrayList<ForwardedPort>();
 
-  List<ForwardedPort> getPorts() {
-    return ports;
+  public ForwardedPort get(int i) {
+    return ports.get(i);
+  }
+
+  public int size() {
+    return ports.size();
   }
 
   /**
-   * Sets the event listener for port forwarding events. A
-   * {@link ForwardedPortEventListener} should
-   * be provided which can implement onForwardedPortAdded and/or
-   * onForwardedPortRemoved.
+   * Adds the specified {@link ForwardedPortEventListener} which should implement
+   * onForwardedPortAdded and/or onForwardedPortRemoved.
    *
    * <pre>
    * setForwardedPortEventListener(new ForwardedPortEventListener() {
@@ -35,7 +38,7 @@ public class ForwardedPortsCollection {
    * });
    * </pre>
    *
-   * @param listener
+   * @param listener the {@link ForwardedPortEventListener} to add.
    */
   public void addListener(ForwardedPortEventListener listener) {
     if (!listeners.contains(listener)) {
@@ -43,10 +46,22 @@ public class ForwardedPortsCollection {
     }
   }
 
+  /**
+   * Removes the specified {@link ForwardedPortEventListener} listener.
+   *
+   * @param listener the {@link ForwardedPortEventListener} to remove.
+   */
   public void removeListener(ForwardedPortEventListener listener) {
     listeners.remove(listener);
   }
 
+  /**
+   * Internal.
+   * Adds the specified {@link ForwardedPort} and calls listeners that provice
+   * onForwardedPortAdded.
+   *
+   * @param port the {@link ForwardedPort} port to add.
+   */
   void addPort(ForwardedPort port) {
     if (ports.stream().anyMatch(p -> p.getRemotePort() == port.getRemotePort())) {
       throw new IllegalStateException("Port has already been added to the collection.");
@@ -57,6 +72,13 @@ public class ForwardedPortsCollection {
     }
   }
 
+  /**
+   * Internal.
+   * Removes the specified {@link ForwardedPort} and notifies listeners that
+   * provide onForwardedPortRemoved.
+   *
+   * @param port the {@link ForwardedPort} port to remove.
+   */
   void removePort(ForwardedPort port) {
     if (ports.removeIf(p -> p.getRemotePort() == port.getRemotePort())) {
       for (ForwardedPortEventListener listener : listeners) {
