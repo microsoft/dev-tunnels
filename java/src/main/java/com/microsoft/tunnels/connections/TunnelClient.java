@@ -18,14 +18,37 @@ import org.apache.sshd.client.session.ClientSession;
 import org.apache.sshd.common.channel.RequestHandler;
 import org.apache.sshd.common.session.ConnectionService;
 import org.apache.sshd.server.forward.AcceptAllForwardingFilter;
-import org.apache.sshd.server.global.TcpipForwardHandler;
 
 public class TunnelClient {
   private static final int sshSessionTimeoutMs = 10000;
   private static final int sshAuthTimeoutMs = 10000;
-  public ClientSession session = null;
+
+  private ClientSession session = null;
+  private SshClient sshClient = null;
+
+  /**
+   * <p>
+   * By default the ssh library will only start local port forwarding for a
+   * requested port.
+   * </p>
+   * <p>
+   * We provide custom implementations of TcpipForwardRequestHandler and
+   * CancelTcpipForwardHandler that allow different local ports to be selected if
+   * the requested port is in
+   * use.
+   * </p>
+   * <p>
+   * That tracking is mapped here since TunnelClient consumers also have reason to
+   * track port added/removed events.
+   * </p>
+   */
+  private ForwardedPortsCollection forwardedPorts = new ForwardedPortsCollection();
 
   public TunnelClient() {
+  }
+
+  public ForwardedPortsCollection getForwardedPorts() {
+    return forwardedPorts;
   }
 
   /**
@@ -34,8 +57,8 @@ public class TunnelClient {
    * @param tunnel Tunnel to connect to.
    * @return
    */
-  public void Connect(Tunnel tunnel) {
-    Connect(tunnel, null);
+  public void connect(Tunnel tunnel) {
+    connect(tunnel, null);
   }
 
   /**
@@ -45,7 +68,7 @@ public class TunnelClient {
    * @param hostId ID of the host connected to the tunnel.
    * @return
    */
-  public void Connect(
+  public void connect(
       Tunnel tunnel,
       String hostId) {
     if (session != null) {
@@ -62,16 +85,18 @@ public class TunnelClient {
           "The specified host is not currently accepting connections to the tunnel.");
     });
 
-    SshClient client = createConfiguredSshClient(tunnel, endpoint);
-    client.start();
+    sshClient = createConfiguredSshClient(tunnel, endpoint);
+    sshClient.start();
 
     try {
-      // The SshClient API doesn't have a connect method that doesn't require a
-      // username/host/port.
-      // However we are using a custom connector (WebSocketConnector) which is
-      // ultimately what starts
-      // the session, and it only uses the username.
-      session = client.connect("tunnel@host:1")
+      /*
+       * The SshClient API doesn't have a connect method that doesn't require a
+       * username/host/port.
+       * However we are using a custom connector (WebSocketConnector) which is
+       * ultimately what starts
+       * the session, and it only uses the username.
+       */
+      session = sshClient.connect("tunnel@host:1")
           .verify(sshSessionTimeoutMs)
           .getSession();
     } catch (IOException e) {
@@ -116,7 +141,8 @@ public class TunnelClient {
     if (oldGlobals.size() > 0) {
       newGlobals.addAll(oldGlobals);
     }
-    newGlobals.add(new TcpipForwardHandler());
+    newGlobals.add(new TcpipForwardRequestHandler(forwardedPorts));
+    newGlobals.add(new CancelTcpipForwardRequestHandler(forwardedPorts));
     client.setGlobalRequestHandlers(newGlobals);
     return client;
   }
@@ -135,5 +161,9 @@ public class TunnelClient {
             "No host is currently accepting connections to the tunnel.");
       });
     }
+  }
+
+  public void stop() {
+    this.sshClient.stop();
   }
 }
