@@ -11,42 +11,35 @@ public class TunnelProtocol {
     /**
      * The protocol is automatically detected. (TODO: Define detection semantics.)
      */
-    @Expose
-    public static String auto = "auto";
+    public static final String auto = "auto";
 
     /**
      * Unknown TCP protocol.
      */
-    @Expose
-    public static String tcp = "tcp";
+    public static final String tcp = "tcp";
 
     /**
      * Unknown UDP protocol.
      */
-    @Expose
-    public static String udp = "udp";
+    public static final String udp = "udp";
 
     /**
      * SSH protocol.
      */
-    @Expose
-    public static String ssh = "ssh";
+    public static final String ssh = "ssh";
 
     /**
      * Remote desktop protocol.
      */
-    @Expose
-    public static String rdp = "rdp";
+    public static final String rdp = "rdp";
 
     /**
      * HTTP protocol.
      */
-    @Expose
-    public static String http = "http";
+    public static final String http = "http";
 
     /**
      * HTTPS protocol.
      */
-    @Expose
-    public static String https = "https";
+    public static final String https = "https";
 }

@@ -103,31 +103,26 @@ public class TunnelAccessControlEntry {
         /**
          * Microsoft (AAD) identity provider.
          */
-        @Expose
-        public static String microsoft = "microsoft";
+        public static final String microsoft = "microsoft";
 
         /**
          * GitHub identity provider.
          */
-        @Expose
-        public static String gitHub = "github";
+        public static final String gitHub = "github";
 
         /**
          * SSH public keys.
          */
-        @Expose
-        public static String ssh = "ssh";
+        public static final String ssh = "ssh";
 
         /**
          * IPv4 addresses.
          */
-        @Expose
-        public static String iPv4 = "ipv4";
+        public static final String iPv4 = "ipv4";
 
         /**
          * IPv6 addresses.
          */
-        @Expose
-        public static String iPv6 = "ipv6";
+        public static final String iPv6 = "ipv6";
     }
 }

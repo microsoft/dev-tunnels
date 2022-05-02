@@ -54,6 +54,5 @@ public class TunnelEndpoint {
      * Token included in {@link TunnelEndpoint#portUriFormat} that is to be replaced by a
      * specified port number.
      */
-    @Expose
-    public static String portUriToken = "{port}";
+    public static final String portUriToken = "{port}";
 }

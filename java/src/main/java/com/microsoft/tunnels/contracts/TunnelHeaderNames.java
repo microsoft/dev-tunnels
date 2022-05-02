@@ -14,20 +14,17 @@ public class TunnelHeaderNames {
      * Authorization header that is sent to the Tunnel service by the tunnel SDK.
      * Supported schemes: "tunnel" with the tunnel access JWT good for 'Connect' scope.
      */
-    @Expose
-    public static String xTunnelAuthorization = "X-Tunnel-Authorization";
+    public static final String xTunnelAuthorization = "X-Tunnel-Authorization";
 
     /**
      * Request ID header that nginx ingress controller adds to all requests if it's not
      * there.
      */
-    @Expose
-    public static String xRequestID = "X-Request-ID";
+    public static final String xRequestID = "X-Request-ID";
 
     /**
      * Github Ssh public key which can be used to validate if it belongs to tunnel's
      * owner.
      */
-    @Expose
-    public static String xGithubSshKey = "X-Github-Ssh-Key";
+    public static final String xGithubSshKey = "X-Github-Ssh-Key";
 }

@@ -15,7 +15,7 @@ namespace Microsoft.VsSaaS.TunnelService.Generator;
 internal class JavaContractWriter : ContractWriter
 {
     public const String JavaDateTimeType = "java.util.Date";
-    public const String PackageName = "package com.microsoft.tunnels.contracts";
+    public const String PackageName = "com.microsoft.tunnels.contracts";
     public const String RegexPatternType = "java.util.regex.Pattern";
     public const String SerializedNameTag = "@SerializedName";
     public const String SerializedNameType = $"com.google.gson.annotations.SerializedName";
@@ -34,13 +34,12 @@ internal class JavaContractWriter : ContractWriter
         var csFilePath = GetRelativePath(type.Locations.Single().GetLineSpan().Path);
 
         var fileName = type.Name + ".java";
-        // TODO - temporarily writing files to a new location.
         var filePath = GetAbsolutePath(Path.Combine("java", "src", "main", "java", "com", "microsoft", "tunnels", "contracts", fileName));
 
         var s = new StringBuilder();
         s.AppendLine($"// Generated from ../../../../../../../../{csFilePath}");
         s.AppendLine();
-        s.AppendLine($"{PackageName};");
+        s.AppendLine($"package {PackageName};");
         s.AppendLine();
 
         var importsOffset = s.Length;
@@ -86,7 +85,8 @@ internal class JavaContractWriter : ContractWriter
         }
     }
 
-    public void writeNestedTypes(StringBuilder s,
+    public void WriteNestedTypes(
+        StringBuilder s,
         string indent,
         ITypeSymbol type,
         SortedSet<string> imports)
@@ -166,10 +166,9 @@ internal class JavaContractWriter : ContractWriter
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
             var javaName = ToCamelCase(field.Name);
             var javaType = GetJavaTypeForCSType(field.Type.ToDisplayString(), javaName, imports);
-            s.AppendLine($"{indent}    {GsonExposeTag}");
-            s.AppendLine($"{indent}    public static {javaType} {javaName} = \"{field.ConstantValue}\";");
+            s.AppendLine($"{indent}    public static final {javaType} {javaName} = \"{field.ConstantValue}\";");
         }
-        writeNestedTypes(s, indent, type, imports);
+        WriteNestedTypes(s, indent, type, imports);
         s.AppendLine($"{indent}}}");
     }
 
