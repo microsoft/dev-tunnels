@@ -14,7 +14,7 @@ namespace Microsoft.VsSaaS.TunnelService.Generator;
 
 internal class JavaContractWriter : ContractWriter
 {
-    public const String JavaDateTimeType = "java.time.LocalDateTime";
+    public const String JavaDateTimeType = "java.util.Date";
     public const String PackageName = "package com.microsoft.tunnels.contracts";
     public const String RegexPatternType = "java.util.regex.Pattern";
     public const String SerializedNameTag = "@SerializedName";
@@ -22,6 +22,8 @@ internal class JavaContractWriter : ContractWriter
     public const String ClassDeclarationHeader = "public class";
     public const String StaticClassDeclarationHeader = "public static class";
     public const String EnumDeclarationHeader = "public enum";
+    public const String GsonExposeType = "com.google.gson.annotations.Expose";
+    public const String GsonExposeTag = "@Expose";
 
     public JavaContractWriter(string repoRoot, string csNamespace) : base(repoRoot, csNamespace)
     {
@@ -75,10 +77,12 @@ internal class JavaContractWriter : ContractWriter
         {
             WriteEnumContract(s, indent, type);
             imports.Add(SerializedNameType);
+            imports.Add(GsonExposeType);
         }
         else
         {
             WriteClassContract(s, indent, type, imports);
+            imports.Add(GsonExposeType);
         }
     }
 
@@ -138,6 +142,7 @@ internal class JavaContractWriter : ContractWriter
             var javaName = ToCamelCase(property.Name);
             var javaType = GetJavaTypeForCSType(propertyType, javaName, imports);
             var value = GetPropertyInitializer(property);
+            s.AppendLine($"{indent}    {GsonExposeTag}");
             if (value != null && !value.Equals("null") && !value.Equals("null!")) {
               s.AppendLine($"{indent}    public {javaType} {javaName} = {value};");
             } else {
@@ -161,6 +166,7 @@ internal class JavaContractWriter : ContractWriter
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
             var javaName = ToCamelCase(field.Name);
             var javaType = GetJavaTypeForCSType(field.Type.ToDisplayString(), javaName, imports);
+            s.AppendLine($"{indent}    {GsonExposeTag}");
             s.AppendLine($"{indent}    public static {javaType} {javaName} = \"{field.ConstantValue}\";");
         }
         writeNestedTypes(s, indent, type, imports);
