@@ -4,13 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.tunnels.contracts.Tunnel;
-import com.microsoft.tunnels.contracts.TunnelAccessControl;
 import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
-import com.microsoft.tunnels.contracts.TunnelRelayTunnelEndpoint;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
@@ -450,21 +448,15 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   }
 
   @Override
-  public CompletableFuture<TunnelRelayTunnelEndpoint> updateTunnelEndpointsAsync(
+  public CompletableFuture<TunnelEndpoint> updateTunnelEndpointAsync(
       Tunnel tunnel,
-      TunnelRelayTunnelEndpoint endpoint,
+      TunnelEndpoint endpoint,
       TunnelRequestOptions options) {
     if (endpoint == null) {
       throw new IllegalArgumentException("Endpoint must not be null.");
     }
     if (StringUtils.isBlank(endpoint.hostId)) {
       throw new IllegalArgumentException("Endpoint hostId must not be null.");
-    }
-    for (TunnelEndpoint e : tunnel.endpoints) {
-      if (!(e instanceof TunnelRelayTunnelEndpoint)) {
-        throw new IllegalArgumentException(
-            "Only TunnelRelayTunnelEndpoints are currently supported.");
-      }
     }
 
     var path = endpointsApiSubPath + "/" + endpoint.hostId + "/" + endpoint.connectionMode;
@@ -473,9 +465,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         path);
 
-    final Type responseType = new TypeToken<TunnelRelayTunnelEndpoint>() {
+    final Type responseType = new TypeToken<TunnelEndpoint>() {
     }.getType();
-    CompletableFuture<TunnelRelayTunnelEndpoint> result = requestAsync(
+    CompletableFuture<TunnelEndpoint> result = requestAsync(
         tunnel,
         options,
         HttpMethod.PUT,
@@ -493,7 +485,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       }
       updatedEndpoints.add(result.join());
       tunnel.endpoints = updatedEndpoints
-          .toArray(new TunnelRelayTunnelEndpoint[updatedEndpoints.size()]);
+          .toArray(new TunnelEndpoint[updatedEndpoints.size()]);
     }
     return result;
   }
@@ -525,14 +517,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.endpoints != null) {
-      var updatedEndpoints = new ArrayList<TunnelRelayTunnelEndpoint>();
+      var updatedEndpoints = new ArrayList<TunnelEndpoint>();
       for (TunnelEndpoint e : tunnel.endpoints) {
         if (e.hostId != hostId || e.connectionMode != connectionMode) {
-          updatedEndpoints.add((TunnelRelayTunnelEndpoint) e);
+          updatedEndpoints.add(e);
         }
       }
       tunnel.endpoints = updatedEndpoints
-          .toArray(new TunnelRelayTunnelEndpoint[updatedEndpoints.size()]);
+          .toArray(new TunnelEndpoint[updatedEndpoints.size()]);
     }
     return result;
   }
