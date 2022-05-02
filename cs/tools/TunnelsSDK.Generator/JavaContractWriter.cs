@@ -149,24 +149,16 @@ internal class JavaContractWriter : ContractWriter
               s.AppendLine($"{indent}    public {javaType} {javaName};");
             }
         }
-        var constMemberNames = new List<string>();
         foreach (var field in type.GetMembers().OfType<IFieldSymbol>()
             .Where((f) => f.IsConst))
         {
-            if (field.DeclaredAccessibility == Accessibility.Public)
-            {
-                constMemberNames.Add(ToCamelCase(field.Name));
-            }
-            else if (field.DeclaredAccessibility != Accessibility.Internal)
-            {
-                continue;
-            }
+            String accessMod = field.DeclaredAccessibility == Accessibility.Internal ? "" : "public ";
 
             s.AppendLine();
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
             var javaName = ToCamelCase(field.Name);
             var javaType = GetJavaTypeForCSType(field.Type.ToDisplayString(), javaName, imports);
-            s.AppendLine($"{indent}    public static final {javaType} {javaName} = \"{field.ConstantValue}\";");
+            s.AppendLine($"{indent}    {accessMod}static final {javaType} {javaName} = \"{field.ConstantValue}\";");
         }
         WriteNestedTypes(s, indent, type, imports);
         s.AppendLine($"{indent}}}");
