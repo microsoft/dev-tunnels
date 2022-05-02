@@ -2,7 +2,6 @@ package com.microsoft.tunnels.management;
 
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
-import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
 import com.microsoft.tunnels.contracts.TunnelRelayTunnelEndpoint;
 
@@ -106,7 +105,7 @@ public interface ITunnelManagementClient {
    */
   public CompletableFuture<TunnelRelayTunnelEndpoint> updateTunnelEndpointsAsync(
       Tunnel tunnel,
-      TunnelEndpoint endpoint,
+      TunnelRelayTunnelEndpoint endpoint,
       TunnelRequestOptions options);
 
   /**

@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelAccessControl;
+import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
@@ -21,7 +22,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -50,19 +53,19 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   // Access Scopes
   private static String[] HostAccessTokenScope = {
-      TunnelAccessScopes.Host
+      TunnelAccessScopes.host
   };
   private static String[] HostOrManageAccessTokenScope = {
-      TunnelAccessScopes.Host,
-      TunnelAccessScopes.Manage,
+      TunnelAccessScopes.host,
+      TunnelAccessScopes.manage,
   };
   private static String[] ManageAccessTokenScope = {
-      TunnelAccessScopes.Manage
+      TunnelAccessScopes.manage
   };
   private static String[] ReadAccessTokenScopes = {
-      TunnelAccessScopes.Manage,
-      TunnelAccessScopes.Host,
-      TunnelAccessScopes.Connect
+      TunnelAccessScopes.manage,
+      TunnelAccessScopes.host,
+      TunnelAccessScopes.connect
   };
 
   private ProductHeaderValue[] userAgents;
@@ -93,7 +96,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       ProductHeaderValue[] userAgents,
       Supplier<String> accessTokenCallback,
       String tunnelServiceUri) {
-    if (userAgents.length == 0){
+    if (userAgents.length == 0) {
       throw new IllegalArgumentException("user agents cannot be empty");
     }
     this.userAgents = userAgents;
@@ -143,9 +146,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       }
     }
     String userAgentString = "";
-    for (ProductHeaderValue userAgent : this.userAgents){
+    for (ProductHeaderValue userAgent : this.userAgents) {
       userAgentString = userAgent.productName
-        + "/" + userAgent.version + " " + userAgentString;
+          + "/" + userAgent.version + " " + userAgentString;
     }
     userAgentString = userAgentString + SDK_USER_AGENT;
     var requestBuilder = HttpRequest.newBuilder()
@@ -269,7 +272,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (options.scopes != null) {
-      TunnelAccessScopes.validate(options.scopes, null);
+      validate(options.scopes, null);
       try {
         queryOptions.add("scopes=" + URLEncoder.encode(String.join(",", options.scopes), encoding));
       } catch (UnsupportedEncodingException e) {
@@ -278,7 +281,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (options.tokenScopes != null) {
-      TunnelAccessScopes.validate(options.tokenScopes, null);
+      validate(options.tokenScopes, null);
       try {
         queryOptions.add(
             "tokenScopes=" + URLEncoder.encode(String.join(",", options.tokenScopes), encoding));
@@ -287,6 +290,39 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       }
     }
     return String.join("&", queryOptions);
+  }
+
+  /**
+   * Checks that the set of scopes matches the given validation set.
+   */
+  public static void validate(
+      Collection<String> scopes,
+      Collection<String> validScopes) {
+    if (scopes == null) {
+      throw new IllegalArgumentException("scopes must not be null");
+    }
+    var allScopes = Arrays.asList(new String[] {
+      TunnelAccessScopes.connect,
+      TunnelAccessScopes.create,
+      TunnelAccessScopes.host,
+      TunnelAccessScopes.inspect,
+      TunnelAccessScopes.manage });
+    scopes.forEach(scope -> {
+      if (StringUtils.isBlank(scope)) {
+        throw new IllegalArgumentException("Tunnel access scopes include a null/empty item.");
+      } else if (!allScopes.contains(scope)) {
+        throw new IllegalArgumentException("Invalid tunnel access scope: " + scope);
+      }
+    });
+
+    if (validScopes != null) {
+      scopes.forEach(scope -> {
+        if (!validScopes.contains(scope)) {
+          throw new IllegalArgumentException(
+              "Tunnel access scope is invalid for current request: " + scope);
+        }
+      });
+    }
   }
 
   public CompletableFuture<Collection<Tunnel>> listTunnelsAsync(
@@ -361,10 +397,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.accessControl = tunnel.accessControl;
     converted.endpoints = tunnel.endpoints;
     if (tunnel.accessControl != null && tunnel.accessControl.entries != null) {
-      converted.accessControl = new TunnelAccessControl(
-          tunnel.accessControl.entries.stream()
-              .filter((e) -> !e.isInherited)
-              .collect(Collectors.toList()));
+      List<TunnelAccessControlEntry> entries = Arrays.asList(tunnel.accessControl.entries);
+      List<TunnelAccessControlEntry> filtered = entries.stream()
+          .filter((e) -> !e.isInherited)
+          .collect(Collectors.toList());
+      converted.accessControl.entries = filtered.toArray(new TunnelAccessControlEntry[0]);
     }
     if (tunnel.ports == null) {
       converted.ports = null;
@@ -415,13 +452,19 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   @Override
   public CompletableFuture<TunnelRelayTunnelEndpoint> updateTunnelEndpointsAsync(
       Tunnel tunnel,
-      TunnelEndpoint endpoint,
+      TunnelRelayTunnelEndpoint endpoint,
       TunnelRequestOptions options) {
     if (endpoint == null) {
       throw new IllegalArgumentException("Endpoint must not be null.");
     }
     if (StringUtils.isBlank(endpoint.hostId)) {
       throw new IllegalArgumentException("Endpoint hostId must not be null.");
+    }
+    for (TunnelEndpoint e : tunnel.endpoints) {
+      if (!(e instanceof TunnelRelayTunnelEndpoint)) {
+        throw new IllegalArgumentException(
+            "Only TunnelRelayTunnelEndpoints are currently supported.");
+      }
     }
 
     var path = endpointsApiSubPath + "/" + endpoint.hostId + "/" + endpoint.connectionMode;
@@ -442,8 +485,8 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.endpoints != null) {
-      var updatedEndpoints = new ArrayList<TunnelRelayTunnelEndpoint>();
-      for (TunnelRelayTunnelEndpoint e : tunnel.endpoints) {
+      var updatedEndpoints = new ArrayList<TunnelEndpoint>();
+      for (TunnelEndpoint e : tunnel.endpoints) {
         if (e.hostId != endpoint.hostId || e.connectionMode != endpoint.connectionMode) {
           updatedEndpoints.add(e);
         }
@@ -483,9 +526,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
     if (tunnel.endpoints != null) {
       var updatedEndpoints = new ArrayList<TunnelRelayTunnelEndpoint>();
-      for (TunnelRelayTunnelEndpoint e : tunnel.endpoints) {
+      for (TunnelEndpoint e : tunnel.endpoints) {
         if (e.hostId != hostId || e.connectionMode != connectionMode) {
-          updatedEndpoints.add(e);
+          updatedEndpoints.add((TunnelRelayTunnelEndpoint) e);
         }
       }
       tunnel.endpoints = updatedEndpoints
@@ -587,10 +630,12 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.protocol = tunnelPort.protocol;
     converted.options = tunnelPort.options;
     if (tunnelPort.accessControl != null && tunnelPort.accessControl.entries != null) {
-      converted.accessControl = new TunnelAccessControl(
-          tunnelPort.accessControl.entries.stream()
-              .filter((e) -> !e.isInherited)
-              .collect(Collectors.toList()));
+      List<TunnelAccessControlEntry> entries = Arrays.asList(tunnel.accessControl.entries);
+      List<TunnelAccessControlEntry> filtered = entries.stream()
+          .filter((e) -> !e.isInherited)
+          .collect(Collectors.toList());
+      converted.accessControl = tunnelPort.accessControl;
+      converted.accessControl.entries = filtered.toArray(new TunnelAccessControlEntry[0]);
     }
     return converted;
   }
