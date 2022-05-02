@@ -1,41 +1,52 @@
+// Generated from ../../../../../../../../cs/src/Contracts/TunnelProtocol.cs
+
 package com.microsoft.tunnels.contracts;
 
+import com.google.gson.annotations.Expose;
+
 /**
- * Defines possible values for the protocol of a TunnelPort.
+ * Defines possible values for the protocol of a {@link TunnelPort}.
  */
 public class TunnelProtocol {
-  /**
-   * The protocol is automatically detected. (TODO: Define detection semantics.)
-   */
-  public static String Auto = "auto";
+    /**
+     * The protocol is automatically detected. (TODO: Define detection semantics.)
+     */
+    @Expose
+    public static String auto = "auto";
 
-  /**
-   * Unknown TCP protocol.
-   */
-  public static String Tcp = "tcp";
+    /**
+     * Unknown TCP protocol.
+     */
+    @Expose
+    public static String tcp = "tcp";
 
-  /**
-   * Unknown UDP protocol.
-   */
-  public static String Udp = "udp";
+    /**
+     * Unknown UDP protocol.
+     */
+    @Expose
+    public static String udp = "udp";
 
-  /**
-   * SSH protocol.
-   */
-  public static String Ssh = "ssh";
+    /**
+     * SSH protocol.
+     */
+    @Expose
+    public static String ssh = "ssh";
 
-  /**
-   * Remote desktop protocol.
-   */
-  public static String Rdp = "rdp";
+    /**
+     * Remote desktop protocol.
+     */
+    @Expose
+    public static String rdp = "rdp";
 
-  /**
-   * HTTP protocol.
-   */
-  public static String Http = "http";
+    /**
+     * HTTP protocol.
+     */
+    @Expose
+    public static String http = "http";
 
-  /**
-   * HTTPS protocol.
-   */
-  public static String Https = "https";
+    /**
+     * HTTPS protocol.
+     */
+    @Expose
+    public static String https = "https";
 }

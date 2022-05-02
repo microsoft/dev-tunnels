@@ -1,93 +1,102 @@
+// Generated from ../../../../../../../../cs/src/Contracts/Tunnel.cs
+
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
 
 /**
  * Data contract for tunnel objects managed through the tunnel service REST API.
  */
 public class Tunnel {
-  /**
-   * Gets or sets the ID of the cluster the tunnel was created in.
-   */
-  @Expose
-  public String clusterId;
-  /**
-   * Gets or sets the generated ID of the tunnel, unique within the cluster.
-   */
-  @Expose
-  public String tunnelId;
-  /**
-   * Gets or sets the optional short name (alias) of the tunnel.
-   * The name must be globally unique within the parent domain, and must be a
-   * valid subdomain.
-   */
-  @Expose
-  public String name;
-  /**
-   * Gets or sets the description of the tunnel.
-   */
-  @Expose
-  public String description;
-  /**
-   * Gets or sets the tags of the tunnel.
-   */
-  @Expose
-  public String[] tags;
-  /**
-   * Gets or sets the optional parent domain of the tunnel,
-   * if it is not using the default parent domain.
-   */
-  @Expose
-  public String domain;
-  /**
-   * Gets or sets a dictionary mapping from scopes to tunnel access tokens.
-   */
-  @Expose
-  public HashMap<String, String> accessTokens;
-  /**
-   * Gets or sets default options for the tunnel.
-   */
-  @Expose
-  public TunnelAccessControl accessControl;
+    /**
+     * Gets or sets the ID of the cluster the tunnel was created in.
+     */
+    @Expose
+    public String clusterId;
 
-  /**
-   * Gets or sets default options for the tunnel.
-   */
-  @Expose
-  public TunnelOptions options;
+    /**
+     * Gets or sets the generated ID of the tunnel, unique within the cluster.
+     */
+    @Expose
+    public String tunnelId;
 
-  /**
-   * Gets or sets current connection status of the tunnel port.
-   */
-  @Expose
-  public TunnelStatus status;
-  /**
-   * Gets or sets an array of endpoints where hosts are currently accepting
-   * client connections to the tunnel.
-   */
-  @Expose
-  public TunnelRelayTunnelEndpoint[] endpoints;
+    /**
+     * Gets or sets the optional short name (alias) of the tunnel.
+     *
+     * The name must be globally unique within the parent domain, and must be a valid
+     * subdomain.
+     */
+    @Expose
+    public String name;
 
-  /**
-   * Gets or sets a list of ports in the tunnel.
-   */
-  @Expose
-  public TunnelPort[] ports;
+    /**
+     * Gets or sets the description of the tunnel.
+     */
+    @Expose
+    public String description;
 
-  /**
-   * Gets or sets the time in UTC of tunnel creation.
-   */
-  @Expose
-  public Date created;
+    /**
+     * Gets or sets the tags of the tunnel.
+     */
+    @Expose
+    public String[] tags;
 
-  public Tunnel() {
-    this(null);
-  }
+    /**
+     * Gets or sets the optional parent domain of the tunnel, if it is not using the
+     * default parent domain.
+     */
+    @Expose
+    public String domain;
 
-  public Tunnel(String name) {
-    this.name = name;
-  }
+    /**
+     * Gets or sets a dictionary mapping from scopes to tunnel access tokens.
+     */
+    @Expose
+    public java.util.HashMap<String, String> accessTokens;
+
+    /**
+     * Gets or sets access control settings for the tunnel.
+     *
+     * See {@link TunnelAccessControl} documentation for details about the access control
+     * model.
+     */
+    @Expose
+    public TunnelAccessControl accessControl;
+
+    /**
+     * Gets or sets default options for the tunnel.
+     */
+    @Expose
+    public TunnelOptions options;
+
+    /**
+     * Gets or sets current connection status of the tunnel.
+     */
+    @Expose
+    public TunnelStatus status;
+
+    /**
+     * Gets or sets an array of endpoints where hosts are currently accepting client
+     * connections to the tunnel.
+     */
+    @Expose
+    public TunnelEndpoint[] endpoints;
+
+    /**
+     * Gets or sets a list of ports in the tunnel.
+     *
+     * This optional property enables getting info about all ports in a tunnel at the same
+     * time as getting tunnel info, or creating one or more ports at the same time as
+     * creating a tunnel. It is omitted when listing (multiple) tunnels, or when updating
+     * tunnel properties. (For the latter, use APIs to create/update/delete individual
+     * ports instead.)
+     */
+    @Expose
+    public TunnelPort[] ports;
+
+    /**
+     * Gets or sets the time in UTC of tunnel creation.
+     */
+    @Expose
+    public java.util.Date created;
 }
