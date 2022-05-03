@@ -119,15 +119,32 @@ internal class JavaContractWriter : ContractWriter
 
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
-        var extends = baseTypeName != null ? " extends " + baseTypeName : "";
+        bool hasStaticMemebers = type.GetMembers()
+            .Where((s) => s.IsStatic && s.DeclaredAccessibility == Accessibility.Public &&
+                (s is IPropertySymbol p ||
+                    (s is IMethodSymbol m && m.MethodKind == MethodKind.Ordinary)))
+                    .Any();
+        // We can link custom code to the generated classes by extending a static class.
+        // This won't work for a class that already extends another class.
+        var extends = "";
+        if (baseTypeName != null)
+        {
+            extends = " extends " + baseTypeName;
+        }
+        else if (hasStaticMemebers)
+        {
+            extends = " extends " + type.Name + "Statics";
+        }
 
         // Only inner classes can be declared static in Java.
         var header = type.IsStatic && type.ContainingType != null
           ? StaticClassDeclarationHeader : ClassDeclarationHeader;
         s.Append($"{indent}{header} {type.Name}{extends} {{");
 
+        CopyConstructor(s, indent + "    ", type, imports);
+
         foreach (var property in type.GetMembers().OfType<IPropertySymbol>()
-        .Where((p) => !p.IsStatic))
+            .Where((p) => !p.IsStatic))
         {
             s.AppendLine();
             s.Append(FormatDocComment(property.GetDocumentationCommentXml(), indent + "    "));
@@ -143,10 +160,13 @@ internal class JavaContractWriter : ContractWriter
             var javaType = GetJavaTypeForCSType(propertyType, javaName, imports);
             var value = GetPropertyInitializer(property);
             s.AppendLine($"{indent}    {GsonExposeTag}");
-            if (value != null && !value.Equals("null") && !value.Equals("null!")) {
-              s.AppendLine($"{indent}    public {javaType} {javaName} = {value};");
-            } else {
-              s.AppendLine($"{indent}    public {javaType} {javaName};");
+            if (value != null && !value.Equals("null") && !value.Equals("null!"))
+            {
+                s.AppendLine($"{indent}    public {javaType} {javaName} = {value};");
+            }
+            else
+            {
+                s.AppendLine($"{indent}    public {javaType} {javaName};");
             }
         }
         foreach (var field in type.GetMembers().OfType<IFieldSymbol>()
@@ -186,6 +206,46 @@ internal class JavaContractWriter : ContractWriter
             s.AppendLine($"{indent}    {field.Name},");
         }
         s.AppendLine($"{indent}}}");
+    }
+
+    private void CopyConstructor(
+        StringBuilder s,
+        string indent,
+        ITypeSymbol type,
+        SortedSet<string> imports)
+    {
+        foreach (var method in type.GetMembers().OfType<IMethodSymbol>())
+        {
+            if (method.Name == ".ctor")
+            {
+                // We assume that 
+                // (1) the constructor only performs property assignments and 
+                // (2) the property and parameter names match.
+                // Then we simply do those assignments.
+                var parameters = new Dictionary<String, String>() { };
+                foreach (var parameter in method.Parameters)
+                {
+                    var parameterType = parameter.Type.ToDisplayString();
+                    var javaName = ToCamelCase(parameter.Name);
+                    var javaType = GetJavaTypeForCSType(parameterType, javaName, imports);
+                    parameters.Add(javaName, javaType);
+                }
+                // No need to write the default constructor.
+                if (parameters.Count == 0)
+                {
+                    return;
+                }
+                s.AppendLine();
+                var parameterString = parameters.Select(p => String.Format("{0} {1}", p.Value, p.Key));
+                s.Append($"{indent}public {type.Name} ({String.Join(", ", parameterString)}) {{");
+                s.AppendLine();
+                foreach (String parameter in parameters.Keys)
+                {
+                    s.AppendLine($"{indent}    this.{parameter} = {parameter};");
+                }
+                s.AppendLine($"{indent}}}");
+            }
+        }
     }
 
     internal static string ToCamelCase(string name)

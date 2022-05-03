@@ -7,4 +7,4 @@ import com.google.gson.annotations.Expose;
 /**
  * Tunnel constraints.
  */
-public class TunnelConstraints {}
+public class TunnelConstraints extends TunnelConstraintsStatics {}

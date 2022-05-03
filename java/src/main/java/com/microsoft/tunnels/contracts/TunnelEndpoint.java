@@ -13,7 +13,7 @@ import com.google.gson.annotations.Expose;
  * clients can select their preferred endpoint(s) from those depending on network
  * environment or client capabilities.
  */
-public class TunnelEndpoint {
+public class TunnelEndpoint extends TunnelEndpointStatics {
     /**
      * Gets or sets the connection mode of the endpoint.
      *

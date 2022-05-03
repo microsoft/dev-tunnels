@@ -16,7 +16,7 @@ import com.google.gson.annotations.Expose;
  * be added in the future. (It should be represented as a separate `RoleAssignments`
  * property on this class.)
  */
-public class TunnelAccessControl {
+public class TunnelAccessControl extends TunnelAccessControlStatics {
     /**
      * Gets or sets the list of access control entries.
      *
