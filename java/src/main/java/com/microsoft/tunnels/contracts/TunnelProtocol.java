@@ -2,8 +2,6 @@
 
 package com.microsoft.tunnels.contracts;
 
-import com.google.gson.annotations.Expose;
-
 /**
  * Defines possible values for the protocol of a {@link TunnelPort}.
  */

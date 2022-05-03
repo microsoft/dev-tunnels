@@ -2,8 +2,6 @@
 
 package com.microsoft.tunnels.contracts;
 
-import com.google.gson.annotations.Expose;
-
 /**
  * Header names for http requests that Tunnel Service can handle
  */

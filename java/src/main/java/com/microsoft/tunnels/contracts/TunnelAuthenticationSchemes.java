@@ -2,8 +2,6 @@
 
 package com.microsoft.tunnels.contracts;
 
-import com.google.gson.annotations.Expose;
-
 /**
  * Defines string constants for authentication schemes supported by tunnel service APIs.
  */

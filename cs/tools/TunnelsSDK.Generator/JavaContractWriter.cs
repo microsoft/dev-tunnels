@@ -81,7 +81,6 @@ internal class JavaContractWriter : ContractWriter
         else
         {
             WriteClassContract(s, indent, type, imports);
-            imports.Add(GsonExposeType);
         }
     }
 
@@ -116,24 +115,17 @@ internal class JavaContractWriter : ContractWriter
         {
             baseTypeName = null;
         }
+        var staticClass = type.IsStatic && type.GetMembers().All((m) => m.IsStatic);
+        if (!staticClass) {
+            imports.Add(GsonExposeType);
+        }
 
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
-        bool hasStaticMemebers = type.GetMembers()
-            .Where((s) => s.IsStatic && s.DeclaredAccessibility == Accessibility.Public &&
-                (s is IPropertySymbol p ||
-                    (s is IMethodSymbol m && m.MethodKind == MethodKind.Ordinary)))
-                    .Any();
-        // We can link custom code to the generated classes by extending a static class.
-        // This won't work for a class that already extends another class.
         var extends = "";
         if (baseTypeName != null)
         {
             extends = " extends " + baseTypeName;
-        }
-        else if (hasStaticMemebers)
-        {
-            extends = " extends " + type.Name + "Statics";
         }
 
         // Only inner classes can be declared static in Java.
@@ -143,8 +135,7 @@ internal class JavaContractWriter : ContractWriter
 
         CopyConstructor(s, indent + "    ", type, imports);
 
-        foreach (var property in type.GetMembers().OfType<IPropertySymbol>()
-            .Where((p) => !p.IsStatic))
+        foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
         {
             s.AppendLine();
             s.Append(FormatDocComment(property.GetDocumentationCommentXml(), indent + "    "));
@@ -158,15 +149,25 @@ internal class JavaContractWriter : ContractWriter
 
             var javaName = ToCamelCase(property.Name);
             var javaType = GetJavaTypeForCSType(propertyType, javaName, imports);
-            var value = GetPropertyInitializer(property);
-            s.AppendLine($"{indent}    {GsonExposeTag}");
+            
+            String accessMod = property.DeclaredAccessibility == Accessibility.Public ? "public " : "";
+            String staticKeyword = property.IsStatic ? "static " : "";
+            // Static properties in a non-static class are manually linked to the *Statics.java class.
+            var value = property.IsStatic && !staticClass ? 
+                $"{type.Name}Statics.{javaName}" : GetPropertyInitializer(property);
+
+            if (!property.IsStatic) {
+                s.AppendLine($"{indent}    {GsonExposeTag}");
+            }
+
             if (value != null && !value.Equals("null") && !value.Equals("null!"))
             {
-                s.AppendLine($"{indent}    public {javaType} {javaName} = {value};");
+                s.AppendLine($"{indent}    {accessMod}{staticKeyword}{javaType} {javaName} = {value};");
             }
             else
             {
-                s.AppendLine($"{indent}    public {javaType} {javaName};");
+                // Uninitialized java fields are null by default.
+                s.AppendLine($"{indent}    {accessMod}{staticKeyword}{javaType} {javaName};");
             }
         }
         foreach (var field in type.GetMembers().OfType<IFieldSymbol>()

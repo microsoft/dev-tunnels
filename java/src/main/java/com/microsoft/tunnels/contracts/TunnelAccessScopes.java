@@ -2,8 +2,6 @@
 
 package com.microsoft.tunnels.contracts;
 
-import com.google.gson.annotations.Expose;
-
 /**
  * Defines scopes for tunnel access tokens.
  */

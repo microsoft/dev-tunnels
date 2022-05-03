@@ -1,10 +1,10 @@
 package com.microsoft.tunnels.contracts;
 
-public class TunnelServicePropertiesStatics {
+class TunnelServicePropertiesStatics {
   /**
    * Gets production service properties.
    */
-  public static final TunnelServiceProperties production = new TunnelServiceProperties(
+  static final TunnelServiceProperties production = new TunnelServiceProperties(
       "https://" + TunnelServiceProperties.prodDnsName + "/",
       TunnelServiceProperties.prodFirstPartyAppId,
       TunnelServiceProperties.prodThirdPartyAppId,
@@ -13,7 +13,7 @@ public class TunnelServicePropertiesStatics {
   /**
    * Gets properties for the service in the staging environment (PPE).
    */
-  public static final TunnelServiceProperties staging = new TunnelServiceProperties(
+  static final TunnelServiceProperties staging = new TunnelServiceProperties(
       "https://" + TunnelServiceProperties.ppeDnsName + "/",
       TunnelServiceProperties.nonProdFirstPartyAppId,
       TunnelServiceProperties.ppeThirdPartyAppId,
@@ -22,7 +22,7 @@ public class TunnelServicePropertiesStatics {
   /**
    * Gets properties for the service in the development environment.
    */
-  public static final TunnelServiceProperties development = new TunnelServiceProperties(
+  static final TunnelServiceProperties development = new TunnelServiceProperties(
       "https://" + TunnelServiceProperties.devDnsName + "/",
       TunnelServiceProperties.nonProdFirstPartyAppId,
       TunnelServiceProperties.devThirdPartyAppId,

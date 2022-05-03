@@ -7,13 +7,28 @@ import com.google.gson.annotations.Expose;
 /**
  * Provides environment-dependent properties about the service.
  */
-public class TunnelServiceProperties extends TunnelServicePropertiesStatics {
+public class TunnelServiceProperties {
     public TunnelServiceProperties (String serviceUri, String serviceAppId, String serviceInternalAppId, String gitHubAppClientId) {
         this.serviceUri = serviceUri;
         this.serviceAppId = serviceAppId;
         this.serviceInternalAppId = serviceInternalAppId;
         this.gitHubAppClientId = gitHubAppClientId;
     }
+
+    /**
+     * Gets production service properties.
+     */
+    public static TunnelServiceProperties production = TunnelServicePropertiesStatics.production;
+
+    /**
+     * Gets properties for the service in the staging environment (PPE).
+     */
+    public static TunnelServiceProperties staging = TunnelServicePropertiesStatics.staging;
+
+    /**
+     * Gets properties for the service in the development environment.
+     */
+    public static TunnelServiceProperties development = TunnelServicePropertiesStatics.development;
 
     /**
      * Gets the base URI of the service.
