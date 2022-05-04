@@ -3,6 +3,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.util.Collection;
 
 /**
  * Data contract for access control on a {@link Tunnel} or {@link TunnelPort}.
@@ -30,7 +31,7 @@ public class TunnelAccessControl {
     /**
      * Checks that all items in an array of scopes are valid.
      */
-    public static void validateScopes(java.util.Collection<String> scopes, java.util.Collection<String> validScopes) {
+    public static void validateScopes(Collection<String> scopes, Collection<String> validScopes) {
         TunnelAccessControlStatics.validateScopes(scopes, validScopes);
     }
 }

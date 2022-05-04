@@ -8,7 +8,7 @@ import com.google.gson.annotations.Expose;
  * Provides environment-dependent properties about the service.
  */
 public class TunnelServiceProperties {
-    public TunnelServiceProperties (String serviceUri, String serviceAppId, String serviceInternalAppId, String gitHubAppClientId) {
+    TunnelServiceProperties (String serviceUri, String serviceAppId, String serviceInternalAppId, String gitHubAppClientId) {
         this.serviceUri = serviceUri;
         this.serviceAppId = serviceAppId;
         this.serviceInternalAppId = serviceInternalAppId;

@@ -3,6 +3,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.util.Date;
 
 /**
  * Data contract for {@link TunnelPort} status.
@@ -22,5 +23,5 @@ public class TunnelPortStatus {
      * Gets or sets the UTC date time when a client was last connected to the port.
      */
     @Expose
-    public java.util.Date lastClientConnectionTime;
+    public Date lastClientConnectionTime;
 }

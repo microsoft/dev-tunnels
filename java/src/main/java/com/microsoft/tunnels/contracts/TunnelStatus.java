@@ -3,6 +3,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.util.Date;
 
 /**
  * Data contract for {@link Tunnel} status.
@@ -22,7 +23,7 @@ public class TunnelStatus {
      * or null if a host has never connected.
      */
     @Expose
-    public java.util.Date lastHostConnectionTime;
+    public Date lastHostConnectionTime;
 
     /**
      * Gets or sets the number of clients currently connected to the tunnel.
@@ -35,5 +36,5 @@ public class TunnelStatus {
      * client has never connected.
      */
     @Expose
-    public java.util.Date lastClientConnectionTime;
+    public Date lastClientConnectionTime;
 }

@@ -3,6 +3,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.util.Map;
 
 /**
  * Structure of error details returned by the tunnel service, including validation errors.
@@ -29,5 +30,5 @@ public class ProblemDetails {
      * Gets or sets additional details about individual request properties.
      */
     @Expose
-    public java.util.HashMap<String, String[]> errors;
+    public Map<String, String[]> errors;
 }

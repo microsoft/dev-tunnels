@@ -3,6 +3,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.util.Map;
 
 /**
  * Data contract for tunnel port objects managed through the tunnel service REST API.
@@ -41,7 +42,7 @@ public class TunnelPort {
      * the individual port.
      */
     @Expose
-    public java.util.HashMap<String, String> accessTokens;
+    public Map<String, String> accessTokens;
 
     /**
      * Gets or sets access control settings for the tunnel port.

@@ -264,7 +264,7 @@ internal class JavaContractWriter : ContractWriter
                 }
                 s.AppendLine();
                 var parameterString = parameters.Select(p => String.Format("{0} {1}", p.Value, p.Key));
-                s.Append($"{indent}public {type.Name} ({String.Join(", ", parameterString)}) {{");
+                s.Append($"{indent}{type.Name} ({String.Join(", ", parameterString)}) {{");
                 s.AppendLine();
                 foreach (String parameter in parameters.Keys)
                 {
@@ -390,15 +390,19 @@ internal class JavaContractWriter : ContractWriter
                 "System.DateTime" => JavaDateTimeType,
                 "System.Text.RegularExpressions.Regex" => RegexPatternType,
                 "System.Collections.Generic.IDictionary<string, string>"
-                    => $"java.util.HashMap<String, String>",
+                    => $"java.util.Map<String, String>",
                 "System.Collections.Generic.IDictionary<string, string[]>"
-                    => $"java.util.HashMap<String, String[]>",
+                    => $"java.util.Map<String, String[]>",
                 "System.Uri" => "java.net.URI",
                 "System.Collections.Generic.IEnumerable<string>" => "java.util.Collection<String>",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
         }
 
+        if (javaType.Contains('.')) {
+            imports.Add(javaType.Split('<')[0]);
+            javaType = javaType.Split('.').Last();
+        }
         javaType += suffix;
         return javaType;
     }

@@ -3,6 +3,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.net.URI;
 
 /**
  * Base class for tunnel connection parameters.
@@ -64,7 +65,7 @@ public class TunnelEndpoint {
      * currently shared via the tunnel, or if a host is not currently connected to the
      * tunnel, then requests to the port URI may result in a 502 Bad Gateway response.
      */
-    public static java.net.URI getPortUri(TunnelEndpoint endpoint, int portNumber) {
+    public static URI getPortUri(TunnelEndpoint endpoint, int portNumber) {
         return TunnelEndpointStatics.getPortUri(endpoint, portNumber);
     }
 }

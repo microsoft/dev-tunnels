@@ -2,6 +2,8 @@
 
 package com.microsoft.tunnels.contracts;
 
+import java.util.regex.Pattern;
+
 /**
  * Tunnel constraints.
  */
@@ -42,7 +44,7 @@ public class TunnelConstraints {
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
-    public static java.util.regex.Pattern clusterIdRegex = java.util.regex.Pattern.compile(
+    public static Pattern clusterIdRegex = java.util.regex.Pattern.compile(
         "[a-z][a-z0-9]{" + (clusterIdMinLength - 1) + "," + (clusterIdMaxLength - 1) + "}");
 
     /**
@@ -51,7 +53,7 @@ public class TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and some
      * lowercase letters (minus vowels).
      */
-    public static java.util.regex.Pattern tunnelIdRegex = java.util.regex.Pattern.compile(
+    public static Pattern tunnelIdRegex = java.util.regex.Pattern.compile(
         "[" + tunnelIdChars.replace("0123456789", "0-9") + "]{" + tunnelIdLength + "}");
 
     /**
@@ -59,7 +61,7 @@ public class TunnelConstraints {
      *
      * Tunnel names are alphanumeric and may contain hyphens.
      */
-    public static java.util.regex.Pattern tunnelNameRegex = java.util.regex.Pattern.compile(
+    public static Pattern tunnelNameRegex = java.util.regex.Pattern.compile(
         "[a-z0-9][a-z0-9-]{" +
         (tunnelNameMinLength - 2) + "," + (tunnelNameMaxLength - 2) +
         "}[a-z0-9]");
@@ -67,7 +69,7 @@ public class TunnelConstraints {
     /**
      * Gets a regular expression that can match or validate tunnel names.
      */
-    public static java.util.regex.Pattern tunnelTagRegex = java.util.regex.Pattern.compile("^[\\w-=]+$");
+    public static Pattern tunnelTagRegex = java.util.regex.Pattern.compile("^[\\w-=]+$");
 
     /**
      * Validates <paramref name="clusterId"/> and returns true if it is a valid cluster

@@ -3,6 +3,8 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.util.Date;
+import java.util.Map;
 
 /**
  * Data contract for tunnel objects managed through the tunnel service REST API.
@@ -52,7 +54,7 @@ public class Tunnel {
      * Gets or sets a dictionary mapping from scopes to tunnel access tokens.
      */
     @Expose
-    public java.util.HashMap<String, String> accessTokens;
+    public Map<String, String> accessTokens;
 
     /**
      * Gets or sets access control settings for the tunnel.
@@ -98,5 +100,5 @@ public class Tunnel {
      * Gets or sets the time in UTC of tunnel creation.
      */
     @Expose
-    public java.util.Date created;
+    public Date created;
 }
