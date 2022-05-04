@@ -134,4 +134,11 @@ public class TunnelServiceProperties {
      * service environments.
      */
     static final String nonProdGitHubAppClientId = "Iv1.b231c327f1eaa229";
+
+    /**
+     * Gets properties for the service in the specified environment.
+     */
+    public static TunnelServiceProperties environment(String environmentName) {
+        return TunnelServicePropertiesStatics.environment(environmentName);
+    }
 }

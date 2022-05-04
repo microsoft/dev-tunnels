@@ -55,4 +55,16 @@ public class TunnelEndpoint {
      * specified port number.
      */
     public static final String portUriToken = "{port}";
+
+    /**
+     * Gets a URI where a web client can connect to a tunnel port.
+     *
+     * Requests to the URI may result in HTTP 307 redirections, so the client may need to
+     * follow the redirection in order to connect to the port. <para /> If the port is not
+     * currently shared via the tunnel, or if a host is not currently connected to the
+     * tunnel, then requests to the port URI may result in a 502 Bad Gateway response.
+     */
+    public static java.net.URI getPortUri(TunnelEndpoint endpoint, int portNumber) {
+        return TunnelEndpointStatics.getPortUri(endpoint, portNumber);
+    }
 }

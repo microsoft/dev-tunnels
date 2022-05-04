@@ -68,4 +68,62 @@ public class TunnelConstraints {
      * Gets a regular expression that can match or validate tunnel names.
      */
     public static java.util.regex.Pattern tunnelTagRegex = java.util.regex.Pattern.compile("^[\\w-=]+$");
+
+    /**
+     * Validates <paramref name="clusterId"/> and returns true if it is a valid cluster
+     * ID, otherwise false.
+     */
+    public static boolean isValidClusterId(String clusterId) {
+        return TunnelConstraintsStatics.isValidClusterId(clusterId);
+    }
+
+    /**
+     * Validates <paramref name="tunnelId"/> and returns true if it is a valid tunnel id,
+     * otherwise, false.
+     */
+    public static boolean isValidTunnelId(String tunnelId) {
+        return TunnelConstraintsStatics.isValidTunnelId(tunnelId);
+    }
+
+    /**
+     * Validates <paramref name="tunnelName"/> and returns true if it is a valid tunnel
+     * name, otherwise, false.
+     */
+    public static boolean isValidTunnelName(String tunnelName) {
+        return TunnelConstraintsStatics.isValidTunnelName(tunnelName);
+    }
+
+    /**
+     * Validates <paramref name="tag"/> and returns true if it is a valid tunnel tag,
+     * otherwise, false.
+     */
+    public static boolean isValidTunnelTag(String tag) {
+        return TunnelConstraintsStatics.isValidTunnelTag(tag);
+    }
+
+    /**
+     * Validates <paramref name="tunnelIdOrName"/> and returns true if it is a valid
+     * tunnel id or name.
+     */
+    public static boolean isValidTunnelIdOrName(String tunnelIdOrName) {
+        return TunnelConstraintsStatics.isValidTunnelIdOrName(tunnelIdOrName);
+    }
+
+    /**
+     * Validates <paramref name="tunnelId"/> and throws exception if it is null or not a
+     * valid tunnel id. Returns <paramref name="tunnelId"/> back if it's a valid tunnel
+     * id.
+     */
+    public static String validateTunnelId(String tunnelId, String paramName) {
+        return TunnelConstraintsStatics.validateTunnelId(tunnelId, paramName);
+    }
+
+    /**
+     * Validates <paramref name="tunnelIdOrName"/> and throws exception if it is null or
+     * not a valid tunnel id or name. Returns <paramref name="tunnelIdOrName"/> back if
+     * it's a valid tunnel id.
+     */
+    public static String validateTunnelIdOrName(String tunnelIdOrName, String paramName) {
+        return TunnelConstraintsStatics.validateTunnelIdOrName(tunnelIdOrName, paramName);
+    }
 }

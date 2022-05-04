@@ -27,4 +27,8 @@ class TunnelServicePropertiesStatics {
       TunnelServiceProperties.nonProdFirstPartyAppId,
       TunnelServiceProperties.devThirdPartyAppId,
       TunnelServiceProperties.nonProdGitHubAppClientId);
+
+  public static TunnelServiceProperties environment(String environmentName) {
+    throw new UnsupportedOperationException("Method not implemented");
+  }
 }

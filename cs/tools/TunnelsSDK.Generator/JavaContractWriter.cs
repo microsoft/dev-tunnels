@@ -147,12 +147,12 @@ internal class JavaContractWriter : ContractWriter
                 propertyType = propertyType.Substring(0, propertyType.Length - 1);
             }
 
+            var accessMod = property.DeclaredAccessibility == Accessibility.Public ? "public " : "";
+            var staticKeyword = property.IsStatic ? "static " : "";
             var javaName = ToCamelCase(property.Name);
             var javaType = GetJavaTypeForCSType(propertyType, javaName, imports);
             
-            String accessMod = property.DeclaredAccessibility == Accessibility.Public ? "public " : "";
-            String staticKeyword = property.IsStatic ? "static " : "";
-            // Static properties in a non-static class are manually linked to the *Statics.java class.
+            // Static properties in a non-static class are linked to the non-generated *Statics.java class.
             var value = property.IsStatic && !staticClass ? 
                 $"{type.Name}Statics.{javaName}" : GetPropertyInitializer(property);
 
@@ -170,17 +170,43 @@ internal class JavaContractWriter : ContractWriter
                 s.AppendLine($"{indent}    {accessMod}{staticKeyword}{javaType} {javaName};");
             }
         }
+
         foreach (var field in type.GetMembers().OfType<IFieldSymbol>()
             .Where((f) => f.IsConst))
         {
-            String accessMod = field.DeclaredAccessibility == Accessibility.Internal ? "" : "public ";
-
             s.AppendLine();
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
+            var accessMod = field.DeclaredAccessibility == Accessibility.Public ? "public " : "";
             var javaName = ToCamelCase(field.Name);
             var javaType = GetJavaTypeForCSType(field.Type.ToDisplayString(), javaName, imports);
             s.AppendLine($"{indent}    {accessMod}static final {javaType} {javaName} = \"{field.ConstantValue}\";");
         }
+        
+        foreach (var method in type.GetMembers().OfType<IMethodSymbol>()) {
+            if (method.IsStatic && method.MethodKind == MethodKind.Ordinary) {
+                s.AppendLine();
+                s.Append(FormatDocComment(method.GetDocumentationCommentXml(), indent + "    "));
+                var accessMod = method.DeclaredAccessibility == Accessibility.Public ? "public " : "";
+                var javaName = ToCamelCase(method.Name);
+                var javaReturnType = GetJavaTypeForCSType(method.ReturnType.ToDisplayString(), javaName, imports);
+
+                var parameters = new Dictionary<String, String>() { };
+                foreach (var parameter in method.Parameters)
+                {
+                    var parameterType = parameter.Type.ToDisplayString();
+                    var javaParameterName = ToCamelCase(parameter.Name);
+                    var javaParameterType = GetJavaTypeForCSType(parameterType, javaName, imports);
+                    parameters.Add(javaParameterName, javaParameterType);
+                }
+                var parameterString = String.Join(", ", parameters.Select(p => String.Format("{0} {1}", p.Value, p.Key)));
+                var returnKeyword = javaReturnType != "void" ? "return " : "";
+
+                s.AppendLine($"{indent}    {accessMod}static {javaReturnType} {javaName}({parameterString}) {{");
+                s.AppendLine($"{indent}        {returnKeyword}{type.Name}Statics.{javaName}({String.Join(", ", parameters.Keys)});");
+                s.AppendLine($"{indent}    }}");
+            }
+        }
+
         WriteNestedTypes(s, indent, type, imports);
         s.AppendLine($"{indent}}}");
     }
@@ -341,6 +367,11 @@ internal class JavaContractWriter : ContractWriter
             csType = csType.Substring(0, csType.Length - 2);
         }
 
+        if (csType.EndsWith("?"))
+        {
+            csType = csType.Substring(0, csType.Length - 1);
+        }
+
         string javaType;
         if (csType.StartsWith(this.csNamespace + "."))
         {
@@ -350,6 +381,7 @@ internal class JavaContractWriter : ContractWriter
         {
             javaType = csType switch
             {
+                "void" => "void",
                 "bool" => "boolean",
                 "int" => "int",
                 "uint" => "int",
@@ -361,6 +393,8 @@ internal class JavaContractWriter : ContractWriter
                     => $"java.util.HashMap<String, String>",
                 "System.Collections.Generic.IDictionary<string, string[]>"
                     => $"java.util.HashMap<String, String[]>",
+                "System.Uri" => "java.net.URI",
+                "System.Collections.Generic.IEnumerable<string>" => "java.lang.Iterable<String>",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
         }

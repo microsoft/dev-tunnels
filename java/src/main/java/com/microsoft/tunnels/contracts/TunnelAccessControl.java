@@ -26,4 +26,11 @@ public class TunnelAccessControl {
      */
     @Expose
     public TunnelAccessControlEntry[] entries;
+
+    /**
+     * Checks that all items in an array of scopes are valid.
+     */
+    public static void validateScopes(java.lang.Iterable<String> scopes, java.lang.Iterable<String> validScopes) {
+        TunnelAccessControlStatics.validateScopes(scopes, validScopes);
+    }
 }

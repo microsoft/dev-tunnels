@@ -97,6 +97,13 @@ public class TunnelAccessControlEntry {
     public String[] scopes;
 
     /**
+     * 
+     */
+    static String getEntryTypeLabel(TunnelAccessControlEntryType entryType, String provider, boolean isInverse, boolean plural) {
+        return TunnelAccessControlEntryStatics.getEntryTypeLabel(entryType, provider, isInverse, plural);
+    }
+
+    /**
      * Constants for well-known identity providers.
      */
     public static class Providers {
