@@ -1,4 +1,4 @@
-module github.com/microsoft/tunnels/go
+module github.com/microsoft/dev-tunnels/go
 
 go 1.17
 
