@@ -168,7 +168,7 @@ func makeConnection(server *RelayServer) http.HandlerFunc {
 		defer cancel()
 
 		if server.accessToken != "" {
-			if r.Header.Get("Authorization") != fmt.Sprintf("tunnel %s", server.accessToken) {
+			if r.Header.Get("Authorization") != server.accessToken {
 				server.sendError(fmt.Errorf("invalid access token"))
 				return
 			}

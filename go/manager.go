@@ -3,6 +3,7 @@ package tunnels
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -96,8 +97,11 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 
 	var client *http.Client
 	if httpHandler == nil {
-		client = &http.Client{}
-
+		if strings.Contains(tunnelServiceUrl.Host, "localhost") {
+			client = &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+		} else {
+			client = &http.Client{}
+		}
 	} else {
 		client = httpHandler
 	}

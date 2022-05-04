@@ -19,7 +19,7 @@ import (
 )
 
 func TestSuccessfulConnect(t *testing.T) {
-	accessToken := "access-token"
+	accessToken := "tunnel access-token"
 	relayServer, err := tunnelstest.NewRelayServer(
 		tunnelstest.WithAccessToken(accessToken),
 	)

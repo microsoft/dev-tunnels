@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 
 	"net/http"
 
@@ -110,10 +111,13 @@ func (c *Client) Connect(ctx context.Context, hostID string) error {
 
 	var headers http.Header
 	if accessToken != "" {
-		c.logger.Printf(fmt.Sprintf("Authorization: tunnel %s", accessToken))
 		headers = make(http.Header)
+		if !strings.Contains(accessToken, "Tunnel") && !strings.Contains(accessToken, "tunnel") {
+			accessToken = fmt.Sprintf("Tunnel %s", accessToken)
+		}
+		headers.Add("Authorization", accessToken)
+		c.logger.Printf(fmt.Sprintf("Authorization: %s", accessToken))
 
-		headers.Add("Authorization", fmt.Sprintf("tunnel %s", accessToken))
 	}
 
 	sock := newSocket(clientRelayURI, protocols, headers, nil)
