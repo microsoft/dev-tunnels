@@ -394,7 +394,7 @@ internal class JavaContractWriter : ContractWriter
                 "System.Collections.Generic.IDictionary<string, string[]>"
                     => $"java.util.HashMap<String, String[]>",
                 "System.Uri" => "java.net.URI",
-                "System.Collections.Generic.IEnumerable<string>" => "java.lang.Iterable<String>",
+                "System.Collections.Generic.IEnumerable<string>" => "java.util.Collection<String>",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
         }

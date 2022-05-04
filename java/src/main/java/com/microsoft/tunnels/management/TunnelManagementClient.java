@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.tunnels.contracts.Tunnel;
+import com.microsoft.tunnels.contracts.TunnelAccessControl;
 import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
@@ -270,7 +271,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (options.scopes != null) {
-      validate(options.scopes, null);
+      TunnelAccessControl.validateScopes(options.scopes, null);
       try {
         queryOptions.add("scopes=" + URLEncoder.encode(String.join(",", options.scopes), encoding));
       } catch (UnsupportedEncodingException e) {
@@ -279,7 +280,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (options.tokenScopes != null) {
-      validate(options.tokenScopes, null);
+      TunnelAccessControl.validateScopes(options.tokenScopes, null);
       try {
         queryOptions.add(
             "tokenScopes=" + URLEncoder.encode(String.join(",", options.tokenScopes), encoding));
@@ -288,39 +289,6 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       }
     }
     return String.join("&", queryOptions);
-  }
-
-  /**
-   * Checks that the set of scopes matches the given validation set.
-   */
-  public static void validate(
-      Collection<String> scopes,
-      Collection<String> validScopes) {
-    if (scopes == null) {
-      throw new IllegalArgumentException("scopes must not be null");
-    }
-    var allScopes = Arrays.asList(new String[] {
-      TunnelAccessScopes.connect,
-      TunnelAccessScopes.create,
-      TunnelAccessScopes.host,
-      TunnelAccessScopes.inspect,
-      TunnelAccessScopes.manage });
-    scopes.forEach(scope -> {
-      if (StringUtils.isBlank(scope)) {
-        throw new IllegalArgumentException("Tunnel access scopes include a null/empty item.");
-      } else if (!allScopes.contains(scope)) {
-        throw new IllegalArgumentException("Invalid tunnel access scope: " + scope);
-      }
-    });
-
-    if (validScopes != null) {
-      scopes.forEach(scope -> {
-        if (!validScopes.contains(scope)) {
-          throw new IllegalArgumentException(
-              "Tunnel access scope is invalid for current request: " + scope);
-        }
-      });
-    }
   }
 
   public CompletableFuture<Collection<Tunnel>> listTunnelsAsync(

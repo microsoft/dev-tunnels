@@ -30,7 +30,7 @@ public class TunnelAccessControl {
     /**
      * Checks that all items in an array of scopes are valid.
      */
-    public static void validateScopes(java.lang.Iterable<String> scopes, java.lang.Iterable<String> validScopes) {
+    public static void validateScopes(java.util.Collection<String> scopes, java.util.Collection<String> validScopes) {
         TunnelAccessControlStatics.validateScopes(scopes, validScopes);
     }
 }
