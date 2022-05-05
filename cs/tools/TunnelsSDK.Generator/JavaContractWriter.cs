@@ -385,9 +385,12 @@ internal class JavaContractWriter : ContractWriter
             {
                 "void" => "void",
                 "bool" => "boolean",
+                "short" => "short",
+                "ushort" => "int",
                 "int" => "int",
                 "uint" => "int",
-                "ushort" => "int",
+                "long" => "long",
+                "ulong" => "long",
                 "string" => "String",
                 "System.DateTime" => JavaDateTimeType,
                 "System.Text.RegularExpressions.Regex" => RegexPatternType,
