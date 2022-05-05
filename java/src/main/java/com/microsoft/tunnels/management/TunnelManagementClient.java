@@ -2,7 +2,13 @@ package com.microsoft.tunnels.management;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+import com.microsoft.tunnels.contracts.LiveShareRelayTunnelEndpoint;
+import com.microsoft.tunnels.contracts.LocalNetworkTunnelEndpoint;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelAccessControl;
 import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
@@ -10,6 +16,7 @@ import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
+import com.microsoft.tunnels.contracts.TunnelRelayTunnelEndpoint;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
@@ -175,10 +182,15 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           response.statusCode(),
           response.body());
     }
-    var builder = new GsonBuilder()
-        .excludeFieldsWithoutExposeAnnotation();
-    Gson gson = builder.create();
+    Gson gson = createConfiguredGson();
     return gson.fromJson(response.body(), typeOfT);
+  }
+
+  private Gson createConfiguredGson() {
+    var builder = new GsonBuilder()
+        .excludeFieldsWithoutExposeAnnotation()
+        .registerTypeAdapter(TunnelEndpoint.class, new TunnelEndpointDeserializer());
+    return builder.create();
   }
 
   private URI buildUri(Tunnel tunnel, TunnelRequestOptions options) {
@@ -683,5 +695,33 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     }
     return result;
+  }
+
+  class TunnelEndpointDeserializer implements JsonDeserializer<TunnelEndpoint> {
+    private Gson gson;
+
+    TunnelEndpointDeserializer() {
+      this.gson = new Gson();
+    }
+
+    @Override
+    public TunnelEndpoint deserialize(
+        JsonElement json,
+        Type typeOfT,
+        JsonDeserializationContext context)
+        throws JsonParseException {
+      var endpointObject = json.getAsJsonObject();
+      var connectionMode = endpointObject.get("connectionMode").getAsString();
+      if (connectionMode.equals("TunnelRelay")) {
+        return gson.fromJson(endpointObject, TunnelRelayTunnelEndpoint.class);
+      } else if (connectionMode.equals("LiveShareRelay")) {
+        return gson.fromJson(endpointObject, LiveShareRelayTunnelEndpoint.class);
+      } else if (connectionMode.equals("LocalNetwork")) {
+        return gson.fromJson(endpointObject, LocalNetworkTunnelEndpoint.class);
+      } else {
+        throw new JsonParseException("Unable to parse TunnelEnpoint: " + endpointObject);
+      }
+    }
+
   }
 }

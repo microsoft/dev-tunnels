@@ -86,12 +86,6 @@ public class TunnelClient {
           "The specified host is not currently accepting connections to the tunnel.");
     });
 
-    // We may want to add other endpoint types in the future.
-    // For now only TunnelRelay endpoints are supported.
-    if (!(endpoint instanceof TunnelRelayTunnelEndpoint)) {
-      throw new IllegalArgumentException(
-          "Only TunnelRelayTunnelEndpoints are currently supported.");
-    }
     sshClient = createConfiguredSshClient(tunnel, (TunnelRelayTunnelEndpoint) endpoint);
     sshClient.start();
 
