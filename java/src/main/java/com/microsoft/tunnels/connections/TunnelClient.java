@@ -1,6 +1,7 @@
 package com.microsoft.tunnels.connections;
 
 import com.microsoft.tunnels.contracts.Tunnel;
+import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelRelayTunnelEndpoint;
 import com.microsoft.tunnels.websocket.WebSocketServiceFactoryFactory;
 
@@ -85,7 +86,7 @@ public class TunnelClient {
           "The specified host is not currently accepting connections to the tunnel.");
     });
 
-    sshClient = createConfiguredSshClient(tunnel, endpoint);
+    sshClient = createConfiguredSshClient(tunnel, (TunnelRelayTunnelEndpoint) endpoint);
     sshClient.start();
 
     try {
@@ -147,8 +148,8 @@ public class TunnelClient {
     return client;
   }
 
-  private List<TunnelRelayTunnelEndpoint> groupEndpoints(Tunnel tunnel, String hostId) {
-    Map<String, List<TunnelRelayTunnelEndpoint>> endpointGroups = Arrays.asList(tunnel.endpoints)
+  private List<TunnelEndpoint> groupEndpoints(Tunnel tunnel, String hostId) {
+    Map<String, List<TunnelEndpoint>> endpointGroups = Arrays.asList(tunnel.endpoints)
         .stream().collect(Collectors.groupingBy(endpoint -> endpoint.hostId));
     if (hostId != null) {
       return endpointGroups.get(hostId);

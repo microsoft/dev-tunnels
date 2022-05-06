@@ -18,6 +18,7 @@ internal abstract class ContractWriter
     {
         "ts",
         "go",
+        "java"
     };
 
     public static ContractWriter Create(string language, string repoRoot, string csNamespace)
@@ -26,6 +27,7 @@ internal abstract class ContractWriter
         {
             "ts" => new TSContractWriter(repoRoot, csNamespace),
             "go" => new GoContractWriter(repoRoot, csNamespace),
+            "java" => new JavaContractWriter(repoRoot, csNamespace),
             _ => throw new NotSupportedException("Unsupported contract language: " + language),
         };
     }
