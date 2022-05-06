@@ -160,7 +160,7 @@
     <repository>
       <id>github</id>
       <name>GitHub Packages</name>
-      <url>https://maven.pkg.github.com/microsoft/tunnels</url>
+      <url>https://maven.pkg.github.com/microsoft/dev-tunnels</url>
     </repository>
   </distributionManagement>
 </project>
