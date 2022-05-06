@@ -1,7 +1,15 @@
 package com.microsoft.tunnels.contracts;
 
+import java.net.URI;
+
+import org.apache.maven.shared.utils.StringUtils;
+
 class TunnelEndpointStatics {
   public static java.net.URI getPortUri(TunnelEndpoint endpoint, int portNumber) {
-    throw new UnsupportedOperationException("Method not implemented");
+    if (StringUtils.isBlank(endpoint.portUriFormat)) {
+      return null;
+    }
+    return URI.create(endpoint.portUriFormat.replace(
+        TunnelEndpoint.portUriToken, Integer.toString(portNumber)));
   }
 }

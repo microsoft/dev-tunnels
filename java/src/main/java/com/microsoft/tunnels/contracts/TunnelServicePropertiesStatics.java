@@ -1,5 +1,9 @@
 package com.microsoft.tunnels.contracts;
 
+import java.util.Locale;
+
+import org.apache.maven.shared.utils.StringUtils;
+
 class TunnelServicePropertiesStatics {
   /**
    * Gets production service properties.
@@ -29,6 +33,23 @@ class TunnelServicePropertiesStatics {
       TunnelServiceProperties.nonProdGitHubAppClientId);
 
   public static TunnelServiceProperties environment(String environmentName) {
-    throw new UnsupportedOperationException("Method not implemented");
+    if (StringUtils.isBlank(environmentName)) {
+      throw new IllegalArgumentException(environmentName);
+    }
+
+    switch (environmentName.toLowerCase(Locale.ROOT)) {
+      case "prod":
+      case "production":
+        return TunnelServiceProperties.production;
+      case "ppe":
+      case "preprod":
+      case "staging":
+        return TunnelServiceProperties.staging;
+      case "dev":
+      case "development":
+        return TunnelServiceProperties.development;
+      default:
+        throw new IllegalArgumentException("Invalid service environment: " + environmentName);
+    }
   }
 }
