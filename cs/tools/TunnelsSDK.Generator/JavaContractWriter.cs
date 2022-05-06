@@ -183,10 +183,9 @@ internal class JavaContractWriter : ContractWriter
         }
         
         foreach (var method in type.GetMembers().OfType<IMethodSymbol>()) {
-            if (method.IsStatic && method.MethodKind == MethodKind.Ordinary) {
+            if (method.IsStatic && method.MethodKind == MethodKind.Ordinary && method.DeclaredAccessibility == Accessibility.Public) {
                 s.AppendLine();
                 s.Append(FormatDocComment(method.GetDocumentationCommentXml(), indent + "    "));
-                var accessMod = method.DeclaredAccessibility == Accessibility.Public ? "public " : "";
                 var javaName = ToCamelCase(method.Name);
                 var javaReturnType = GetJavaTypeForCSType(method.ReturnType.ToDisplayString(), javaName, imports);
 
@@ -201,7 +200,7 @@ internal class JavaContractWriter : ContractWriter
                 var parameterString = String.Join(", ", parameters.Select(p => String.Format("{0} {1}", p.Value, p.Key)));
                 var returnKeyword = javaReturnType != "void" ? "return " : "";
 
-                s.AppendLine($"{indent}    {accessMod}static {javaReturnType} {javaName}({parameterString}) {{");
+                s.AppendLine($"{indent}    public static {javaReturnType} {javaName}({parameterString}) {{");
                 s.AppendLine($"{indent}        {returnKeyword}{type.Name}Statics.{javaName}({String.Join(", ", parameters.Keys)});");
                 s.AppendLine($"{indent}    }}");
             }
