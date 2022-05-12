@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 // Generated from ../../../cs/src/Contracts/ProblemDetails.cs
 
 package tunnels
@@ -10,7 +13,7 @@ package tunnels
 // doesn't require adding a dependency on that package.
 type ProblemDetails struct {
 	// Gets or sets the error title.
-	Title  string `json:"title,omitempty"`
+	Title string `json:"title,omitempty"`
 
 	// Gets or sets the error detail.
 	Detail string `json:"detail,omitempty"`

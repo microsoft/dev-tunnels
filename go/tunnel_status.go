@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelStatus.cs
 
 package tunnels
@@ -12,14 +14,14 @@ type TunnelStatus struct {
 	//
 	// This is typically 0 or 1, but may be more than 1 if the tunnel options allow multiple
 	// hosts.
-	HostConnectionCount      uint32 `json:"hostConnectionCount"`
+	HostConnectionCount uint32 `json:"hostConnectionCount"`
 
 	// Gets or sets the UTC time when a host was last accepting connections to the tunnel, or
 	// null if a host has never connected.
-	LastHostConnectionTime   *time.Time `json:"lastHostConnectionTime,omitempty"`
+	LastHostConnectionTime *time.Time `json:"lastHostConnectionTime,omitempty"`
 
 	// Gets or sets the number of clients currently connected to the tunnel.
-	ClientConnectionCount    uint32 `json:"clientConnectionCount"`
+	ClientConnectionCount uint32 `json:"clientConnectionCount"`
 
 	// Gets or sets the UTC time when a client last connected to the tunnel, or null if a
 	// client has never connected.

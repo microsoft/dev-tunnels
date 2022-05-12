@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelProtocol.cs
 
 package tunnels
@@ -7,22 +9,22 @@ type TunnelProtocol string
 
 const (
 	// The protocol is automatically detected. (TODO: Define detection semantics.)
-	TunnelProtocolAuto  TunnelProtocol = "auto"
+	TunnelProtocolAuto TunnelProtocol = "auto"
 
 	// Unknown TCP protocol.
-	TunnelProtocolTcp   TunnelProtocol = "tcp"
+	TunnelProtocolTcp TunnelProtocol = "tcp"
 
 	// Unknown UDP protocol.
-	TunnelProtocolUdp   TunnelProtocol = "udp"
+	TunnelProtocolUdp TunnelProtocol = "udp"
 
 	// SSH protocol.
-	TunnelProtocolSsh   TunnelProtocol = "ssh"
+	TunnelProtocolSsh TunnelProtocol = "ssh"
 
 	// Remote desktop protocol.
-	TunnelProtocolRdp   TunnelProtocol = "rdp"
+	TunnelProtocolRdp TunnelProtocol = "rdp"
 
 	// HTTP protocol.
-	TunnelProtocolHttp  TunnelProtocol = "http"
+	TunnelProtocolHttp TunnelProtocol = "http"
 
 	// HTTPS protocol.
 	TunnelProtocolHttps TunnelProtocol = "https"

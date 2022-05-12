@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelEndpoint.cs
 
 package tunnels
@@ -23,7 +25,7 @@ type TunnelEndpoint struct {
 	// multiple connection modes, the host's ID is the same for all the endpoints it
 	// supports. However different hosts may simultaneously accept connections at different
 	// endpoints for the same tunnel, if enabled in tunnel options.
-	HostID         string `json:"hostId"`
+	HostID string `json:"hostId"`
 
 	// Gets or sets an array of public keys, which can be used by clients to authenticate the
 	// host.
@@ -32,7 +34,7 @@ type TunnelEndpoint struct {
 	// Gets or sets a string used to format URIs where a web client can connect to ports of
 	// the tunnel. The string includes a `TunnelEndpoint.PortUriToken` that must be replaced
 	// with the actual port number.
-	PortURIFormat  string `json:"portUriFormat,omitempty"`
+	PortURIFormat string `json:"portUriFormat,omitempty"`
 
 	LiveShareRelayTunnelEndpoint
 	LocalNetworkTunnelEndpoint
@@ -42,13 +44,13 @@ type TunnelEndpoint struct {
 // Parameters for connecting to a tunnel via a Live Share Azure Relay.
 type LiveShareRelayTunnelEndpoint struct {
 	// Gets or sets the Live Share workspace ID.
-	WorkspaceID         string `json:"workspaceId"`
+	WorkspaceID string `json:"workspaceId"`
 
 	// Gets or sets the Azure Relay URI.
-	RelayURI            string `json:"relayUri,omitempty"`
+	RelayURI string `json:"relayUri,omitempty"`
 
 	// Gets or sets a SAS token that allows hosts to listen on the Azure Relay endpoint.
-	RelayHostSasToken   string `json:"relayHostSasToken,omitempty"`
+	RelayHostSasToken string `json:"relayHostSasToken,omitempty"`
 
 	// Gets or sets a SAS token that allows clients to connect to the Azure Relay endpoint.
 	RelayClientSasToken string `json:"relayClientSasToken,omitempty"`
@@ -73,7 +75,7 @@ type LocalNetworkTunnelEndpoint struct {
 // Parameters for connecting to a tunnel via the tunnel service's built-in relay function.
 type TunnelRelayTunnelEndpoint struct {
 	// Gets or sets the host URI.
-	HostRelayURI   string `json:"hostRelayUri,omitempty"`
+	HostRelayURI string `json:"hostRelayUri,omitempty"`
 
 	// Gets or sets the client URI.
 	ClientRelayURI string `json:"clientRelayUri,omitempty"`
