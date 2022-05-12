@@ -37,6 +37,8 @@ internal class JavaContractWriter : ContractWriter
         var filePath = GetAbsolutePath(Path.Combine("java", "src", "main", "java", "com", "microsoft", "tunnels", "contracts", fileName));
 
         var s = new StringBuilder();
+        s.AppendLine("// Copyright (c) Microsoft Corporation.");
+        s.AppendLine("// Licensed under the MIT license.");
         s.AppendLine($"// Generated from ../../../../../../../../{csFilePath}");
         s.AppendLine();
         s.AppendLine($"package {PackageName};");
