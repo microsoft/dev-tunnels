@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { UserManager } from '../userManager';
 import { authenticationTokenStatus, UserInfo } from '../userInfo';
 

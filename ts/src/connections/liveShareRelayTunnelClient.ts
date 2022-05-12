@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { SshClientSession, Trace } from '@vs/vs-ssh';
 import { SshHelpers } from './sshHelpers';
 import { TunnelClientBase } from './tunnelClientBase';

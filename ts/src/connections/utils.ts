@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 export class List {
     public static groupBy<T, K>(
         list: { forEach(f: (item: T) => void): void },

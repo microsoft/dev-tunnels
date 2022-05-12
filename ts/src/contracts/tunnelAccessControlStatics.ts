@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TunnelAccessScopes } from './tunnelAccessScopes';
 
 const allScopes = [

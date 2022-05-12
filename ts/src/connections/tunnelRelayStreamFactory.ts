@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { Stream } from '@vs/vs-ssh';
 import { IClientConfig } from 'websocket';
 

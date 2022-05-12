@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TunnelManagementClient, TunnelRequestOptions } from '@vs/tunnels-management';
 import {
     Tunnel,
