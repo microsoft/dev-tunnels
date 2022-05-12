@@ -1,5 +1,6 @@
 // <copyright file="ITunnelHost.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license.
 // </copyright>
 
 using System;
