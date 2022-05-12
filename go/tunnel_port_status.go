@@ -15,7 +15,7 @@ type TunnelPortStatus struct {
 	// The client connection count does not include the host. (See the
 	// `TunnelStatus.HostConnectionCount` property for host connection status. Hosts always
 	// listen for incoming connections on all tunnel ports simultaneously.)
-	ClientConnectionCount uint32 `json:"clientConnectionCount"`
+	ClientConnectionCount    uint32 `json:"clientConnectionCount"`
 
 	// Gets or sets the UTC date time when a client was last connected to the port.
 	LastClientConnectionTime *time.Time `json:"lastClientConnectionTime,omitempty"`
