@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
 // Generated from ../../../../../../../../cs/src/Contracts/LiveShareRelayTunnelEndpoint.cs
 
 package com.microsoft.tunnels.contracts;
