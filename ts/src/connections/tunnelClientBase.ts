@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { Tunnel, TunnelConnectionMode, TunnelEndpoint } from '@vs/tunnels-contracts';
 import {
     CancellationToken,

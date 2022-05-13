@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TunnelPort, Tunnel } from '@vs/tunnels-contracts';
 import { TunnelManagementClient } from '@vs/tunnels-management';
 import { KeyPair, SshAlgorithms, SshServerSession, Trace } from '@vs/vs-ssh';

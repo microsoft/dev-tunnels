@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TunnelRelayTunnelHost } from '@vs/tunnels-connections';
 import {
     Tunnel,

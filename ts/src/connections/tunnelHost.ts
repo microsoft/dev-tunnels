@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { Tunnel, TunnelPort } from '@vs/tunnels-contracts';
 import { Disposable } from 'vscode-jsonrpc';
 

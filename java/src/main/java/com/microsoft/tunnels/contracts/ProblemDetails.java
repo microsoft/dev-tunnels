@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
 // Generated from ../../../../../../../../cs/src/Contracts/ProblemDetails.cs
 
 package com.microsoft.tunnels.contracts;

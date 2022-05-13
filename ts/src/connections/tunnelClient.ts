@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TunnelConnectionMode, Tunnel } from '@vs/tunnels-contracts';
 import { SshStream, CancellationToken } from '@vs/vs-ssh';
 import { ForwardedPortsCollection } from '@vs/vs-ssh-tcp';

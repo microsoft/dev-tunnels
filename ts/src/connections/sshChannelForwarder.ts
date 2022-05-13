@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { Queue, SshChannel, SshChannelClosedEventArgs, Stream } from '@vs/vs-ssh';
 import { Semaphore } from 'await-semaphore';
 

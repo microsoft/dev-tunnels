@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 package com.microsoft.tunnels.contracts;
 
 import org.apache.maven.shared.utils.StringUtils;

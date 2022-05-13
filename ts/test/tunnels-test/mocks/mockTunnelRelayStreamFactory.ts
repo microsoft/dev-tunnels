@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TunnelRelayStreamFactory } from '@vs/tunnels-connections';
 import { Stream } from '@vs/vs-ssh';
 import { access } from 'fs';

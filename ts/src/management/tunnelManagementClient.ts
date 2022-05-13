@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort } from '@vs/tunnels-contracts';
 import { TunnelRequestOptions } from './tunnelRequestOptions';
 import * as https from 'https';
