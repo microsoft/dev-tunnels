@@ -1,4 +1,4 @@
-﻿// <copyright file="ResourceStatus.cs" company="Microsoft">
+﻿// <copyright file="RateStatus.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
