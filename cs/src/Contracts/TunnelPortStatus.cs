@@ -23,8 +23,8 @@ public class TunnelPortStatus
     /// status of those connections.
     /// 
     /// This count also does not include HTTP client connections, unless they are upgraded
-    /// to websockets. HTTP connections are counted on a per-request rather than per-connection
-    /// basis: see <see cref="HttpRequestRate"/>.
+    /// to websockets. HTTP connections are counted per-request rather than per-connection:
+    /// see <see cref="HttpRequestRate"/>.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ResourceStatus? ClientConnectionCount { get; set; }
@@ -46,8 +46,8 @@ public class TunnelPortStatus
     /// those connection types.
     ///
     /// This also does not include HTTP connections, unless they are upgraded to websockets.
-    /// HTTP connections are counted on a per-request rather than per-connection
-    /// basis: see <see cref="HttpRequestRate"/>.
+    /// HTTP connections are counted per-request rather than per-connection: see
+    /// <see cref="HttpRequestRate"/>.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public RateStatus? ClientConnectionRate { get; set; }

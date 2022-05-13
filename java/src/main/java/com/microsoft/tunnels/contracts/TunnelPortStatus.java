@@ -18,9 +18,8 @@ public class TunnelPortStatus {
      * This client connection count does not include non-port-specific connections such as
      * SDK and SSH clients. See {@link TunnelStatus#clientConnectionCount} for status of
      * those connections.  This count also does not include HTTP client connections,
-     * unless they are upgraded to websockets. HTTP connections are counted on a
-     * per-request rather than per-connection basis: see {@link
-     * TunnelPortStatus#httpRequestRate}.
+     * unless they are upgraded to websockets. HTTP connections are counted per-request
+     * rather than per-connection: see {@link TunnelPortStatus#httpRequestRate}.
      */
     @Expose
     public ResourceStatus clientConnectionCount;
@@ -39,8 +38,8 @@ public class TunnelPortStatus {
      * This client connection rate does not count non-port-specific connections such as
      * SDK and SSH clients. See {@link TunnelStatus#clientConnectionRate} for those
      * connection types.  This also does not include HTTP connections, unless they are
-     * upgraded to websockets. HTTP connections are counted on a per-request rather than
-     * per-connection basis: see {@link TunnelPortStatus#httpRequestRate}.
+     * upgraded to websockets. HTTP connections are counted per-request rather than
+     * per-connection: see {@link TunnelPortStatus#httpRequestRate}.
      */
     @Expose
     public RateStatus clientConnectionRate;

@@ -16,8 +16,8 @@ type TunnelPortStatus struct {
 	// This client connection count does not include non-port-specific connections such as
 	// SDK and SSH clients. See `TunnelStatus.ClientConnectionCount` for status of those
 	// connections.  This count also does not include HTTP client connections, unless they
-	// are upgraded to websockets. HTTP connections are counted on a per-request rather than
-	// per-connection basis: see `TunnelPortStatus.HttpRequestRate`.
+	// are upgraded to websockets. HTTP connections are counted per-request rather than
+	// per-connection: see `TunnelPortStatus.HttpRequestRate`.
 	ClientConnectionCount    *ResourceStatus `json:"clientConnectionCount,omitempty"`
 
 	// Gets or sets the UTC date time when a client was last connected to the port, or null
@@ -30,7 +30,7 @@ type TunnelPortStatus struct {
 	// This client connection rate does not count non-port-specific connections such as SDK
 	// and SSH clients. See `TunnelStatus.ClientConnectionRate` for those connection types.
 	// This also does not include HTTP connections, unless they are upgraded to websockets.
-	// HTTP connections are counted on a per-request rather than per-connection basis: see
+	// HTTP connections are counted per-request rather than per-connection: see
 	// `TunnelPortStatus.HttpRequestRate`.
 	ClientConnectionRate     *RateStatus `json:"clientConnectionRate,omitempty"`
 
