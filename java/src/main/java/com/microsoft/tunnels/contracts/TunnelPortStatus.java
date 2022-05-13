@@ -12,18 +12,42 @@ import java.util.Date;
  */
 public class TunnelPortStatus {
     /**
-     * Gets or sets the number of clients currently connected to the port.
+     * Gets or sets the current value and limit for the number of clients connected to the
+     * port.
      *
-     * The client connection count does not include the host. (See the {@link
-     * TunnelStatus#hostConnectionCount} property for host connection status. Hosts always
-     * listen for incoming connections on all tunnel ports simultaneously.)
+     * This client connection count does not include non-port-specific connections such as
+     * SDK and SSH clients. See {@link TunnelStatus#clientConnectionCount} for status of
+     * those connections.  This count also does not include HTTP client connections,
+     * unless they are upgraded to websockets. HTTP connections are counted per-request
+     * rather than per-connection: see {@link TunnelPortStatus#httpRequestRate}.
      */
     @Expose
-    public int clientConnectionCount;
+    public ResourceStatus clientConnectionCount;
 
     /**
-     * Gets or sets the UTC date time when a client was last connected to the port.
+     * Gets or sets the UTC date time when a client was last connected to the port, or
+     * null if a client has never connected.
      */
     @Expose
     public Date lastClientConnectionTime;
+
+    /**
+     * Gets or sets the current value and limit for the rate of client connections to the
+     * tunnel port.
+     *
+     * This client connection rate does not count non-port-specific connections such as
+     * SDK and SSH clients. See {@link TunnelStatus#clientConnectionRate} for those
+     * connection types.  This also does not include HTTP connections, unless they are
+     * upgraded to websockets. HTTP connections are counted per-request rather than
+     * per-connection: see {@link TunnelPortStatus#httpRequestRate}.
+     */
+    @Expose
+    public RateStatus clientConnectionRate;
+
+    /**
+     * Gets or sets the current value and limit for the rate of HTTP requests to the
+     * tunnel port.
+     */
+    @Expose
+    public RateStatus httpRequestRate;
 }
