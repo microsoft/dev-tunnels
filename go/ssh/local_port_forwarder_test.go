@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/microsoft/tunnels/go/ssh/messages"
+	"github.com/microsoft/dev-tunnels/go/ssh/messages"
 )
 
 type mockChannelOpener struct {

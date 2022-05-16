@@ -17,7 +17,7 @@
     <Copyright>Copyright (c) Microsoft Corporation. All rights reserved.</Copyright>
     <Owners>Microsoft</Owners>
     <RepositoryType>Git</RepositoryType>
-    <RepositoryUrl>https://github.com/microsoft/tunnels</RepositoryUrl>
+    <RepositoryUrl>https://github.com/microsoft/dev-tunnels</RepositoryUrl>
   </PropertyGroup>
 
   <!-- Product Properties -->

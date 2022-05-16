@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"os"
 
-	tunnels "github.com/microsoft/tunnels/go"
+	tunnels "github.com/microsoft/dev-tunnels/go"
 )
 
 // Set the tunnelId and cluster Id for the tunnels you want to connect to
