@@ -8,7 +8,7 @@
   <version>${revision}</version>
 
   <name>tunnels-java-sdk</name>
-  <url>https://github.com/microsoft/tunnels</url>
+  <url>https://github.com/microsoft/dev-tunnels</url>
 
   <properties>
     <java.version>11</java.version>
@@ -160,7 +160,7 @@
     <repository>
       <id>github</id>
       <name>GitHub Packages</name>
-      <url>https://maven.pkg.github.com/microsoft/tunnels</url>
+      <url>https://maven.pkg.github.com/microsoft/dev-tunnels</url>
     </repository>
   </distributionManagement>
 </project>
