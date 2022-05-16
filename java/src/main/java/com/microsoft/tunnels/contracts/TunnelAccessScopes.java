@@ -1,61 +1,37 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+// Generated from ../../../../../../../../cs/src/Contracts/TunnelAccessScopes.cs
+
 package com.microsoft.tunnels.contracts;
 
-import com.google.gson.annotations.Expose;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import org.apache.maven.shared.utils.StringUtils;
-
 /**
- * TunnelAccessScopes.
+ * Defines scopes for tunnel access tokens.
  */
 public class TunnelAccessScopes {
-  @Expose
-  public static String Create = "create";
-  @Expose
-  public static String Manage = "manage";
-  @Expose
-  public static String Host = "host";
-  @Expose
-  public static String Inspect = "inspect";
-  @Expose
-  public static String Connect = "connect";
-  @Expose
-  public static ArrayList<String> All = new ArrayList<String>() {
-    {
-      add(Create);
-      add(Manage);
-      add(Host);
-      add(Inspect);
-      add(Connect);
-    }
-  };
+    /**
+     * Allows creating tunnels. This scope is valid only in policies at the global,
+     * domain, or organization level; it is not relevant to an already-created tunnel or
+     * tunnel port. (Creation of ports requires "manage" or "host" access to the tunnel.)
+     */
+    public static final String create = "create";
 
-  /**
-   * Checks that the set of scopes matches the given validation set.
-   */
-  public static void validate(
-      Collection<String> scopes,
-      Collection<String> validScopes) {
-    if (scopes == null) {
-      throw new IllegalArgumentException("scopes must not be null");
-    }
-    scopes.forEach(scope -> {
-      if (StringUtils.isBlank(scope)) {
-        throw new IllegalArgumentException("Tunnel access scopes include a null/empty item.");
-      } else if (!TunnelAccessScopes.All.contains(scope)) {
-        throw new IllegalArgumentException("Invalid tunnel access scope: " + scope);
-      }
-    });
+    /**
+     * Allows management operations on tunnels and tunnel ports.
+     */
+    public static final String manage = "manage";
 
-    if (validScopes != null) {
-      scopes.forEach(scope -> {
-        if (!validScopes.contains(scope)) {
-          throw new IllegalArgumentException(
-              "Tunnel access scope is invalid for current request: " + scope);
-        }
-      });
-    }
-  }
+    /**
+     * Allows accepting connections on tunnels as a host.
+     */
+    public static final String host = "host";
 
+    /**
+     * Allows inspecting tunnel connection activity and data.
+     */
+    public static final String inspect = "inspect";
+
+    /**
+     * Allows connecting to tunnels as a client.
+     */
+    public static final String connect = "connect";
 }

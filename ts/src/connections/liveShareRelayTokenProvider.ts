@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { LiveShareRelayTunnelEndpoint, Tunnel, TunnelAccessScopes } from '@vs/tunnels-contracts';
 import { TunnelManagementClient, TunnelRequestOptions } from '@vs/tunnels-management';
 

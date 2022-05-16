@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import * as ssh from '@vs/vs-ssh';
 import {
     client as WebSocketClient,

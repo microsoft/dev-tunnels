@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TunnelEndpoint as ITunnelEndpoint, portUriToken } from './tunnelEndpoint';
 
 /**

@@ -1,5 +1,6 @@
 ﻿// <copyright file="GoContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license.
 // </copyright>
 
 using Microsoft.CodeAnalysis;
@@ -27,6 +28,8 @@ internal class GoContractWriter : ContractWriter
         var filePath = GetAbsolutePath(Path.Combine("go", fileName));
 
         var s = new StringBuilder();
+        s.AppendLine("// Copyright (c) Microsoft Corporation.");
+        s.AppendLine("// Licensed under the MIT license.");
         s.AppendLine($"// Generated from ../../../{csFilePath}");
         s.AppendLine();
         s.AppendLine("package tunnels");
@@ -426,9 +429,12 @@ internal class GoContractWriter : ContractWriter
             goType = csType switch
             {
                 "bool" => "bool",
+                "short" => "int16",
+                "ushort" => "uint16",
                 "int" => "int32",
                 "uint" => "uint32",
-                "ushort" => "uint16",
+                "long" => "int64",
+                "ulong" => "uint64",
                 "string" => "string",
                 "System.DateTime" => "time.Time",
                 "System.Text.RegularExpressions.Regex" => "regexp.Regexp",

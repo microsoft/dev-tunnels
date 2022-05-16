@@ -1,6 +1,6 @@
-//
-//  Copyright (c) Microsoft Corporation. All rights reserved.
-//
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 
 /**
  * Error thrown by `withTimeout()` when the promise does not resolve before the timeout duration.

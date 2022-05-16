@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { TcpListenerFactory } from '@vs/vs-ssh-tcp/tcpListenerFactory';
 import { Server } from 'net';
 import { CancellationToken } from 'vscode-jsonrpc';

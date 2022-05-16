@@ -1,18 +1,20 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+// Generated from ../../../../../../../../cs/src/Contracts/TunnelOptions.cs
+
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
 
-import java.util.Collection;
-
 /**
- * TunnelOptions.
+ * Data contract for {@link Tunnel} or {@link TunnelPort} options.
  */
 public class TunnelOptions {
-  /**
-   * Specifies the set of connection protocol / implementations enabled for a
-   * tunnel
-   * or port. If unspecified, all supported modes are enabled.
-   */
-  @Expose
-  public Collection<TunnelConnectionMode> connectionModes;
+    /**
+     * Gets or sets a value indicating whether web-forwarding of this tunnel can run on
+     * any cluster (region) without redirecting to the home cluster. This is only
+     * applicable if the tunnel has a name and web-forwarding uses it.
+     */
+    @Expose
+    public boolean isGloballyAvailable;
 }

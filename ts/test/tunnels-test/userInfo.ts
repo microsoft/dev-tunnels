@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 export class UserInfo {
     public aadProvider?: string = 'AAD';
     public githubProvider?: string = 'GitHub';
