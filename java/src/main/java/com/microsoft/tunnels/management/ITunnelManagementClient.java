@@ -1,10 +1,12 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 package com.microsoft.tunnels.management;
 
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
-import com.microsoft.tunnels.contracts.TunnelRelayTunnelEndpoint;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -104,7 +106,7 @@ public interface ITunnelManagementClient {
    * @return The created or updated tunnel endpoint, with any server-supplied
    *         properties filled.
    */
-  public CompletableFuture<TunnelRelayTunnelEndpoint> updateTunnelEndpointsAsync(
+  public CompletableFuture<TunnelEndpoint> updateTunnelEndpointAsync(
       Tunnel tunnel,
       TunnelEndpoint endpoint,
       TunnelRequestOptions options);

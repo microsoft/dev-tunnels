@@ -1,10 +1,20 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 package com.microsoft.tunnels.management;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+import com.microsoft.tunnels.contracts.LiveShareRelayTunnelEndpoint;
+import com.microsoft.tunnels.contracts.LocalNetworkTunnelEndpoint;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelAccessControl;
+import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
@@ -21,7 +31,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -50,19 +62,19 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   // Access Scopes
   private static String[] HostAccessTokenScope = {
-      TunnelAccessScopes.Host
+      TunnelAccessScopes.host
   };
   private static String[] HostOrManageAccessTokenScope = {
-      TunnelAccessScopes.Host,
-      TunnelAccessScopes.Manage,
+      TunnelAccessScopes.host,
+      TunnelAccessScopes.manage,
   };
   private static String[] ManageAccessTokenScope = {
-      TunnelAccessScopes.Manage
+      TunnelAccessScopes.manage
   };
   private static String[] ReadAccessTokenScopes = {
-      TunnelAccessScopes.Manage,
-      TunnelAccessScopes.Host,
-      TunnelAccessScopes.Connect
+      TunnelAccessScopes.manage,
+      TunnelAccessScopes.host,
+      TunnelAccessScopes.connect
   };
 
   private ProductHeaderValue[] userAgents;
@@ -93,7 +105,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       ProductHeaderValue[] userAgents,
       Supplier<String> accessTokenCallback,
       String tunnelServiceUri) {
-    if (userAgents.length == 0){
+    if (userAgents.length == 0) {
       throw new IllegalArgumentException("user agents cannot be empty");
     }
     this.userAgents = userAgents;
@@ -143,9 +155,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       }
     }
     String userAgentString = "";
-    for (ProductHeaderValue userAgent : this.userAgents){
+    for (ProductHeaderValue userAgent : this.userAgents) {
       userAgentString = userAgent.productName
-        + "/" + userAgent.version + " " + userAgentString;
+          + "/" + userAgent.version + " " + userAgentString;
     }
     userAgentString = userAgentString + SDK_USER_AGENT;
     var requestBuilder = HttpRequest.newBuilder()
@@ -173,10 +185,15 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           response.statusCode(),
           response.body());
     }
-    var builder = new GsonBuilder()
-        .excludeFieldsWithoutExposeAnnotation();
-    Gson gson = builder.create();
+    Gson gson = createConfiguredGson();
     return gson.fromJson(response.body(), typeOfT);
+  }
+
+  private Gson createConfiguredGson() {
+    var builder = new GsonBuilder()
+        .excludeFieldsWithoutExposeAnnotation()
+        .registerTypeAdapter(TunnelEndpoint.class, new TunnelEndpointDeserializer());
+    return builder.create();
   }
 
   private URI buildUri(Tunnel tunnel, TunnelRequestOptions options) {
@@ -269,7 +286,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (options.scopes != null) {
-      TunnelAccessScopes.validate(options.scopes, null);
+      TunnelAccessControl.validateScopes(options.scopes, null);
       try {
         queryOptions.add("scopes=" + URLEncoder.encode(String.join(",", options.scopes), encoding));
       } catch (UnsupportedEncodingException e) {
@@ -278,7 +295,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (options.tokenScopes != null) {
-      TunnelAccessScopes.validate(options.tokenScopes, null);
+      TunnelAccessControl.validateScopes(options.tokenScopes, null);
       try {
         queryOptions.add(
             "tokenScopes=" + URLEncoder.encode(String.join(",", options.tokenScopes), encoding));
@@ -361,10 +378,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.accessControl = tunnel.accessControl;
     converted.endpoints = tunnel.endpoints;
     if (tunnel.accessControl != null && tunnel.accessControl.entries != null) {
-      converted.accessControl = new TunnelAccessControl(
-          tunnel.accessControl.entries.stream()
-              .filter((e) -> !e.isInherited)
-              .collect(Collectors.toList()));
+      List<TunnelAccessControlEntry> entries = Arrays.asList(tunnel.accessControl.entries);
+      List<TunnelAccessControlEntry> filtered = entries.stream()
+          .filter((e) -> !e.isInherited)
+          .collect(Collectors.toList());
+      converted.accessControl.entries = filtered.toArray(new TunnelAccessControlEntry[0]);
     }
     if (tunnel.ports == null) {
       converted.ports = null;
@@ -413,7 +431,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   }
 
   @Override
-  public CompletableFuture<TunnelRelayTunnelEndpoint> updateTunnelEndpointsAsync(
+  public CompletableFuture<TunnelEndpoint> updateTunnelEndpointAsync(
       Tunnel tunnel,
       TunnelEndpoint endpoint,
       TunnelRequestOptions options) {
@@ -430,9 +448,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         path);
 
-    final Type responseType = new TypeToken<TunnelRelayTunnelEndpoint>() {
+    final Type responseType = new TypeToken<TunnelEndpoint>() {
     }.getType();
-    CompletableFuture<TunnelRelayTunnelEndpoint> result = requestAsync(
+    CompletableFuture<TunnelEndpoint> result = requestAsync(
         tunnel,
         options,
         HttpMethod.PUT,
@@ -442,15 +460,15 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.endpoints != null) {
-      var updatedEndpoints = new ArrayList<TunnelRelayTunnelEndpoint>();
-      for (TunnelRelayTunnelEndpoint e : tunnel.endpoints) {
+      var updatedEndpoints = new ArrayList<TunnelEndpoint>();
+      for (TunnelEndpoint e : tunnel.endpoints) {
         if (e.hostId != endpoint.hostId || e.connectionMode != endpoint.connectionMode) {
           updatedEndpoints.add(e);
         }
       }
       updatedEndpoints.add(result.join());
       tunnel.endpoints = updatedEndpoints
-          .toArray(new TunnelRelayTunnelEndpoint[updatedEndpoints.size()]);
+          .toArray(new TunnelEndpoint[updatedEndpoints.size()]);
     }
     return result;
   }
@@ -482,14 +500,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
 
     if (tunnel.endpoints != null) {
-      var updatedEndpoints = new ArrayList<TunnelRelayTunnelEndpoint>();
-      for (TunnelRelayTunnelEndpoint e : tunnel.endpoints) {
+      var updatedEndpoints = new ArrayList<TunnelEndpoint>();
+      for (TunnelEndpoint e : tunnel.endpoints) {
         if (e.hostId != hostId || e.connectionMode != connectionMode) {
           updatedEndpoints.add(e);
         }
       }
       tunnel.endpoints = updatedEndpoints
-          .toArray(new TunnelRelayTunnelEndpoint[updatedEndpoints.size()]);
+          .toArray(new TunnelEndpoint[updatedEndpoints.size()]);
     }
     return result;
   }
@@ -587,10 +605,12 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.protocol = tunnelPort.protocol;
     converted.options = tunnelPort.options;
     if (tunnelPort.accessControl != null && tunnelPort.accessControl.entries != null) {
-      converted.accessControl = new TunnelAccessControl(
-          tunnelPort.accessControl.entries.stream()
-              .filter((e) -> !e.isInherited)
-              .collect(Collectors.toList()));
+      List<TunnelAccessControlEntry> entries = Arrays.asList(tunnel.accessControl.entries);
+      List<TunnelAccessControlEntry> filtered = entries.stream()
+          .filter((e) -> !e.isInherited)
+          .collect(Collectors.toList());
+      converted.accessControl = tunnelPort.accessControl;
+      converted.accessControl.entries = filtered.toArray(new TunnelAccessControlEntry[0]);
     }
     return converted;
   }
@@ -678,5 +698,33 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     }
     return result;
+  }
+
+  class TunnelEndpointDeserializer implements JsonDeserializer<TunnelEndpoint> {
+    private Gson gson;
+
+    TunnelEndpointDeserializer() {
+      this.gson = new Gson();
+    }
+
+    @Override
+    public TunnelEndpoint deserialize(
+        JsonElement json,
+        Type typeOfT,
+        JsonDeserializationContext context)
+        throws JsonParseException {
+      var endpointObject = json.getAsJsonObject();
+      var connectionMode = endpointObject.get("connectionMode").getAsString();
+      if (connectionMode.equals("TunnelRelay")) {
+        return gson.fromJson(endpointObject, TunnelRelayTunnelEndpoint.class);
+      } else if (connectionMode.equals("LiveShareRelay")) {
+        return gson.fromJson(endpointObject, LiveShareRelayTunnelEndpoint.class);
+      } else if (connectionMode.equals("LocalNetwork")) {
+        return gson.fromJson(endpointObject, LocalNetworkTunnelEndpoint.class);
+      } else {
+        throw new JsonParseException("Unable to parse TunnelEnpoint: " + endpointObject);
+      }
+    }
+
   }
 }

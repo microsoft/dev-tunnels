@@ -1,5 +1,6 @@
 // <copyright file="TunnelAccessControlEntryType.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license.
 // </copyright>
 
 namespace Microsoft.VsSaaS.TunnelService.Contracts

@@ -1,5 +1,6 @@
 ﻿// <copyright file="ContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license.
 // </copyright>
 
 using Microsoft.CodeAnalysis;
@@ -18,6 +19,7 @@ internal abstract class ContractWriter
     {
         "ts",
         "go",
+        "java"
     };
 
     public static ContractWriter Create(string language, string repoRoot, string csNamespace)
@@ -26,6 +28,7 @@ internal abstract class ContractWriter
         {
             "ts" => new TSContractWriter(repoRoot, csNamespace),
             "go" => new GoContractWriter(repoRoot, csNamespace),
+            "java" => new JavaContractWriter(repoRoot, csNamespace),
             _ => throw new NotSupportedException("Unsupported contract language: " + language),
         };
     }

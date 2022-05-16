@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 package com.microsoft.tunnels;
 
 import static org.junit.Assert.assertEquals;
@@ -28,7 +31,7 @@ public class TunnelManagementClientTests {
       TunnelManagementClientTests.class.getPackage().getSpecificationVersion());
 
   private TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
-      new ProductHeaderValue[]{userAgent}, () -> "");
+      new ProductHeaderValue[] { userAgent }, () -> "");
 
   @Test
   public void createTunnel() {
@@ -36,23 +39,24 @@ public class TunnelManagementClientTests {
     // Set up tunnel access control.
     var tunnelAccessEntry = new TunnelAccessControlEntry();
     tunnelAccessEntry.type = TunnelAccessControlEntryType.Anonymous;
-    tunnelAccessEntry.subjects = new String[]{};
-    tunnelAccessEntry.scopes = new String[]{"connect"};
-    var access = new TunnelAccessControl(Arrays.asList(new TunnelAccessControlEntry()));
+    tunnelAccessEntry.subjects = new String[] {};
+    tunnelAccessEntry.scopes = new String[] { "connect" };
+    var access = new TunnelAccessControl();
+    access.entries = new TunnelAccessControlEntry[] { new TunnelAccessControlEntry() };
 
     // set up the tunnel port.
     var port = new TunnelPort();
     port.portNumber = 3000;
-    port.protocol = TunnelProtocol.Https;
+    port.protocol = TunnelProtocol.https;
 
     // Set up tunnel.
     Tunnel tunnel = new Tunnel();
     tunnel.accessControl = access;
-    tunnel.ports = new TunnelPort[] {port};
+    tunnel.ports = new TunnelPort[] { port };
 
     // Configure tunnel request options.
     var requestOptions = new TunnelRequestOptions();
-    requestOptions.tokenScopes = Arrays.asList(TunnelAccessScopes.Host);
+    requestOptions.tokenScopes = Arrays.asList(TunnelAccessScopes.host);
     requestOptions.includePorts = true;
 
     var createdTunnel = tryCreateTunnel(tunnel, requestOptions);
@@ -112,7 +116,7 @@ public class TunnelManagementClientTests {
     var port = new TunnelPort();
     var portNumber = 3000;
     port.portNumber = portNumber;
-    port.protocol = TunnelProtocol.Https;
+    port.protocol = TunnelProtocol.https;
 
     var tunnel = new Tunnel();
     var options = new TunnelRequestOptions();
@@ -123,7 +127,7 @@ public class TunnelManagementClientTests {
     var result = tunnelManagementClient.createTunnelPortAsync(createdTunnel, port, options).join();
     // Expect properties specified at creation to be equal.
     assertEquals("Expected ports to be equal.", portNumber, result.portNumber);
-    assertEquals("Expected protocol to be equal.", TunnelProtocol.Https, result.protocol);
+    assertEquals("Expected protocol to be equal.", TunnelProtocol.https, result.protocol);
 
     // Expect unspecified properties to have been initialized to defaults.
     assertNull(result.accessTokens);

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 export { Tunnel } from './tunnel';
 export { LiveShareRelayTunnelEndpoint } from './liveShareRelayTunnelEndpoint';
 export { ProblemDetails } from './problemDetails';
