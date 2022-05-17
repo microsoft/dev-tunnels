@@ -32,7 +32,7 @@ internal class GoContractWriter : ContractWriter
         s.AppendLine("// Licensed under the MIT license.");
         s.AppendLine($"// Generated from ../../../{csFilePath}");
         s.AppendLine();
-        s.AppendLine("package tunnels");
+        s.AppendLine("package goTunnels");
         s.AppendLine();
 
         var importsOffset = s.Length;
