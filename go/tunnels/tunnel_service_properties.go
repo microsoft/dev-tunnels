@@ -7,13 +7,13 @@ package tunnels
 // Provides environment-dependent properties about the service.
 type TunnelServiceProperties struct {
 	// Gets the base URI of the service.
-	ServiceURI string `json:"serviceUri"`
+	ServiceURI           string `json:"serviceUri"`
 
 	// Gets the public AAD AppId for the service.
 	//
 	// Clients specify this AppId as the audience property when authenticating to the
 	// service.
-	ServiceAppID string `json:"serviceAppId"`
+	ServiceAppID         string `json:"serviceAppId"`
 
 	// Gets the internal AAD AppId for the service.
 	//
@@ -26,7 +26,7 @@ type TunnelServiceProperties struct {
 	//
 	// Clients apps that authenticate tunnel users with GitHub specify this as the client ID
 	// when requesting a user token.
-	GitHubAppClientID string `json:"gitHubAppClientId"`
+	GitHubAppClientID    string `json:"gitHubAppClientId"`
 }
 
 // Global DNS name of the production tunnel service.

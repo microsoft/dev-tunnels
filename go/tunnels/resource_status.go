@@ -14,7 +14,7 @@ type ResourceStatus struct {
 	// Any requests that would cause the limit to be exceeded may be denied by the service.
 	// For HTTP requests, the response is generally a 403 Forbidden status, with details
 	// about the limit in the response body.
-	Limit uint64 `json:"limit,omitempty"`
+	Limit   uint64 `json:"limit,omitempty"`
 
 	RateStatus
 }
@@ -30,5 +30,5 @@ type RateStatus struct {
 
 	// Gets or sets the number of seconds until the current measurement period ends and the
 	// current rate value resets.
-	ResetSeconds uint32 `json:"resetSeconds,omitempty"`
+	ResetSeconds  uint32 `json:"resetSeconds,omitempty"`
 }

@@ -11,7 +11,7 @@ package tunnels
 // have additional port-specific entries that augment or override those access rules.
 type TunnelAccessControlEntry struct {
 	// Gets or sets the access control entry type.
-	Type TunnelAccessControlEntryType `json:"type"`
+	Type         TunnelAccessControlEntryType `json:"type"`
 
 	// Gets or sets the provider of the subjects in this access control entry. The provider
 	// impacts how the subject identifiers are resolved and displayed. The provider may be an
@@ -23,11 +23,11 @@ type TunnelAccessControlEntry struct {
 	// For public key ACEs, this value is the type of public key, e.g. "ssh".  For IP address
 	// range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6".  For anonymous
 	// ACEs, this value is null.
-	Provider string `json:"provider,omitempty"`
+	Provider     string `json:"provider,omitempty"`
 
 	// Gets or sets a value indicating whether this is an access control entry on a tunnel
 	// port that is inherited from the tunnel's access control list.
-	IsInherited bool `json:"isInherited,omitempty"`
+	IsInherited  bool `json:"isInherited,omitempty"`
 
 	// Gets or sets a value indicating whether this entry is a deny rule that blocks access
 	// to the specified users. Otherwise it is an allow rule.
@@ -35,7 +35,7 @@ type TunnelAccessControlEntry struct {
 	// All deny rules (including inherited rules) are processed after all allow rules.
 	// Therefore a deny ACE cannot be overridden by an allow ACE that is later in the list or
 	// on a more-specific resource. In other words, inherited deny ACEs cannot be overridden.
-	IsDeny bool `json:"isDeny,omitempty"`
+	IsDeny       bool `json:"isDeny,omitempty"`
 
 	// Gets or sets a value indicating whether this entry applies to all subjects that are
 	// NOT in the `TunnelAccessControlEntry.Subjects` list.
@@ -48,7 +48,7 @@ type TunnelAccessControlEntry struct {
 	// access to users who are not members of an organization or are outside of an IP address
 	// range, effectively blocking any tunnels from allowing outside access (because
 	// inherited deny ACEs cannot be overridden).
-	IsInverse bool `json:"isInverse,omitempty"`
+	IsInverse    bool `json:"isInverse,omitempty"`
 
 	// Gets or sets an optional organization context for all subjects of this entry. The use
 	// and meaning of this value depends on the `TunnelAccessControlEntry.Type` and
@@ -61,12 +61,12 @@ type TunnelAccessControlEntry struct {
 	// Gets or sets the subjects for the entry, such as user or group IDs. The format of the
 	// values depends on the `TunnelAccessControlEntry.Type` and
 	// `TunnelAccessControlEntry.Provider` of this entry.
-	Subjects []string `json:"subjects"`
+	Subjects     []string `json:"subjects"`
 
 	// Gets or sets the access scopes that this entry grants or denies to the subjects.
 	//
 	// These must be one or more values from `TunnelAccessScopes`.
-	Scopes []string `json:"scopes"`
+	Scopes       []string `json:"scopes"`
 }
 
 // Constants for well-known identity providers.
@@ -78,14 +78,14 @@ const (
 	TunnelAccessControlEntryProviderMicrosoft TunnelAccessControlEntryProvider = "microsoft"
 
 	// GitHub identity provider.
-	TunnelAccessControlEntryProviderGitHub TunnelAccessControlEntryProvider = "github"
+	TunnelAccessControlEntryProviderGitHub    TunnelAccessControlEntryProvider = "github"
 
 	// SSH public keys.
-	TunnelAccessControlEntryProviderSsh TunnelAccessControlEntryProvider = "ssh"
+	TunnelAccessControlEntryProviderSsh       TunnelAccessControlEntryProvider = "ssh"
 
 	// IPv4 addresses.
-	TunnelAccessControlEntryProviderIPv4 TunnelAccessControlEntryProvider = "ipv4"
+	TunnelAccessControlEntryProviderIPv4      TunnelAccessControlEntryProvider = "ipv4"
 
 	// IPv6 addresses.
-	TunnelAccessControlEntryProviderIPv6 TunnelAccessControlEntryProvider = "ipv6"
+	TunnelAccessControlEntryProviderIPv6      TunnelAccessControlEntryProvider = "ipv6"
 )
