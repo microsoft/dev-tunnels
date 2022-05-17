@@ -25,7 +25,7 @@ internal class GoContractWriter : ContractWriter
         var csFilePath = GetRelativePath(type.Locations.Single().GetLineSpan().Path);
 
         var fileName = ToSnakeCase(type.Name) + ".go";
-        var filePath = GetAbsolutePath(Path.Combine("go", fileName));
+        var filePath = GetAbsolutePath(Path.Combine("go/tunnels", fileName));
 
         var s = new StringBuilder();
         s.AppendLine("// Copyright (c) Microsoft Corporation.");

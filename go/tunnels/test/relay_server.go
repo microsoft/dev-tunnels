@@ -12,7 +12,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/gorilla/websocket"
-	"github.com/microsoft/dev-tunnels/go/ssh/messages"
+	"github.com/microsoft/dev-tunnels/go/tunnels/ssh/messages"
 	"golang.org/x/crypto/ssh"
 )
 

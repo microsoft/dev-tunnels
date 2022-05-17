@@ -14,8 +14,8 @@ import (
 
 	"net/http"
 
-	tunnelssh "github.com/microsoft/dev-tunnels/go/ssh"
-	"github.com/microsoft/dev-tunnels/go/ssh/messages"
+	tunnelssh "github.com/microsoft/dev-tunnels/go/tunnels/ssh"
+	"github.com/microsoft/dev-tunnels/go/tunnels/ssh/messages"
 	"golang.org/x/crypto/ssh"
 )
 
