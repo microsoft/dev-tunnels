@@ -429,12 +429,9 @@ internal class GoContractWriter : ContractWriter
             goType = csType switch
             {
                 "bool" => "bool",
-                "short" => "int16",
-                "ushort" => "uint16",
                 "int" => "int32",
                 "uint" => "uint32",
-                "long" => "int64",
-                "ulong" => "uint64",
+                "ushort" => "uint16",
                 "string" => "string",
                 "System.DateTime" => "time.Time",
                 "System.Text.RegularExpressions.Regex" => "regexp.Regexp",

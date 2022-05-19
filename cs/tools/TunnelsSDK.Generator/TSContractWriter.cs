@@ -382,12 +382,9 @@ internal class TSContractWriter : ContractWriter
             tsType = csType switch
             {
                 "bool" => "boolean",
-                "short" => "number",
-                "ushort" => "number",
                 "int" => "number",
                 "uint" => "number",
-                "long" => "number",
-                "ulong" => "number",
+                "ushort" => "number",
                 "string" => "string",
                 "System.DateTime" => "Date",
                 "System.Text.RegularExpressions.Regex" => "RegExp",
