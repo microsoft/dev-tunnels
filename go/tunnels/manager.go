@@ -600,15 +600,15 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 	if tunnelRequestOptions.AccessToken != "" {
 		token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelRequestOptions.AccessToken)
 	}
-	if token == "" {
-		token = m.tokenProvider()
-	}
 	if token == "" && tunnel != nil {
 		for _, scope := range scopes {
 			if tunnelToken, ok := tunnel.AccessTokens[scope]; ok {
 				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelToken)
 			}
 		}
+	}
+	if token == "" {
+		token = m.tokenProvider()
 	}
 	return token
 }
