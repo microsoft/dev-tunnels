@@ -4,6 +4,7 @@
 package tunnels
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/rodaine/table"
@@ -143,4 +144,19 @@ func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error)
 	}
 
 	return convertedPort, nil
+}
+
+func (rs *ResourceStatus) UnmarshalJSON(data []byte) (err error) {
+	// First attempt to un-marshal as a ResourceStatus object.
+	var obj map[string]uint64
+	err = json.Unmarshal(data, &obj)
+	if (err == nil) {
+		rs.Current = obj["current"]
+		rs.Limit = obj["limit"]
+	} else {
+		// It's not an object - unmarshal as a simple number.
+		err = json.Unmarshal(data, &rs.Current)
+		rs.Limit = 0
+	}
+	return err
 }

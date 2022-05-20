@@ -3,13 +3,17 @@
 
 package com.microsoft.tunnels;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.microsoft.tunnels.contracts.ResourceStatus;
 import com.microsoft.tunnels.contracts.TunnelAccessControl;
 import com.microsoft.tunnels.contracts.TunnelConstraints;
+import com.microsoft.tunnels.contracts.TunnelContracts;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelServiceProperties;
 
@@ -80,5 +84,15 @@ public class TunnelContractsTests {
       TunnelAccessControl.validateScopes(invalidScopes, validScopes);
     });
     assertTrue(exception.getMessage().equals("Invalid tunnel access scope: invalid"));
+  }
+
+  @Test
+  public void resourceStatus() {
+    var gson = TunnelContracts.getGson();
+    var result1 = gson.fromJson("{\"current\": 3, \"limit\": 10 }", ResourceStatus.class);
+    assertNotEquals(0, result1.current);
+    assertNotEquals(0, result1.limit);
+    var result2 = gson.fromJson("3", ResourceStatus.class);
+    assertEquals(result1.current, result2.current);
   }
 }

@@ -79,7 +79,6 @@ internal class JavaContractWriter : ContractWriter
         {
             WriteEnumContract(s, indent, type);
             imports.Add(SerializedNameType);
-            imports.Add(GsonExposeType);
         }
         else
         {
