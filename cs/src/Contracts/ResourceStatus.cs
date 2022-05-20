@@ -3,6 +3,9 @@
 // Licensed under the MIT license.
 // </copyright>
 
+using System;
+using System.Diagnostics;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Microsoft.VsSaaS.TunnelService.Contracts;
@@ -27,4 +30,64 @@ public class ResourceStatus
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ulong? Limit { get; set; }
+
+    /// <summary>
+    /// JSON converter that allows for compatibility with a simple number value
+    /// when the resource status does not include a limit.
+    /// </summary>
+    public class Converter : JsonConverter<ResourceStatus>
+    {
+        /// <inheritdoc/>
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert == typeof(ResourceStatus);
+        }
+
+        /// <inheritdoc/>
+#if NET5_0_OR_GREATER
+        public override ResourceStatus? Read(
+#else
+        public override ResourceStatus Read(
+#endif
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options)
+        {
+            // By default, serializer handles null deserialization for reference types.
+            Debug.Assert(
+                reader.TokenType != JsonTokenType.Null,
+                "JSON token to be deserialized should not be null");
+
+            if (reader.TokenType == JsonTokenType.Number)
+            {
+                return new ResourceStatus
+                {
+                    Current = reader.GetUInt64(),
+                };
+            }
+            else
+            {
+                return JsonSerializer.Deserialize<ResourceStatus>(ref reader, options);
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void Write(
+            Utf8JsonWriter writer,
+            ResourceStatus value,
+            JsonSerializerOptions options)
+        {
+            // By default, serializer handles null serialization.
+            Debug.Assert(value != null, "Value to be serialized should not be null.");
+
+            if (value.Limit == null)
+            {
+                writer.WriteNumberValue(value.Current);
+            }
+            else
+            {
+                JsonSerializer.Serialize<ResourceStatus>(writer, value, options);
+            }
+        }
+    }
 }

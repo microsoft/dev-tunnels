@@ -24,6 +24,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
             options.Converters.Add(new JsonStringEnumConverter());
             options.Converters.Add(new TunnelEndpoint.Converter());
             options.Converters.Add(new TunnelAccessControl.Converter());
+            options.Converters.Add(new ResourceStatus.Converter());
             options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             return options;
         }

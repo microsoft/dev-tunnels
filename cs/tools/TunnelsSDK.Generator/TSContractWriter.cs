@@ -376,6 +376,11 @@ internal class TSContractWriter : ContractWriter
             {
                 imports.Add(tsType);
             }
+
+            if (tsType == "ResourceStatus")
+            {
+                tsType = "number | ResourceStatus";
+            }
         }
         else
         {

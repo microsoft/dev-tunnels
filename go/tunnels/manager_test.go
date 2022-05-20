@@ -5,6 +5,7 @@ package tunnels
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -712,5 +713,30 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
 		logger.Printf("Deleted tunnel with id %s", getTunnel.TunnelID)
+	}
+}
+
+
+func TestResourceStatusUnmarshal(t *testing.T) {
+	var test1 = []byte("{ \"current\": 3, \"limit\": 10 }")
+	var result1 ResourceStatus
+	var err = json.Unmarshal(test1, &result1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if (result1.Limit == 0) {
+		t.Errorf("Limit was not deserialized")
+	}
+
+	var result2 ResourceStatus
+	var test2 = []byte("3")
+	err = json.Unmarshal(test2, &result2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if result1.Current != result2.Current {
+		t.Errorf("%d != %d", result1.Current, result2.Current)
 	}
 }

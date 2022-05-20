@@ -410,6 +410,7 @@ namespace Microsoft.VsSaaS.TunnelService
 
                     case HttpStatusCode.NotFound:
                     case HttpStatusCode.Conflict:
+                    case HttpStatusCode.TooManyRequests:
                         throw new InvalidOperationException(errorMessage, hrex);
 
                     case HttpStatusCode.Redirect:
@@ -420,6 +421,7 @@ namespace Microsoft.VsSaaS.TunnelService
                         // when client auto redirection is disabled.
                         hrex.Data["Location"] = response.Headers.Location;
                         throw;
+
                     default: throw;
                 }
             }

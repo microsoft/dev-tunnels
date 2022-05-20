@@ -13,7 +13,7 @@ export interface TunnelStatus {
     /**
      * Gets or sets the current value and limit for the number of ports on the tunnel.
      */
-    portCount?: ResourceStatus;
+    portCount?: number | ResourceStatus;
 
     /**
      * Gets or sets the current value and limit for the number of hosts currently
@@ -22,7 +22,7 @@ export interface TunnelStatus {
      * This is typically 0 or 1, but may be more than 1 if the tunnel options allow
      * multiple hosts.
      */
-    hostConnectionCount?: ResourceStatus;
+    hostConnectionCount?: number | ResourceStatus;
 
     /**
      * Gets or sets the UTC time when a host was last accepting connections to the tunnel,
@@ -37,7 +37,7 @@ export interface TunnelStatus {
      * This counts non-port-specific client connections, which is SDK and SSH clients. See
      * {@link TunnelPortStatus} for status of per-port client connections.
      */
-    clientConnectionCount?: ResourceStatus;
+    clientConnectionCount?: number | ResourceStatus;
 
     /**
      * Gets or sets the UTC time when a client last connected to the tunnel, or null if a

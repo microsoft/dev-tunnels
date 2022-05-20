@@ -20,7 +20,7 @@ export interface TunnelPortStatus {
      * unless they are upgraded to websockets. HTTP connections are counted per-request
      * rather than per-connection: see {@link TunnelPortStatus.httpRequestRate}.
      */
-    clientConnectionCount?: ResourceStatus;
+    clientConnectionCount?: number | ResourceStatus;
 
     /**
      * Gets or sets the UTC date time when a client was last connected to the port, or
