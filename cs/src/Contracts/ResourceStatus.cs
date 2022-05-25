@@ -32,17 +32,24 @@ public class ResourceStatus
     public ulong? Limit { get; set; }
 
     /// <summary>
+    /// Implicitly converts a number value to a resource status (with unspecified limit).
+    /// </summary>
+    /// <param name="value"></param>
+    public static implicit operator ResourceStatus(ulong value)
+        => new ResourceStatus { Current = value };
+
+    /// <summary>
+    /// Implicitly converts a resource status to a number value (ignoring any limit).
+    /// </summary>
+    /// <param name="status"></param>
+    public static implicit operator ulong(ResourceStatus status) => status.Current;
+
+    /// <summary>
     /// JSON converter that allows for compatibility with a simple number value
     /// when the resource status does not include a limit.
     /// </summary>
     public class Converter : JsonConverter<ResourceStatus>
     {
-        /// <inheritdoc/>
-        public override bool CanConvert(Type typeToConvert)
-        {
-            return typeToConvert == typeof(ResourceStatus);
-        }
-
         /// <inheritdoc/>
 #if NET5_0_OR_GREATER
         public override ResourceStatus? Read(
@@ -65,9 +72,56 @@ public class ResourceStatus
                     Current = reader.GetUInt64(),
                 };
             }
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new JsonException($"Unexpected token: {reader.TokenType}");
+            }
             else
             {
-                return JsonSerializer.Deserialize<ResourceStatus>(ref reader, options);
+                var currentPropertyName =
+                    options.PropertyNamingPolicy?.ConvertName(nameof(Current)) ?? nameof(Current);
+                var limitPropertyName =
+                    options.PropertyNamingPolicy?.ConvertName(nameof(Limit)) ?? nameof(Limit);
+                var comparison = options.PropertyNameCaseInsensitive ?
+                    StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+                ulong? current = null;
+                ulong? limit = null;
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonTokenType.EndObject)
+                    {
+                        break;
+                    }
+                    else if (reader.TokenType != JsonTokenType.PropertyName)
+                    {
+                        throw new JsonException($"Unexpected token: {reader.TokenType}");
+                    }
+
+                    var propertyName = reader.GetString();
+                    reader.Read();
+
+                    if (string.Equals(propertyName, currentPropertyName, comparison))
+                    {
+                        current = reader.GetUInt64();
+                    }
+                    else if (string.Equals(propertyName, limitPropertyName, comparison))
+                    {
+                        limit = reader.TokenType == JsonTokenType.Null ?
+                            null : reader.GetUInt64();
+                    }
+                    else
+                    {
+                        reader.Skip();
+                    }
+                }
+
+                if (current == null)
+                {
+                    throw new JsonException($"Missing required property: {currentPropertyName}");
+                }
+
+                return new ResourceStatus { Current = current.Value, Limit = limit };
             }
         }
 
@@ -86,7 +140,14 @@ public class ResourceStatus
             }
             else
             {
-                JsonSerializer.Serialize<ResourceStatus>(writer, value, options);
+                writer.WriteStartObject();
+                writer.WriteNumber(
+                    options.PropertyNamingPolicy?.ConvertName(nameof(Current)) ?? nameof(Current),
+                    value.Current);
+                writer.WriteNumber(
+                    options.PropertyNamingPolicy?.ConvertName(nameof(Limit)) ?? nameof(Limit),
+                    value.Limit.Value);
+                writer.WriteEndObject();
             }
         }
     }
