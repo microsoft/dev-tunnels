@@ -130,12 +130,6 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public class Converter : JsonConverter<TunnelAccessControl>
         {
             /// <inheritdoc/>
-            public override bool CanConvert(Type typeToConvert)
-            {
-                return typeToConvert == typeof(TunnelAccessControl);
-            }
-
-            /// <inheritdoc/>
 #if NET5_0_OR_GREATER
             public override TunnelAccessControl? Read(
 #else
@@ -152,39 +146,40 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
                 if (reader.TokenType != JsonTokenType.StartObject)
                 {
-                    throw new JsonException();
+                    throw new JsonException($"Unexpected token: {reader.TokenType}");
                 }
 
                 var entriesPropertyName =
                     options.PropertyNamingPolicy?.ConvertName(nameof(Entries)) ?? nameof(Entries);
+                var comparison = options.PropertyNameCaseInsensitive ?
+                    StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
                 var value = new TunnelAccessControl();
 
-                do
+                while (reader.Read())
                 {
-                    reader.Read();
-
-                    if (reader.TokenType == JsonTokenType.PropertyName)
-                    {
-                        var propertyName = reader.GetString();
-                        reader.Read();
-
-                        if (propertyName == entriesPropertyName)
-                        {
-                            value.Entries = JsonSerializer.Deserialize<TunnelAccessControlEntry[]>(
-                                ref reader, options) !;
-                        }
-                        else
-                        {
-                            reader.Skip();
-                        }
-                    }
-                    else if (reader.TokenType == JsonTokenType.EndObject)
+                    if (reader.TokenType == JsonTokenType.EndObject)
                     {
                         break;
                     }
+                    else if (reader.TokenType != JsonTokenType.PropertyName)
+                    {
+                        throw new JsonException($"Unexpected token: {reader.TokenType}");
+                    }
+
+                    var propertyName = reader.GetString();
+                    reader.Read();
+
+                    if (string.Equals(propertyName, entriesPropertyName, comparison))
+                    {
+                        value.Entries = JsonSerializer.Deserialize<TunnelAccessControlEntry[]>(
+                            ref reader, options) !;
+                    }
+                    else
+                    {
+                        reader.Skip();
+                    }
                 }
-                while (true);
 
                 return value;
             }
