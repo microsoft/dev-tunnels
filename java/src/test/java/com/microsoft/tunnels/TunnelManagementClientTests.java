@@ -21,6 +21,8 @@ import com.microsoft.tunnels.management.TunnelRequestOptions;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -33,6 +35,7 @@ public class TunnelManagementClientTests {
   private TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
       new ProductHeaderValue[] { userAgent }, () -> "");
 
+  @Ignore
   @Test
   public void createTunnel() {
 
@@ -78,6 +81,7 @@ public class TunnelManagementClientTests {
     tunnelManagementClient.deleteTunnelAsync(createdTunnel).join();
   }
 
+  @Ignore
   @Test
   public void getTunnel() {
     Tunnel tunnel = new Tunnel();
@@ -94,6 +98,7 @@ public class TunnelManagementClientTests {
     tunnelManagementClient.deleteTunnelAsync(createdTunnel, options).join();
   }
 
+  @Ignore
   @Test
   public void updateTunnelAsync() {
     Tunnel tunnel = new Tunnel();
@@ -111,6 +116,7 @@ public class TunnelManagementClientTests {
     tunnelManagementClient.deleteTunnelAsync(createdTunnel, options).join();
   }
 
+  @Ignore
   @Test
   public void createTunnelPort() {
     var port = new TunnelPort();
