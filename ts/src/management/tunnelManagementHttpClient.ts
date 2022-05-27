@@ -30,6 +30,32 @@ function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
 }
 
+function parseDate(value?: string | Date) {
+    return typeof value === 'string' ? new Date(Date.parse(value)) : value;
+}
+
+/**
+ * Fixes Tunnel properties of type Date that were deserialized as strings.
+ */
+function parseTunnelDates(tunnel: Tunnel | null) {
+    if (!tunnel) return;
+    tunnel.created = parseDate(tunnel.created);
+    if (tunnel.status) {
+        tunnel.status.lastHostConnectionTime = parseDate(tunnel.status.lastHostConnectionTime);
+        tunnel.status.lastClientConnectionTime = parseDate(tunnel.status.lastClientConnectionTime);
+    }
+}
+
+/**
+ * Fixes TunnelPort properties of type Date that were deserialized as strings.
+ */
+function parseTunnelPortDates(port: TunnelPort | null) {
+    if (!port) return;
+    if (port.status) {
+        port.status.lastClientConnectionTime = parseDate(port.status.lastClientConnectionTime);
+    }
+}
+
 const manageAccessTokenScope = [TunnelAccessScopes.Manage];
 const hostAccessTokenScope = [TunnelAccessScopes.Host];
 const hostOrManageAccessTokenScopes = [TunnelAccessScopes.Manage, TunnelAccessScopes.Host];
@@ -138,7 +164,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const uri = this.buildUri(clusterId, tunnelsApiPath, options, query);
 
         const config = await this.getAxiosRequestConfig(undefined, options, readAccessTokenScopes);
-        return await this.request<Tunnel[]>('GET', uri, undefined, config);
+        const results = await this.request<Tunnel[]>('GET', uri, undefined, config);
+        results.forEach(parseTunnelDates);
+        return results;
     }
 
     public async searchTunnels(
@@ -155,14 +183,18 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const uri = this.buildUri(clusterId, tunnelsApiPath, options, query);
 
         const config = await this.getAxiosRequestConfig(undefined, options, readAccessTokenScopes);
-        return await this.request<Tunnel[]>('GET', uri, undefined, config);
+        const results = await this.request<Tunnel[]>('GET', uri, undefined, config);
+        results.forEach(parseTunnelDates);
+        return results;
     }
 
     public async getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null> {
         const uri = this.buildUriForTunnel(tunnel, options);
 
         const config = await this.getAxiosRequestConfig(tunnel, options, readAccessTokenScopes);
-        return await this.request<Tunnel | null>('GET', uri, undefined, config);
+        const result = await this.request<Tunnel | null>('GET', uri, undefined, config);
+        parseTunnelDates(result);
+        return result;
     }
 
     public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
@@ -175,7 +207,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         const config = await this.getAxiosRequestConfig(tunnel, options, manageAccessTokenScope);
         tunnel = this.convertTunnelForRequest(tunnel);
-        return await this.request<Tunnel>('POST', uri, tunnel, config);
+        const result = await this.request<Tunnel>('POST', uri, tunnel, config);
+        parseTunnelDates(result);
+        return result;
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
@@ -195,6 +229,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             result.accessTokens = tunnel.accessTokens;
         }
 
+        parseTunnelDates(result);
         return result;
     }
 
@@ -266,7 +301,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const uri = this.buildUriForTunnel(tunnel, options, portsApiSubPath);
 
         const config = await this.getAxiosRequestConfig(tunnel, options, readAccessTokenScopes);
-        return await this.request<TunnelPort[]>('GET', uri, undefined, config);
+        const results = await this.request<TunnelPort[]>('GET', uri, undefined, config);
+        results.forEach(parseTunnelPortDates);
+        return results;
     }
 
     public async getTunnelPort(
@@ -277,7 +314,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const uri = this.buildUriForTunnel(tunnel, options, `${portsApiSubPath}/${portNumber}`);
 
         const config = await this.getAxiosRequestConfig(tunnel, options, readAccessTokenScopes);
-        return await this.request<TunnelPort>('GET', uri, undefined, config);
+        const result = await this.request<TunnelPort>('GET', uri, undefined, config);
+        parseTunnelPortDates(result);
+        return result;
     }
 
     public async createTunnelPort(
@@ -303,6 +342,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 .sort(comparePorts);
         }
 
+        parseTunnelPortDates(result);
         return result;
     }
 
@@ -344,6 +384,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             result.accessTokens = tunnelPort.accessTokens;
         }
 
+        parseTunnelPortDates(result);
         return result;
     }
 
