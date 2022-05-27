@@ -3,12 +3,12 @@
 ### Setting up development
 These instructions assume you are using vscode for development as SDK is configured for it.
 1. Clone this repo and open the `java` folder in vscode.
-1. Install the recommended extension pack "Extension Pack for Java"
-1. The extension will prompt you to install a JDK. Choose JDK version 11 (LTS).
-1. Once you have the extension and JDK installed, run `mvn test`.
+2. Install the recommended extension pack "Extension Pack for Java"
+3. The extension will prompt you to install a JDK. Choose JDK version 11 (LTS).
+4. Once you have the extension and JDK installed, run `mvn test`.
 
 ### Publishing
-The Tunnels Java SDK is published as a GitHub package through a [GitHub Action](https://github.com/microsoft/dev-tunnels/blob/main/.github/workflows/java-sdk-release.yml). Since the repo is shared by mutliple language SDKs, the Java packages are distinguished with a tag of the form `java-vX.Y.Z`. See [tags](https://github.com/microsoft/dev-tunnels/tags) for examples.
+The Tunnels Java SDK is published as a GitHub package through a [GitHub Action](../.github/workflows/java-sdk-release.yml). Since the repo is shared by multiple language SDKs, the Java packages are distinguished with a tag of the form `java-vX.Y.Z`. See [tags](https://github.com/microsoft/dev-tunnels/tags) for examples.
 
 Follow these steps to publish a new version of the Java package:
 1. Create a new [release](https://github.com/microsoft/dev-tunnels/releases/new).
