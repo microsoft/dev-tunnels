@@ -17,18 +17,20 @@ internal abstract class ContractWriter
 
     public static string[] SupportedLanguages { get; } = new[]
     {
-        "ts",
-        "go",
-        "java"
+        "TypeScript",
+        "Go",
+        "Java",
+        "Rust"
     };
 
     public static ContractWriter Create(string language, string repoRoot, string csNamespace)
     {
         return language switch
         {
-            "ts" => new TSContractWriter(repoRoot, csNamespace),
-            "go" => new GoContractWriter(repoRoot, csNamespace),
-            "java" => new JavaContractWriter(repoRoot, csNamespace),
+            "TypeScript" => new TSContractWriter(repoRoot, csNamespace),
+            "Go" => new GoContractWriter(repoRoot, csNamespace),
+            "Java" => new JavaContractWriter(repoRoot, csNamespace),
+            "Rust" => new RustContractWriter(repoRoot, csNamespace),
             _ => throw new NotSupportedException("Unsupported contract language: " + language),
         };
     }
