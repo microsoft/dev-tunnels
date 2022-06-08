@@ -208,8 +208,7 @@ internal class GoContractWriter : ContractWriter
             s.AppendLine();
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), "\t"));
             var alignment = new string(' ', maxFieldNameLength - field.Name.Length);
-            var value = type.BaseType?.Name == "Enum" ?
-                TSContractWriter.ToCamelCase(field.Name) : field.ConstantValue;
+            var value = type.BaseType?.Name == "Enum" ? field.Name : field.ConstantValue;
             s.AppendLine($"\t{typeName}{field.Name}{alignment} {typeName} = \"{value}\"");
         }
 
