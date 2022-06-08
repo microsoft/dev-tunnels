@@ -180,8 +180,7 @@ internal class TSContractWriter : ContractWriter
             s.AppendLine();
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
 
-            var value = type.BaseType?.Name == "Enum" ?
-                ToCamelCase(field.Name) : field.ConstantValue;
+            var value = type.BaseType?.Name == "Enum" ? field.Name : field.ConstantValue;
             s.AppendLine($"{indent}    {field.Name} = '{value}',");
         }
 

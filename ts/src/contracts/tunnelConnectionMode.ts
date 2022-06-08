@@ -16,15 +16,15 @@ export enum TunnelConnectionMode {
      * While it's technically not "tunneling", this mode may be combined with others to
      * enable choosing the most efficient connection mode available.
      */
-    LocalNetwork = 'localNetwork',
+    LocalNetwork = 'LocalNetwork',
 
     /**
      * Use the tunnel service's integrated relay function.
      */
-    TunnelRelay = 'tunnelRelay',
+    TunnelRelay = 'TunnelRelay',
 
     /**
      * Connect via a Live Share workspace's Azure Relay endpoint.
      */
-    LiveShareRelay = 'liveShareRelay',
+    LiveShareRelay = 'LiveShareRelay',
 }
