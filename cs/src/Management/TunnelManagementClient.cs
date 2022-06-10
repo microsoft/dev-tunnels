@@ -403,7 +403,8 @@ namespace Microsoft.VsSaaS.TunnelService
                         if (response.Headers.WwwAuthenticate?.Count > 0)
                         {
                             ex.SetAuthenticationSchemes(
-                                response.Headers.WwwAuthenticate.Select((v) => v.Scheme).ToArray());
+                                response.Headers.WwwAuthenticate.Select(
+                                    (v) => v.ToString()).ToArray());
                         }
 
                         throw ex;
