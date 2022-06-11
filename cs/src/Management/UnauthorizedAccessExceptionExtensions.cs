@@ -44,12 +44,18 @@ public static class UnauthorizedAccessExceptionExtensions
         this UnauthorizedAccessException ex,
         IEnumerable<AuthenticationHeaderValue>? authenticationSchemes)
     {
+        SetAuthenticationSchemes(ex, authenticationSchemes?
+            .Select((s) => s?.ToString()!)
+            .Where((s) => s != null));
+    }
+
+    internal static void SetAuthenticationSchemes(
+        this UnauthorizedAccessException ex,
+        IEnumerable<string>? authenticationSchemes)
+    {
         lock (ex.Data)
         {
-            ex.Data[AuthenticationSchemesKey] = authenticationSchemes?
-                .Select((s) => s?.ToString() !)
-                .Where((s) => s != null)
-                .ToArray();
+            ex.Data[AuthenticationSchemesKey] = authenticationSchemes?.ToArray();
         }
     }
 }
