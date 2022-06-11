@@ -4,6 +4,9 @@
 // </copyright>
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http.Headers;
 
 namespace Microsoft.VsSaaS.TunnelService;
 
@@ -18,14 +21,18 @@ public static class UnauthorizedAccessExceptionExtensions
     /// Gets the list of schemes that may be used to authenticate, when an
     /// <see cref="UnauthorizedAccessException" /> was thrown for an unauthenticated request.
     /// </summary>
-    public static string[]? GetAuthenticationSchemes(this UnauthorizedAccessException ex)
+    public static IEnumerable<AuthenticationHeaderValue>? GetAuthenticationSchemes(
+        this UnauthorizedAccessException ex)
     {
         Requires.NotNull(ex, nameof(ex));
 
         lock (ex.Data)
         {
             var authenticationSchemes = ex.Data[AuthenticationSchemesKey] as string[];
-            return authenticationSchemes;
+            return authenticationSchemes?
+                .Select((s) => AuthenticationHeaderValue.TryParse(s, out var value) ? value : null!)
+                .Where((s) => s != null)
+                .ToArray();
         }
     }
 
@@ -35,11 +42,14 @@ public static class UnauthorizedAccessExceptionExtensions
     /// </summary>
     public static void SetAuthenticationSchemes(
         this UnauthorizedAccessException ex,
-        string[]? authenticationSchemes)
+        IEnumerable<AuthenticationHeaderValue>? authenticationSchemes)
     {
         lock (ex.Data)
         {
-            ex.Data[AuthenticationSchemesKey] = authenticationSchemes;
+            ex.Data[AuthenticationSchemesKey] = authenticationSchemes?
+                .Select((s) => s?.ToString() !)
+                .Where((s) => s != null)
+                .ToArray();
         }
     }
 }
