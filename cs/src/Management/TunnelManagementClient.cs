@@ -400,11 +400,10 @@ namespace Microsoft.VsSaaS.TunnelService
                     case HttpStatusCode.Forbidden:
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
 
-                        if (response.Headers.WwwAuthenticate?.Count > 0)
-                        {
-                            ex.SetAuthenticationSchemes(response.Headers.WwwAuthenticate);
-                        }
-
+                        // The HttpResponseHeaders.WwwAuthenticate property does not correctly
+                        // handle multiple values! Get the values by name instead.
+                        var authHeaderValues = response.Headers.GetValues("WWW-Authenticate");
+                        ex.SetAuthenticationSchemes(authHeaderValues);
                         throw ex;
 
                     case HttpStatusCode.NotFound:
