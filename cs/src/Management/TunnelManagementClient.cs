@@ -402,8 +402,12 @@ namespace Microsoft.VsSaaS.TunnelService
 
                         // The HttpResponseHeaders.WwwAuthenticate property does not correctly
                         // handle multiple values! Get the values by name instead.
-                        var authHeaderValues = response.Headers.GetValues("WWW-Authenticate");
-                        ex.SetAuthenticationSchemes(authHeaderValues);
+                        if (response.Headers.TryGetValues(
+                            "WWW-Authenticate", out var authHeaderValues))
+                        {
+                            ex.SetAuthenticationSchemes(authHeaderValues);
+                        }
+
                         throw ex;
 
                     case HttpStatusCode.NotFound:
