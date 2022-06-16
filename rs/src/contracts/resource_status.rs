@@ -4,10 +4,16 @@
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum ResourceStatus {
+    Detailed(DetailedResourceStatus),
+    Count(u32),
+}
 // Current value and limit for a limited resource related to a tunnel or tunnel port.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
-pub struct ResourceStatus {
+pub struct DetailedResourceStatus {
     // Gets or sets the current value.
     pub current: u64,
 

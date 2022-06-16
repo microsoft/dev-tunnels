@@ -136,6 +136,16 @@ internal class RustContractWriter : ContractWriter
         return true;
     }
 
+    private void WriteResourceStatusSerializer(StringBuilder s)
+    {
+        s.AppendLine("#[derive(Clone, Debug, Deserialize, Serialize)]");
+        s.AppendLine("#[serde(untagged)]");
+        s.AppendLine("pub enum ResourceStatus {");
+        s.AppendLine("    Detailed(DetailedResourceStatus),");
+        s.AppendLine("    Count(u32),");
+        s.AppendLine("}");
+    }
+
     private void WriteInterfaceContract(
         StringBuilder s,
         ITypeSymbol type,
@@ -144,10 +154,17 @@ internal class RustContractWriter : ContractWriter
     {
         imports.Add("serde::{Deserialize, Serialize}");
 
+        var rsName = type.Name;
+        if (rsName == "ResourceStatus")
+        {
+            WriteResourceStatusSerializer(s);
+            rsName = "DetailedResourceStatus";
+        }
+
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
         s.AppendLine("#[derive(Clone, Debug, Deserialize, Serialize)]");
         s.AppendLine("#[serde(rename_all(serialize = \"camelCase\", deserialize = \"camelCase\"))]");
-        s.Append($"pub struct {type.Name} {{");
+        s.Append($"pub struct {rsName} {{");
 
         var properties = type.GetMembers()
             .OfType<IPropertySymbol>()
@@ -177,8 +194,8 @@ internal class RustContractWriter : ContractWriter
             {
                 s.AppendLine();
                 s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
-                var rsName = ToSnakeCase(field.Name).ToUpperInvariant();
-                s.AppendLine($"pub const {rsName}: &str = \"{value}\";");
+                var fieldRsName = ToSnakeCase(field.Name).ToUpperInvariant();
+                s.AppendLine($"pub const {fieldRsName}: &str = \"{value}\";");
             }
         }
 
