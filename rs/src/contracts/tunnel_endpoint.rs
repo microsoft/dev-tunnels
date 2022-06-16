@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelEndpoint.cs
 
+use crate::contracts::serialization::empty_string_as_none;
 use crate::contracts::TunnelConnectionMode;
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +39,7 @@ pub struct TunnelEndpoint {
     // Gets or sets a string used to format URIs where a web client can connect to ports
     // of the tunnel. The string includes a `TunnelEndpoint.PortUriToken` that must be
     // replaced with the actual port number.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub port_uri_format: Option<String>,
 }
 

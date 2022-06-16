@@ -5,7 +5,7 @@ use reqwest::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, Method, Request,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use url::Url;
 
 use crate::contracts::{
@@ -26,6 +26,17 @@ pub struct TunnelManagementClient {
 const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
 const ENDPOINTS_API_SUB_PATH: &str = "/endpoints";
 const PORTS_API_SUB_PATH: &str = "/ports";
+
+struct NeverDeserialize();
+
+impl<'de> Deserialize<'de> for NeverDeserialize {
+    fn deserialize<D>(_: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(NeverDeserialize())
+    }
+}
 
 impl TunnelManagementClient {
     /// Lists all tunnels available to the user.
@@ -110,10 +121,12 @@ impl TunnelManagementClient {
         &self,
         locator: &TunnelLocator,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<bool> {
+    ) -> HttpResult<()> {
         let url = self.build_tunnel_uri(locator, None);
         let request = self.make_tunnel_request(Method::DELETE, url, options);
-        self.execute_json("delete_tunnel", request).await
+        self.execute_json::<NeverDeserialize>("delete_tunnel", request)
+            .await?;
+        Ok(())
     }
 
     /// Updates an existing tunnel's endpoints.
@@ -142,7 +155,7 @@ impl TunnelManagementClient {
         host_id: &str,
         connection_mode: Option<TunnelConnectionMode>,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<bool> {
+    ) -> HttpResult<()> {
         let path = if let Some(cm) = connection_mode {
             format!("{}/{}/{}", ENDPOINTS_API_SUB_PATH, host_id, cm)
         } else {
@@ -151,7 +164,9 @@ impl TunnelManagementClient {
 
         let url = self.build_tunnel_uri(locator, Some(&path));
         let request = self.make_tunnel_request(Method::DELETE, url, options);
-        self.execute_json("delete_tunnel_endpoints", request).await
+        self.execute_json::<NeverDeserialize>("delete_tunnel_endpoints", request)
+            .await?;
+        Ok(())
     }
 
     /// List a tunnel's ports.
@@ -290,8 +305,8 @@ impl TunnelManagementClient {
     /// Builds a URI that does an operation on a tunnel.
     fn build_tunnel_uri(&self, locator: &TunnelLocator, path: Option<&str>) -> Url {
         let make_path = |ident: &str| {
-            path.map(|p| format!("/{}/{}/{}", TUNNELS_API_PATH, ident, p))
-                .unwrap_or_else(|| format!("/{}/{}", TUNNELS_API_PATH, ident))
+            path.map(|p| format!("{}/{}/{}", TUNNELS_API_PATH, ident, p))
+                .unwrap_or_else(|| format!("{}/{}", TUNNELS_API_PATH, ident))
         };
 
         match locator {
@@ -309,7 +324,6 @@ impl TunnelManagementClient {
             let hostname = uri.host_str().unwrap_or("");
             if !hostname.starts_with(&format!("{}.", cluster_id)) {
                 let new_hostname = format!("{}.{}", cluster_id, hostname).replace("global.", "");
-                drop(hostname);
                 uri.set_host(Some(&new_hostname)).unwrap();
             }
         }
@@ -331,10 +345,10 @@ impl TunnelManagementClient {
             if tunnel_opts.include_ports {
                 query.append_pair("includePorts", "true");
             }
-            if tunnel_opts.scopes.len() > 0 {
+            if !tunnel_opts.scopes.is_empty() {
                 query.append_pair("scopes", &tunnel_opts.scopes.join(","));
             }
-            if tunnel_opts.token_scopes.len() > 0 {
+            if !tunnel_opts.token_scopes.is_empty() {
                 query.append_pair("tokenScopes", &tunnel_opts.scopes.join(","));
             }
         }
@@ -392,7 +406,7 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
     TunnelClientBuilder {
         authorization: Authorization::Anonymous,
         client: None,
-        user_agent: HeaderValue::from_str(&user_agent).unwrap(),
+        user_agent: HeaderValue::from_str(user_agent).unwrap(),
         environment: env_production(),
     }
 }
@@ -414,22 +428,22 @@ impl TunnelClientBuilder {
     }
 }
 
-impl Into<TunnelManagementClient> for TunnelClientBuilder {
-    fn into(self) -> TunnelManagementClient {
+impl From<TunnelClientBuilder> for TunnelManagementClient {
+    fn from(builder: TunnelClientBuilder) -> Self {
         TunnelManagementClient {
-            authorization: self
+            authorization: builder
                 .authorization
                 .as_header()
                 .map(|s| HeaderValue::from_str(&s).unwrap()),
-            client: self.client.unwrap_or_else(Client::new),
-            user_agent: self.user_agent,
-            environment: self.environment,
+            client: builder.client.unwrap_or_else(Client::new),
+            user_agent: builder.user_agent,
+            environment: builder.environment,
         }
     }
 }
 
 // End to end tests can be run with `cargo test --features end_to_end -- --nocapture`
-//with an environment variable TUNNEL_TEST_CLIENT_ID.
+// with an environment variable TUNNEL_TEST_CLIENT_ID.
 #[cfg(test)]
 #[cfg(feature = "end_to_end")]
 mod test_end_to_end {
@@ -439,17 +453,37 @@ mod test_end_to_end {
     use tokio::time::sleep;
 
     use crate::{
-        contracts::PROD_FIRST_PARTY_APP_ID,
-        management::{Authorization, NO_REQUEST_OPTIONS},
+        contracts::{Tunnel, PROD_FIRST_PARTY_APP_ID},
+        management::{Authorization, TunnelLocator, NO_REQUEST_OPTIONS},
     };
 
     use super::{new_tunnel_management, TunnelManagementClient};
 
     #[tokio::test]
-    async fn test_list_all_tunnels() {
+    async fn round_trips_tunnel() {
         let c = get_client().await;
+
+        // create tunnel
+        let tunnel = c
+            .create_tunnel(&Tunnel::default(), NO_REQUEST_OPTIONS)
+            .await
+            .unwrap();
+        assert!(tunnel.tunnel_id.is_some());
+        let ident = TunnelLocator::try_from(&tunnel).unwrap();
+
+        // get tunnel
+        let tunnel2 = c.get_tunnel(&ident, NO_REQUEST_OPTIONS).await.unwrap();
+        assert_eq!(tunnel.tunnel_id, tunnel2.tunnel_id);
+
+        // appears in list tunnels
         let tunnels = c.list_all_tunnels(NO_REQUEST_OPTIONS).await.unwrap();
-        format!("{:?}", tunnels);
+        assert!(tunnels
+            .iter()
+            .find(|t| t.tunnel_id == tunnel.tunnel_id)
+            .is_some());
+
+        // delete tunnel
+        c.delete_tunnel(&ident, NO_REQUEST_OPTIONS).await.unwrap();
     }
 
     #[derive(Deserialize)]

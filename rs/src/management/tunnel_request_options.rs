@@ -26,7 +26,7 @@ pub struct TunnelRequestOptions {
     pub scopes: Vec<String>,
 }
 
-pub const NO_REQUEST_OPTIONS: &'static TunnelRequestOptions = &TunnelRequestOptions {
+pub const NO_REQUEST_OPTIONS: &TunnelRequestOptions = &TunnelRequestOptions {
     authorization: None,
     headers: Vec::new(),
     include_ports: false,

@@ -27,6 +27,7 @@ mod rate_status;
 mod problem_details;
 mod local_network_tunnel_endpoint;
 mod live_share_relay_tunnel_endpoint;
+mod serialization;
 
 pub use tunnel_environments::*;
 pub use tunnel_status::*;

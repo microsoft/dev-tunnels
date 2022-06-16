@@ -16,10 +16,21 @@ namespace Microsoft.VsSaaS.TunnelService.Generator;
 
 internal class RustContractWriter : ContractWriter
 {
+    // extra, non-generated modules that should be imported but not exported:
+    private readonly List<string> ImportModules = new List<string>()
+    {
+        "serialization",
+    };
+
+    // extra, non-generated modules that should be exported:
     private readonly List<string> ExportModules = new List<string>()
     {
-        // extra, non-generated modules that should be exported:
         "tunnel_environments",
+    };
+
+    private static readonly ISet<string> DefaultDerivers = new HashSet<string>()
+    {
+        "Tunnel",
     };
 
     public RustContractWriter(string repoRoot, string csNamespace) : base(repoRoot, csNamespace)
@@ -81,6 +92,10 @@ internal class RustContractWriter : ContractWriter
         this.AppendFileHeader(s, "RustContractWriter.cs");
 
         foreach (var mod in this.ExportModules)
+        {
+            s.AppendLine($"mod {mod};");
+        }
+        foreach (var mod in this.ImportModules)
         {
             s.AppendLine($"mod {mod};");
         }
@@ -162,7 +177,12 @@ internal class RustContractWriter : ContractWriter
         }
 
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
-        s.AppendLine("#[derive(Clone, Debug, Deserialize, Serialize)]");
+        s.Append("#[derive(Clone, Debug, Deserialize, Serialize");
+        if (DefaultDerivers.Contains(rsName))
+        {
+            s.Append(", Default");
+        }
+        s.AppendLine(")]");
         s.AppendLine("#[serde(rename_all(serialize = \"camelCase\", deserialize = \"camelCase\"))]");
         s.Append($"pub struct {rsName} {{");
 
@@ -397,6 +417,12 @@ internal class RustContractWriter : ContractWriter
 
         if (isNullable)
         {
+            if (rsType == "String")
+            {
+                imports.Add("crate::contracts::serialization::empty_string_as_none");
+                s.AppendLine("    #[serde(default, deserialize_with = \"empty_string_as_none\")]");
+            }
+
             rsType = $"Option<{rsType}>";
         }
 

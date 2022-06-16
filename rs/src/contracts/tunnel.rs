@@ -3,6 +3,7 @@
 // Generated from ../../../cs/src/Contracts/Tunnel.cs
 
 use chrono::{DateTime, Utc};
+use crate::contracts::serialization::empty_string_as_none;
 use crate::contracts::TunnelAccessControl;
 use crate::contracts::TunnelEndpoint;
 use crate::contracts::TunnelOptions;
@@ -12,22 +13,26 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Data contract for tunnel objects managed through the tunnel service REST API.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct Tunnel {
     // Gets or sets the ID of the cluster the tunnel was created in.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub cluster_id: Option<String>,
 
     // Gets or sets the generated ID of the tunnel, unique within the cluster.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub tunnel_id: Option<String>,
 
     // Gets or sets the optional short name (alias) of the tunnel.
     //
     // The name must be globally unique within the parent domain, and must be a valid
     // subdomain.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub name: Option<String>,
 
     // Gets or sets the description of the tunnel.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub description: Option<String>,
 
     // Gets or sets the tags of the tunnel.
@@ -36,6 +41,7 @@ pub struct Tunnel {
 
     // Gets or sets the optional parent domain of the tunnel, if it is not using the
     // default parent domain.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub domain: Option<String>,
 
     // Gets or sets a dictionary mapping from scopes to tunnel access tokens.

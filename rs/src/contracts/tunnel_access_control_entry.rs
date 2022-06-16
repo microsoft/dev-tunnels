@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntry.cs
 
+use crate::contracts::serialization::empty_string_as_none;
 use crate::contracts::TunnelAccessControlEntryType;
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +29,7 @@ pub struct TunnelAccessControlEntry {
     // provider.  For public key ACEs, this value is the type of public key, e.g. "ssh".
     // For IP address range ACEs, this value is the IP addrss version, e.g. "ipv4" or
     // "ipv6".  For anonymous ACEs, this value is null.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub provider: Option<String>,
 
     // Gets or sets a value indicating whether this is an access control entry on a tunnel
@@ -65,6 +67,7 @@ pub struct TunnelAccessControlEntry {
     //
     // For AAD users and group ACEs, this value is the AAD tenant ID. It is not currently
     // used with any other types of ACEs.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub organization: Option<String>,
 
     // Gets or sets the subjects for the entry, such as user or group IDs. The format of

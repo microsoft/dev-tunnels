@@ -4,6 +4,7 @@
 
 use crate::contracts::RateStatus;
 use crate::contracts::ResourceStatus;
+use crate::contracts::serialization::empty_string_as_none;
 use serde::{Deserialize, Serialize};
 
 // Data contract for `TunnelPort` status.
@@ -22,6 +23,7 @@ pub struct TunnelPortStatus {
 
     // Gets or sets the UTC date time when a client was last connected to the port, or
     // null if a client has never connected.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub last_client_connection_time: Option<String>,
 
     // Gets or sets the current value and limit for the rate of client connections to the

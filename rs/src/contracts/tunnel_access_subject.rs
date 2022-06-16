@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelAccessSubject.cs
 
+use crate::contracts::serialization::empty_string_as_none;
 use crate::contracts::TunnelAccessControlEntryType;
 use serde::{Deserialize, Serialize};
 
@@ -19,10 +20,12 @@ pub struct TunnelAccessSubject {
     //
     // The ID is typically a guid or integer that is unique within the scope of the
     // identity provider or organization, and never changes for that subject.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub id: Option<String>,
 
     // Gets or sets the subject organization ID, which may be required if an organization
     // is not implied by the authentication context.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub organization_id: Option<String>,
 
     // Gets or sets the partial or full subject name.
@@ -30,6 +33,7 @@ pub struct TunnelAccessSubject {
     // When resolving a subject name to ID, a partial name may be provided, and the full
     // name is returned if the partial name was successfully resolved. When formatting a
     // subject ID to name, the full name is returned if the ID was found.
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub name: Option<String>,
 
     // Gets or sets an array of possible subject matches, if a partial name was provided
