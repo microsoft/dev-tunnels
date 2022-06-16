@@ -2,13 +2,14 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelConnectionMode.cs
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 // Specifies the connection protocol / implementation for a tunnel.
 //
 // Depending on the connection mode, hosts or clients might need to use different
 // authentication and connection protocols.
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum TunnelConnectionMode {
     // Connect directly to the host over the local network.
     //
@@ -21,4 +22,14 @@ pub enum TunnelConnectionMode {
 
     // Connect via a Live Share workspace's Azure Relay endpoint.
     LiveShareRelay,
+}
+
+impl fmt::Display for TunnelConnectionMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TunnelConnectionMode::LocalNetwork => write!(f, "LocalNetwork"),
+            TunnelConnectionMode::TunnelRelay => write!(f, "TunnelRelay"),
+            TunnelConnectionMode::LiveShareRelay => write!(f, "LiveShareRelay"),
+        }
+    }
 }

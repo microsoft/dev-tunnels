@@ -3,7 +3,7 @@
 // Generated from ../../../cs/src/Contracts/TunnelAccessControl.cs
 
 use crate::contracts::TunnelAccessControlEntry;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // Data contract for access control on a `Tunnel` or `TunnelPort`.
 //
@@ -15,7 +15,7 @@ use serde::{Serialize, Deserialize};
 // specifies a set of related access scopes), and assign roles to users. That feature may
 // be added in the future. (It should be represented as a separate `RoleAssignments`
 // property on this class.)
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelAccessControl {
     // Gets or sets the list of access control entries.
@@ -23,5 +23,5 @@ pub struct TunnelAccessControl {
     // The order of entries is significant: later entries override earlier entries that
     // apply to the same subject. However, deny rules are always processed after allow
     // rules, therefore an allow rule cannot override a deny rule for the same subject.
-    entries: Vec<TunnelAccessControlEntry>,
+    pub entries: Vec<TunnelAccessControlEntry>,
 }

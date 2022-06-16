@@ -2,13 +2,13 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/LocalNetworkTunnelEndpoint.cs
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // Parameters for connecting to a tunnel via a local network connection.
 //
 // While a direct connection is technically not "tunneling", tunnel hosts may accept
 // connections via the local network as an optional more-efficient alternative to a relay.
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct LocalNetworkTunnelEndpoint {
     // Gets or sets a list of IP endpoints where the host may accept connections.
@@ -19,5 +19,5 @@ pub struct LocalNetworkTunnelEndpoint {
     // an indication of the network connection protocol), an IP address (IPv4 or IPv6) and
     // a port number. The URIs do not typically include any paths, because the connection
     // is not normally HTTP-based.
-    host_endpoints: Vec<String>,
+    pub host_endpoints: Vec<String>,
 }

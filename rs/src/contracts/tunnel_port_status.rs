@@ -5,10 +5,10 @@
 use chrono::{DateTime, Utc};
 use crate::contracts::RateStatus;
 use crate::contracts::ResourceStatus;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // Data contract for `TunnelPort` status.
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelPortStatus {
     // Gets or sets the current value and limit for the number of clients connected to the
@@ -19,11 +19,11 @@ pub struct TunnelPortStatus {
     // connections.  This count also does not include HTTP client connections, unless they
     // are upgraded to websockets. HTTP connections are counted per-request rather than
     // per-connection: see `TunnelPortStatus.HttpRequestRate`.
-    client_connection_count: Option<ResourceStatus>,
+    pub client_connection_count: Option<ResourceStatus>,
 
     // Gets or sets the UTC date time when a client was last connected to the port, or
     // null if a client has never connected.
-    last_client_connection_time: Option<DateTime<Utc>>,
+    pub last_client_connection_time: Option<DateTime<Utc>>,
 
     // Gets or sets the current value and limit for the rate of client connections to the
     // tunnel port.
@@ -33,9 +33,9 @@ pub struct TunnelPortStatus {
     // types.  This also does not include HTTP connections, unless they are upgraded to
     // websockets. HTTP connections are counted per-request rather than per-connection:
     // see `TunnelPortStatus.HttpRequestRate`.
-    client_connection_rate: Option<RateStatus>,
+    pub client_connection_rate: Option<RateStatus>,
 
     // Gets or sets the current value and limit for the rate of HTTP requests to the
     // tunnel port.
-    http_request_rate: Option<RateStatus>,
+    pub http_request_rate: Option<RateStatus>,
 }

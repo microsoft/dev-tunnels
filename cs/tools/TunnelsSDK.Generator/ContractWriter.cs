@@ -43,6 +43,10 @@ internal abstract class ContractWriter
 
     public abstract void WriteContract(ITypeSymbol type, ICollection<ITypeSymbol> allTypes);
 
+    public virtual void WriteCompleted()
+    {
+    }
+
     protected string GetAbsolutePath(string relativePath)
     {
         return Path.Combine(this.repoRoot, relativePath);

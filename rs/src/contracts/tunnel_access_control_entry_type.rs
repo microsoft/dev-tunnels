@@ -2,10 +2,11 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntryType.cs
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 // Specifies the type of `TunnelAccessControlEntry`.
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum TunnelAccessControlEntryType {
     // Uninitialized access control entry type.
     None,
@@ -38,4 +39,19 @@ pub enum TunnelAccessControlEntryType {
     // The access control entry is a list of IP address ranges that are allowed (or
     // denied) access to the tunnel.
     IPAddressRanges,
+}
+
+impl fmt::Display for TunnelAccessControlEntryType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TunnelAccessControlEntryType::None => write!(f, "None"),
+            TunnelAccessControlEntryType::Anonymous => write!(f, "Anonymous"),
+            TunnelAccessControlEntryType::Users => write!(f, "Users"),
+            TunnelAccessControlEntryType::Groups => write!(f, "Groups"),
+            TunnelAccessControlEntryType::Organizations => write!(f, "Organizations"),
+            TunnelAccessControlEntryType::Repositories => write!(f, "Repositories"),
+            TunnelAccessControlEntryType::PublicKeys => write!(f, "PublicKeys"),
+            TunnelAccessControlEntryType::IPAddressRanges => write!(f, "IPAddressRanges"),
+        }
+    }
 }

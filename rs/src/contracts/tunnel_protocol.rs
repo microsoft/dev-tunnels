@@ -5,22 +5,22 @@
 // Defines possible values for the protocol of a `TunnelPort`.
 
 // The protocol is automatically detected. (TODO: Define detection semantics.)
-const AUTO: &str = "auto";
+pub const TUNNEL_PROTOCOL_AUTO: &str = "auto";
 
 // Unknown TCP protocol.
-const TCP: &str = "tcp";
+pub const TUNNEL_PROTOCOL_TCP: &str = "tcp";
 
 // Unknown UDP protocol.
-const UDP: &str = "udp";
+pub const TUNNEL_PROTOCOL_UDP: &str = "udp";
 
 // SSH protocol.
-const SSH: &str = "ssh";
+pub const TUNNEL_PROTOCOL_SSH: &str = "ssh";
 
 // Remote desktop protocol.
-const RDP: &str = "rdp";
+pub const TUNNEL_PROTOCOL_RDP: &str = "rdp";
 
 // HTTP protocol.
-const HTTP: &str = "http";
+pub const TUNNEL_PROTOCOL_HTTP: &str = "http";
 
 // HTTPS protocol.
-const HTTPS: &str = "https";
+pub const TUNNEL_PROTOCOL_HTTPS: &str = "https";

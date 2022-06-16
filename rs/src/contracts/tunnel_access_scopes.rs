@@ -7,16 +7,16 @@
 // Allows creating tunnels. This scope is valid only in policies at the global, domain, or
 // organization level; it is not relevant to an already-created tunnel or tunnel port.
 // (Creation of ports requires "manage" or "host" access to the tunnel.)
-const CREATE: &str = "create";
+pub const TUNNEL_ACCESS_SCOPES_CREATE: &str = "create";
 
 // Allows management operations on tunnels and tunnel ports.
-const MANAGE: &str = "manage";
+pub const TUNNEL_ACCESS_SCOPES_MANAGE: &str = "manage";
 
 // Allows accepting connections on tunnels as a host.
-const HOST: &str = "host";
+pub const TUNNEL_ACCESS_SCOPES_HOST: &str = "host";
 
 // Allows inspecting tunnel connection activity and data.
-const INSPECT: &str = "inspect";
+pub const TUNNEL_ACCESS_SCOPES_INSPECT: &str = "inspect";
 
 // Allows connecting to tunnels as a client.
-const CONNECT: &str = "connect";
+pub const TUNNEL_ACCESS_SCOPES_CONNECT: &str = "connect";

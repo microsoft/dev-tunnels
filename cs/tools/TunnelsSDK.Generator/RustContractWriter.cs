@@ -16,6 +16,11 @@ namespace Microsoft.VsSaaS.TunnelService.Generator;
 
 internal class RustContractWriter : ContractWriter
 {
+    private readonly List<string> ExportModules = new List<string>()
+    {
+        // extra, non-generated modules that should be exported:
+        "tunnel_environments",
+    };
 
     public RustContractWriter(string repoRoot, string csNamespace) : base(repoRoot, csNamespace)
     {
@@ -25,14 +30,14 @@ internal class RustContractWriter : ContractWriter
     {
         var csFilePath = GetRelativePath(type.Locations.Single().GetLineSpan().Path);
 
+        var moduleName = ToSnakeCase(type.Name);
+        this.ExportModules.Add(moduleName);
+
         var fileName = ToSnakeCase(type.Name) + ".rs";
         var filePath = GetAbsolutePath(Path.Combine("rs/src/contracts", fileName));
 
         var s = new StringBuilder();
-        s.AppendLine("// Copyright (c) Microsoft Corporation.");
-        s.AppendLine("// Licensed under the MIT license.");
-        s.AppendLine($"// Generated from ../../../{csFilePath}");
-        s.AppendLine();
+        this.AppendFileHeader(s, $"../../../{csFilePath}");
 
         var importsOffset = s.Length;
         var imports = new SortedSet<string>();
@@ -62,6 +67,40 @@ internal class RustContractWriter : ContractWriter
         }
 
         File.WriteAllText(filePath, s.ToString());
+    }
+
+    public override void WriteCompleted()
+    {
+        this.WriteModRs();
+    }
+
+    private void WriteModRs()
+    {
+        var filePath = GetAbsolutePath("rs/src/contracts/mod.rs");
+        var s = new StringBuilder();
+        this.AppendFileHeader(s, "RustContractWriter.cs");
+
+        foreach (var mod in this.ExportModules)
+        {
+            s.AppendLine($"mod {mod};");
+        }
+
+        s.AppendLine();
+
+        foreach (var mod in this.ExportModules)
+        {
+            s.AppendLine($"pub use {mod}::*;");
+        }
+
+        File.WriteAllText(filePath, s.ToString());
+    }
+
+    private void AppendFileHeader(StringBuilder s, string generatedFrom)
+    {
+        s.AppendLine("// Copyright (c) Microsoft Corporation.");
+        s.AppendLine("// Licensed under the MIT license.");
+        s.AppendLine($"// Generated from {generatedFrom}");
+        s.AppendLine();
     }
 
     private bool WriteContractType(
@@ -103,10 +142,10 @@ internal class RustContractWriter : ContractWriter
         SortedSet<string> imports,
         ICollection<ITypeSymbol> allTypes)
     {
-        imports.Add("serde::{Serialize, Deserialize}");
+        imports.Add("serde::{Deserialize, Serialize}");
 
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
-        s.AppendLine("#[derive(Serialize, Deserialize)]");
+        s.AppendLine("#[derive(Clone, Debug, Deserialize, Serialize)]");
         s.AppendLine("#[serde(rename_all(serialize = \"camelCase\", deserialize = \"camelCase\"))]");
         s.Append($"pub struct {type.Name} {{");
 
@@ -120,18 +159,7 @@ internal class RustContractWriter : ContractWriter
         {
             s.AppendLine();
             s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
-
-            var propertyName = ToSnakeCase(property.Name);
-            if (propertyName == "type" && type.Name.EndsWith("Entry"))
-            {
-                propertyName = "entry_type";
-                s.AppendLine("    #[serde(rename = \"type\")]");
-            }
-
-            var alignment = new string(' ', maxPropertyNameLength - propertyName.Length);
-            var propertyType = property.Type.ToDisplayString();
-            var rsType = GetRustTypeForCSType(propertyType, property, imports);
-            s.AppendLine($"    {propertyName}: {rsType},");
+            AppendStructProperty(type, property, imports, s);
         }
 
         s.AppendLine("}");
@@ -150,7 +178,7 @@ internal class RustContractWriter : ContractWriter
                 s.AppendLine();
                 s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
                 var rsName = ToSnakeCase(field.Name).ToUpperInvariant();
-                s.AppendLine($"const {rsName}: &str = \"{value}\";");
+                s.AppendLine($"pub const {rsName}: &str = \"{value}\";");
             }
         }
 
@@ -161,12 +189,18 @@ internal class RustContractWriter : ContractWriter
         ITypeSymbol type,
         SortedSet<string> imports)
     {
-        imports.Add("serde::{Serialize, Deserialize}");
+        imports.Add("serde::{Deserialize, Serialize}");
+        imports.Add("std::fmt");
 
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
 
-        s.AppendLine("#[derive(Serialize, Deserialize)]");
+        s.AppendLine("#[derive(Clone, Debug, Deserialize, Serialize)]");
         s.Append($"pub enum {type.Name} {{");
+
+        var display = new StringBuilder();
+        display.AppendLine($"impl fmt::Display for {type.Name} {{");
+        display.AppendLine("    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {");
+        display.AppendLine("        match *self {");
 
         var fields = type.GetMembers()
             .OfType<IFieldSymbol>()
@@ -180,10 +214,17 @@ internal class RustContractWriter : ContractWriter
             var alignment = new string(' ', maxFieldNameLength - field.Name.Length);
             var value = type.BaseType?.Name == "Enum" ? field.Name : field.ConstantValue;
             s.AppendLine($"    {field.Name},");
+            display.AppendLine($"            {type.Name}::{field.Name} => write!(f, \"{field.Name}\"),");
         }
 
         s.AppendLine("}");
 
+        display.AppendLine("        }");
+        display.AppendLine("    }");
+        display.AppendLine("}");
+
+        s.AppendLine();
+        s.Append(display);
     }
 
     private void WriteStaticClassContract(
@@ -203,8 +244,8 @@ internal class RustContractWriter : ContractWriter
             {
                 s.AppendLine();
                 s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
-                var rsName = ToSnakeCase(field.Name).ToUpperInvariant();
-                s.AppendLine($"const {rsName}: &str = \"{value}\";");
+                var rsName = ToSnakeCase($"{type.Name}{field.Name}").ToUpperInvariant();
+                s.AppendLine($"pub const {rsName}: &str = \"{value}\";");
             }
         }
     }
@@ -265,27 +306,43 @@ internal class RustContractWriter : ContractWriter
 
         return s.ToString();
     }
-
-    private string GetRustTypeForCSType(string csType, IPropertySymbol property, SortedSet<string> imports)
+    private void AppendStructProperty(ITypeSymbol parentType, IPropertySymbol property, SortedSet<string> imports, StringBuilder s)
     {
+        var csType = property.Type.ToString();
         var isNullable = csType.EndsWith("?");
         if (isNullable)
         {
             csType = csType.Substring(0, csType.Length - 1);
         }
 
+        // Detect JsonIgnoreCondition.WhenWritingDefault
+        var ignoreWhenDefault = property.GetAttributes().Any(ad =>
+            ad.AttributeClass?.Name == "JsonIgnoreAttribute" && ad.NamedArguments.Any(arg => arg.Value.Value is int i && i == 2));
+
         var isArray = csType.EndsWith("[]");
         if (isArray)
         {
             csType = csType.Substring(0, csType.Length - 2);
-            isNullable = false;
+            if (isNullable || ignoreWhenDefault)
+            {
+                s.AppendLine("    #[serde(skip_serializing_if = \"Vec::is_empty\", default)]");
+                isNullable = false;
+                ignoreWhenDefault = false;
+            }
+        }
+
+        if (ignoreWhenDefault)
+        {
+            s.AppendLine("    #[serde(default)]");
         }
 
         string rsType;
         if (csType.StartsWith(this.csNamespace + "."))
         {
             rsType = csType.Substring(csNamespace.Length + 1);
-            imports.Add($"crate::contracts::{rsType}");
+            if (rsType != parentType.Name) {
+                imports.Add($"crate::contracts::{rsType}");
+            }
         }
         else
         {
@@ -309,11 +366,6 @@ internal class RustContractWriter : ContractWriter
             };
         }
 
-        if (rsType.Length == 3 && rsType.StartsWith("i") || rsType.StartsWith("u"))
-        {
-            imports.Add($"std::{rsType}");
-        }
-
         if (isArray)
         {
             rsType = $"Vec<{rsType}>";
@@ -333,6 +385,14 @@ internal class RustContractWriter : ContractWriter
             imports.Add("std::collections::HashMap");
         }
 
-        return rsType;
+
+        var propertyName = ToSnakeCase(property.Name);
+        if (propertyName == "type")
+        {
+            propertyName = "kind";
+            s.AppendLine("    #[serde(rename = \"type\")]");
+        }
+
+        s.AppendLine($"    pub {propertyName}: {rsType},");
     }
 }
