@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelPortStatus.cs
 
-use chrono::{DateTime, Utc};
 use crate::contracts::RateStatus;
 use crate::contracts::ResourceStatus;
 use serde::{Deserialize, Serialize};
@@ -23,7 +22,7 @@ pub struct TunnelPortStatus {
 
     // Gets or sets the UTC date time when a client was last connected to the port, or
     // null if a client has never connected.
-    pub last_client_connection_time: Option<DateTime<Utc>>,
+    pub last_client_connection_time: Option<String>,
 
     // Gets or sets the current value and limit for the rate of client connections to the
     // tunnel port.

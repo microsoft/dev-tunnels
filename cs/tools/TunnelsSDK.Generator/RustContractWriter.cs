@@ -353,6 +353,13 @@ internal class RustContractWriter : ContractWriter
             s.AppendLine("    #[serde(default)]");
         }
 
+        // todo@connor4312: the service currently returns a non-standard format
+        // for these fields, serialize them as strings until that's fixed.
+        if (property.Name == "LastClientConnectionTime" || property.Name == "LastHostConnectionTime")
+        {
+            csType = "string";
+        }
+
         string rsType;
         if (csType.StartsWith(this.csNamespace + "."))
         {

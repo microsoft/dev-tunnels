@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelStatus.cs
 
-use chrono::{DateTime, Utc};
 use crate::contracts::RateStatus;
 use crate::contracts::ResourceStatus;
 use serde::{Deserialize, Serialize};
@@ -23,7 +22,7 @@ pub struct TunnelStatus {
 
     // Gets or sets the UTC time when a host was last accepting connections to the tunnel,
     // or null if a host has never connected.
-    pub last_host_connection_time: Option<DateTime<Utc>>,
+    pub last_host_connection_time: Option<String>,
 
     // Gets or sets the current value and limit for the number of clients connected to the
     // tunnel.
@@ -37,7 +36,7 @@ pub struct TunnelStatus {
     //
     // This reports times for non-port-specific client connections, which is SDK client
     // and SSH clients. See `TunnelPortStatus` for per-port client connections.
-    pub last_client_connection_time: Option<DateTime<Utc>>,
+    pub last_client_connection_time: Option<String>,
 
     // Gets or sets the current value and limit for the rate of client connections to the
     // tunnel.
