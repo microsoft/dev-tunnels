@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+use std::{error::Error, future::Future};
+
 use reqwest::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, Method, Request,
@@ -9,18 +11,20 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use url::Url;
 
 use crate::contracts::{
-    env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelEnvironment, TunnelPort,
+    env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
+    TunnelServiceProperties,
 };
 
 use super::{
+    authorization_provider::{AuthorizationProvider, DelegatedAuthorization, StaticAuthorization},
     Authorization, HttpError, HttpResult, ResponseError, TunnelLocator, TunnelRequestOptions,
 };
 
 pub struct TunnelManagementClient {
     client: Client,
-    authorization: Option<HeaderValue>,
+    authorization: Box<dyn AuthorizationProvider>,
     user_agent: HeaderValue,
-    environment: TunnelEnvironment,
+    environment: TunnelServiceProperties,
 }
 
 const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
@@ -47,7 +51,7 @@ impl TunnelManagementClient {
         let mut url = self.build_uri(None, TUNNELS_API_PATH);
         url.query_pairs_mut().append_pair("global", "true");
 
-        let request = self.make_tunnel_request(Method::GET, url, options);
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("list_all_tunnels", request).await
     }
 
@@ -58,7 +62,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<Vec<Tunnel>> {
         let url = self.build_uri(Some(cluster_id), TUNNELS_API_PATH);
-        let request = self.make_tunnel_request(Method::GET, url, options);
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("list_cluster_tunnels", request).await
     }
 
@@ -77,7 +81,7 @@ impl TunnelManagementClient {
             query.append_pair("requireAllTags", &require_all_tags.to_string());
         }
 
-        let request = self.make_tunnel_request(Method::GET, url, options);
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("search_tunnels", request).await
     }
 
@@ -88,7 +92,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
         let url = self.build_tunnel_uri(locator, None);
-        let request = self.make_tunnel_request(Method::GET, url, options);
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("get_tunnel", request).await
     }
 
@@ -99,7 +103,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
         let url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
-        let mut request = self.make_tunnel_request(Method::POST, url, options);
+        let mut request = self.make_tunnel_request(Method::POST, url, options).await?;
         json_body(&mut request, tunnel);
         self.execute_json("create_tunnel", request).await
     }
@@ -111,7 +115,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
         let url = self.build_tunnel_uri(&tunnel.try_into().unwrap(), None);
-        let mut request = self.make_tunnel_request(Method::PUT, url, options);
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, tunnel);
         self.execute_json("update_tunnel", request).await
     }
@@ -123,7 +127,9 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<()> {
         let url = self.build_tunnel_uri(locator, None);
-        let request = self.make_tunnel_request(Method::DELETE, url, options);
+        let request = self
+            .make_tunnel_request(Method::DELETE, url, options)
+            .await?;
         self.execute_json::<NeverDeserialize>("delete_tunnel", request)
             .await?;
         Ok(())
@@ -143,7 +149,7 @@ impl TunnelManagementClient {
                 ENDPOINTS_API_SUB_PATH, endpoint.host_id, endpoint.connection_mode
             )),
         );
-        let mut request = self.make_tunnel_request(Method::PUT, url, options);
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_endpoints", request).await
     }
@@ -163,7 +169,9 @@ impl TunnelManagementClient {
         };
 
         let url = self.build_tunnel_uri(locator, Some(&path));
-        let request = self.make_tunnel_request(Method::DELETE, url, options);
+        let request = self
+            .make_tunnel_request(Method::DELETE, url, options)
+            .await?;
         self.execute_json::<NeverDeserialize>("delete_tunnel_endpoints", request)
             .await?;
         Ok(())
@@ -176,7 +184,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<Vec<TunnelPort>> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
-        let request = self.make_tunnel_request(Method::GET, url, options);
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("list_tunnel_ports", request).await
     }
 
@@ -191,7 +199,7 @@ impl TunnelManagementClient {
             locator,
             Some(&format!("{}/{}", PORTS_API_SUB_PATH, port_number)),
         );
-        let request = self.make_tunnel_request(Method::GET, url, options);
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("get_tunnel_port", request).await
     }
 
@@ -203,7 +211,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelPort> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
-        let mut request = self.make_tunnel_request(Method::POST, url, options);
+        let mut request = self.make_tunnel_request(Method::POST, url, options).await?;
         json_body(&mut request, port);
         self.execute_json("create_tunnel_port", request).await
     }
@@ -219,7 +227,7 @@ impl TunnelManagementClient {
             locator,
             Some(&format!("{}/{}", PORTS_API_SUB_PATH, port.port_number)),
         );
-        let mut request = self.make_tunnel_request(Method::PUT, url, options);
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, port);
         self.execute_json("create_tunnel_port", request).await
     }
@@ -235,7 +243,9 @@ impl TunnelManagementClient {
             locator,
             Some(&format!("{}/{}", PORTS_API_SUB_PATH, port_number)),
         );
-        let request = self.make_tunnel_request(Method::DELETE, url, options);
+        let request = self
+            .make_tunnel_request(Method::DELETE, url, options)
+            .await?;
         self.execute_json("create_tunnel_port", request).await
     }
 
@@ -318,7 +328,8 @@ impl TunnelManagementClient {
     /// Builds a URI to a path on the given cluster, if given, or to the global
     /// service if nont is provided.
     fn build_uri(&self, cluster_id: Option<&str>, path: &str) -> Url {
-        let mut uri = self.environment.service_uri.clone();
+        let mut uri =
+            Url::parse(&self.environment.service_uri).expect("expected valid service_uri");
 
         if let Some(cluster_id) = cluster_id {
             let hostname = uri.host_str().unwrap_or("");
@@ -334,12 +345,12 @@ impl TunnelManagementClient {
     }
 
     /// Makes a request and applies the additional tunnel options to the headers and query string.
-    fn make_tunnel_request(
+    async fn make_tunnel_request(
         &self,
         method: Method,
         mut url: Url,
         tunnel_opts: &TunnelRequestOptions,
-    ) -> Request {
+    ) -> HttpResult<Request> {
         {
             let mut query = url.query_pairs_mut();
             if tunnel_opts.include_ports {
@@ -352,7 +363,7 @@ impl TunnelManagementClient {
                 query.append_pair("tokenScopes", &tunnel_opts.scopes.join(","));
             }
         }
-        let mut request = self.make_request(method, url);
+        let mut request = self.make_request(method, url).await?;
 
         let headers = request.headers_mut();
         if let Some(authorization) = &tunnel_opts.authorization {
@@ -367,19 +378,26 @@ impl TunnelManagementClient {
             headers.append(name, value.to_owned());
         }
 
-        request
+        Ok(request)
     }
 
     /// Makes a basic request taht communicates with the service.
-    fn make_request(&self, method: Method, url: Url) -> Request {
+    async fn make_request(&self, method: Method, url: Url) -> HttpResult<Request> {
         let mut request = Request::new(method, url);
         let headers = request.headers_mut();
         headers.insert("User-Agent", self.user_agent.clone());
-        if let Some(a) = &self.authorization {
-            headers.insert(AUTHORIZATION, a.clone());
+
+        match self.authorization.as_ref().get_authorization().await {
+            Err(e) => return Err(HttpError::AuthorizationError(e)),
+            Ok(Authorization::Anonymous) => {}
+            Ok(auth) => {
+                if let Some(a) = &auth.as_header() {
+                    headers.insert(AUTHORIZATION, HeaderValue::from_str(a).unwrap());
+                }
+            }
         }
 
-        request
+        Ok(request)
     }
 }
 
@@ -394,17 +412,17 @@ where
 }
 
 pub struct TunnelClientBuilder {
-    authorization: Authorization,
+    authorization: Box<dyn AuthorizationProvider>,
     client: Option<Client>,
     user_agent: HeaderValue,
-    environment: TunnelEnvironment,
+    environment: TunnelServiceProperties,
 }
 
 /// Creates a new tunnel client builder. You can set options, then use `into()`
 /// to get the client instance (or cast automatically).
 pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
     TunnelClientBuilder {
-        authorization: Authorization::Anonymous,
+        authorization: Box::new(StaticAuthorization(Authorization::Anonymous)),
         client: None,
         user_agent: HeaderValue::from_str(user_agent).unwrap(),
         environment: env_production(),
@@ -413,7 +431,16 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
 
 impl TunnelClientBuilder {
     pub fn authorization(&mut self, authorization: Authorization) -> &mut Self {
-        self.authorization = authorization;
+        self.authorization = Box::new(StaticAuthorization(authorization));
+        self
+    }
+
+    pub fn authorization_fn<F, Fut>(&mut self, f: F) -> &mut Self
+    where
+        F: Fn() -> Fut + 'static,
+        Fut: Future<Output = Result<Authorization, Box<dyn Error>>> + 'static,
+    {
+        self.authorization = Box::new(DelegatedAuthorization(f));
         self
     }
 
@@ -422,7 +449,7 @@ impl TunnelClientBuilder {
         self
     }
 
-    pub fn environment(&mut self, environment: TunnelEnvironment) -> &mut Self {
+    pub fn environment(&mut self, environment: TunnelServiceProperties) -> &mut Self {
         self.environment = environment;
         self
     }
@@ -431,10 +458,7 @@ impl TunnelClientBuilder {
 impl From<TunnelClientBuilder> for TunnelManagementClient {
     fn from(builder: TunnelClientBuilder) -> Self {
         TunnelManagementClient {
-            authorization: builder
-                .authorization
-                .as_header()
-                .map(|s| HeaderValue::from_str(&s).unwrap()),
+            authorization: builder.authorization,
             client: builder.client.unwrap_or_else(Client::new),
             user_agent: builder.user_agent,
             environment: builder.environment,
@@ -546,15 +570,16 @@ mod test_end_to_end {
     }
 
     async fn get_client() -> TunnelManagementClient {
-        let client = reqwest::Client::new();
-        let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
-            Ok(value) => value,
-            _ => do_device_code_flow(&client).await,
-        };
-
         let mut c = new_tunnel_management("rs-sdk-tests");
-        c.authorization(Authorization::Bearer(token));
-        c.client(client);
+        c.authorization_fn(|| async {
+            let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
+                Ok(value) => value,
+                _ => do_device_code_flow(&reqwest::Client::new()).await,
+            };
+
+            env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
+            Ok(Authorization::Bearer(token))
+        });
         c.into()
     }
 }

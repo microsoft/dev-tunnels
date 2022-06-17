@@ -6,6 +6,8 @@ use std::{error::Error, fmt::Display};
 use reqwest::StatusCode;
 use url::Url;
 
+use crate::contracts::ProblemDetails;
+
 /// Type of result returned from HTTP operations.
 pub type HttpResult<R> = Result<R, HttpError>;
 
@@ -16,12 +18,15 @@ pub enum HttpError {
     ConnectionError(reqwest::Error),
     /// An error returned from the remote server.
     ResponseError(ResponseError),
+    /// An error was returned from the authorization callback.
+    AuthorizationError(Box<dyn Error>),
 }
 
 impl Error for HttpError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             HttpError::ConnectionError(e) => Some(e),
+            HttpError::AuthorizationError(e) => Some(e.as_ref()),
             _ => None,
         }
     }
@@ -32,6 +37,7 @@ impl Display for HttpError {
         match self {
             HttpError::ConnectionError(e) => write!(f, "connection error: {}", e),
             HttpError::ResponseError(e) => write!(f, "response error: {}", e),
+            HttpError::AuthorizationError(e) => write!(f, "authorization error: {}", e),
         }
     }
 }
@@ -47,6 +53,15 @@ pub struct ResponseError {
     pub data: Option<String>,
     /// Request ID for debugging purposes
     pub request_id: Option<String>,
+}
+
+impl ResponseError {
+    /// Attempts to get service problem details, if available.
+    pub fn get_details(&self) -> Option<ProblemDetails> {
+        self.data
+            .as_deref()
+            .and_then(|d| serde_json::from_str(d).ok())
+    }
 }
 
 impl Display for ResponseError {

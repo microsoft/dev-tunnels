@@ -1,4 +1,5 @@
 mod authorization;
+mod authorization_provider;
 mod errors;
 mod http_client;
 mod tunnel_locator;

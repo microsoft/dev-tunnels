@@ -19,7 +19,6 @@ internal class RustContractWriter : ContractWriter
     // extra, non-generated modules that should be imported but not exported:
     private readonly List<string> ImportModules = new List<string>()
     {
-        "serialization",
     };
 
     // extra, non-generated modules that should be exported:
@@ -417,12 +416,6 @@ internal class RustContractWriter : ContractWriter
 
         if (isNullable)
         {
-            if (rsType == "String")
-            {
-                imports.Add("crate::contracts::serialization::empty_string_as_none");
-                s.AppendLine("    #[serde(default, deserialize_with = \"empty_string_as_none\")]");
-            }
-
             rsType = $"Option<{rsType}>";
         }
 

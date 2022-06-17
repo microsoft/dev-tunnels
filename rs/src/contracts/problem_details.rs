@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/ProblemDetails.cs
 
-use crate::contracts::serialization::empty_string_as_none;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -16,11 +15,9 @@ use std::collections::HashMap;
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct ProblemDetails {
     // Gets or sets the error title.
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub title: Option<String>,
 
     // Gets or sets the error detail.
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub detail: Option<String>,
 
     // Gets or sets additional details about individual request properties.

@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelPort.cs
 
-use crate::contracts::serialization::empty_string_as_none;
 use crate::contracts::TunnelAccessControl;
 use crate::contracts::TunnelOptions;
 use crate::contracts::TunnelPortStatus;
@@ -14,11 +13,9 @@ use std::collections::HashMap;
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelPort {
     // Gets or sets the ID of the cluster the tunnel was created in.
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub cluster_id: Option<String>,
 
     // Gets or sets the generated ID of the tunnel, unique within the cluster.
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub tunnel_id: Option<String>,
 
     // Gets or sets the IP port number of the tunnel port.
@@ -27,7 +24,6 @@ pub struct TunnelPort {
     // Gets or sets the protocol of the tunnel port.
     //
     // Should be one of the string constants from `TunnelProtocol`.
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub protocol: Option<String>,
 
     // Gets or sets a dictionary mapping from scopes to tunnel access tokens.
