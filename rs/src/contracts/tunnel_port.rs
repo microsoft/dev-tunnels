@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Data contract for tunnel port objects managed through the tunnel service REST API.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelPort {
     // Gets or sets the ID of the cluster the tunnel was created in.

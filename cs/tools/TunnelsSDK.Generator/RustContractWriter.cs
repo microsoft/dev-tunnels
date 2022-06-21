@@ -30,6 +30,7 @@ internal class RustContractWriter : ContractWriter
     private static readonly ISet<string> DefaultDerivers = new HashSet<string>()
     {
         "Tunnel",
+        "TunnelPort",
     };
 
     public RustContractWriter(string repoRoot, string csNamespace) : base(repoRoot, csNamespace)

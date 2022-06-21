@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use std::{error::Error, future::Future};
+use std::{error::Error, future::Future, sync::Arc};
 
 use reqwest::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
@@ -20,16 +20,17 @@ use super::{
     Authorization, HttpError, HttpResult, ResponseError, TunnelLocator, TunnelRequestOptions,
 };
 
+#[derive(Clone)]
 pub struct TunnelManagementClient {
     client: Client,
-    authorization: Box<dyn AuthorizationProvider>,
+    authorization: Arc<Box<dyn AuthorizationProvider>>,
     user_agent: HeaderValue,
     environment: TunnelServiceProperties,
 }
 
 const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
-const ENDPOINTS_API_SUB_PATH: &str = "/endpoints";
-const PORTS_API_SUB_PATH: &str = "/ports";
+const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
+const PORTS_API_SUB_PATH: &str = "ports";
 
 struct NeverDeserialize();
 
@@ -458,7 +459,7 @@ impl TunnelClientBuilder {
 impl From<TunnelClientBuilder> for TunnelManagementClient {
     fn from(builder: TunnelClientBuilder) -> Self {
         TunnelManagementClient {
-            authorization: builder.authorization,
+            authorization: Arc::new(builder.authorization),
             client: builder.client.unwrap_or_else(Client::new),
             user_agent: builder.user_agent,
             environment: builder.environment,
