@@ -99,5 +99,11 @@ public class ContractsGenerator : ISourceGenerator
                 writer.WriteContract(type, types);
             }
         }
+
+        foreach (var writer in writers)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            writer.WriteCompleted();
+        }
     }
 }
