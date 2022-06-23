@@ -10,6 +10,14 @@ pub enum ResourceStatus {
     Detailed(DetailedResourceStatus),
     Count(u32),
 }
+impl ResourceStatus {
+    pub fn get_count(&self) -> u64 {
+        match self {
+            ResourceStatus::Detailed(d) => d.current,
+            ResourceStatus::Count(c) => (*c).into(),
+        }
+    }
+}
 // Current value and limit for a limited resource related to a tunnel or tunnel port.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]

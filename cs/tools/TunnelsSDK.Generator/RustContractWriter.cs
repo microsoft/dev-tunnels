@@ -159,6 +159,14 @@ internal class RustContractWriter : ContractWriter
         s.AppendLine("    Detailed(DetailedResourceStatus),");
         s.AppendLine("    Count(u32),");
         s.AppendLine("}");
+        s.AppendLine("impl ResourceStatus {");
+        s.AppendLine("    pub fn get_count(&self) -> u64 {");
+        s.AppendLine("        match self {");
+        s.AppendLine("            ResourceStatus::Detailed(d) => d.current,");
+        s.AppendLine("            ResourceStatus::Count(c) => (*c).into(),");
+        s.AppendLine("        }");
+        s.AppendLine("    }");
+        s.AppendLine("}");
     }
 
     private void WriteInterfaceContract(
