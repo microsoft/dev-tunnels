@@ -57,5 +57,12 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// access to the tunnel.
         /// </summary>
         IPAddressRanges,
+
+        /// <summary>
+        /// The access control entry is a list of service tags representing Azure services that
+        /// are allowed or denied access to the tunnel. These are resolve to IP address ranges by
+        /// the tunnel service.
+        /// </summary>
+        ServiceTag,
     }
 }

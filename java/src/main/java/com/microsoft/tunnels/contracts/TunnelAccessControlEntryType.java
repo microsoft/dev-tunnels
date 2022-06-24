@@ -65,4 +65,12 @@ public enum TunnelAccessControlEntryType {
      */
     @SerializedName("IPAddressRanges")
     IPAddressRanges,
+
+    /**
+     * The access control entry is a list of service tags representing Azure services that
+     * are allowed or denied access to the tunnel. These are resolve to IP address ranges
+     * by the tunnel service.
+     */
+    @SerializedName("ServiceTag")
+    ServiceTag,
 }

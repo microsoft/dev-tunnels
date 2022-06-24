@@ -42,6 +42,9 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
 
             /// <summary>IPv6 addresses.</summary>
             public const string IPv6 = "ipv6";
+
+            /// <summary>Service tags.</summary>
+            public const string ServiceTag = "service-tag";
         }
 
         /// <summary>
@@ -70,7 +73,9 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         ///
         /// For public key ACEs, this value is the type of public key, e.g. "ssh".
         ///
-        /// For IP address range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6".
+        /// For IP address range ACEs, this value is the IP address version, e.g. "ipv4" or "ipv6".
+        ///
+        /// For service tag ACEs, this value is "service-tag".
         ///
         /// For anonymous ACEs, this value is null.
         /// </remarks>
@@ -190,6 +195,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
                 TunnelAccessControlEntryType.Repositories => "Repo",
                 TunnelAccessControlEntryType.PublicKeys => "Key",
                 TunnelAccessControlEntryType.IPAddressRanges => "IP Range",
+                TunnelAccessControlEntryType.ServiceTag => "Service Tag",
                 _ => entryType.ToString(),
             };
 
@@ -207,6 +213,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
                     Providers.Ssh => $"SSH {label}",
                     Providers.IPv4 => label.Replace("IP", "IPv4"),
                     Providers.IPv6 => label.Replace("IP", "IPv6"),
+                    Providers.ServiceTag => label,
                     _ => $"{label} ({provider})",
                 };
             }

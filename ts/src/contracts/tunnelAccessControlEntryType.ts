@@ -54,4 +54,11 @@ export enum TunnelAccessControlEntryType {
      * denied) access to the tunnel.
      */
     IPAddressRanges = 'IPAddressRanges',
+
+    /**
+     * The access control entry is a list of service tags representing Azure services that
+     * are allowed or denied access to the tunnel. These are resolve to IP address ranges
+     * by the tunnel service.
+     */
+    ServiceTag = 'ServiceTag',
 }
