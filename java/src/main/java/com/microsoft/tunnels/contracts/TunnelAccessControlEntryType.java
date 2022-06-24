@@ -71,6 +71,6 @@ public enum TunnelAccessControlEntryType {
      * are allowed or denied access to the tunnel. These are resolve to IP address ranges
      * by the tunnel service.
      */
-    @SerializedName("ServiceTag")
-    ServiceTag,
+    @SerializedName("ServiceTags")
+    ServiceTags,
 }

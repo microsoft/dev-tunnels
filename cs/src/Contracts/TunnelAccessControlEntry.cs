@@ -195,7 +195,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
                 TunnelAccessControlEntryType.Repositories => "Repo",
                 TunnelAccessControlEntryType.PublicKeys => "Key",
                 TunnelAccessControlEntryType.IPAddressRanges => "IP Range",
-                TunnelAccessControlEntryType.ServiceTag => "Service Tag",
+                TunnelAccessControlEntryType.ServiceTags => "Service Tag",
                 _ => entryType.ToString(),
             };
 

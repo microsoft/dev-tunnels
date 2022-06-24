@@ -63,6 +63,6 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// are allowed or denied access to the tunnel. These are resolve to IP address ranges by
         /// the tunnel service.
         /// </summary>
-        ServiceTag,
+        ServiceTags,
     }
 }
