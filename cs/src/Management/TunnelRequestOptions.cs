@@ -29,6 +29,9 @@ namespace Microsoft.VsSaaS.TunnelService
         /// Note this should not be a _user_ access token (such as AAD or GitHub); use the
         /// callback parameter to the <see cref="TunnelManagementClient"/> constructor to
         /// supply user access tokens.
+        /// <para/>
+        /// When an access token is provided here, it is used instead of any user token from the
+        /// callback.
         /// </remarks>
         public string? AccessToken { get; set; }
 
@@ -84,7 +87,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// Converts tunnel request options to a query string for HTTP requests to the
         /// tunnel management API.
         /// </summary>
-        internal string ToQueryString()
+        protected internal virtual string ToQueryString()
         {
             var queryOptions = new Dictionary<string, string>();
 
