@@ -27,10 +27,5 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// Use the tunnel service's integrated relay function.
         /// </summary>
         TunnelRelay = 1,
-
-        /// <summary>
-        /// Connect via a Live Share workspace's Azure Relay endpoint.
-        /// </summary>
-        LiveShareRelay = 2,
     }
 }

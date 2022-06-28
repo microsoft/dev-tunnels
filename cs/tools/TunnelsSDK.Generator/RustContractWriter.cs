@@ -91,6 +91,9 @@ internal class RustContractWriter : ContractWriter
         var s = new StringBuilder();
         this.AppendFileHeader(s, "RustContractWriter.cs");
 
+        this.ExportModules.Sort();
+        this.ImportModules.Sort();
+
         foreach (var mod in this.ExportModules)
         {
             s.AppendLine($"mod {mod};");

@@ -209,13 +209,6 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
             // For now, the client is allowed to skip SSH authentication;
             // they must have a valid tunnel access token already to get this far.
             e.authenticationPromise = Promise.resolve({});
-        } else if (
-            e.authenticationType === SshAuthenticationType.clientPassword &&
-            !e.clientUsername
-        ) {
-            // The client is authenticating with a Live Share session token.
-            // TODO: Validate the Live Share session token.
-            e.authenticationPromise = Promise.resolve({});
         } else {
             // Other authentication types are not implemented. Doing nothing here
             // results in a client authentication failure.

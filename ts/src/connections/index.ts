@@ -3,8 +3,6 @@
 
 export * from './tunnelClient';
 export * from './tunnelHost';
-export * from './liveShareRelayTokenProvider';
-export * from './liveShareRelayTunnelClient';
 
 export * from './multiModeTunnelClient';
 export * from './multiModeTunnelHost';

@@ -158,8 +158,6 @@ public abstract class TunnelEndpoint
                     JsonSerializer.Deserialize<LocalNetworkTunnelEndpoint>(ref reader, options),
                 TunnelConnectionMode.TunnelRelay =>
                     JsonSerializer.Deserialize<TunnelRelayTunnelEndpoint>(ref reader, options),
-                TunnelConnectionMode.LiveShareRelay =>
-                    JsonSerializer.Deserialize<LiveShareRelayTunnelEndpoint>(ref reader, options),
                 _ => throw new JsonException($"Unsupported connection mode: {mode}")
             };
 
