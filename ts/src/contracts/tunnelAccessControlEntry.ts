@@ -28,9 +28,9 @@ export interface TunnelAccessControlEntry {
      * the user/group/org IDs. It may be one of the well-known provider names in {@link
      * TunnelAccessControlEntry.providers}, or (in the future) a custom identity provider.
      *  For public key ACEs, this value is the type of public key, e.g. "ssh".  For IP
-     * address range ACEs, this value is the IP address version, e.g. "ipv4" or "ipv6".
-     * For service tag ACEs, this value is "service-tag".  For anonymous ACEs, this value
-     * is null.
+     * address range ACEs, this value is the IP address version, "ipv4" or "ipv6", or
+     * "service-tag" if the range is defined by an Azure service tag.  For anonymous ACEs,
+     * this value is null.
      */
     provider?: string;
 

@@ -36,11 +36,6 @@ const (
 	TunnelAccessControlEntryTypePublicKeys      TunnelAccessControlEntryType = "PublicKeys"
 
 	// The access control entry is a list of IP address ranges that are allowed (or denied)
-	// access to the tunnel.
+	// access to the tunnel. Ranges can be IPv4, IPv6, or Azure service tags.
 	TunnelAccessControlEntryTypeIPAddressRanges TunnelAccessControlEntryType = "IPAddressRanges"
-
-	// The access control entry is a list of service tags representing Azure services that
-	// are allowed or denied access to the tunnel. These are resolve to IP address ranges by
-	// the tunnel service.
-	TunnelAccessControlEntryTypeServiceTags     TunnelAccessControlEntryType = "ServiceTags"
 )

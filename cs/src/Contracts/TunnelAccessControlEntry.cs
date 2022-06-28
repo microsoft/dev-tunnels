@@ -73,9 +73,8 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         ///
         /// For public key ACEs, this value is the type of public key, e.g. "ssh".
         ///
-        /// For IP address range ACEs, this value is the IP address version, e.g. "ipv4" or "ipv6".
-        ///
-        /// For service tag ACEs, this value is "service-tag".
+        /// For IP address range ACEs, this value is the IP address version, "ipv4" or "ipv6",
+        /// or "service-tag" if the range is defined by an Azure service tag.
         ///
         /// For anonymous ACEs, this value is null.
         /// </remarks>
@@ -195,7 +194,6 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
                 TunnelAccessControlEntryType.Repositories => "Repo",
                 TunnelAccessControlEntryType.PublicKeys => "Key",
                 TunnelAccessControlEntryType.IPAddressRanges => "IP Range",
-                TunnelAccessControlEntryType.ServiceTags => "Service Tag",
                 _ => entryType.ToString(),
             };
 
@@ -213,7 +211,7 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
                     Providers.Ssh => $"SSH {label}",
                     Providers.IPv4 => label.Replace("IP", "IPv4"),
                     Providers.IPv6 => label.Replace("IP", "IPv6"),
-                    Providers.ServiceTag => label,
+                    Providers.ServiceTag => "Service Tag",
                     _ => $"{label} ({provider})",
                 };
             }
