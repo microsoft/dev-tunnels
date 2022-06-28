@@ -21,8 +21,9 @@ type TunnelAccessControlEntry struct {
 	// user/group/org IDs. It may be one of the well-known provider names in
 	// `TunnelAccessControlEntry.Providers`, or (in the future) a custom identity provider.
 	// For public key ACEs, this value is the type of public key, e.g. "ssh".  For IP address
-	// range ACEs, this value is the IP addrss version, e.g. "ipv4" or "ipv6".  For anonymous
-	// ACEs, this value is null.
+	// range ACEs, this value is the IP address version, "ipv4" or "ipv6", or "service-tag"
+	// if the range is defined by an Azure service tag.  For anonymous ACEs, this value is
+	// null.
 	Provider     string `json:"provider,omitempty"`
 
 	// Gets or sets a value indicating whether this is an access control entry on a tunnel
@@ -75,17 +76,20 @@ type TunnelAccessControlEntryProvider string
 
 const (
 	// Microsoft (AAD) identity provider.
-	TunnelAccessControlEntryProviderMicrosoft TunnelAccessControlEntryProvider = "microsoft"
+	TunnelAccessControlEntryProviderMicrosoft  TunnelAccessControlEntryProvider = "microsoft"
 
 	// GitHub identity provider.
-	TunnelAccessControlEntryProviderGitHub    TunnelAccessControlEntryProvider = "github"
+	TunnelAccessControlEntryProviderGitHub     TunnelAccessControlEntryProvider = "github"
 
 	// SSH public keys.
-	TunnelAccessControlEntryProviderSsh       TunnelAccessControlEntryProvider = "ssh"
+	TunnelAccessControlEntryProviderSsh        TunnelAccessControlEntryProvider = "ssh"
 
 	// IPv4 addresses.
-	TunnelAccessControlEntryProviderIPv4      TunnelAccessControlEntryProvider = "ipv4"
+	TunnelAccessControlEntryProviderIPv4       TunnelAccessControlEntryProvider = "ipv4"
 
 	// IPv6 addresses.
-	TunnelAccessControlEntryProviderIPv6      TunnelAccessControlEntryProvider = "ipv6"
+	TunnelAccessControlEntryProviderIPv6       TunnelAccessControlEntryProvider = "ipv6"
+
+	// Service tags.
+	TunnelAccessControlEntryProviderServiceTag TunnelAccessControlEntryProvider = "service-tag"
 )
