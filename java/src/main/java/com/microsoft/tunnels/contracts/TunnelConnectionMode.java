@@ -27,10 +27,4 @@ public enum TunnelConnectionMode {
      */
     @SerializedName("TunnelRelay")
     TunnelRelay,
-
-    /**
-     * Connect via a Live Share workspace's Azure Relay endpoint.
-     */
-    @SerializedName("LiveShareRelay")
-    LiveShareRelay,
 }

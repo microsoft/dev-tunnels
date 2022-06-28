@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 export { Tunnel } from './tunnel';
-export { LiveShareRelayTunnelEndpoint } from './liveShareRelayTunnelEndpoint';
 export { ProblemDetails } from './problemDetails';
 export { TunnelAccessControl } from './tunnelAccessControl';
 export { TunnelAccessControlEntry } from './tunnelAccessControlEntry';

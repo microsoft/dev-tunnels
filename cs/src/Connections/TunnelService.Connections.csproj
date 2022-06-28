@@ -17,9 +17,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.LiveShare.Rpc" Version="$(MicrosoftVisualStudioLiveSharePackageVersion)" />
-    <PackageReference Include="Microsoft.VisualStudio.LiveShare.Rpc.Json" Version="$(MicrosoftVisualStudioLiveSharePackageVersion)" />
-
     <PackageReference Include="Microsoft.VisualStudio.Ssh" Version="$(VsSshPackageVersion)" />
     <PackageReference Include="Microsoft.VisualStudio.Ssh.Tcp" Version="$(VsSshPackageVersion)" />
     <PackageReference Include="Microsoft.Azure.Relay" Version="$(MicrosoftAzureRelayPackageVersion)" />

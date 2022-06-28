@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Nerdbank.Streams" Version="2.5.76" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Contracts\TunnelService.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Management\TunnelService.Management.csproj" />
     <ProjectReference Include="..\..\src\Connections\TunnelService.Connections.csproj" />

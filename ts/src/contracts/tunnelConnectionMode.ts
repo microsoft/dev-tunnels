@@ -22,9 +22,4 @@ export enum TunnelConnectionMode {
      * Use the tunnel service's integrated relay function.
      */
     TunnelRelay = 'TunnelRelay',
-
-    /**
-     * Connect via a Live Share workspace's Azure Relay endpoint.
-     */
-    LiveShareRelay = 'LiveShareRelay',
 }

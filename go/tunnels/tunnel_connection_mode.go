@@ -15,11 +15,8 @@ const (
 	//
 	// While it's technically not "tunneling", this mode may be combined with others to
 	// enable choosing the most efficient connection mode available.
-	TunnelConnectionModeLocalNetwork   TunnelConnectionMode = "LocalNetwork"
+	TunnelConnectionModeLocalNetwork TunnelConnectionMode = "LocalNetwork"
 
 	// Use the tunnel service's integrated relay function.
-	TunnelConnectionModeTunnelRelay    TunnelConnectionMode = "TunnelRelay"
-
-	// Connect via a Live Share workspace's Azure Relay endpoint.
-	TunnelConnectionModeLiveShareRelay TunnelConnectionMode = "LiveShareRelay"
+	TunnelConnectionModeTunnelRelay  TunnelConnectionMode = "TunnelRelay"
 )

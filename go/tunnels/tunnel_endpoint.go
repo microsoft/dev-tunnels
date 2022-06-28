@@ -36,24 +36,8 @@ type TunnelEndpoint struct {
 	// with the actual port number.
 	PortURIFormat  string `json:"portUriFormat,omitempty"`
 
-	LiveShareRelayTunnelEndpoint
 	LocalNetworkTunnelEndpoint
 	TunnelRelayTunnelEndpoint
-}
-
-// Parameters for connecting to a tunnel via a Live Share Azure Relay.
-type LiveShareRelayTunnelEndpoint struct {
-	// Gets or sets the Live Share workspace ID.
-	WorkspaceID         string `json:"workspaceId"`
-
-	// Gets or sets the Azure Relay URI.
-	RelayURI            string `json:"relayUri,omitempty"`
-
-	// Gets or sets a SAS token that allows hosts to listen on the Azure Relay endpoint.
-	RelayHostSasToken   string `json:"relayHostSasToken,omitempty"`
-
-	// Gets or sets a SAS token that allows clients to connect to the Azure Relay endpoint.
-	RelayClientSasToken string `json:"relayClientSasToken,omitempty"`
 }
 
 // Parameters for connecting to a tunnel via a local network connection.

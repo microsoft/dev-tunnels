@@ -44,8 +44,6 @@ public class TunnelContracts {
       var connectionMode = endpointObject.get("connectionMode").getAsString();
       if (connectionMode.equals("TunnelRelay")) {
         return gson.fromJson(endpointObject, TunnelRelayTunnelEndpoint.class);
-      } else if (connectionMode.equals("LiveShareRelay")) {
-        return gson.fromJson(endpointObject, LiveShareRelayTunnelEndpoint.class);
       } else if (connectionMode.equals("LocalNetwork")) {
         return gson.fromJson(endpointObject, LocalNetworkTunnelEndpoint.class);
       } else {

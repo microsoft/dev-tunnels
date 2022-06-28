@@ -293,13 +293,6 @@ namespace Microsoft.VsSaaS.TunnelService
                 // they must have a valid tunnel access token already to get this far.
                 e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
             }
-            else if (e.AuthenticationType == SshAuthenticationType.ClientPassword &&
-                string.IsNullOrEmpty(e.ClientUsername))
-            {
-                // The client is authenticating with a Live Share session token.
-                // TODO: Validate the Live Share session token.
-                e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
-            }
             else
             {
                 // Other authentication types are not implemented. Doing nothing here

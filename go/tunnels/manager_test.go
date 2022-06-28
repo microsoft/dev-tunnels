@@ -662,7 +662,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	// Create and add endpoint
 	endpoint := &TunnelEndpoint{
 		HostID:         "test",
-		ConnectionMode: TunnelConnectionModeLiveShareRelay,
+		ConnectionMode: TunnelConnectionModeTunnelRelay,
 	}
 
 	updatedEndpoint, err := managementClient.UpdateTunnelEndpoint(ctx, createdTunnel, endpoint, nil, options)
@@ -687,7 +687,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf("endpoint was not successfully updated")
 	}
 
-	err = managementClient.DeleteTunnelEndpoints(ctx, createdTunnel, "test", TunnelConnectionModeLiveShareRelay, options)
+	err = managementClient.DeleteTunnelEndpoints(ctx, createdTunnel, "test", TunnelConnectionModeTunnelRelay, options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return

@@ -19,9 +19,6 @@ pub enum TunnelConnectionMode {
 
     // Use the tunnel service's integrated relay function.
     TunnelRelay,
-
-    // Connect via a Live Share workspace's Azure Relay endpoint.
-    LiveShareRelay,
 }
 
 impl fmt::Display for TunnelConnectionMode {
@@ -29,7 +26,6 @@ impl fmt::Display for TunnelConnectionMode {
         match *self {
             TunnelConnectionMode::LocalNetwork => write!(f, "LocalNetwork"),
             TunnelConnectionMode::TunnelRelay => write!(f, "TunnelRelay"),
-            TunnelConnectionMode::LiveShareRelay => write!(f, "LiveShareRelay"),
         }
     }
 }

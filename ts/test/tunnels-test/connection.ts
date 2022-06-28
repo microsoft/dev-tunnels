@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { LiveShareRelayTunnelClient, TunnelRelayTunnelClient } from '@vs/tunnels-connections';
+import { TunnelRelayTunnelClient } from '@vs/tunnels-connections';
 import { Tunnel, TunnelConnectionMode } from '@vs/tunnels-contracts';
 import { TunnelManagementHttpClient, TunnelRequestOptions } from '@vs/tunnels-management';
 import * as yargs from 'yargs';
@@ -33,7 +33,7 @@ async function main() {
         }
     }
 
-    return startLiveShareRelayConnection();
+    return startTunnelRelayConnection();
 }
 
 async function connect(port: number, options: { [name: string]: string }) {
@@ -52,27 +52,6 @@ async function connect(port: number, options: { [name: string]: string }) {
         },
     );
 
-    return 0;
-}
-
-async function startLiveShareRelayConnection() {
-    let tunnelManagementClient = new TunnelManagementHttpClient(
-        userAgent,
-        () => Promise.resolve('Bearer'),
-        'https://global.tunnels.vsengsaas.visualstudio.com/',
-    );
-    const tunnel: Tunnel = { tunnelId: 'ztpzkm21', clusterId: 'westus2' };
-    let tunnelRequestOptions: TunnelRequestOptions = {
-        tokenScopes: ['connect'],
-        accessToken: '',
-    };
-
-    let tunnelInstance = await tunnelManagementClient.getTunnel(tunnel, tunnelRequestOptions);
-
-    let liveShareRelayTunnelClient = new LiveShareRelayTunnelClient();
-    await liveShareRelayTunnelClient.connectClient(tunnelInstance!, tunnelInstance!.endpoints!);
-    // Wait indefinitely so the connection does not close
-    await new Promise((resolve) => {});
     return 0;
 }
 
