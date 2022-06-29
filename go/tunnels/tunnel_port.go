@@ -15,6 +15,17 @@ type TunnelPort struct {
 	// Gets or sets the IP port number of the tunnel port.
 	PortNumber    uint16 `json:"portNumber"`
 
+	// Gets or sets the optional short name of the port.
+	//
+	// The name must be unique among named ports of the same tunnel.
+	Name          string `json:"name,omitempty"`
+
+	// Gets or sets the optional description of the port.
+	Description   string `json:"description,omitempty"`
+
+	// Gets or sets the tags of the port.
+	Tags          []string `json:"tags,omitempty"`
+
 	// Gets or sets the protocol of the tunnel port.
 	//
 	// Should be one of the string constants from `TunnelProtocol`.

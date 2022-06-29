@@ -27,6 +27,23 @@ export interface TunnelPort {
     portNumber: number;
 
     /**
+     * Gets or sets the optional short name of the port.
+     *
+     * The name must be unique among named ports of the same tunnel.
+     */
+    name?: string;
+
+    /**
+     * Gets or sets the optional description of the port.
+     */
+    description?: string;
+
+    /**
+     * Gets or sets the tags of the port.
+     */
+    tags?: string[];
+
+    /**
      * Gets or sets the protocol of the tunnel port.
      *
      * Should be one of the string constants from {@link TunnelProtocol}.

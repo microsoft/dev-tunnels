@@ -21,6 +21,18 @@ pub struct TunnelPort {
     // Gets or sets the IP port number of the tunnel port.
     pub port_number: u16,
 
+    // Gets or sets the optional short name of the port.
+    //
+    // The name must be unique among named ports of the same tunnel.
+    pub name: Option<String>,
+
+    // Gets or sets the optional description of the port.
+    pub description: Option<String>,
+
+    // Gets or sets the tags of the port.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub tags: Vec<String>,
+
     // Gets or sets the protocol of the tunnel port.
     //
     // Should be one of the string constants from `TunnelProtocol`.

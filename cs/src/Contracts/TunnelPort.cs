@@ -38,6 +38,27 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         public ushort PortNumber { get; set; }
 
         /// <summary>
+        /// Gets or sets the optional short name of the port.
+        /// </summary>
+        /// <remarks>
+        /// The name must be unique among named ports of the same tunnel.
+        /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Name { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional description of the port.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Description { get; set; }
+
+        /// <summary>
+        /// Gets or sets the tags of the port.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string[]? Tags { get; set; }
+
+        /// <summary>
         /// Gets or sets the protocol of the tunnel port.
         /// </summary>
         /// <remarks>
