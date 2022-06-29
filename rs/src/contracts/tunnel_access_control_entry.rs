@@ -26,8 +26,9 @@ pub struct TunnelAccessControlEntry {
     // the user/group/org IDs. It may be one of the well-known provider names in
     // `TunnelAccessControlEntry.Providers`, or (in the future) a custom identity
     // provider.  For public key ACEs, this value is the type of public key, e.g. "ssh".
-    // For IP address range ACEs, this value is the IP addrss version, e.g. "ipv4" or
-    // "ipv6".  For anonymous ACEs, this value is null.
+    // For IP address range ACEs, this value is the IP address version, "ipv4" or "ipv6",
+    // or "service-tag" if the range is defined by an Azure service tag.  For anonymous
+    // ACEs, this value is null.
     pub provider: Option<String>,
 
     // Gets or sets a value indicating whether this is an access control entry on a tunnel
@@ -94,3 +95,6 @@ pub const PROVIDERS_IPV4: &str = "ipv4";
 
 // IPv6 addresses.
 pub const PROVIDERS_IPV6: &str = "ipv6";
+
+// Service tags.
+pub const PROVIDERS_SERVICE_TAG: &str = "service-tag";

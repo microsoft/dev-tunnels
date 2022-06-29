@@ -30,6 +30,26 @@ public class TunnelPort {
     public int portNumber;
 
     /**
+     * Gets or sets the optional short name of the port.
+     *
+     * The name must be unique among named ports of the same tunnel.
+     */
+    @Expose
+    public String name;
+
+    /**
+     * Gets or sets the optional description of the port.
+     */
+    @Expose
+    public String description;
+
+    /**
+     * Gets or sets the tags of the port.
+     */
+    @Expose
+    public String[] tags;
+
+    /**
      * Gets or sets the protocol of the tunnel port.
      *
      * Should be one of the string constants from {@link TunnelProtocol}.
