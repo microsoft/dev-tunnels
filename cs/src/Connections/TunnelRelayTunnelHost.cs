@@ -40,6 +40,9 @@ namespace Microsoft.VsSaaS.TunnelService
         private readonly IList<Task> clientSessionTasks = new List<Task>();
         private readonly string hostId;
 
+        private int reconnectAttempts = 0;
+        private const int maxReconnectAttempts = 6;
+
         private MultiChannelStream? hostSession;
 
         /// <summary>
@@ -158,12 +161,31 @@ namespace Microsoft.VsSaaS.TunnelService
             }
         }
 
-        private void HostSession_Closed(object? sender, SshSessionClosedEventArgs e)
+        private async void HostSession_Closed(object? sender, SshSessionClosedEventArgs e)
         {
+            
+            Trace.TraceInformation("Attempting to reconnect");
+            while (e.Reason == SshDisconnectReason.ConnectionLost && reconnectAttempts < maxReconnectAttempts)
+            {
+                await Task.Delay((int)Math.Pow(10, reconnectAttempts));
+                Trace.TraceInformation("Attempting to reconnect " + reconnectAttempts);
+                
+                try
+                {
+                    await this.hostSession!.ConnectAsync(CancellationToken.None);
+                    return;
+                }
+                catch
+                {
+                    reconnectAttempts++;
+                }
+            }
             var session = (MultiChannelStream)sender!;
+            await session.CloseAsync();
             session.Closed -= HostSession_Closed;
             session.ChannelOpening -= HostSession_ChannelOpening;
             this.hostSession = null;
+
             Trace.TraceInformation("Connection to host tunnel relay closed.");
         }
 
