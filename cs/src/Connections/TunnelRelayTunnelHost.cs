@@ -45,6 +45,10 @@ namespace Microsoft.VsSaaS.TunnelService
 
         private MultiChannelStream? hostSession;
 
+        private Tunnel? tunnel;
+
+        private string[]? hostKeys;
+
         /// <summary>
         /// Creates a new instance of a host that connects to a tunnel via a tunnel relay.
         /// </summary>
@@ -105,6 +109,8 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <inheritdoc />
         protected override async Task StartAsync(Tunnel tunnel, string[]? hostPublicKeys, CancellationToken cancellation)
         {
+            this.tunnel = tunnel;
+            this.hostKeys = hostPublicKeys;
             string? accessToken = null;
             tunnel.AccessTokens?.TryGetValue(TunnelAccessScopes.Host, out accessToken);
             Requires.Argument(
@@ -163,7 +169,12 @@ namespace Microsoft.VsSaaS.TunnelService
 
         private async void HostSession_Closed(object? sender, SshSessionClosedEventArgs e)
         {
-            
+            var session = (MultiChannelStream)sender!;
+            await session.CloseAsync();
+            session.Closed -= HostSession_Closed;
+            session.ChannelOpening -= HostSession_ChannelOpening;
+            this.hostSession = null;
+
             Trace.TraceInformation("Attempting to reconnect");
             while (e.Reason == SshDisconnectReason.ConnectionLost && reconnectAttempts < maxReconnectAttempts)
             {
@@ -172,7 +183,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 
                 try
                 {
-                    await this.hostSession!.ConnectAsync(CancellationToken.None);
+                    await StartAsync(this.tunnel!, this.hostKeys, CancellationToken.None);
                     return;
                 }
                 catch
@@ -180,11 +191,7 @@ namespace Microsoft.VsSaaS.TunnelService
                     reconnectAttempts++;
                 }
             }
-            var session = (MultiChannelStream)sender!;
-            await session.CloseAsync();
-            session.Closed -= HostSession_Closed;
-            session.ChannelOpening -= HostSession_ChannelOpening;
-            this.hostSession = null;
+           
 
             Trace.TraceInformation("Connection to host tunnel relay closed.");
         }
