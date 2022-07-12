@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -112,7 +111,7 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents}, nil
 }
 
-// Lists all tunnels owned by the authenticated user.
+// Lists tunnels owned by the authenticated user.
 // Returns a list of tunnels or an error if the search fails.
 func (m *Manager) ListTunnels(
 	ctx context.Context, clusterID string, domain string, options *TunnelRequestOptions,
@@ -128,37 +127,6 @@ func (m *Manager) ListTunnels(
 	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, nil, readAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel request: %w", err)
-	}
-
-	err = json.Unmarshal(response, &ts)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
-	}
-
-	return ts, nil
-}
-
-// Search tunnels that the authenticated user has access to based on tags.
-// If requireAllTags is true then tunnels returned must contain all tags in the tags slice.
-// Returns a slice of the found tunnels or an error if the search fails.
-func (m *Manager) SearchTunnels(
-	ctx context.Context, tags []string, requireAllTags bool, clusterID string, domain string, options *TunnelRequestOptions,
-) (ts []*Tunnel, err error) {
-	queryParams := url.Values{}
-	if clusterID == "" {
-		queryParams.Add("global", "true")
-	}
-	if domain != "" {
-		queryParams.Add("domain", domain)
-	}
-	queryParams.Add("allTags", strconv.FormatBool(requireAllTags))
-	tagString := strings.Join(tags, ",")
-	queryParams.Add("tags", tagString)
-
-	url := m.buildUri(clusterID, tunnelsApiPath, options, queryParams.Encode())
-	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, nil, readAccessTokenScope, false)
-	if err != nil {
-		return nil, fmt.Errorf("error sending search tunnel request: %w", err)
 	}
 
 	err = json.Unmarshal(response, &ts)
@@ -338,7 +306,7 @@ func (m *Manager) DeleteTunnelEndpoints(
 	return err
 }
 
-// Lists all ports on the tunnel.
+// Lists ports on the tunnel.
 func (m *Manager) ListTunnelPorts(
 	ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions,
 ) (tp []*TunnelPort, err error) {

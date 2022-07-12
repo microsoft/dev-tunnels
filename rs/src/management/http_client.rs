@@ -44,7 +44,7 @@ impl<'de> Deserialize<'de> for NeverDeserialize {
 }
 
 impl TunnelManagementClient {
-    /// Lists all tunnels available to the user.
+    /// Lists tunnels owned by the user.
     pub async fn list_all_tunnels(
         &self,
         options: &TunnelRequestOptions,
@@ -56,7 +56,7 @@ impl TunnelManagementClient {
         self.execute_json("list_all_tunnels", request).await
     }
 
-    /// Lists all tunnels for a specific cluster to the user.
+    /// Lists tunnels owned by the user in a specific cluster.
     pub async fn list_cluster_tunnels(
         &self,
         cluster_id: &str,
@@ -65,25 +65,6 @@ impl TunnelManagementClient {
         let url = self.build_uri(Some(cluster_id), TUNNELS_API_PATH);
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("list_cluster_tunnels", request).await
-    }
-
-    /// Lists all tunnels for a specific cluster to the user.
-    pub async fn search_tunnels(
-        &self,
-        tags: &[&str],
-        require_all_tags: bool,
-        cluster_id: Option<&str>,
-        options: &TunnelRequestOptions,
-    ) -> HttpResult<Vec<Tunnel>> {
-        let mut url = self.build_uri(cluster_id, TUNNELS_API_PATH);
-        {
-            let mut query = url.query_pairs_mut();
-            query.append_pair("tags", &tags.join(","));
-            query.append_pair("requireAllTags", &require_all_tags.to_string());
-        }
-
-        let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("search_tunnels", request).await
     }
 
     /// Looks up a tunnel by ID or name.
@@ -361,7 +342,16 @@ impl TunnelManagementClient {
                 query.append_pair("scopes", &tunnel_opts.scopes.join(","));
             }
             if !tunnel_opts.token_scopes.is_empty() {
-                query.append_pair("tokenScopes", &tunnel_opts.scopes.join(","));
+                query.append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
+            }
+            if tunnel_opts.force_rename {
+                query.append_pair("forceRename", "true");
+            }
+            if !tunnel_opts.tags.is_empty() {
+                query.append_pair("tags", &tunnel_opts.tags.join(","));
+                if tunnel_opts.require_all_tags {
+                    query.append_pair("allTags", "true");
+                }
             }
         }
         let mut request = self.make_request(method, url).await?;

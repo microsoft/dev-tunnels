@@ -18,7 +18,7 @@ namespace Microsoft.VsSaaS.TunnelService
     public interface ITunnelManagementClient : IDisposable
     {
         /// <summary>
-        /// Lists all tunnels that are owned by the caller.
+        /// Lists tunnels that are owned by the caller.
         /// </summary>
         /// <param name="clusterId">A tunnel cluster ID, or null to list tunnels globally.</param>
         /// <param name="domain">Tunnel domain, or null for the default domain.</param>
@@ -27,6 +27,11 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <returns>Array of tunnel objects.</returns>
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
+        /// <remarks>
+        /// The list can be filtered by setting <see cref="TunnelRequestOptions.Tags"/>.
+        /// Ports will not be included in the returned tunnels unless
+        /// <see cref="TunnelRequestOptions.IncludePorts"/> is set to true.
+        /// </remarks>
         Task<Tunnel[]> ListTunnelsAsync(
             string? clusterId = null,
             string? domain = null,
@@ -45,6 +50,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <returns>Array of tunnel objects.</returns>
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
+        [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Tags instead.")]
         Task<Tunnel[]> SearchTunnelsAsync(
             string[] tags,
             bool requireAllTags,
@@ -63,6 +69,10 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <returns>The requested tunnel object, or null if the ID or name was not found.</returns>
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
+        /// <remarks>
+        /// Ports will not be included in the returned tunnel unless
+        /// <see cref="TunnelRequestOptions.IncludePorts"/> is set to true.
+        /// </remarks>
         Task<Tunnel?> GetTunnelAsync(
             Tunnel tunnel,
             TunnelRequestOptions? options = null,
@@ -180,7 +190,7 @@ namespace Microsoft.VsSaaS.TunnelService
             CancellationToken cancellation = default);
 
         /// <summary>
-        /// Lists all ports on a tunnel.
+        /// Lists ports on a tunnel.
         /// </summary>
         /// <param name="tunnel">Tunnel object including at least either a tunnel name
         /// (globally unique, if configured) or tunnel ID and cluster ID.</param>
@@ -191,6 +201,9 @@ namespace Microsoft.VsSaaS.TunnelService
         /// invalid, or unauthorized.</exception>
         /// <exception cref="InvalidOperationException">The tunnel ID or name was not found.
         /// </exception>
+        /// <remarks>
+        /// The list can be filtered by setting <see cref="TunnelRequestOptions.Tags"/>.
+        /// </remarks>
         Task<TunnelPort[]> ListTunnelPortsAsync(
             Tunnel tunnel,
             TunnelRequestOptions? options = null,

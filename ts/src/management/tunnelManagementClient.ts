@@ -16,30 +16,30 @@ export interface TunnelManagementClient {
     httpsAgent?: https.Agent;
 
     /**
-     * Lists all tunnels that are owned by the caller.
-     * @param clusterId
-     * @param options
+     * Lists tunnels that are owned by the caller.
+     *
+     * The list can be filtered by setting `TunnelRequestOptions.tags`. Ports will not be
+     * included in the returned tunnels unless `TunnelRequestOptions.includePorts` is set to true.
+     *
+     * @param clusterId A tunnel cluster ID, or null to list tunnels globally.
+     * @param domain Tunnel domain, or null for the default domain.
+     * @param options Request options.
      */
-    listTunnels(clusterId?: string, options?: TunnelRequestOptions): Promise<Tunnel[]>;
-
-    /**
-     * Search for all tunnels with matching tags.
-     * @param tags
-     * @param requireAllTags
-     * @param clusterId
-     * @param options
-     */
-    searchTunnels(
-        tags: string[],
-        requireAllTags: boolean,
+    listTunnels(
         clusterId?: string,
+        domain?: string,
         options?: TunnelRequestOptions,
     ): Promise<Tunnel[]>;
 
     /**
      * Gets one tunnel by ID or name.
-     * @param tunnel
-     * @param options
+     *
+     * Ports will not be included in the returned tunnel unless `TunnelRequestOptions.includePorts`
+     * is set to true.
+     *
+     * @param tunnel Tunnel object including at least either a tunnel name (globally unique,
+     * if configured) or tunnel ID and cluster ID.
+     * @param options Request options.
      */
     getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null>;
 
@@ -91,9 +91,13 @@ export interface TunnelManagementClient {
     ): Promise<boolean>;
 
     /**
-     * Lists all ports on a tunnel.
-     * @param tunnel
-     * @param options
+     * Lists ports on a tunnel.
+     *
+     * The list can be filtered by setting `TunnelRequestOptions.tags`.
+     *
+     * @param tunnel Tunnel object including at least either a tunnel name (globally unique,
+     * if configured) or tunnel ID and cluster ID.
+     * @param options Request options.
      */
     listTunnelPorts(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<TunnelPort[]>;
 

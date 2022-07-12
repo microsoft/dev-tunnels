@@ -16,25 +16,23 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
     public hostRelayUri?: string;
     public clientRelayUri?: string;
 
-    listTunnels(clusterId?: string, options?: TunnelRequestOptions): Promise<Tunnel[]> {
-        return Promise.resolve(this.tunnels);
-    }
-
-    searchTunnels(
-        tags: string[],
-        requireAllTags: boolean,
+    listTunnels(
         clusterId?: string,
+        domain?: string,
         options?: TunnelRequestOptions,
     ): Promise<Tunnel[]> {
-        let tunnels: Tunnel[];
-        if (!requireAllTags) {
-            tunnels = this.tunnels.filter(
-                (tunnel) => tunnel.tags && tags.some((t) => tunnel!.tags!.includes(t)),
-            );
-        } else {
-            tunnels = this.tunnels.filter(
-                (tunnel) => tunnel.tags && tags.every((t) => tunnel!.tags!.includes(t)),
-            );
+        let tunnels = this.tunnels;
+
+        if (options?.tags) {
+            if (!options.requireAllTags) {
+                tunnels = this.tunnels.filter(
+                    (tunnel) => tunnel.tags && options.tags!.some((t) => tunnel.tags!.includes(t)),
+                );
+            } else {
+                tunnels = this.tunnels.filter(
+                    (tunnel) => tunnel.tags && options.tags!.every((t) => tunnel.tags!.includes(t)),
+                );
+            }
         }
 
         return Promise.resolve(tunnels);
