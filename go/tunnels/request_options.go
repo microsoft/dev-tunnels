@@ -22,6 +22,8 @@ type TunnelRequestOptions struct {
 	IncludePorts bool
 
 	// Optional list of tags to filter the requested tunnels or ports.
+	// By default, an item is included if ANY tag matches; set `requireAllTags` to match
+	// ALL tags instead.
 	Tags []string
 
 	// Flag that indicates whether listed items must match all tags specified in `tags`.
