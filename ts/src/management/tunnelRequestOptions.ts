@@ -40,7 +40,9 @@ export interface TunnelRequestOptions {
      * Gets or sets an optional list of tags to filter the requested tunnels or ports.
      *
      * Requested tags are compared to the `Tunnel.tags` or `TunnelPort.tags` when calling
-     * `TunnelManagementClient.listTunnels` or `TunnelManagementClient.listTunnelPorts` respectively.
+     * `TunnelManagementClient.listTunnels` or `TunnelManagementClient.listTunnelPorts`
+     * respectively. By default, an item is included if ANY tag matches; set `requireAllTags`
+     * to match ALL tags instead.
      */
     tags?: string[];
 

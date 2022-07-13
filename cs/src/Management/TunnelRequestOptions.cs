@@ -68,7 +68,9 @@ namespace Microsoft.VsSaaS.TunnelService
         /// Requested tags are compared to the <see cref="Tunnel.Tags"/> or
         /// <see cref="TunnelPort.Tags"/> when calling
         /// <see cref="ITunnelManagementClient.ListTunnelsAsync"/> or
-        /// <see cref="ITunnelManagementClient.ListTunnelPortsAsync"/> respectively.
+        /// <see cref="ITunnelManagementClient.ListTunnelPortsAsync"/> respectively. By default, an
+        /// item is included if ANY tag matches; set <see cref="RequireAllTags" /> to match ALL
+        /// tags instead.
         /// </remarks>
         public string[]? Tags { get; set; }
 

@@ -18,6 +18,11 @@ pub struct TunnelRequestOptions {
     pub include_ports: bool,
 
     /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
+    ///
+    /// Requested tags are compared to the `Tunnel.tags` or `TunnelPort.tags` when calling
+    /// `TunnelManagementClient.list_all_tunnels` or `TunnelManagementClient.list_tunnel_ports`
+    /// respectively. By default, an item is included if ANY tag matches; set `require_all_tags`
+    /// to match ALL tags instead.
     pub tags: Vec<String>,
 
     /// Gets or sets a flag that indicates whether listed items must match all tags
