@@ -60,7 +60,8 @@ export class TunnelManagementTests {
     @test
     public async listTunnelsIncludePorts() {
         this.nextResponse = [];
-        await this.managementClient.listTunnels(undefined, { includePorts: true, scopes: [ 'connect' ] });
+        await this.managementClient.listTunnels(
+            undefined, undefined, { includePorts: true, scopes: [ 'connect' ] });
         assert(this.lastRequest && this.lastRequest.uri);
         assert(this.lastRequest.uri.startsWith('http://global.'));
         assert(this.lastRequest.uri.includes('includePorts=true&scopes=connect&global=true'));

@@ -37,6 +37,22 @@ export interface TunnelRequestOptions {
     includePorts?: boolean;
 
     /**
+     * Gets or sets an optional list of tags to filter the requested tunnels or ports.
+     *
+     * Requested tags are compared to the `Tunnel.tags` or `TunnelPort.tags` when calling
+     * `TunnelManagementClient.listTunnels` or `TunnelManagementClient.listTunnelPorts`
+     * respectively. By default, an item is included if ANY tag matches; set `requireAllTags`
+     * to match ALL tags instead.
+     */
+    tags?: string[];
+
+    /*
+     * Gets or sets a flag that indicates whether listed items must match all tags
+     * specified in `tags`. If false, an item is included if any tag matches.
+     */
+    requireAllTags?: boolean;
+
+    /**
      * Gets or sets an optional list of scopes that should be authorized when
      * retrieving a tunnel or tunnel port object.
      */
@@ -47,4 +63,10 @@ export interface TunnelRequestOptions {
      * are requested when retrieving a tunnel or tunnel port object.
      */
     tokenScopes?: string[];
+
+    /**
+     * If true on a create or update request then upon a name conflict, attempt to rename the
+     * existing tunnel to null and give the name to the tunnel from the request.
+     */
+    forceRename?: boolean;
 }

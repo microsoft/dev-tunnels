@@ -22,6 +22,8 @@ namespace Microsoft.VsSaaS.TunnelService
     /// </remarks>
     public class TunnelRequestOptions
     {
+        private static readonly string[] TrueOption = new[] { "true" };
+
         /// <summary>
         /// Gets or sets a tunnel access token for the request.
         /// </summary>
@@ -55,9 +57,28 @@ namespace Microsoft.VsSaaS.TunnelService
         public bool FollowRedirects { get; set; } = true;
 
         /// <summary>
-        /// Gets or sets a flag that requests tunnel ports when retrieving a tunnel object.
+        /// Gets or sets a flag that requests tunnel ports when retrieving tunnels.
         /// </summary>
         public bool IncludePorts { get; set; }
+
+        /// <summary>
+        /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
+        /// </summary>
+        /// <remarks>
+        /// Requested tags are compared to the <see cref="Tunnel.Tags"/> or
+        /// <see cref="TunnelPort.Tags"/> when calling
+        /// <see cref="ITunnelManagementClient.ListTunnelsAsync"/> or
+        /// <see cref="ITunnelManagementClient.ListTunnelPortsAsync"/> respectively. By default, an
+        /// item is included if ANY tag matches; set <see cref="RequireAllTags" /> to match ALL
+        /// tags instead.
+        /// </remarks>
+        public string[]? Tags { get; set; }
+
+        /// <summary>
+        /// Gets or sets a flag that indicates whether listed items must match all tags
+        /// specified in <see cref="Tags"/>. If false, an item is included if any tag matches.
+        /// </summary>
+        public bool RequireAllTags { get; set; }
 
         /// <summary>
         /// Gets or sets an optional list of scopes that should be authorized when retrieving a
@@ -89,32 +110,42 @@ namespace Microsoft.VsSaaS.TunnelService
         /// </summary>
         protected internal virtual string ToQueryString()
         {
-            var queryOptions = new Dictionary<string, string>();
+            var queryOptions = new Dictionary<string, string[]>();
 
             if (IncludePorts)
             {
-                queryOptions["includePorts"] = "true";
+                queryOptions["includePorts"] = TrueOption;
             }
 
             if (Scopes != null)
             {
                 TunnelAccessControl.ValidateScopes(Scopes);
-                queryOptions["scopes"] = string.Join(",", Scopes);
+                queryOptions["scopes"] = Scopes;
             }
 
             if (TokenScopes != null)
             {
                 TunnelAccessControl.ValidateScopes(TokenScopes);
-                queryOptions["tokenScopes"] = string.Join(",", TokenScopes);
+                queryOptions["tokenScopes"] = TokenScopes;
             }
 
             if (ForceRename)
             {
-                queryOptions["forceRename"] = "true";
+                queryOptions["forceRename"] = TrueOption;
             }
 
+            if (Tags != null && Tags.Length > 0)
+            {
+                queryOptions["tags"] = Tags;
+                if (RequireAllTags)
+                {
+                    queryOptions["allTags"] = TrueOption;
+                }
+            }
+
+            // Note the comma separator for multi-valued options is NOT URL-encoded.
             return string.Join('&', queryOptions.Select(
-                (o) => $"{o.Key}={HttpUtility.UrlEncode(o.Value)}"));
+                (o) => $"{o.Key}={string.Join(",", o.Value.Select(HttpUtility.UrlEncode))}"));
         }
     }
 }

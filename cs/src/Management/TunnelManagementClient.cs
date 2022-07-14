@@ -599,6 +599,7 @@ namespace Microsoft.VsSaaS.TunnelService
         }
 
         /// <inheritdoc />
+        [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Tags instead.")]
         public async Task<Tunnel[]> SearchTunnelsAsync(
             string[] tags,
             bool requireAllTags,

@@ -158,28 +158,11 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async listTunnels(
         clusterId?: string,
+        domain?: string,
         options?: TunnelRequestOptions,
     ): Promise<Tunnel[]> {
-        const query = clusterId ? undefined : 'global=true';
-        const uri = this.buildUri(clusterId, tunnelsApiPath, options, query);
-
-        const config = await this.getAxiosRequestConfig(undefined, options, readAccessTokenScopes);
-        const results = await this.request<Tunnel[]>('GET', uri, undefined, config);
-        results.forEach(parseTunnelDates);
-        return results;
-    }
-
-    public async searchTunnels(
-        tags: string[],
-        requireAllTags: boolean,
-        clusterId?: string,
-        options?: TunnelRequestOptions,
-    ): Promise<Tunnel[]> {
-        let query = clusterId ? 'global=true' : null;
-        query = !query ? `allTags=${requireAllTags}` : `${query}&allTags=${requireAllTags}`;
-        let tagsString = tags.map(encodeURI).join(',');
-        query += `&tags=${tagsString}`;
-
+        const queryParams = [clusterId ? null : 'global=true', domain ? `domain=${domain}` : null];
+        const query = queryParams.filter((p) => !!p).join('&');
         const uri = this.buildUri(clusterId, tunnelsApiPath, options, query);
 
         const config = await this.getAxiosRequestConfig(undefined, options, readAccessTokenScopes);
@@ -606,28 +589,39 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
         additionalQuery?: string,
     ) {
-        let queryOptions: any = {};
+        let queryOptions: { [name: string]: string[] } = {};
         const queryItems = [];
 
         if (options) {
             if (options.includePorts) {
-                queryOptions['includePorts'] = 'true';
+                queryOptions['includePorts'] = ['true'];
             }
 
             if (options.scopes) {
                 TunnelAccessControl.validateScopes(options.scopes);
-                queryOptions['scopes'] = options.scopes.join(',');
+                queryOptions['scopes'] = options.scopes;
             }
 
             if (options.tokenScopes) {
                 TunnelAccessControl.validateScopes(options.tokenScopes);
-                queryOptions['tokenScopes'] = options.tokenScopes.join(',');
+                queryOptions['tokenScopes'] = options.tokenScopes;
+            }
+
+            if (options.forceRename) {
+                queryOptions['forceRename'] = ['true'];
+            }
+
+            if (options.tags) {
+                queryOptions['tags'] = options.tags;
+                if (options.requireAllTags) {
+                    queryOptions['allTags'] = ['true'];
+                }
             }
 
             queryItems.push(
                 ...Object.keys(queryOptions).map((key) => {
                     const value = queryOptions[key];
-                    return `${key}=${encodeURI(value)}`;
+                    return `${key}=${value.map(encodeURIComponent).join(',')}`;
                 }),
             );
         }

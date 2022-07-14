@@ -6,7 +6,6 @@ package com.microsoft.tunnels.management;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.tunnels.contracts.Tunnel;
-import com.microsoft.tunnels.contracts.TunnelAccessControl;
 import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
@@ -14,11 +13,9 @@ import com.microsoft.tunnels.contracts.TunnelContracts;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -242,7 +239,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
     String queryString = "";
     if (options != null) {
-      queryString = toQueryString(options);
+      queryString = options.toQueryString();
     }
     if (query != null) {
       queryString += StringUtils.isBlank(queryString) ? query : "&" + query;
@@ -263,38 +260,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
   }
 
-  private String toQueryString(TunnelRequestOptions options) {
-    final String encoding = "UTF-8";
-    var queryOptions = new ArrayList<String>();
-    if (options.includePorts) {
-      queryOptions.add("includePorts=true");
-    }
-
-    if (options.scopes != null) {
-      TunnelAccessControl.validateScopes(options.scopes, null);
-      try {
-        queryOptions.add("scopes=" + URLEncoder.encode(String.join(",", options.scopes), encoding));
-      } catch (UnsupportedEncodingException e) {
-        throw new IllegalArgumentException("Bad encoding: " + encoding);
-      }
-    }
-
-    if (options.tokenScopes != null) {
-      TunnelAccessControl.validateScopes(options.tokenScopes, null);
-      try {
-        queryOptions.add(
-            "tokenScopes=" + URLEncoder.encode(String.join(",", options.tokenScopes), encoding));
-      } catch (UnsupportedEncodingException e) {
-        throw new IllegalArgumentException("Bad encoding: " + encoding);
-      }
-    }
-    return String.join("&", queryOptions);
-  }
-
   public CompletableFuture<Collection<Tunnel>> listTunnelsAsync(
       String clusterId,
+      String domain,
       TunnelRequestOptions options) {
-    // TODO - add domain parameter
     var query = StringUtils.isBlank(clusterId) ? "global=true" : null;
     var requestUri = this.buildUri(clusterId, tunnelsApiPath, options, query);
     final Type responseType = new TypeToken<Collection<Tunnel>>() {
@@ -307,17 +276,6 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         ReadAccessTokenScopes,
         null /* requestObject */,
         responseType);
-  }
-
-  @Override
-  public CompletableFuture<Collection<Tunnel>> searchTunnelsAsync(
-      String[] tags,
-      boolean requireAllTags,
-      String clusterId,
-      String domain,
-      TunnelRequestOptions options) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   @Override

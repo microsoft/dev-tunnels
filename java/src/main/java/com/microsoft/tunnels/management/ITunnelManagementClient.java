@@ -17,29 +17,14 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface ITunnelManagementClient {
   /**
-   * Lists all tunnels that are owned by the caller.
+   * Lists tunnels that are owned by the caller.
    *
    * @param clusterId A tunnel cluster ID, or null to list tunnels globally.
+   * @param domain    Tunnel domain, or null for the default domain.
    * @param options   Request options.
    * @return Array of tunnel objects.
    */
   public CompletableFuture<Collection<Tunnel>> listTunnelsAsync(
-      String clusterId,
-      TunnelRequestOptions options);
-
-  /**
-   * Search for all tunnels with matching tags.
-   *
-   * @param tags           The tags to search for.
-   * @param requireAllTags requires a tunnel to have all specified tags.
-   * @param clusterId      A tunnel cluster ID, or null to list tunnels globally.
-   * @param domain         Tunnel domain, or null for the default domain.
-   * @param options        Request options.
-   * @return Array of tunnel objects.
-   */
-  public CompletableFuture<Collection<Tunnel>> searchTunnelsAsync(
-      String[] tags,
-      boolean requireAllTags,
       String clusterId,
       String domain,
       TunnelRequestOptions options);

@@ -21,6 +21,15 @@ type TunnelRequestOptions struct {
 	// Flag that requests tunnel ports when retrieving a tunnel object.
 	IncludePorts bool
 
+	// Optional list of tags to filter the requested tunnels or ports.
+	// By default, an item is included if ANY tag matches; set `requireAllTags` to match
+	// ALL tags instead.
+	Tags []string
+
+	// Flag that indicates whether listed items must match all tags specified in `tags`.
+	// If false, an item is included if any tag matches.
+	RequireAllTags bool
+
 	// List of scopes that are needed for the current request.
 	Scopes TunnelAccessScopes
 
@@ -53,6 +62,15 @@ func (options *TunnelRequestOptions) queryString() string {
 	}
 	if options.ForceRename {
 		queryOptions.Set("forceRename", "true")
+	}
+	if options.Tags != nil {
+		for _, tag := range options.Tags {
+			queryOptions.Add("tags", string(tag))
+		}
+
+		if options.RequireAllTags {
+			queryOptions.Set("allTags", "true")
+		}
 	}
 
 	return queryOptions.Encode()
