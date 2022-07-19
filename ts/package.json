@@ -49,7 +49,7 @@
 		"eslint-plugin-prettier": "^3.3.1",
 		"mocha": "^9.1.2",
 		"mocha-multi-reporters": "^1.1.7",
-		"moment": "^2.29.2",
+		"moment": "^2.29.4",
 		"nerdbank-gitversioning": "^3.1.91",
 		"prettier": "^1.19.1",
 		"source-map-support": "^0.5.11",
