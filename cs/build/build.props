@@ -83,7 +83,7 @@
     <VisualStudioValidationVersion>15.5.31</VisualStudioValidationVersion>
     <VsSaaSPackageVersion>2.0.39</VsSaaSPackageVersion>
     <VsSaasTokenServiceClientPackageVersion>1.0.3642</VsSaasTokenServiceClientPackageVersion>
-    <VsSshPackageVersion>3.7.1</VsSshPackageVersion>
+    <VsSshPackageVersion>3.7.2</VsSshPackageVersion>
     <XunitExtensibilityCorePackageVersion>2.4.1</XunitExtensibilityCorePackageVersion>
     <XunitExtensibilityExecutionPackageVersion>2.4.1</XunitExtensibilityExecutionPackageVersion>
     <XunitExtensionsAssemblyFixturePackageVersion>2.2.0</XunitExtensionsAssemblyFixturePackageVersion>
