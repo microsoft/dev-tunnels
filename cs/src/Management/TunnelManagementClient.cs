@@ -34,6 +34,7 @@ namespace Microsoft.DevTunnels.Management
         private const string ClustersPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
+        private const string CheckNameAvailableSubPath = "/checkNameAvailable";
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
@@ -1240,6 +1241,25 @@ namespace Microsoft.DevTunnels.Management
                 body: null,
                 cancellation);
             return clusterDetails!;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> CheckNameAvailable(
+            string name,
+            CancellationToken cancellation = default)
+        {
+            Requires.NotNull(name, nameof(name));
+            
+            var uri = BuildUri(clusterId: null, TunnelsApiPath + "/" + name + CheckNameAvailableSubPath, null);
+            bool? result = await this.SendTunnelRequestAsync<bool>(
+                tunnel: null,
+                null,
+                HttpMethod.Get,
+                uri,
+                Array.Empty<string>(),
+                true,
+                cancellation);
+            return result ?? false;
         }
     }
 }
