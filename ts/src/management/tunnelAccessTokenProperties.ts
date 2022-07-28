@@ -92,7 +92,6 @@ export class TunnelAccessTokenProperties {
         }
 
         try {
-            const jsonObj = JSON.parse(tokenBodyJson);
             const result = new TunnelAccessTokenProperties();
             Object.assign(result, JSON.parse(tokenBodyJson));
             return result;
