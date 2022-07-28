@@ -30,6 +30,7 @@
 		"vscode-jsonrpc": "^4.0.0"
 	},
 	"devDependencies": {
+		"@microsoft/ts-mocha-trx-reporter": "^1.0.0",
 		"@testdeck/mocha": "^0.1.0",
 		"@types/debug": "^4.1.4",
 		"@types/mocha": "^5.2.6",
@@ -40,7 +41,6 @@
 		"@types/yargs": "^17.0.3",
 		"@typescript-eslint/eslint-plugin-tslint": "^4.14.2",
 		"@typescript-eslint/parser": "^4.14.2",
-		"@vs/mocha-trx-reporter": "^1.0.4987",
 		"brfs": "^2.0.2",
 		"browserify": "^16.2.3",
 		"chalk": "^2.4.2",
