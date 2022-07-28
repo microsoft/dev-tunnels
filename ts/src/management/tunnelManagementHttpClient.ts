@@ -17,6 +17,7 @@ import {
     TunnelManagementClient,
 } from './tunnelManagementClient';
 import { TunnelRequestOptions } from './tunnelRequestOptions';
+import { TunnelAccessTokenProperties } from './tunnelAccessTokenProperties';
 import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
@@ -69,7 +70,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     public additionalRequestHeaders?: { [header: string]: string };
 
     private readonly baseAddress: string;
-    private readonly accessTokenCallback: () => Promise<string | null>;
+    private readonly userTokenCallback: () => Promise<string | null>;
     private readonly userAgents: string;
 
     public trace: (msg: string) => void = (msg) => {};
@@ -79,7 +80,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * with a client authentication callback, service URI, and HTTP handler.
      *
      * @param userAgent { name, version } object or a comment string to use as the User-Agent header.
-     * @param accessTokenCallback Optional async callback for retrieving a client authentication
+     * @param userTokenCallback Optional async callback for retrieving a client authentication
      * header value with access token, for AAD or GitHub user authentication. This may be omitted
      * for anonymous tunnel clients, or if tunnel access tokens will be specified via
      * `TunnelRequestOptions.accessToken`.
@@ -90,7 +91,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      */
     constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
-        accessTokenCallback?: () => Promise<string | null>,
+        userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
     ) {
@@ -142,7 +143,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             this.userAgents = userAgents;
         }
 
-        this.accessTokenCallback = accessTokenCallback ?? (() => Promise.resolve(null));
+        this.userTokenCallback = userTokenCallback ?? (() => Promise.resolve(null));
 
         if (!tunnelServiceUri) {
             tunnelServiceUri = TunnelServiceProperties.production.serviceUri;
@@ -499,13 +500,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         let headers: { [name: string]: string } = {};
 
         if (options && options.accessToken) {
+            TunnelAccessTokenProperties.validateTokenExpiration(options.accessToken);
             headers[
                 tunnelAuthentication
             ] = `${TunnelAuthenticationSchemes.tunnel} ${options.accessToken}`;
         }
 
-        if (!(tunnelAuthentication in headers) && this.accessTokenCallback) {
-            let token = await this.accessTokenCallback();
+        if (!(tunnelAuthentication in headers) && this.userTokenCallback) {
+            let token = await this.userTokenCallback();
             if (token) {
                 headers[tunnelAuthentication] = token;
             }
@@ -513,10 +515,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         if (!(tunnelAuthentication in headers) && tunnel?.accessTokens) {
             for (let scope of scopes ?? []) {
-                if (tunnel.accessTokens[scope]) {
+                const accessToken = tunnel.accessTokens[scope];
+                if (accessToken) {
+                    TunnelAccessTokenProperties.validateTokenExpiration(accessToken);
                     headers[
                         tunnelAuthentication
-                    ] = `${TunnelAuthenticationSchemes.tunnel} ${tunnel.accessTokens[scope]}`;
+                    ] = `${TunnelAuthenticationSchemes.tunnel} ${accessToken}`;
                     break;
                 }
             }
@@ -681,15 +685,65 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     private traceHeaders(headers: { [key: string]: unknown }): void {
         for (let [headerName, headerValue] of Object.entries(headers)) {
+            if (headerName === 'Authorization') {
+                this.traceAuthorizationHeader(headerName, headerValue as string);
+                return;
+            }
+
             this.trace(`${headerName}: ${headerValue ?? ''}`);
         }
     }
 
+    private traceAuthorizationHeader(key: string, value: string): void {
+        if (typeof value !== 'string') return;
+
+        const spaceIndex = value.indexOf(' ');
+        if (spaceIndex < 0) {
+            this.trace(`${key}: [${value.length}]`);
+            return;
+        }
+
+        const scheme = value.substring(0, spaceIndex);
+        const token = value.substring(spaceIndex + 1);
+
+        if (scheme.toLowerCase() === TunnelAuthenticationSchemes.tunnel.toLowerCase()) {
+            const tokenProperties = TunnelAccessTokenProperties.tryParse(token);
+            if (tokenProperties) {
+                this.trace(`${key}: ${scheme} <${tokenProperties}>`);
+                return;
+            }
+        }
+
+        this.trace(`${key}: ${scheme} <token>`);
+    }
+
     private traceContent(data: any) {
         if (typeof data === 'object') {
-            this.trace(JSON.stringify(data, undefined, '  '));
-        } else if (typeof data === 'string') {
-            this.trace(data);
+            data = JSON.stringify(data, undefined, '  ');
         }
+
+        if (typeof data === 'string') {
+            this.trace(TunnelManagementHttpClient.replaceTokensInContent(data));
+        }
+    }
+
+    private static replaceTokensInContent(content: string): string {
+        const tokenRegex = /"(eyJ[a-zA-z0-9\-_]+\.[a-zA-z0-9\-_]+\.[a-zA-z0-9\-_]+)"/;
+
+        let match = tokenRegex.exec(content);
+        while (match) {
+            let token = match[1];
+            const tokenProperties = TunnelAccessTokenProperties.tryParse(token);
+            token = tokenProperties?.toString() ?? 'token';
+            content =
+                content.substring(0, match.index + 1) +
+                '<' +
+                token +
+                '>' +
+                content.substring(match.index + match[0].length - 1);
+            match = tokenRegex.exec(content);
+        }
+
+        return content;
     }
 }
