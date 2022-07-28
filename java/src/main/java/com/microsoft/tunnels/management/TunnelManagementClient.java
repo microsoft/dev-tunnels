@@ -68,7 +68,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   };
 
   private ProductHeaderValue[] userAgents;
-  private Supplier<String> accessTokenCallback;
+  private Supplier<String> userTokenCallback;
   private String baseAddress;
 
   public TunnelManagementClient(ProductHeaderValue[] userAgents) {
@@ -77,29 +77,29 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   public TunnelManagementClient(
       ProductHeaderValue[] userAgents,
-      Supplier<String> accessTokenCallback) {
-    this(userAgents, accessTokenCallback, null);
+      Supplier<String> userTokenCallback) {
+    this(userAgents, userTokenCallback, null);
   }
 
   /**
    * Initiates a new instance of the TunnelManagementClient class.
    *
-   * @param userAgents          List of User-Agent headers given as a
-   *                            {@link ProductHeaderValue}.
-   * @param accessTokenCallback A callback which should resolve to the
-   *                            Authentication header value.
-   * @param tunnelServiceUri    Uri for the tunnel service. Defaults to the
-   *                            production service url.
+   * @param userAgents        List of User-Agent headers given as a
+   *                          {@link ProductHeaderValue}.
+   * @param userTokenCallback A callback which should resolve to the
+   *                          Authentication header value.
+   * @param tunnelServiceUri  Uri for the tunnel service. Defaults to the
+   *                          production service url.
    */
   public TunnelManagementClient(
       ProductHeaderValue[] userAgents,
-      Supplier<String> accessTokenCallback,
+      Supplier<String> userTokenCallback,
       String tunnelServiceUri) {
     if (userAgents.length == 0) {
       throw new IllegalArgumentException("user agents cannot be empty");
     }
     this.userAgents = userAgents;
-    this.accessTokenCallback = accessTokenCallback != null ? accessTokenCallback : () -> "";
+    this.userTokenCallback = userTokenCallback != null ? userTokenCallback : () -> "";
     this.baseAddress = tunnelServiceUri != null ? tunnelServiceUri : prodServiceUri;
   }
 
@@ -132,7 +132,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (StringUtils.isBlank(authHeaderValue)) {
-      authHeaderValue = this.accessTokenCallback.get();
+      authHeaderValue = this.userTokenCallback.get();
     }
 
     if (StringUtils.isBlank(authHeaderValue) && tunnel != null && tunnel.accessTokens != null) {
