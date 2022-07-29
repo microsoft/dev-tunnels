@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelEndpoint as ITunnelEndpoint, portUriToken } from './tunnelEndpoint';
+import { TunnelEndpoint as ITunnelEndpoint, portToken } from './tunnelEndpoint';
 
 /**
  * Gets a URI where a web client can connect to a tunnel port.
@@ -28,7 +28,7 @@ export function getPortUri(endpoint: ITunnelEndpoint, portNumber?: number): stri
         return undefined;
     }
 
-    return endpoint.portUriFormat.replace(portUriToken, portNumber.toString());
+    return endpoint.portUriFormat.replace(portToken, portNumber.toString());
 }
 
 export function getPortSshCommand(
@@ -43,5 +43,5 @@ export function getPortSshCommand(
         return undefined;
     }
 
-    return endpoint.portSshCommandFormat.replace(portUriToken, portNumber.toString());
+    return endpoint.portSshCommandFormat.replace(portToken, portNumber.toString());
 }
