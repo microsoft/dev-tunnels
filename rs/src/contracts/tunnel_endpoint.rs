@@ -39,6 +39,11 @@ pub struct TunnelEndpoint {
     // of the tunnel. The string includes a `TunnelEndpoint.PortUriToken` that must be
     // replaced with the actual port number.
     pub port_uri_format: Option<String>,
+
+    // Gets or sets a string used to format ssh command where ssh client can connect to
+    // shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortUriToken`
+    // that must be replaced with the actual port number.
+    pub port_ssh_command_format: Option<String>,
 }
 
 // Token included in `TunnelEndpoint.PortUriFormat` that is to be replaced by a specified

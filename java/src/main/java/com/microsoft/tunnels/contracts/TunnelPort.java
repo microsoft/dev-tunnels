@@ -86,4 +86,12 @@ public class TunnelPort {
      */
     @Expose
     public TunnelPortStatus status;
+
+    /**
+     * Gets or sets the username for the ssh service user is trying to forward.
+     *
+     * Should be provided if the {@link TunnelProtocol} is Ssh.
+     */
+    @Expose
+    public String sshUser;
 }

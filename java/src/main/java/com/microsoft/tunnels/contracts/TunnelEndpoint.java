@@ -54,6 +54,14 @@ public class TunnelEndpoint {
     public String portUriFormat;
 
     /**
+     * Gets or sets a string used to format ssh command where ssh client can connect to
+     * shared ssh port of the tunnel. The string includes a {@link
+     * TunnelEndpoint#portUriToken} that must be replaced with the actual port number.
+     */
+    @Expose
+    public String portSshCommandFormat;
+
+    /**
      * Token included in {@link TunnelEndpoint#portUriFormat} that is to be replaced by a
      * specified port number.
      */
@@ -69,5 +77,16 @@ public class TunnelEndpoint {
      */
     public static URI getPortUri(TunnelEndpoint endpoint, int portNumber) {
         return TunnelEndpointStatics.getPortUri(endpoint, portNumber);
+    }
+
+    /**
+     * Gets a ssh command which can be used to connect to a tunnel ssh port.
+     *
+     * SSH client on Windows/Linux/MacOS  are supported. <para /> If the port is not
+     * currently shared via the tunnel, or if a host is not currently connected to the
+     * tunnel, then ssh connection might fail.
+     */
+    public static String getPortSshCommand(TunnelEndpoint endpoint, int portNumber) {
+        return TunnelEndpointStatics.getPortSshCommand(endpoint, portNumber);
     }
 }

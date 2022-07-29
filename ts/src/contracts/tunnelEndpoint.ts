@@ -46,6 +46,13 @@ export interface TunnelEndpoint {
      * be replaced with the actual port number.
      */
     portUriFormat?: string;
+
+    /**
+     * Gets or sets a string used to format ssh command where ssh client can connect to
+     * shared ssh port of the tunnel. The string includes a {@link
+     * TunnelEndpoint.portUriToken} that must be replaced with the actual port number.
+     */
+    portSshCommandFormat?: string;
 }
 
 /**
@@ -58,9 +65,11 @@ export const portUriToken = '{port}';
 // and re-export them as an object with the same name as the interface.
 import {
     getPortUri,
+    getPortSshCommand,
 } from './tunnelEndpointStatics';
 
 export const TunnelEndpoint = {
     portUriToken,
     getPortUri,
+    getPortSshCommand,
 };

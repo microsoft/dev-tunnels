@@ -54,4 +54,9 @@ pub struct TunnelPort {
 
     // Gets or sets current connection status of the tunnel port.
     pub status: Option<TunnelPortStatus>,
+
+    // Gets or sets the username for the ssh service user is trying to forward.
+    //
+    // Should be provided if the `TunnelProtocol` is Ssh.
+    pub ssh_user: Option<String>,
 }

@@ -996,6 +996,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 Options = tunnelPort.Options,
                 AccessControl = tunnelPort.AccessControl == null ? null : new TunnelAccessControl(
                     tunnelPort.AccessControl.Where((ace) => !ace.IsInherited)),
+                SshUser = tunnelPort.SshUser,
             };
         }
 
