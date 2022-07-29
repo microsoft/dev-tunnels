@@ -15,4 +15,12 @@ class TunnelEndpointStatics {
     return URI.create(endpoint.portUriFormat.replace(
         TunnelEndpoint.portUriToken, Integer.toString(portNumber)));
   }
+
+  public static String getPortSshCommand(TunnelEndpoint endpoint, int portNumber) {
+    if (StringUtils.isBlank(endpoint.portSshCommandFormat)) {
+      return null;
+    }
+    return endpoint.portSshCommandFormat.replace(
+        TunnelEndpoint.portUriToken, Integer.toString(portNumber));
+  }
 }
