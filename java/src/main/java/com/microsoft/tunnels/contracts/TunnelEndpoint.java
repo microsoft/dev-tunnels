@@ -47,8 +47,8 @@ public class TunnelEndpoint {
 
     /**
      * Gets or sets a string used to format URIs where a web client can connect to ports
-     * of the tunnel. The string includes a {@link TunnelEndpoint#portUriToken} that must
-     * be replaced with the actual port number.
+     * of the tunnel. The string includes a {@link TunnelEndpoint#portToken} that must be
+     * replaced with the actual port number.
      */
     @Expose
     public String portUriFormat;
@@ -56,16 +56,17 @@ public class TunnelEndpoint {
     /**
      * Gets or sets a string used to format ssh command where ssh client can connect to
      * shared ssh port of the tunnel. The string includes a {@link
-     * TunnelEndpoint#portUriToken} that must be replaced with the actual port number.
+     * TunnelEndpoint#portToken} that must be replaced with the actual port number.
      */
     @Expose
     public String portSshCommandFormat;
 
     /**
-     * Token included in {@link TunnelEndpoint#portUriFormat} that is to be replaced by a
-     * specified port number.
+     * Token included in {@link TunnelEndpoint#portUriFormat} and {@link
+     * TunnelEndpoint#portSshCommandFormat} that is to be replaced by a specified port
+     * number.
      */
-    public static final String portUriToken = "{port}";
+    public static final String portToken = "{port}";
 
     /**
      * Gets a URI where a web client can connect to a tunnel port.

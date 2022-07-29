@@ -32,13 +32,13 @@ type TunnelEndpoint struct {
 	HostPublicKeys       []string `json:"hostPublicKeys,omitempty"`
 
 	// Gets or sets a string used to format URIs where a web client can connect to ports of
-	// the tunnel. The string includes a `TunnelEndpoint.PortUriToken` that must be replaced
+	// the tunnel. The string includes a `TunnelEndpoint.PortToken` that must be replaced
 	// with the actual port number.
 	PortURIFormat        string `json:"portUriFormat,omitempty"`
 
 	// Gets or sets a string used to format ssh command where ssh client can connect to
-	// shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortUriToken`
-	// that must be replaced with the actual port number.
+	// shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortToken` that
+	// must be replaced with the actual port number.
 	PortSshCommandFormat string `json:"portSshCommandFormat,omitempty"`
 
 	LocalNetworkTunnelEndpoint
@@ -70,6 +70,7 @@ type TunnelRelayTunnelEndpoint struct {
 	ClientRelayURI string `json:"clientRelayUri,omitempty"`
 }
 
-// Token included in `TunnelEndpoint.PortUriFormat` that is to be replaced by a specified
-// port number.
-var PortURIToken = "{port}"
+// Token included in `TunnelEndpoint.PortUriFormat` and
+// `TunnelEndpoint.PortSshCommandFormat` that is to be replaced by a specified port
+// number.
+var PortToken = "{port}"
