@@ -30,3 +30,18 @@ export function getPortUri(endpoint: ITunnelEndpoint, portNumber?: number): stri
 
     return endpoint.portUriFormat.replace(portUriToken, portNumber.toString());
 }
+
+export function getPortSshCommand(
+    endpoint: ITunnelEndpoint,
+    portNumber?: number,
+): string | undefined {
+    if (!endpoint) {
+        throw new TypeError('A tunnel endpoint is required.');
+    }
+
+    if (typeof portNumber !== 'number' || !endpoint.portSshCommandFormat) {
+        return undefined;
+    }
+
+    return endpoint.portSshCommandFormat.replace(portUriToken, portNumber.toString());
+}
