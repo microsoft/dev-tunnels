@@ -21,6 +21,7 @@ public class ConnectionStatusChangedEventArgs : EventArgs
     {
         PreviousStatus = previousStatus;
         Status = status;
+        DisconnectException = disconnectException;
     }
 
     /// <summary>

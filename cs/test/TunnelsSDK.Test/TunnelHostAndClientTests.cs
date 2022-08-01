@@ -207,19 +207,39 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     public async Task ConnectRelayClientFailsForUnrecoverableException()
     {
         var relayClient = new TunnelRelayTunnelClient(TestTS);
+        var disconnectedException = new TaskCompletionSource<Exception>();
+        relayClient.ConnectionStatusChanged += (sender, args) =>
+        {
+            if (args.Status == ConnectionStatus.Disconnected)
+            {
+                disconnectedException.TrySetResult(args.DisconnectException);
+            }
+        };
+
         var tunnel = CreateRelayTunnel();
         await Assert.ThrowsAsync<ArgumentNullException>(
             "foobar", 
             () => ConnectRelayClientAsync(relayClient, tunnel, (_) => throw new ArgumentNullException("foobar")));
+        Assert.IsType<ArgumentNullException>(await disconnectedException.Task);
     }
 
     [Fact]
     public async Task ConnectRelayClientFailsFor403Forbidden()
     {
         var relayClient = new TunnelRelayTunnelClient(TestTS);
+        var disconnectedException = new TaskCompletionSource<Exception>();
+        relayClient.ConnectionStatusChanged += (sender, args) =>
+        {
+            if (args.Status == ConnectionStatus.Disconnected)
+            {
+                disconnectedException.TrySetResult(args.DisconnectException);
+            }
+        };
+
         var tunnel = CreateRelayTunnel();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => ConnectRelayClientAsync(relayClient, tunnel, (_) => ThrowNotAWebSocket(403)));
+        Assert.IsType<UnauthorizedAccessException>(await disconnectedException.Task);
     }
 
     [Fact]
