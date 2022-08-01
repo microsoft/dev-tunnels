@@ -197,6 +197,16 @@ internal class RustContractWriter : ContractWriter
         s.AppendLine("#[serde(rename_all(serialize = \"camelCase\", deserialize = \"camelCase\"))]");
         s.Append($"pub struct {rsName} {{");
 
+        var fullBaseType = type.BaseType?.ToString();
+        if (fullBaseType != null && fullBaseType.StartsWith(this.csNamespace))
+        {
+            var rsBaseType = fullBaseType.Substring(this.csNamespace.Length + 1);
+            s.AppendLine();
+            s.AppendLine("    #[serde(flatten)]");
+            s.AppendLine($"    pub base: {rsBaseType},");
+            imports.Add($"crate::contracts::{rsBaseType}");
+        }
+
         var properties = type.GetMembers()
             .OfType<IPropertySymbol>()
             .Where((p) => !p.IsStatic)

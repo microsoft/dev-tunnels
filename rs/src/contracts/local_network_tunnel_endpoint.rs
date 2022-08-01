@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/LocalNetworkTunnelEndpoint.cs
 
+use crate::contracts::TunnelEndpoint;
 use serde::{Deserialize, Serialize};
 
 // Parameters for connecting to a tunnel via a local network connection.
@@ -11,6 +12,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct LocalNetworkTunnelEndpoint {
+    #[serde(flatten)]
+    pub base: TunnelEndpoint,
+
     // Gets or sets a list of IP endpoints where the host may accept connections.
     //
     // A host may accept connections on multiple IP endpoints simultaneously if there are

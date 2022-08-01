@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/RateStatus.cs
 
+use crate::contracts::ResourceStatus;
 use serde::{Deserialize, Serialize};
 
 // Current value and limit information for a rate-limited operation related to a tunnel or
@@ -9,6 +10,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct RateStatus {
+    #[serde(flatten)]
+    pub base: ResourceStatus,
+
     // Gets or sets the length of each period, in seconds, over which the rate is
     // measured.
     //

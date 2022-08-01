@@ -12,7 +12,7 @@ use url::Url;
 
 use crate::contracts::{
     env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelServiceProperties,
+    TunnelRelayTunnelEndpoint, TunnelServiceProperties,
 };
 
 use super::{
@@ -134,6 +134,26 @@ impl TunnelManagementClient {
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_endpoints", request).await
+    }
+
+    /// Updates an existing tunnel's endpoints with relay information.
+    pub async fn update_tunnel_relay_endpoints(
+        &self,
+        locator: &TunnelLocator,
+        endpoint: &TunnelRelayTunnelEndpoint,
+        options: &TunnelRequestOptions,
+    ) -> HttpResult<TunnelRelayTunnelEndpoint> {
+        let url = self.build_tunnel_uri(
+            locator,
+            Some(&format!(
+                "{}/{}/{}",
+                ENDPOINTS_API_SUB_PATH, endpoint.base.host_id, endpoint.base.connection_mode
+            )),
+        );
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
+        json_body(&mut request, endpoint);
+        self.execute_json("update_tunnel_relay_endpoints", request)
+            .await
     }
 
     /// Deletes an existing tunnel's endpoints.
