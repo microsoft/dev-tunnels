@@ -42,7 +42,6 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
         Exception? exception = null;
         int attempt = 0;
         bool isTunnelAccessTokenRefreshed = false;
-        string message;
 
         while (true)
         {
@@ -60,6 +59,10 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 stream = null;
                 disconnectReason = SshDisconnectReason.None;
                 return;
+            }
+            catch (UnauthorizedAccessException uaex) // Tunnel access token validation failed.
+            {
+                await RefreshTunnelAccessTokenAsync(uaex);
             }
             catch (SshReconnectException srex)
             {
@@ -96,41 +99,13 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                         case 401:
                             // Unauthorized error may happen when the tunnel access token is no longer valid, e.g. expired.
                             // Try refreshing it.
-                            if (!isTunnelAccessTokenRefreshed)
-                            {
-                                try
-                                {
-                                    isTunnelAccessTokenRefreshed = await this.relayClient.RefreshTunnelAccessTokenAsync(cancellation);
-                                }
-                                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-                                {
-                                    throw;
-                                }
-                                catch (Exception ex)
-                                {
-                                    throw new UnauthorizedAccessException(
-                                        $"Not authorized (401). Refreshing tunnel access token also failed with error {ex.Message}",
-                                        ex);
-                                }
-
-                                if (isTunnelAccessTokenRefreshed)
-                                {
-                                    isDelayNeeded = false;
-                                    errorDescription = "The tunnel access token expired and just has been refreshed.";
-                                    break;
-                                }
-                            }
-
-                            message = "Not authorized (401). " +
-                                (isTunnelAccessTokenRefreshed ? 
-                                "Refreshed tunnel access token also doesn't work." : 
-                                $"Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope.");
-
-                            throw new UnauthorizedAccessException(message, wse);
+                            await RefreshTunnelAccessTokenAsync(wse);
+                            break;
 
                         case 403:
-                            message = $"Forbidden (403). Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope.";
-                            throw new UnauthorizedAccessException(message, wse);
+                            throw new UnauthorizedAccessException(
+                                $"Forbidden (403). Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope.", 
+                                wse);
 
                         case 404:
                             throw new TunnelConnectionException($"The tunnel or port is not found (404).", wse);
@@ -192,6 +167,54 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 {
                     attempDelayMs <<= 1;
                 }
+            }
+
+            async Task RefreshTunnelAccessTokenAsync(Exception exception)
+            {
+                var statusCode = exception.Data.Contains("HttpStatusCode") ? $" ({exception.Data["HttpStatusCode"]})" : string.Empty;
+                if (!isTunnelAccessTokenRefreshed)
+                {
+                    try
+                    {
+                        isTunnelAccessTokenRefreshed = await this.relayClient.RefreshTunnelAccessTokenAsync(cancellation);
+                    }
+                    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (UnauthorizedAccessException uaex)
+                    {
+                        // The refreshed token is not valid.
+                        throw new UnauthorizedAccessException(
+                            $"Not authorized{statusCode}. Refreshed tunnel access token is not valid. {uaex.Message}",
+                            uaex);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new UnauthorizedAccessException(
+                            $"Not authorized{statusCode}. Refreshing tunnel access token failed with error {ex.Message}",
+                            ex);
+                    }
+
+                    if (isTunnelAccessTokenRefreshed)
+                    {
+                        isDelayNeeded = false;
+                        errorDescription = "The tunnel access token was no longer valid and had just been refreshed.";
+                        return;
+                    }
+                }
+
+                if (exception is UnauthorizedAccessException)
+                {
+                    throw exception;
+                }
+
+                throw new UnauthorizedAccessException(
+                    "Not authorized (401). " +
+                    (isTunnelAccessTokenRefreshed ?
+                        "Refreshed tunnel access token also doesn't work." :
+                        $"Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope."),
+                    exception);
             }
         }
     }

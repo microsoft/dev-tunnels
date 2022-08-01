@@ -135,6 +135,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// </summary>
         protected virtual Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
         {
+            ValidateAccessToken();
             Trace.TraceInformation("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
             return this.StreamFactory.CreateRelayStreamAsync(
                 this.relayUri!,

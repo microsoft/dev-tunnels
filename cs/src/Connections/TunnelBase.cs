@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VsSaaS.TunnelService.Contracts;
@@ -89,6 +90,18 @@ public abstract class TunnelBase : IAsyncDisposable
     protected string? accessToken;
 
     /// <summary>
+    /// Validate <see cref="accessToken"/> if it is not null or empty.
+    /// </summary>
+    /// <exception cref="UnauthorizedAccessException">is thrown if the <see cref="accessToken"/> is expired.</exception>
+    protected virtual void ValidateAccessToken()
+    {
+        if (!string.IsNullOrEmpty(this.accessToken))
+        {
+            TunnelAccessTokenProperties.ValidateTokenExpiration(this.accessToken);
+        }
+    }
+
+    /// <summary>
     /// Create tunnel connector for <see cref="Tunnel"/>.
     /// </summary>
     protected abstract Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation);
@@ -158,16 +171,23 @@ public abstract class TunnelBase : IAsyncDisposable
     /// <summary>
     /// Gets the fresh tunnel access token when Relay service returns 401.
     /// </summary>
+    /// <exception cref="UnauthorizedAccessException">Thown if the refreshed token is expred.</exception>
     protected async Task<bool> RefreshTunnelAccessTokenAsync(CancellationToken cancellation)
     {
         var previousStatus = ConnectionStatus;
         ConnectionStatus = ConnectionStatus.RefreshingTunnelAccessToken;
+        Trace.TraceInformation(
+            "Refreshing tunnel access token. Current token: {0}",
+            TunnelAccessTokenProperties.GetTokenTrace(this.accessToken));
         try
         {
             var newTunnelAccessToken = await GetFreshTunnelAccessTokenAsync(cancellation);
-            if (!string.IsNullOrEmpty(newTunnelAccessToken) &&
-                newTunnelAccessToken != this.accessToken)
+            if (!string.IsNullOrEmpty(newTunnelAccessToken))
             {
+                TunnelAccessTokenProperties.ValidateTokenExpiration(newTunnelAccessToken);
+                Trace.TraceInformation(
+                    "Refreshed tunnel access token. New token: {0}",
+                    TunnelAccessTokenProperties.GetTokenTrace(newTunnelAccessToken));
                 this.accessToken = newTunnelAccessToken;
                 return true;
             }

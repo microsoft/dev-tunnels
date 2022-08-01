@@ -169,6 +169,24 @@ public class TunnelAccessTokenProperties
     }
 
     /// <summary>
+    /// Gets token representation for tracing.
+    /// </summary>
+    public static string GetTokenTrace(string? token)
+    {
+        if (token == null)
+        {
+            return "<null>";
+        }
+
+        if (token == string.Empty)
+        {
+            return "<empty>";
+        }
+
+        return TryParse(token) is TunnelAccessTokenProperties t ? $"<JWT: {t}>" : "<token>";
+    }
+
+    /// <summary>
     /// Attempts to parse a tunnel access token (JWT). This does NOT validate the token
     /// signature or any claims.
     /// </summary>
