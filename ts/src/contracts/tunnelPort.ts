@@ -75,4 +75,11 @@ export interface TunnelPort {
      * Gets or sets current connection status of the tunnel port.
      */
     status?: TunnelPortStatus;
+
+    /**
+     * Gets or sets the username for the ssh service user is trying to forward.
+     *
+     * Should be provided if the {@link TunnelProtocol} is Ssh.
+     */
+    sshUser?: string;
 }

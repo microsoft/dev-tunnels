@@ -55,17 +55,25 @@ public abstract class TunnelEndpoint
 
     /// <summary>
     /// Gets or sets a string used to format URIs where a web client can connect to
-    /// ports of the tunnel. The string includes a <see cref="PortUriToken"/> that must be
+    /// ports of the tunnel. The string includes a <see cref="PortToken"/> that must be
     /// replaced with the actual port number.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PortUriFormat { get; set; }
 
     /// <summary>
-    /// Token included in <see cref="PortUriFormat"/> that is to be replaced by a specified
-    /// port number.
+    /// Gets or sets a string used to format ssh command where ssh client can connect to
+    /// shared ssh port of the tunnel. The string includes a <see cref="PortToken"/> that must be
+    /// replaced with the actual port number.
     /// </summary>
-    public const string PortUriToken = "{port}";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PortSshCommandFormat { get; set; }
+
+    /// <summary>
+    /// Token included in <see cref="PortUriFormat"/> and <see cref="PortSshCommandFormat"/>
+    ///  that is to be replaced by a specified port number.
+    /// </summary>
+    public const string PortToken = "{port}";
 
     /// <summary>
     /// Gets a URI where a web client can connect to a tunnel port. 
@@ -91,7 +99,32 @@ public abstract class TunnelEndpoint
         }
 
         return new Uri(endpoint.PortUriFormat.Replace(
-            PortUriToken, portNumber.Value.ToString(CultureInfo.InvariantCulture)));
+            PortToken, portNumber.Value.ToString(CultureInfo.InvariantCulture)));
+    }
+
+    /// <summary>
+    /// Gets a ssh command which can be used to connect to a tunnel ssh port. 
+    /// </summary>
+    /// <param name="endpoint">A tunnel endpoint containing a port ssh URI format.</param>
+    /// <param name="portNumber">The port number to connect to; the port is assumed to be
+    /// separately shared by a tunnel host.</param>
+    /// <returns>ssh command for the requested ssh port, or null if the endpoint does not support
+    /// ssh client connections.</returns>
+    /// <remarks>
+    /// SSH client on Windows/Linux/MacOS  are supported.
+    /// <para />
+    /// If the port is not currently shared via the tunnel, or if a host is not currently
+    /// connected to the tunnel, then ssh connection might fail.
+    /// </remarks>
+    public static string? GetPortSshCommand(TunnelEndpoint endpoint, int? portNumber)
+    {
+        if (portNumber == null || string.IsNullOrEmpty(endpoint.PortSshCommandFormat))
+        {
+            return null;
+        }
+
+        return endpoint.PortSshCommandFormat.Replace(
+            PortToken, portNumber.Value.ToString(CultureInfo.InvariantCulture));
     }
 
     /// <summary>

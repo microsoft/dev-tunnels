@@ -42,25 +42,34 @@ export interface TunnelEndpoint {
 
     /**
      * Gets or sets a string used to format URIs where a web client can connect to ports
-     * of the tunnel. The string includes a {@link TunnelEndpoint.portUriToken} that must
-     * be replaced with the actual port number.
+     * of the tunnel. The string includes a {@link TunnelEndpoint.portToken} that must be
+     * replaced with the actual port number.
      */
     portUriFormat?: string;
+
+    /**
+     * Gets or sets a string used to format ssh command where ssh client can connect to
+     * shared ssh port of the tunnel. The string includes a {@link
+     * TunnelEndpoint.portToken} that must be replaced with the actual port number.
+     */
+    portSshCommandFormat?: string;
 }
 
 /**
- * Token included in {@link TunnelEndpoint.portUriFormat} that is to be replaced by a
- * specified port number.
+ * Token included in {@link TunnelEndpoint.portUriFormat} and {@link
+ * TunnelEndpoint.portSshCommandFormat} that is to be replaced by a specified port number.
  */
-export const portUriToken = '{port}';
+export const portToken = '{port}';
 
 // Import static members from a non-generated file,
 // and re-export them as an object with the same name as the interface.
 import {
     getPortUri,
+    getPortSshCommand,
 } from './tunnelEndpointStatics';
 
 export const TunnelEndpoint = {
-    portUriToken,
+    portToken,
     getPortUri,
+    getPortSshCommand,
 };

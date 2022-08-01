@@ -47,4 +47,9 @@ type TunnelPort struct {
 
 	// Gets or sets current connection status of the tunnel port.
 	Status        *TunnelPortStatus `json:"status,omitempty"`
+
+	// Gets or sets the username for the ssh service user is trying to forward.
+	//
+	// Should be provided if the `TunnelProtocol` is Ssh.
+	SshUser       string `json:"sshUser,omitempty"`
 }

@@ -208,6 +208,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
             Protocol = tunnelPort.Protocol,
             AccessControl = tunnelPort.AccessControl,
             Options = tunnelPort.Options,
+            SshUser = tunnelPort.SshUser,
         };
         tunnel.Ports = (tunnel.Ports ?? Enumerable.Empty<TunnelPort>())
             .Concat(new[] { tunnelPort }).ToArray();

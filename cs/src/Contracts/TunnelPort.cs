@@ -99,5 +99,14 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TunnelPortStatus? Status { get; set; }
+
+        /// <summary>
+        /// Gets or sets the username for the ssh service user is trying to forward.
+        /// </summary>
+        /// <remarks>
+        /// Should be provided if the <see cref="TunnelProtocol"/> is Ssh.
+        /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SshUser { get; set; }
     }
 }
