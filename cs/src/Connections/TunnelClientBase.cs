@@ -23,16 +23,15 @@ namespace Microsoft.VsSaaS.TunnelService;
 /// <summary>
 /// Base class for clients that connect to a single host
 /// </summary>
-public abstract class TunnelClientBase : ITunnelClient
+public abstract class TunnelClientBase : TunnelBase, ITunnelClient
 {
     private bool acceptLocalConnectionsForForwardedPorts = true;
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelClientBase" /> class.
     /// </summary>
-    public TunnelClientBase(TraceSource trace)
+    public TunnelClientBase(ITunnelManagementClient? managementClient, TraceSource trace) : base(managementClient, trace)
     {
-        Trace = Requires.NotNull(trace, nameof(trace));
     }
 
     /// <inheritdoc />
@@ -57,6 +56,9 @@ public abstract class TunnelClientBase : ITunnelClient
     /// </summary>
     protected bool IsSshSessionActive { get; private set; }
 
+    /// <inheritdoc />
+    protected override string TunnelAccessScope => TunnelAccessScopes.Connect;
+
     /// <summary>
     /// Get a value indicating if remote <paramref name="port"/> is forwarded and has any channels open on the client,
     /// whether used by local tcp listener if <see cref="AcceptLocalConnectionsForForwardedPorts"/> is true, or
@@ -69,13 +71,9 @@ public abstract class TunnelClientBase : ITunnelClient
 
     /// <summary>
     /// SSH session closed event.
+    /// The client may try to reconnect after firing this event.
     /// </summary>
     protected EventHandler? SshSessionClosed { get; set; }
-
-    /// <summary>
-    /// Trace to write output to console
-    /// </summary>
-    protected TraceSource Trace { get; }
 
     /// <summary>
     ///  A value indicating whether local connections for forwarded ports are accepted.
@@ -94,9 +92,9 @@ public abstract class TunnelClientBase : ITunnelClient
     }
 
     /// <summary>
-    /// Do work specific to the type of tunnel client.
+    /// Get host Id the client is connecting to.
     /// </summary>
-    protected abstract Task ConnectAsync(Tunnel tunnel, IEnumerable<TunnelEndpoint> endpoints, CancellationToken cancellation);
+    public string? HostId { get; private set; }
 
     /// <inheritdoc />
     public async Task ConnectAsync(Tunnel tunnel, string? hostId, CancellationToken cancellation)
@@ -116,25 +114,8 @@ public abstract class TunnelClientBase : ITunnelClient
                 "No hosts are currently accepting connections for the tunnel.");
         }
 
-        var endpointGroups = tunnel.Endpoints.GroupBy((ep) => ep.HostId).ToArray();
-        IGrouping<string?, TunnelEndpoint> endpointGroup;
-        if (hostId != null)
-        {
-            endpointGroup = endpointGroups.SingleOrDefault((g) => g.Key == hostId) ??
-                throw new InvalidOperationException(
-                    "The specified host is not currently accepting connections to the tunnel.");
-        }
-        else if (endpointGroups.Length > 1)
-        {
-            throw new InvalidOperationException(
-                "There are multiple hosts for the tunnel. Specify a host ID to connect to.");
-        }
-        else
-        {
-            endpointGroup = endpointGroups.Single();
-        }
-
-        await ConnectAsync(tunnel, endpointGroup, cancellation);
+        HostId = hostId;
+        await ConnectTunnelSessionAsync(tunnel, cancellation);
     }
 
     /// <inheritdoc />
@@ -151,13 +132,25 @@ public abstract class TunnelClientBase : ITunnelClient
     /// </remarks>
     protected async Task StartSshSessionAsync(Stream stream, CancellationToken cancellation)
     {
-        var clientConfig = new SshSessionConfiguration();
+        ConnectionStatus = ConnectionStatus.Connecting;
+        if (this.SshSession != null)
+        {
+            // Unsubscribe event handler from the previous session.
+            this.SshSession.Authenticating -= OnSshServerAuthenticating;
+            this.SshSession.Disconnected -= OnSshSessionDisconnected;
+            this.SshSession.Closed -= SshSession_Closed;
+            this.SshSession.Request -= OnRequest;
+        }
+
+        var clientConfig = new SshSessionConfiguration(enableReconnect: true);
 
         // Enable port-forwarding via the SSH protocol.
         clientConfig.AddService(typeof(PortForwardingService));
 
         this.SshSession = new SshClientSession(clientConfig, Trace.WithName("SSH"));
         this.SshSession.Authenticating += OnSshServerAuthenticating;
+        this.SshSession.Disconnected += OnSshSessionDisconnected;
+
         SshPortForwardingService = this.SshSession.ActivateService<PortForwardingService>();
         ConfigurePortForwardingService();
         this.SshSession.Request += OnRequest;
@@ -169,7 +162,11 @@ public abstract class TunnelClientBase : ITunnelClient
         // they must have a valid tunnel access token already to get this far.
         var clientCredentials = new SshClientCredentials("tunnel", password: null);
         await this.SshSession.AuthenticateAsync(clientCredentials);
+        ConnectionStatus = ConnectionStatus.Connected;
     }
+
+    private void OnSshSessionDisconnected(object? sender, EventArgs e) =>
+        StartReconnectTaskIfNotDisposed();
 
     private void ConfigurePortForwardingService()
     {
@@ -223,8 +220,10 @@ public abstract class TunnelClientBase : ITunnelClient
     }
 
     /// <inheritdoc />
-    public virtual async ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
+        await base.DisposeAsync();
+
         if (this.SshSession != null)
         {
             await this.SshSession.CloseAsync(SshDisconnectReason.ByApplication);
@@ -283,5 +282,9 @@ public abstract class TunnelClientBase : ITunnelClient
         }
 
         OnSshSessionClosed(e.Exception);
+        if (e.Reason == SshDisconnectReason.ConnectionLost)
+        {
+            StartReconnectTaskIfNotDisposed();
+        }
     }
 }

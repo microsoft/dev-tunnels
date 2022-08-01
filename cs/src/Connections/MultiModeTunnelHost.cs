@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VsSaaS.TunnelService.Contracts;
@@ -14,7 +15,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// <summary>
     /// Aggregation of multiple tunnel hosts.
     /// </summary>
-    public class MultiModeTunnelHost : ITunnelHost
+    public class MultiModeTunnelHost : TunnelBase, ITunnelHost
     {
         /// <summary>
         /// Gets or sets a host ID. An initial value is automatically generated for the process.
@@ -30,15 +31,19 @@ namespace Microsoft.VsSaaS.TunnelService
         /// Creates a new instance of the <see cref="MultiModeTunnelHost" /> class
         /// that can simultaneously run multiple single-mode hosts.
         /// </summary>
-        public MultiModeTunnelHost(IEnumerable<ITunnelHost> hosts)
+        public MultiModeTunnelHost(IEnumerable<ITunnelHost> hosts, ITunnelManagementClient managementClient, TraceSource trace) : base(managementClient, trace)
         {
             Hosts = new List<ITunnelHost>(Requires.NotNull(hosts, nameof(hosts)));
+            // TODO: Subscribe to hosts' RefreshingTunnelAccessToken event and call TunnelBase.RefreshTunnelAccessTokenAsync() to get the tunnel access token.
         }
 
         /// <summary>
         /// Gets the list of hosts that can accept connections on the tunnel.
         /// </summary>
         public IEnumerable<ITunnelHost> Hosts { get; }
+
+        /// <inheritdoc />
+        protected override string TunnelAccessScope => TunnelAccessScopes.Host;
 
         /// <inheritdoc />
         public async Task StartAsync(
@@ -58,8 +63,10 @@ namespace Microsoft.VsSaaS.TunnelService
         }
 
         /// <inheritdoc />
-        public async ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
+            await base.DisposeAsync();
+
             var disposeTasks = new List<Task>();
 
             foreach (var host in Hosts)
@@ -113,6 +120,12 @@ namespace Microsoft.VsSaaS.TunnelService
 
             await Task.WhenAll(updateTasks);
             return updatedPort;
+        }
+
+        /// <inheritdoc />
+        protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
+        {
+            throw new NotImplementedException();
         }
     }
 }

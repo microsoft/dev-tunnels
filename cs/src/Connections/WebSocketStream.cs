@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
@@ -92,6 +93,34 @@ namespace Microsoft.VsSaaS.TunnelService
                 configure?.Invoke(socket.Options);
                 await socket.ConnectAsync(uri, cancellation);
                 return new WebSocketStream(socket);
+            }
+            catch (WebSocketException wse) when (wse.WebSocketErrorCode == WebSocketError.NotAWebSocket)
+            {
+                // The http request didn't upgrade to a web socket and instead may have returned a status code.
+                // As a workaround, check for "'{actual response code}'" pattern in the exception message,
+                // which may look like this: "The server returned status code '403' when status code '101' was expected".
+                // TODO: switch to ClientWebSocket.HttpStatusCode when we get to .NET CORE 7.0, see https://github.com/dotnet/runtime/issues/25918#issuecomment-1132039238
+
+                int i = wse.Message.IndexOf('\'');
+                if (i >= 0)
+                {
+                    int j = wse.Message.IndexOf('\'', i + 1);
+                    if (j > i + 1 && 
+                        int.TryParse(
+                            wse.Message.Substring(i + 1, j - i - 1), 
+                            NumberStyles.None,
+                            CultureInfo.InvariantCulture, 
+                            out var statusCode) &&
+                        statusCode != 101)
+                    {
+                        wse.Data["HttpStatusCode"] = statusCode;
+                        socket.Dispose();
+                        throw wse;
+                    }
+                }
+
+                socket.Dispose();
+                throw;
             }
             catch
             {

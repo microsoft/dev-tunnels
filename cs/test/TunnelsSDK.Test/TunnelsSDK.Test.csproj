@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Nerdbank.Streams" Version="2.5.76" />
+    <PackageReference Include="Microsoft.VisualStudio.Ssh.Tcp" Version="$(VsSshPackageVersion)" />
   </ItemGroup>
 
   <ItemGroup>
