@@ -17,7 +17,6 @@ namespace Microsoft.VsSaaS.TunnelService;
 /// </summary>
 public abstract class TunnelBase : IAsyncDisposable
 {
-    private readonly object reconnectLock = new();
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
     private ConnectionStatus connectionStatus;
@@ -39,7 +38,7 @@ public abstract class TunnelBase : IAsyncDisposable
         get => this.connectionStatus;
         protected set
         {
-            lock (this.reconnectLock)
+            lock (DisposeLock)
             {
                 if (this.disposeCts.IsCancellationRequested)
                 {
@@ -72,6 +71,19 @@ public abstract class TunnelBase : IAsyncDisposable
     /// Trace to write output to console.
     /// </summary>
     protected TraceSource Trace { get; }
+
+    /// <summary>
+    /// Dispose token.
+    /// </summary>
+    protected CancellationToken DisposeToken => this.disposeCts.Token;
+
+    /// <summary>
+    /// Lock object that guards disposal.
+    /// </summary>
+    /// <remarks>
+    /// Locking on <see cref="DisposeLock"/> guarantees that <see cref="DisposeToken"/> won't get cancelled while the lock is held.
+    /// </remarks>
+    protected object DisposeLock { get; } = new();
 
     /// <summary>
     /// Management client used for connections.
@@ -237,7 +249,7 @@ public abstract class TunnelBase : IAsyncDisposable
     public virtual async ValueTask DisposeAsync()
     {
         Task? reconnectTask;
-        lock (this.reconnectLock)
+        lock (DisposeLock)
         {
             this.disposeCts.Cancel();
             reconnectTask = this.reconnectTask;
@@ -273,7 +285,7 @@ public abstract class TunnelBase : IAsyncDisposable
     /// </summary>
     protected void StartReconnectTaskIfNotDisposed()
     {
-        lock (this.reconnectLock)
+        lock (DisposeLock)
         {
             if (!this.disposeCts.IsCancellationRequested && 
                 this.reconnectTask == null &&
@@ -303,7 +315,7 @@ public abstract class TunnelBase : IAsyncDisposable
             // There might have been ConnectionStatusChanged event fired as well.
         }
 
-        lock (this.reconnectLock)
+        lock (DisposeLock)
         {
             this.reconnectTask = null;
         }

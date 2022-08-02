@@ -35,7 +35,6 @@ namespace Microsoft.VsSaaS.TunnelService
         /// </summary>
         public const string ClientStreamChannelType = "client-ssh-session-stream";
 
-        private readonly CancellationTokenSource disposeCts = new CancellationTokenSource();
         private readonly IList<Task> clientSessionTasks = new List<Task>();
         private readonly string hostId;
         private readonly ICollection<SshServerSession> reconnectableSessions = new List<SshServerSession>();
@@ -75,7 +74,7 @@ namespace Microsoft.VsSaaS.TunnelService
             }
 
             List<Task> tasks;
-            lock (this.clientSessionTasks)
+            lock (DisposeLock)
             {
                 tasks = new List<Task>(this.clientSessionTasks);
                 this.clientSessionTasks.Clear();
@@ -188,7 +187,7 @@ namespace Microsoft.VsSaaS.TunnelService
             this.hostSession = null;
             Trace.TraceInformation(
                 "Connection to host tunnel relay closed.{0}",
-                this.disposeCts.IsCancellationRequested ? string.Empty : " Reconnecting.");
+                DisposeToken.IsCancellationRequested ? string.Empty : " Reconnecting.");
 
             StartReconnectTaskIfNotDisposed();
         }
@@ -209,16 +208,16 @@ namespace Microsoft.VsSaaS.TunnelService
             }
 
             Task task;
-            lock (this.clientSessionTasks)
+            lock (DisposeLock)
             {
-                if (this.disposeCts.IsCancellationRequested)
+                if (DisposeToken.IsCancellationRequested)
                 {
                     e.FailureDescription = $"The host is disconnecting.";
                     e.FailureReason = SshChannelOpenFailureReason.ConnectFailed;
                     return;
                 }
 
-                task = AcceptClientSessionAsync((MultiChannelStream)sender!, this.disposeCts.Token);
+                task = AcceptClientSessionAsync((MultiChannelStream)sender!, DisposeToken);
                 this.clientSessionTasks.Add(task);
             }
 
@@ -226,7 +225,7 @@ namespace Microsoft.VsSaaS.TunnelService
 
             void RemoveClientSessionTask(Task t)
             {
-                lock (this.clientSessionTasks)
+                lock (DisposeLock)
                 {
                     this.clientSessionTasks.Remove(t);
                 }
