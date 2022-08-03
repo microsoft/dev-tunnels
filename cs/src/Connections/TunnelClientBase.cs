@@ -125,10 +125,11 @@ public abstract class TunnelClientBase : TunnelBase, ITunnelClient
         throw new InvalidOperationException("Port forwarding has not been started. Ensure that the client has connected by calling ConnectAsync.");
 
     /// <summary>
-    /// Start Ssh session on the <paramref name="stream"/>.
+    /// Start SSH session on the <paramref name="stream"/>.
     /// </summary>
     /// <remarks>
     /// Overwrites <see cref="SshSession"/> property.
+    /// SSH session reconnect is enabled only if <see cref="TunnelBase.connector"/> is not null.
     /// </remarks>
     protected async Task StartSshSessionAsync(Stream stream, CancellationToken cancellation)
     {
@@ -142,7 +143,8 @@ public abstract class TunnelClientBase : TunnelBase, ITunnelClient
             this.SshSession.Request -= OnRequest;
         }
 
-        var clientConfig = new SshSessionConfiguration(enableReconnect: true);
+        // Enable reconnect only if connector is set as reconnect depends on it.
+        var clientConfig = new SshSessionConfiguration(enableReconnect: this.connector != null);
 
         // Enable port-forwarding via the SSH protocol.
         clientConfig.AddService(typeof(PortForwardingService));

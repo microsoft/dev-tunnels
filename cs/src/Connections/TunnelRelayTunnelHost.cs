@@ -254,6 +254,8 @@ namespace Microsoft.VsSaaS.TunnelService
             var tcs = new TaskCompletionSource<object?>();
             try
             {
+                // Always enable reconnect on client SSH server.
+                // When a client reconnects, relay service just opens another SSH channel of client-ssh-session-stream type for it.
                 var serverConfig = new SshSessionConfiguration(enableReconnect: true);
 
                 // Enable port-forwarding via the SSH protocol.
