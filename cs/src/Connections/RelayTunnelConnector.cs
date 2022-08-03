@@ -34,14 +34,14 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
     /// <inheritdoc/>
     public async Task ConnectSessionAsync(bool isReconnect, CancellationToken cancellation)
     {
-        int attempDelayMs = ReconnectInitialDelayMs;
-        bool isDelayNeeded;
-
-        object? errorDescription;
-        var disconnectReason = SshDisconnectReason.ConnectionLost;
-        Exception? exception = null;
         int attempt = 0;
+        int attempDelayMs = ReconnectInitialDelayMs;
         bool isTunnelAccessTokenRefreshed = false;
+
+        bool isDelayNeeded;
+        object? errorDescription;
+        SshDisconnectReason disconnectReason;
+        Exception? exception;
 
         while (true)
         {
@@ -50,6 +50,8 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
             isDelayNeeded = true;
             Stream? stream = null;
             errorDescription = null;
+            disconnectReason = SshDisconnectReason.ConnectionLost;
+            exception = null;
             try
             {
                 // TODO: check tunnel access token expiration and try refresh it if it's expired.
@@ -81,14 +83,13 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
             {
                 // All other SSH connection exceptions are not recoverable.
                 disconnectReason = scex.DisconnectReason != SshDisconnectReason.None ? scex.DisconnectReason : SshDisconnectReason.ByApplication;
-                exception = scex;
-                throw new TunnelConnectionException($"Failed to start tunnel SSH session: {scex.Message}", scex);
+                throw exception = new TunnelConnectionException($"Failed to start tunnel SSH session: {scex.Message}", scex);
             }
             catch (WebSocketException wse)
             {
                 if (wse.WebSocketErrorCode == WebSocketError.UnsupportedProtocol)
                 {
-                    throw new InvalidOperationException("Unsupported web socket sub-protocol.", wse);
+                    throw exception = new InvalidOperationException("Unsupported web socket sub-protocol.", wse);
                 }
 
                 if (wse.WebSocketErrorCode == WebSocketError.NotAWebSocket)
@@ -103,12 +104,12 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                             break;
 
                         case 403:
-                            throw new UnauthorizedAccessException(
+                            throw exception = new UnauthorizedAccessException(
                                 $"Forbidden (403). Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope.", 
                                 wse);
 
                         case 404:
-                            throw new TunnelConnectionException($"The tunnel or port is not found (404).", wse);
+                            throw exception = new TunnelConnectionException($"The tunnel or port is not found (404).", wse);
 
                         case 429:
                             errorDescription = "Rate limit exceeded (429). Too many requests in a given amount of time.";
@@ -116,7 +117,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
 
                         default:
                             // For any other status code we assume the error is not recoverable.
-                            throw new TunnelConnectionException(wse.Message, wse);
+                            throw exception = new TunnelConnectionException(wse.Message, wse);
                     }
                 }
 
