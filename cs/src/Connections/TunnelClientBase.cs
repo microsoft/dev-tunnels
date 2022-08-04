@@ -194,6 +194,28 @@ public abstract class TunnelClientBase : TunnelBase, ITunnelClient
         IsSshSessionActive = true;
     }
 
+    /// <inheritdoc />
+    protected override async Task CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
+    {
+        await base.CloseSessionAsync(disconnectReason, exception);
+        if (SshSession != null && !SshSession.IsClosed)
+        {
+            if (exception != null)
+            {
+                await SshSession.CloseAsync(disconnectReason, exception);
+            }
+            else
+            {
+                await SshSession.CloseAsync(disconnectReason);
+            }
+
+            // Closing the SSH session does nothing if the session is in disconnected state,
+            // which may happen for a reconnectable session when the connection drops.
+            // Disposing of the session forces closing and frees up the resources.
+            SshSession.Dispose();
+        }
+    }
+
     /// <summary>
     /// SSH session has just closed.
     /// </summary>

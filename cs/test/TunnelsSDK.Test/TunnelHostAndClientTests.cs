@@ -167,6 +167,23 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         return multiChannelStream;
     }
 
+    [Fact]
+    public void NewRelayClientHasNoConnectionStatus()
+    {
+        var relayClient = new TunnelRelayTunnelClient(TestTS);
+        Assert.Null(relayClient.DisconnectException);
+        Assert.Equal(ConnectionStatus.None, relayClient.ConnectionStatus);
+    }
+
+    [Fact]
+    public void NewRelayHostHasNoConnectionStatus()
+    {
+        var managementClient = new MockTunnelManagementClient();
+        managementClient.HostRelayUri = MockHostRelayUri;
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        Assert.Null(relayHost.DisconnectException);
+        Assert.Equal(ConnectionStatus.None, relayHost.ConnectionStatus);
+    }
 
     [Fact]
     public async Task ConnectRelayClient()
@@ -180,6 +197,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         var tunnel = CreateRelayTunnel();
         using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);
+        Assert.Null(relayClient.DisconnectException);
     }
 
     [Fact]
@@ -221,6 +239,9 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             "foobar", 
             () => ConnectRelayClientAsync(relayClient, tunnel, (_) => throw new ArgumentNullException("foobar")));
         Assert.IsType<ArgumentNullException>(await disconnectedException.Task);
+
+        Assert.Equal(ConnectionStatus.Disconnected, relayClient.ConnectionStatus);
+        Assert.IsType<ArgumentNullException>(relayClient.DisconnectException);
     }
 
     [Fact]
@@ -240,6 +261,9 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => ConnectRelayClientAsync(relayClient, tunnel, (_) => ThrowNotAWebSocket(403)));
         Assert.IsType<UnauthorizedAccessException>(await disconnectedException.Task);
+
+        Assert.Equal(ConnectionStatus.Disconnected, relayClient.ConnectionStatus);
+        Assert.IsType<UnauthorizedAccessException>(relayClient.DisconnectException);
     }
 
     [Fact]
@@ -249,6 +273,35 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var tunnel = CreateRelayTunnel();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => ConnectRelayClientAsync(relayClient, tunnel, (_) => ThrowNotAWebSocket(401)));
+
+        Assert.Equal(ConnectionStatus.Disconnected, relayClient.ConnectionStatus);
+        Assert.IsType<UnauthorizedAccessException>(relayClient.DisconnectException);
+    }
+
+    [Fact]
+    public async Task ConnectRelayClientSetsConnectionStatus()
+    {
+        var relayClient = new TunnelRelayTunnelClient(TestTS);
+
+        var clientConnected = new TaskCompletionSource();
+        relayClient.ConnectionStatusChanged += (sender, args) =>
+        {
+            switch (args.Status)
+            {
+                case ConnectionStatus.Connected:
+                    clientConnected.TrySetResult();
+                    break;
+
+                case ConnectionStatus.Disconnected:
+                    clientConnected.TrySetException(new Exception("Unexpected disconnection"));
+                    break;
+            }
+        };
+
+        var tunnel = CreateRelayTunnel();
+        using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);
+        Assert.Equal(ConnectionStatus.Connected, relayClient.ConnectionStatus);
+        await clientConnected.Task;
     }
 
     [Fact]
@@ -395,9 +448,26 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var managementClient = new MockTunnelManagementClient();
         managementClient.HostRelayUri = MockHostRelayUri;
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        var hostConnected = new TaskCompletionSource();
+        relayHost.ConnectionStatusChanged += (sender, args) =>
+        {
+            switch (args.Status)
+            {
+                case ConnectionStatus.Connected:
+                    hostConnected.TrySetResult();
+                    break;
+
+                case ConnectionStatus.Disconnected:
+                    hostConnected.TrySetException(new Exception("Unexpected disconnection"));
+                    break;
+            }
+        };
 
         var tunnel = CreateRelayTunnel();
         using var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
+
+        Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
+        await hostConnected.Task;
 
         using var clientRelayStream = await multiChannelStream.OpenStreamAsync(
             TunnelRelayTunnelHost.ClientStreamChannelType);
@@ -547,6 +617,94 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(this.localPortsFixture.Port1, await clientPortAdded.Task);
 
         Assert.Contains(relayClient.ForwardedPorts, p => p.RemotePort == this.localPortsFixture.Port);
+
+        // Clean up
+        await relayClient.DisposeAsync();
+        await relayHost.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task ConnectRelayClientToHostAndFailToReconnectClient()
+    {
+        var managementClient = new MockTunnelManagementClient
+        {
+            HostRelayUri = MockHostRelayUri,
+            ClientRelayUri = MockClientRelayUri,
+        };
+
+        // Create and start tunnel host
+        var tunnel = CreateRelayTunnel(addClientEndpoint: false); // Hosting a tunnel adds the endpoint
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
+        var clientMultiChannelStream = new TaskCompletionSource<MultiChannelStream>();
+        clientMultiChannelStream.SetResult(multiChannelStream);
+        var clientConnected = new TaskCompletionSource<SshStream>();
+
+        // Create and connect tunnel client
+        var relayClient = new TestTunnelRelayTunnelClient(TestTS)
+        {
+            StreamFactory = new MockTunnelRelayStreamFactory(TunnelRelayTunnelClient.WebSocketSubProtocol)
+            {
+                StreamFactory = async (accessToken) =>
+                {
+                    var result = await (await clientMultiChannelStream.Task).OpenStreamAsync(TunnelRelayTunnelHost.ClientStreamChannelType);
+                    clientConnected.TrySetResult(result);
+                    return result;
+                },
+            }
+        };
+
+        await relayClient.ConnectAsync(tunnel, hostId: null, CancellationToken.None)
+            .WithTimeout(Timeout);
+
+        var clientSshStream = await clientConnected.Task;
+
+        // Add port to the tunnel host and wait for it on the client
+        var clientPortAdded = new TaskCompletionSource<int?>();
+        relayClient.ForwardedPorts.PortAdded += (sender, args) =>
+            clientPortAdded.TrySetResult(args.Port.RemotePort);
+
+        await relayHost.AddPortAsync(new TunnelPort { PortNumber = this.localPortsFixture.Port }, CancellationToken.None);
+        Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
+
+        // Expect disconnection
+        var relayClientDisconnected = new TaskCompletionSource<Exception>();
+        relayClient.ConnectionStatusChanged += (sender, args) =>
+        {
+            switch (args.Status)
+            {
+                case ConnectionStatus.Connected:
+                    relayClientDisconnected.TrySetException(new Exception("Unexpected reconnection"));
+                    break;
+
+                case ConnectionStatus.Disconnected:
+                    relayClientDisconnected.TrySetResult(args.DisconnectException);
+                    break;
+
+            }
+        };
+
+        var clientSshSessionClosed = new TaskCompletionSource();
+        relayClient.SshSessionClosed += (sender, args) => clientSshSessionClosed.TrySetResult();
+
+        // Reconnection will fail with WebSocketException emulating Relay returning 404 (tunnel not found).
+        // This is not recoverable and tunnel client reconnection should give up.
+        var wse = new WebSocketException(WebSocketError.NotAWebSocket);
+        wse.Data["HttpStatusCode"] = 404;
+        clientMultiChannelStream = new TaskCompletionSource<MultiChannelStream>();
+        clientMultiChannelStream.SetException(wse);
+
+        // Disconnect the tunnel client
+        await clientSshStream.Channel.CloseAsync();
+
+        var disconnectException = await relayClientDisconnected.Task;
+        Assert.IsType<TunnelConnectionException>(disconnectException);
+        Assert.Equal(wse, disconnectException.InnerException);
+
+        await clientSshSessionClosed.Task;
+
+        Assert.IsType<TunnelConnectionException>(relayClient.DisconnectException);
+        Assert.Equal(wse, relayClient.DisconnectException.InnerException);
 
         // Clean up
         await relayClient.DisposeAsync();

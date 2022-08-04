@@ -17,9 +17,10 @@ public class RefreshingTunnelAccessTokenEventArgs : EventArgs
     /// <summary>
     /// Creates a new instance of <see cref="RefreshingTunnelAccessTokenEventArgs"/> class.
     /// </summary>
-    public RefreshingTunnelAccessTokenEventArgs(string tunnelAccessScope)
+    public RefreshingTunnelAccessTokenEventArgs(string tunnelAccessScope, CancellationToken cancellation)
     {
         TunnelAccessScope = Requires.NotNull(tunnelAccessScope, nameof(tunnelAccessScope));
+        Cancellation = cancellation;
     }
 
     /// <summary>
@@ -28,14 +29,13 @@ public class RefreshingTunnelAccessTokenEventArgs : EventArgs
     public string TunnelAccessScope { get; }
 
     /// <summary>
-    /// Optional token provider function the event handler may set to asynchnronously fetch the token.
-    /// The arguments are: tunnel access scope and cancellation token.
-    /// The result is the task that returns the new tunnel access token or null if it couldn't fetch the token.
+    /// Cancellation token that event handler may observe when it asynchronously fetches the tunnel access token.
     /// </summary>
-    public Func<string, CancellationToken, Task<string?>>? TunnelAccessTokenProvider { get; set; }
+    public CancellationToken Cancellation { get; }
 
     /// <summary>
-    /// Tunnel access token that the event handler may set synchronously.
+    /// Token task the event handler may set to asynchnronously fetch the token.
+    /// The result of the task may be a new tunnel access token or null if it couldn't get the token.
     /// </summary>
-    public string? TunnelAccessToken { get; set; }
+    public Task<string?>? TunnelAccessTokenTask { get; set; }
 }

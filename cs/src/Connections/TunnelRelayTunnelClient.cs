@@ -155,25 +155,8 @@ namespace Microsoft.VsSaaS.TunnelService
             CreateSessionStreamAsync(cancellation);
 
         /// <inheritdoc />
-        async Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
-        {
-            if (SshSession != null && !SshSession.IsClosed && disconnectReason != SshDisconnectReason.None)
-            {
-                if (exception != null)
-                {
-                    await SshSession.CloseAsync(disconnectReason, exception);
-                }
-                else
-                {
-                    await SshSession.CloseAsync(disconnectReason);
-                }
-
-                // Closing the SSH session does nothing if the session is in disconnected state,
-                // which may happen for a reconnectable session when the connection drops.
-                // Disposing of the session forces closing and frees up the resources.
-                SshSession.Dispose();
-            }
-        }
+        Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception) =>
+            CloseSessionAsync(disconnectReason, exception);
 
         /// <inheritdoc />
         Task IRelayClient.ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation) =>

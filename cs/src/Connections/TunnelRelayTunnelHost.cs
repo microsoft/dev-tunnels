@@ -144,6 +144,18 @@ namespace Microsoft.VsSaaS.TunnelService
                 cancellation);
         }
 
+        /// <inheritdoc />
+        protected override async Task CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
+        {
+            await base.CloseSessionAsync(disconnectReason, exception);
+            var hostSession = this.hostSession;
+            if (hostSession != null)
+            {
+                await hostSession.CloseAsync();
+                hostSession.Dispose();
+            }
+        }
+
         #region IRelayClient
 
         /// <inheritdoc />
@@ -166,15 +178,8 @@ namespace Microsoft.VsSaaS.TunnelService
         }
 
         /// <inheritdoc />
-        async Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
-        {
-            var hostSession = this.hostSession;
-            if (hostSession != null)
-            {
-                await hostSession.CloseAsync();
-                hostSession.Dispose();
-            }
-        }
+        Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception) =>
+            CloseSessionAsync(disconnectReason, exception);
 
         /// <inheritdoc />
         Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>

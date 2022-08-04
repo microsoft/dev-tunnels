@@ -110,7 +110,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// Event handler for refreshing the tunnel access token.
         /// The tunnel client will fire this event when it is not able to use the access token it got from the tunnel.
         /// </summary>
-        EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken { get; set; }
+        event EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken;
 
         /// <summary>
         /// Connection status changed event.

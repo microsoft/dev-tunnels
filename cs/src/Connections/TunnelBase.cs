@@ -5,9 +5,9 @@
 
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.Ssh;
 using Microsoft.VsSaaS.TunnelService.Contracts;
 
 namespace Microsoft.VsSaaS.TunnelService;
@@ -49,6 +49,13 @@ public abstract class TunnelBase : IAsyncDisposable
                 this.connectionStatus = value;
                 if (value != previousConnectionStatus)
                 {
+                    // If there were temporary connection issue, DisconnectException may be not null.
+                    // Since we have successfuly connected after all, clean it up.
+                    if (value == ConnectionStatus.Connected)
+                    {
+                        DisconnectException = null;
+                    }
+
                     OnConnectionStatusChanged(previousConnectionStatus, value);
                 }
             }
@@ -56,10 +63,11 @@ public abstract class TunnelBase : IAsyncDisposable
     }
 
     /// <summary>
-    /// Get the exception that caused disconnection.
-    /// Null if not yet connected or disconnection was caused by disposing of this object.
+    /// Get the last exception that caused disconnection.
+    /// Null if not yet connected.
+    /// If disconnection was caused by disposing of this object, the value may be either null, or the last exception when the connection failed.
     /// </summary>
-    public Exception? DisconnectException { get; protected set; }
+    public Exception? DisconnectException { get; private set; }
 
     /// <summary>
     /// Get the tunnel that is being hosted or connected to.
@@ -127,7 +135,7 @@ public abstract class TunnelBase : IAsyncDisposable
     /// Event handler for refreshing the tunnel access token.
     /// The tunnel client or host fires this event when it is not able to use the access token it got from the tunnel.
     /// </summary>
-    public EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken { get; set; }
+    public event EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken;
 
     /// <summary>
     /// Connection status changed event.
@@ -148,6 +156,24 @@ public abstract class TunnelBase : IAsyncDisposable
             await this.connector.ConnectSessionAsync(isReconnect, cancellation);
         },
         cancellation);
+    }
+
+    /// <summary>
+    /// Close tunnel session with the given reason and exception.
+    /// </summary>
+    /// <remarks>
+    /// This is used by <see cref="ITunnelConnector"/> when it couldn't connect the tunnel SSH session.
+    /// Depending on whether the exception is recoverable, the tunnel connector may try to reconnect and start a new session,
+    /// or give up and change <see cref="ConnectionStatus"/> to <see cref="ConnectionStatus.Disconnected"/>.
+    /// </remarks>
+    protected virtual Task CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
+    {
+        if (exception != null)
+        {
+            DisconnectException = exception;
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -236,13 +262,14 @@ public abstract class TunnelBase : IAsyncDisposable
             return Tunnel!.AccessTokens?.TryGetValue(TunnelAccessScope, out var result) == true ? result : null;
         }
 
-        var eventArgs = new RefreshingTunnelAccessTokenEventArgs(TunnelAccessScope);
-        RefreshingTunnelAccessToken?.Invoke(this, eventArgs);
+        if (RefreshingTunnelAccessToken == null)
+        {
+            return null;
+        }
 
-        return eventArgs.TunnelAccessToken ??
-            (eventArgs.TunnelAccessTokenProvider != null ?
-            await eventArgs.TunnelAccessTokenProvider(TunnelAccessScope, cancellation).ConfigureAwait(false) :
-            null);
+        var eventArgs = new RefreshingTunnelAccessTokenEventArgs(TunnelAccessScope, cancellation);
+        RefreshingTunnelAccessToken?.Invoke(this, eventArgs);
+        return eventArgs.TunnelAccessTokenTask != null ? await eventArgs.TunnelAccessTokenTask.ConfigureAwait(false) : null;
     }
 
     /// <inheritdoc />
