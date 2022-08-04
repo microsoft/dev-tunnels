@@ -71,6 +71,7 @@ namespace Microsoft.VsSaaS.TunnelService
             {
                 this.hostSession = null;
                 await hostSession.CloseAsync();
+                hostSession.Dispose();
             }
 
             List<Task> tasks;
@@ -167,9 +168,11 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <inheritdoc />
         async Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
         {
-            if (this.hostSession != null)
+            var hostSession = this.hostSession;
+            if (hostSession != null)
             {
-                await this.hostSession.CloseAsync();
+                await hostSession.CloseAsync();
+                hostSession.Dispose();
             }
         }
 

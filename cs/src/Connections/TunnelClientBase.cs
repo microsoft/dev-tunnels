@@ -229,6 +229,7 @@ public abstract class TunnelClientBase : TunnelBase, ITunnelClient
         if (this.SshSession != null)
         {
             await this.SshSession.CloseAsync(SshDisconnectReason.ByApplication);
+            this.SshSession.Dispose();
         }
 
         SshSessionClosed = null;
