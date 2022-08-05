@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,19 +18,21 @@ namespace Microsoft.VsSaaS.TunnelService
     /// <summary>
     /// Tunnel client implementation that selects one of multiple available connection modes.
     /// </summary>
-    public class MultiModeTunnelClient : ITunnelClient
+    public class MultiModeTunnelClient : TunnelBase, ITunnelClient
     {
         /// <summary>
         /// Creates a new instance of the <see cref="MultiModeTunnelClient" /> class
         /// that can select from among multiple single-mode clients.
         /// </summary>
-        public MultiModeTunnelClient(IEnumerable<ITunnelClient> clients)
+        public MultiModeTunnelClient(IEnumerable<ITunnelClient> clients, ITunnelManagementClient managementClient, TraceSource trace) : base(managementClient, trace)
         {
             Clients = new List<ITunnelClient>(Requires.NotNull(clients, nameof(clients)));
             Requires.Argument(
                 Clients.Count() > 0,
                 nameof(clients),
                 "At least one tunnel client is required.");
+
+            // TODO: Subscribe to clients RefreshingTunnelAccessToken event and call TunnelBase.RefreshTunnelAccessTokenAsync() to get the tunnel access token.
         }
 
         /// <summary>
@@ -58,6 +61,9 @@ namespace Microsoft.VsSaaS.TunnelService
         }
 
         /// <inheritdoc />
+        protected override string TunnelAccessScope => TunnelAccessScopes.Connect;
+
+        /// <inheritdoc />
         public async Task ConnectAsync(
             Tunnel tunnel,
             string? hostId,
@@ -79,8 +85,10 @@ namespace Microsoft.VsSaaS.TunnelService
         }
 
         /// <inheritdoc />
-        public async ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
+            await base.DisposeAsync();
+
             var disposeTasks = new List<Task>();
 
             foreach (var client in Clients)
@@ -93,6 +101,12 @@ namespace Microsoft.VsSaaS.TunnelService
 
         /// <inheritdoc />
         public Task<Stream?> ConnectToForwardedPortAsync(int forwardedPort, CancellationToken cancellation)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
         {
             throw new NotImplementedException();
         }

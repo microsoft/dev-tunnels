@@ -17,6 +17,17 @@ namespace Microsoft.VsSaaS.TunnelService
     public interface ITunnelHost : IAsyncDisposable
     {
         /// <summary>
+        /// Gets the connection status.
+        /// </summary>
+        ConnectionStatus ConnectionStatus { get; }
+
+        /// <summary>
+        /// Gets the exception that caused disconnection.
+        /// Null if not yet connected or disconnection was caused by disposing of this object.
+        /// </summary>
+        Exception? DisconnectException { get; }
+
+        /// <summary>
         /// Connects to a tunnel as a host and starts accepting incoming connections
         /// to local ports as defined on the tunnel.
         /// </summary>
@@ -78,6 +89,15 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelPort updatedPort,
             CancellationToken cancellation);
 
-        // TODO: Events about tunnel port and connection activity?
+        /// <summary>
+        /// Event handler for refreshing the tunnel access token.
+        /// The tunnel client will fire this event when it is not able to use the access token it got from the tunnel.
+        /// </summary>
+        event EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken;
+
+        /// <summary>
+        /// Connection status changed event.
+        /// </summary>
+        event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
     }
 }
