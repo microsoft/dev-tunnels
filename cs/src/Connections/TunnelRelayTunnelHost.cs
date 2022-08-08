@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +23,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// Tunnel host implementation that uses data-plane relay
     /// to accept client connections.
     /// </summary>
-    public class TunnelRelayTunnelHost : TunnelHostBase
+    public class TunnelRelayTunnelHost : TunnelHostBase, IRelayClient
     {
         /// <summary>
         /// Web socket sub-protocol to connect to the tunnel relay endpoint.
@@ -36,12 +35,13 @@ namespace Microsoft.VsSaaS.TunnelService
         /// </summary>
         public const string ClientStreamChannelType = "client-ssh-session-stream";
 
-        private readonly CancellationTokenSource disposeCts = new CancellationTokenSource();
         private readonly IList<Task> clientSessionTasks = new List<Task>();
         private readonly string hostId;
+        private readonly ICollection<SshServerSession> reconnectableSessions = new List<SshServerSession>();
 
         private MultiChannelStream? hostSession;
-
+        private Uri? relayUri;
+        
         /// <summary>
         /// Creates a new instance of a host that connects to a tunnel via a tunnel relay.
         /// </summary>
@@ -64,17 +64,18 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <inheritdoc />
         public override async ValueTask DisposeAsync()
         {
-            this.disposeCts.Cancel();
+            await base.DisposeAsync();
 
             var hostSession = this.hostSession;
             if (hostSession != null)
             {
                 this.hostSession = null;
                 await hostSession.CloseAsync();
+                hostSession.Dispose();
             }
 
             List<Task> tasks;
-            lock (this.clientSessionTasks)
+            lock (DisposeLock)
             {
                 tasks = new List<Task>(this.clientSessionTasks);
                 this.clientSessionTasks.Clear();
@@ -82,7 +83,7 @@ namespace Microsoft.VsSaaS.TunnelService
 
             if (Tunnel != null)
             {
-                tasks.Add(ManagementClient.DeleteTunnelEndpointsAsync(Tunnel, this.hostId, TunnelConnectionMode.TunnelRelay));
+                tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, this.hostId, TunnelConnectionMode.TunnelRelay));
             }
 
             foreach (RemotePortForwarder forwarder in RemoteForwarders.Values)
@@ -90,24 +91,22 @@ namespace Microsoft.VsSaaS.TunnelService
                 forwarder.Dispose();
             }
 
-            while (this.SshSessions.TryTake(out var sshSession))
-            {
-                tasks.Add(sshSession.CloseAsync(SshDisconnectReason.ByApplication));
-            }
-
             await Task.WhenAll(tasks);
-            this.clientSessionTasks.Clear();
         }
 
         /// <inheritdoc />
-        protected override async Task StartAsync(Tunnel tunnel, string[]? hostPublicKeys, CancellationToken cancellation)
+        protected override async Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
         {
-            string? accessToken = null;
-            tunnel.AccessTokens?.TryGetValue(TunnelAccessScopes.Host, out accessToken);
-            Requires.Argument(
-                accessToken != null,
-                nameof(tunnel),
-                $"There is no access token for {nameof(TunnelAccessScopes.Host)} scope on the tunnel.");
+            Requires.NotNull(Tunnel!, nameof(Tunnel));
+
+            this.accessToken = null!;
+            Tunnel.AccessTokens?.TryGetValue(TunnelAccessScope, out this.accessToken!);
+            Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
+
+            var hostPublicKeys = new[]
+            {
+                HostPrivateKey.GetPublicKeyBytes(HostPrivateKey.KeyAlgorithmName).ToBase64(),
+            };
 
             var endpoint = new TunnelRelayTunnelEndpoint
             {
@@ -115,48 +114,78 @@ namespace Microsoft.VsSaaS.TunnelService
                 HostPublicKeys = hostPublicKeys,
             };
 
-            endpoint = (TunnelRelayTunnelEndpoint)await ManagementClient.UpdateTunnelEndpointAsync(
-                tunnel,
+            endpoint = (TunnelRelayTunnelEndpoint)await ManagementClient!.UpdateTunnelEndpointAsync(
+                Tunnel,
                 endpoint,
                 options: null,
                 cancellation);
 
-            Tunnel = tunnel;
-
             Requires.Argument(
                 !string.IsNullOrEmpty(endpoint?.HostRelayUri),
-                nameof(tunnel),
+                nameof(Tunnel),
                 $"The tunnel host relay endpoint URI is missing.");
 
-            var hostRelayUri = endpoint.HostRelayUri;
-            Trace.TraceInformation("Connecting to host tunnel relay {0}", hostRelayUri);
+            this.relayUri = new Uri(endpoint.HostRelayUri, UriKind.Absolute);
 
-            try
-            {
-                var stream = await StreamFactory.CreateRelayStreamAsync(
-                    new Uri(hostRelayUri, UriKind.Absolute),
-                    accessToken,
-                    WebSocketSubProtocol,
-                    cancellation);
+            return new RelayTunnelConnector(this);
+        }
 
-                this.hostSession = new MultiChannelStream(stream, Trace.WithName("HostSSH"));
-                this.hostSession.ChannelOpening += HostSession_ChannelOpening;
-                this.hostSession.Closed += HostSession_Closed;
-                try
-                {
-                    await this.hostSession.ConnectAsync(cancellation);
-                }
-                catch
-                {
-                    await this.hostSession.CloseAsync();
-                    throw;
-                }
-            }
-            catch (Exception exception)
+        /// <summary>
+        /// Create stream to the tunnel.
+        /// </summary>
+        protected virtual Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
+        {
+            ValidateAccessToken();
+            Trace.TraceInformation("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
+            return this.StreamFactory.CreateRelayStreamAsync(
+                this.relayUri!,
+                this.accessToken,
+                WebSocketSubProtocol,
+                cancellation);
+        }
+
+        /// <inheritdoc />
+        protected override async Task CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
+        {
+            await base.CloseSessionAsync(disconnectReason, exception);
+            var hostSession = this.hostSession;
+            if (hostSession != null)
             {
-                throw new TunnelConnectionException("Failed to connect to tunnel relay.", exception);
+                await hostSession.CloseAsync();
+                hostSession.Dispose();
             }
         }
+
+        #region IRelayClient
+
+        /// <inheritdoc />
+        string IRelayClient.TunnelAccessScope => TunnelAccessScope;
+
+        /// <inheritdoc />
+        TraceSource IRelayClient.Trace => Trace;
+
+        /// <inheritdoc />
+        Task<Stream> IRelayClient.CreateSessionStreamAsync(CancellationToken cancellation) =>
+            CreateSessionStreamAsync(cancellation);
+
+        /// <inheritdoc />
+        async Task IRelayClient.ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
+        {
+            this.hostSession = new MultiChannelStream(stream, Trace.WithName("HostSSH"));
+            this.hostSession.ChannelOpening += HostSession_ChannelOpening;
+            this.hostSession.Closed += HostSession_Closed;
+            await this.hostSession.ConnectAsync(cancellation);
+        }
+
+        /// <inheritdoc />
+        Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception) =>
+            CloseSessionAsync(disconnectReason, exception);
+
+        /// <inheritdoc />
+        Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>
+            RefreshTunnelAccessTokenAsync(cancellation);
+
+        #endregion IRelayClient
 
         private void HostSession_Closed(object? sender, SshSessionClosedEventArgs e)
         {
@@ -164,7 +193,11 @@ namespace Microsoft.VsSaaS.TunnelService
             session.Closed -= HostSession_Closed;
             session.ChannelOpening -= HostSession_ChannelOpening;
             this.hostSession = null;
-            Trace.TraceInformation("Connection to host tunnel relay closed.");
+            Trace.TraceInformation(
+                "Connection to host tunnel relay closed.{0}",
+                DisposeToken.IsCancellationRequested ? string.Empty : " Reconnecting.");
+
+            StartReconnectTaskIfNotDisposed();
         }
 
         private void HostSession_ChannelOpening(object? sender, SshChannelOpeningEventArgs e)
@@ -183,16 +216,16 @@ namespace Microsoft.VsSaaS.TunnelService
             }
 
             Task task;
-            lock (this.clientSessionTasks)
+            lock (DisposeLock)
             {
-                if (this.disposeCts.IsCancellationRequested)
+                if (DisposeToken.IsCancellationRequested)
                 {
                     e.FailureDescription = $"The host is disconnecting.";
                     e.FailureReason = SshChannelOpenFailureReason.ConnectFailed;
                     return;
                 }
 
-                task = AcceptClientSessionAsync((MultiChannelStream)sender!, this.disposeCts.Token);
+                task = AcceptClientSessionAsync((MultiChannelStream)sender!, DisposeToken);
                 this.clientSessionTasks.Add(task);
             }
 
@@ -200,7 +233,7 @@ namespace Microsoft.VsSaaS.TunnelService
 
             void RemoveClientSessionTask(Task t)
             {
-                lock (this.clientSessionTasks)
+                lock (DisposeLock)
                 {
                     this.clientSessionTasks.Remove(t);
                 }
@@ -211,7 +244,7 @@ namespace Microsoft.VsSaaS.TunnelService
         {
             try
             {
-                using var stream = await hostSession.AcceptStreamAsync(ClientStreamChannelType, cancellation);
+                var stream = await hostSession.AcceptStreamAsync(ClientStreamChannelType, cancellation);
                 await ConnectAndRunClientSessionAsync(stream, cancellation);
             }
             catch (OperationCanceledException)
@@ -225,52 +258,77 @@ namespace Microsoft.VsSaaS.TunnelService
 
         private async Task ConnectAndRunClientSessionAsync(Stream stream, CancellationToken cancellation)
         {
-            var serverConfig = new SshSessionConfiguration();
-
-            // Enable port-forwarding via the SSH protocol.
-            serverConfig.AddService(typeof(PortForwardingService));
-
-            var session = new SshServerSession(serverConfig, Trace.WithName("ClientSSH"));
-            session.Credentials = new SshServerCredentials(this.HostPrivateKey);
-
+            var sshSessionOwnsStream = false;
             var tcs = new TaskCompletionSource<object?>();
-            using var tokenRegistration = cancellation.CanBeCanceled ?
-                cancellation.Register(() => tcs.TrySetCanceled(cancellation)) : default;
-
-            session.Authenticating += OnSshClientAuthenticating;
-            session.ClientAuthenticated += OnSshClientAuthenticated;
-            session.ChannelOpening += OnSshChannelOpening;
-            session.Closed += Session_Closed;
-
             try
             {
-                var portForwardingService = session.ActivateService<PortForwardingService>();
+                // Always enable reconnect on client SSH server.
+                // When a client reconnects, relay service just opens another SSH channel of client-ssh-session-stream type for it.
+                var serverConfig = new SshSessionConfiguration(enableReconnect: true);
 
-                // All tunnel hosts and clients should disable this because they do not use it (for now) and leaving it enabled is a potential security issue.
-                portForwardingService.AcceptRemoteConnectionsForNonForwardedPorts = false;
+                // Enable port-forwarding via the SSH protocol.
+                serverConfig.AddService(typeof(PortForwardingService));
 
-                await session.ConnectAsync(stream, cancellation);
-                this.SshSessions.Add(session);
-                await tcs.Task;
+                var session = new SshServerSession(serverConfig, this.reconnectableSessions, Trace.WithName("ClientSSH"));
+                session.Credentials = new SshServerCredentials(this.HostPrivateKey);
+
+                using var tokenRegistration = cancellation.CanBeCanceled ?
+                    cancellation.Register(() => tcs.TrySetCanceled(cancellation)) : default;
+
+                session.Authenticating += OnSshClientAuthenticating;
+                session.ClientAuthenticated += OnSshClientAuthenticated;
+                session.Reconnected += OnSshClientReconnected;
+                session.ChannelOpening += OnSshChannelOpening;
+                session.Closed += Session_Closed;
+
+                try
+                {
+                    var portForwardingService = session.ActivateService<PortForwardingService>();
+
+                    // All tunnel hosts and clients should disable this because they do not use it (for now) and leaving it enabled is a potential security issue.
+                    portForwardingService.AcceptRemoteConnectionsForNonForwardedPorts = false;
+
+                    await session.ConnectAsync(stream, cancellation);
+                    sshSessionOwnsStream = true;
+
+                    AddClientSshSession(session);
+
+                    await tcs.Task;
+                }
+                finally
+                {
+                    if (!session.IsClosed)
+                    {
+                        await session.CloseAsync(SshDisconnectReason.ByApplication);
+                    }
+
+                    session.Authenticating -= OnSshClientAuthenticating;
+                    session.ClientAuthenticated -= OnSshClientAuthenticated;
+                    session.Reconnected -= OnSshClientReconnected;
+                    session.ChannelOpening -= OnSshChannelOpening;
+                    session.Closed -= Session_Closed;
+
+                    RemoveClientSshSession(session);
+                }
             }
-            finally
+            catch when (!sshSessionOwnsStream)
             {
-                session.Authenticating -= OnSshClientAuthenticating;
-                session.ChannelOpening -= OnSshChannelOpening;
-                session.Closed -= Session_Closed;
+                stream.Close();
+                throw;
             }
 
             void Session_Closed(object? sender, SshSessionClosedEventArgs e)
             {
-                if (e.Reason == SshDisconnectReason.ByApplication)
-                {
-                    Trace.TraceInformation("Client ssh session closed.");
-                }
-                else if (cancellation.IsCancellationRequested)
+                // Reconnecting client session may cause the new session close with 'None' reason and null exception.
+                if (cancellation.IsCancellationRequested)
                 {
                     Trace.TraceInformation("Client ssh session cancelled.");
                 }
-                else
+                else if (e.Reason == SshDisconnectReason.ByApplication)
+                {
+                    Trace.TraceInformation("Client ssh session closed.");
+                }
+                else if (e.Reason != SshDisconnectReason.None || e.Exception != null)
                 {
                     Trace.TraceEvent(
                         TraceEventType.Error,
@@ -300,13 +358,17 @@ namespace Microsoft.VsSaaS.TunnelService
             }
         }
 
-        private async void OnSshClientAuthenticated(object? sender, EventArgs e)
-        {
-            // After the client session authenicated, automatically start forwarding existing ports.
-            var session = (SshServerSession)sender!;
-            var pfs = session.ActivateService<PortForwardingService>();
+        private async void OnSshClientAuthenticated(object? sender, EventArgs e) =>
+            await StartForwardingExistingPortsAsync((SshServerSession)sender!);
 
-            foreach (TunnelPort port in Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>())
+        private async void OnSshClientReconnected(object? sender, EventArgs e) =>
+            await StartForwardingExistingPortsAsync((SshServerSession)sender!, removeUnusedPorts: true);
+
+        private async Task StartForwardingExistingPortsAsync(SshServerSession session, bool removeUnusedPorts = false)
+        {
+            var tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
+            var pfs = session.ActivateService<PortForwardingService>();
+            foreach (TunnelPort port in tunnelPorts)
             {
                 try
                 {
@@ -320,6 +382,33 @@ namespace Microsoft.VsSaaS.TunnelService
                         "Error forwarding port {0} to client: {1}",
                         port.PortNumber,
                         exception.Message);
+                }
+            }
+
+            // If a tunnel client reconnects, its SSH session Port Forwarding service may
+            // have remote port forwarders for the ports no longer forwarded.
+            // Remove such forwarders.
+            if (removeUnusedPorts && session.SessionId != null)
+            {
+                tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
+                var unusedlocalPorts = new HashSet<int>(
+                    pfs.LocalForwardedPorts
+                        .Select(p => p.LocalPort)
+                        .Where(localPort => localPort.HasValue && !tunnelPorts.Any(tp => tp.PortNumber == localPort))
+                        .Select(localPort => localPort!.Value));
+
+                var remoteForwardersToDispose = RemoteForwarders
+                    .Where((kvp) =>
+                        Enumerable.SequenceEqual(kvp.Key.SessionId, session.SessionId) &&
+                        unusedlocalPorts.Contains(kvp.Value.LocalPort))
+                    .Select(kvp => kvp.Key);
+
+                foreach (SessionPortKey key in remoteForwardersToDispose)
+                {
+                    if (RemoteForwarders.TryRemove(key, out var remoteForwarder))
+                    {
+                        remoteForwarder?.Dispose();
+                    }
                 }
             }
         }

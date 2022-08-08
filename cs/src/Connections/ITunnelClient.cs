@@ -36,6 +36,17 @@ namespace Microsoft.VsSaaS.TunnelService
         bool AcceptLocalConnectionsForForwardedPorts { get; set; }
 
         /// <summary>
+        /// Gets the connection status.
+        /// </summary>
+        ConnectionStatus ConnectionStatus { get; }
+
+        /// <summary>
+        /// Gets the exception that caused disconnection.
+        /// Null if not yet connected or disconnection was caused by disposing of this object.
+        /// </summary>
+        Exception? DisconnectException { get; }
+
+        /// <summary>
         /// Connects to a tunnel.
         /// </summary>
         /// <param name="tunnel">Tunnel to connect to.</param>
@@ -94,5 +105,16 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <returns>A <see cref="Task{Stream}"/> representing the result of the asynchronous operation.</returns>
         /// <exception cref="InvalidOperationException">If the tunnel is not yet connected and hasn't started connecting.</exception>
         Task<Stream?> ConnectToForwardedPortAsync(int forwardedPort, CancellationToken cancellation);
+
+        /// <summary>
+        /// Event handler for refreshing the tunnel access token.
+        /// The tunnel client will fire this event when it is not able to use the access token it got from the tunnel.
+        /// </summary>
+        event EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken;
+
+        /// <summary>
+        /// Connection status changed event.
+        /// </summary>
+        event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
     }
 }

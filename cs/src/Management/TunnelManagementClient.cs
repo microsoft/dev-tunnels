@@ -51,21 +51,21 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Visual-Studio-Tunnel-Service-SDK")!;
 
         private readonly HttpClient httpClient;
-        private readonly Func<Task<AuthenticationHeaderValue?>> accessTokenCallback;
+        private readonly Func<Task<AuthenticationHeaderValue?>> userTokenCallback;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
         /// with an optional client authentication callback.
         /// </summary>
         /// <param name="userAgent">User agent.</param>
-        /// <param name="accessTokenCallback">Optional async callback for retrieving a client
+        /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header, for AAD or GitHub user authentication. This may be null
         /// for anonymous tunnel clients, or if tunnel access tokens will be specified via
         /// <see cref="TunnelRequestOptions.AccessToken"/>.</param>
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
-            Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null)
-            : this(new[] { userAgent }, accessTokenCallback, tunnelServiceUri: null, httpHandler: null)
+            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null)
+            : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null)
         {
         }
 
@@ -76,14 +76,14 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
         /// case that this SDK is used in a program, such as a CLI, that has users that want 
         /// to be differentiated. </param>
-        /// <param name="accessTokenCallback">Optional async callback for retrieving a client
+        /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header, for AAD or GitHub user authentication. This may be null
         /// for anonymous tunnel clients, or if tunnel access tokens will be specified via
         /// <see cref="TunnelRequestOptions.AccessToken"/>.</param>
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
-            Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null)
-            : this(userAgents, accessTokenCallback, tunnelServiceUri: null, httpHandler: null)
+            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null)
+            : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null)
         {
         }
 
@@ -92,7 +92,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// with a client authentication callback, service URI, and HTTP handler.
         /// </summary>
         /// <param name="userAgent">User agent.</param>
-        /// <param name="accessTokenCallback">Optional async callback for retrieving a client
+        /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header value with access token, for AAD or GitHub user authentication.
         /// This may be null for anonymous tunnel clients, or if tunnel access tokens will be
         /// specified via <see cref="TunnelRequestOptions.AccessToken"/>.</param>
@@ -105,10 +105,10 @@ namespace Microsoft.VsSaaS.TunnelService
         /// by <see cref="Dispose"/>.</param>
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
-            Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null,
+            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null)
-            : this(new[] { userAgent }, accessTokenCallback, tunnelServiceUri, httpHandler)
+            : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler)
         {
         }
 
@@ -119,7 +119,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
         /// case that this SDK is used in a program, such as a CLI, that has users that want 
         /// to be differentiated. </param>
-        /// <param name="accessTokenCallback">Optional async callback for retrieving a client
+        /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header value with access token, for AAD or GitHub user authentication.
         /// This may be null for anonymous tunnel clients, or if tunnel access tokens will be
         /// specified via <see cref="TunnelRequestOptions.AccessToken"/>.</param>
@@ -132,14 +132,14 @@ namespace Microsoft.VsSaaS.TunnelService
         /// by <see cref="Dispose"/>.</param>
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
-            Func<Task<AuthenticationHeaderValue?>>? accessTokenCallback = null,
+            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null)
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
 
-            this.accessTokenCallback = accessTokenCallback ??
+            this.userTokenCallback = userTokenCallback ??
                 (() => Task.FromResult<AuthenticationHeaderValue?>(null));
 
             httpHandler ??= new SocketsHttpHandler
@@ -546,13 +546,14 @@ namespace Microsoft.VsSaaS.TunnelService
 
             if (!string.IsNullOrEmpty(options?.AccessToken))
             {
+                TunnelAccessTokenProperties.ValidateTokenExpiration(options.AccessToken);
                 token = new AuthenticationHeaderValue(
                     TunnelAuthenticationScheme, options.AccessToken);
             }
 
             if (token == null)
             {
-                token = await this.accessTokenCallback();
+                token = await this.userTokenCallback();
             }
 
             if (token == null && tunnel?.AccessTokens != null)
@@ -562,6 +563,7 @@ namespace Microsoft.VsSaaS.TunnelService
                     if (tunnel.AccessTokens.TryGetValue(scope, out var accessToken) == true &&
                         !string.IsNullOrEmpty(accessToken))
                     {
+                        TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
                         token = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);
                         break;
@@ -994,6 +996,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 Options = tunnelPort.Options,
                 AccessControl = tunnelPort.AccessControl == null ? null : new TunnelAccessControl(
                     tunnelPort.AccessControl.Where((ace) => !ace.IsInherited)),
+                SshUser = tunnelPort.SshUser,
             };
         }
 

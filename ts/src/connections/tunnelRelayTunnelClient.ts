@@ -8,6 +8,7 @@ import {
     TunnelRelayTunnelEndpoint,
     TunnelAccessScopes,
 } from '@vs/tunnels-contracts';
+import { TunnelAccessTokenProperties } from '@vs/tunnels-management';
 import { TraceLevel } from '@vs/vs-ssh';
 import { TunnelRelayStreamFactory, DefaultTunnelRelayStreamFactory } from '.';
 import { TunnelClientBase } from './tunnelClientBase';
@@ -63,7 +64,8 @@ export class TunnelRelayTunnelClient extends TunnelClientBase {
             `Sec-WebSocket-Protocol: ${TunnelRelayTunnelClient.webSocketSubProtocol}`,
         );
         if (accessToken) {
-            this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel ${accessToken}`);
+            const token = TunnelAccessTokenProperties.tryParse(accessToken)?.toString() ?? 'token';
+            this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${token}>`);
         }
 
         try {

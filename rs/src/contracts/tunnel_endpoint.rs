@@ -36,11 +36,17 @@ pub struct TunnelEndpoint {
     pub host_public_keys: Vec<String>,
 
     // Gets or sets a string used to format URIs where a web client can connect to ports
-    // of the tunnel. The string includes a `TunnelEndpoint.PortUriToken` that must be
+    // of the tunnel. The string includes a `TunnelEndpoint.PortToken` that must be
     // replaced with the actual port number.
     pub port_uri_format: Option<String>,
+
+    // Gets or sets a string used to format ssh command where ssh client can connect to
+    // shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortToken`
+    // that must be replaced with the actual port number.
+    pub port_ssh_command_format: Option<String>,
 }
 
-// Token included in `TunnelEndpoint.PortUriFormat` that is to be replaced by a specified
-// port number.
-pub const PORT_URI_TOKEN: &str = "{port}";
+// Token included in `TunnelEndpoint.PortUriFormat` and
+// `TunnelEndpoint.PortSshCommandFormat` that is to be replaced by a specified port
+// number.
+pub const PORT_TOKEN: &str = "{port}";

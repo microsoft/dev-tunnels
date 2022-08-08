@@ -17,7 +17,7 @@ type TunnelEndpoint struct {
 	// This property is required when creating or updating an endpoint.  The subclass type is
 	// also an indication of the connection mode, but this property is necessary to determine
 	// the subclass type when deserializing.
-	ConnectionMode TunnelConnectionMode `json:"connectionMode"`
+	ConnectionMode       TunnelConnectionMode `json:"connectionMode"`
 
 	// Gets or sets the ID of the host that is listening on this endpoint.
 	//
@@ -25,16 +25,21 @@ type TunnelEndpoint struct {
 	// multiple connection modes, the host's ID is the same for all the endpoints it
 	// supports. However different hosts may simultaneously accept connections at different
 	// endpoints for the same tunnel, if enabled in tunnel options.
-	HostID         string `json:"hostId"`
+	HostID               string `json:"hostId"`
 
 	// Gets or sets an array of public keys, which can be used by clients to authenticate the
 	// host.
-	HostPublicKeys []string `json:"hostPublicKeys,omitempty"`
+	HostPublicKeys       []string `json:"hostPublicKeys,omitempty"`
 
 	// Gets or sets a string used to format URIs where a web client can connect to ports of
-	// the tunnel. The string includes a `TunnelEndpoint.PortUriToken` that must be replaced
+	// the tunnel. The string includes a `TunnelEndpoint.PortToken` that must be replaced
 	// with the actual port number.
-	PortURIFormat  string `json:"portUriFormat,omitempty"`
+	PortURIFormat        string `json:"portUriFormat,omitempty"`
+
+	// Gets or sets a string used to format ssh command where ssh client can connect to
+	// shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortToken` that
+	// must be replaced with the actual port number.
+	PortSshCommandFormat string `json:"portSshCommandFormat,omitempty"`
 
 	LocalNetworkTunnelEndpoint
 	TunnelRelayTunnelEndpoint
@@ -65,6 +70,7 @@ type TunnelRelayTunnelEndpoint struct {
 	ClientRelayURI string `json:"clientRelayUri,omitempty"`
 }
 
-// Token included in `TunnelEndpoint.PortUriFormat` that is to be replaced by a specified
-// port number.
-var PortURIToken = "{port}"
+// Token included in `TunnelEndpoint.PortUriFormat` and
+// `TunnelEndpoint.PortSshCommandFormat` that is to be replaced by a specified port
+// number.
+var PortToken = "{port}"
