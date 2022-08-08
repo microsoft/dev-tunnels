@@ -234,13 +234,13 @@ impl TunnelManagementClient {
         self.execute_json("create_tunnel_port", request).await
     }
 
-    /// Updates an existing port on the tunnel.
+    /// Deletes an existing port on the tunnel.
     pub async fn delete_tunnel_port(
         &self,
         locator: &TunnelLocator,
         port_number: u16,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<TunnelPort> {
+    ) -> HttpResult<()> {
         let url = self.build_tunnel_uri(
             locator,
             Some(&format!("{}/{}", PORTS_API_SUB_PATH, port_number)),
@@ -248,7 +248,8 @@ impl TunnelManagementClient {
         let request = self
             .make_tunnel_request(Method::DELETE, url, options)
             .await?;
-        self.execute_json("create_tunnel_port", request).await
+        self.execute_json::<NeverDeserialize>("delete_tunnel_port", request).await?;
+        Ok(())
     }
 
     /// Sends the request and deserializes a JSON response
