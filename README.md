@@ -1,5 +1,21 @@
 # Tunnels
 
+## SDK Feature Matrix
+
+| Feature | C# | TypeScript | Java | Go | Rust |
+|---|---|---|---|---|---|
+| Management API | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tunnel Client Connections | ✅ | ✅ | ✅ | ✅ | 🚧 |
+| Tunnel Host Connections | ✅ | ✅ | ❌ | ❌ | 🚧 |
+| Reconnection | 🚧 | 🚧 | 🗓️ | 🗓️ | ❌ |
+| SSH-level Reconnection | 🚧 | 🚧 | ❌ | ❌ | ❌ |
+| Automatic tunnel access token refresh | 🚧 | 🚧 | 🗓️ | 🗓️ | ❌ |
+
+✅ - Supported  
+🚧 - In Progress  
+❌ - Not Supported  
+🗓️ - Planned  
+
 ## Trademarks
 
 This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
