@@ -231,7 +231,7 @@ impl TunnelManagementClient {
         );
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, port);
-        self.execute_json("create_tunnel_port", request).await
+        self.execute_json("update_tunnel_port", request).await
     }
 
     /// Deletes an existing port on the tunnel.
