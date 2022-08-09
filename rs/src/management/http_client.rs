@@ -7,12 +7,12 @@ use reqwest::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, Method, Request,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use crate::contracts::{
-    env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelRelayTunnelEndpoint, TunnelServiceProperties,
+    env_production, Tunnel, TunnelRelayTunnelEndpoint, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
+    TunnelServiceProperties,
 };
 
 use super::{
@@ -31,17 +31,6 @@ pub struct TunnelManagementClient {
 const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
-
-struct NeverDeserialize();
-
-impl<'de> Deserialize<'de> for NeverDeserialize {
-    fn deserialize<D>(_: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(NeverDeserialize())
-    }
-}
 
 impl TunnelManagementClient {
     /// Lists tunnels owned by the user.
@@ -107,14 +96,12 @@ impl TunnelManagementClient {
         &self,
         locator: &TunnelLocator,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<()> {
+    ) -> HttpResult<bool> {
         let url = self.build_tunnel_uri(locator, None);
         let request = self
             .make_tunnel_request(Method::DELETE, url, options)
             .await?;
-        self.execute_json::<NeverDeserialize>("delete_tunnel", request)
-            .await?;
-        Ok(())
+        self.execute_no_response("delete_tunnel", request).await
     }
 
     /// Updates an existing tunnel's endpoints.
@@ -163,7 +150,7 @@ impl TunnelManagementClient {
         host_id: &str,
         connection_mode: Option<TunnelConnectionMode>,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<()> {
+    ) -> HttpResult<bool> {
         let path = if let Some(cm) = connection_mode {
             format!("{}/{}/{}", ENDPOINTS_API_SUB_PATH, host_id, cm)
         } else {
@@ -174,9 +161,7 @@ impl TunnelManagementClient {
         let request = self
             .make_tunnel_request(Method::DELETE, url, options)
             .await?;
-        self.execute_json::<NeverDeserialize>("delete_tunnel_endpoints", request)
-            .await?;
-        Ok(())
+        self.execute_no_response("delete_tunnel_endpoints", request).await
     }
 
     /// List a tunnel's ports.
@@ -240,7 +225,7 @@ impl TunnelManagementClient {
         locator: &TunnelLocator,
         port_number: u16,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<()> {
+    ) -> HttpResult<bool> {
         let url = self.build_tunnel_uri(
             locator,
             Some(&format!("{}/{}", PORTS_API_SUB_PATH, port_number)),
@@ -248,8 +233,7 @@ impl TunnelManagementClient {
         let request = self
             .make_tunnel_request(Method::DELETE, url, options)
             .await?;
-        self.execute_json::<NeverDeserialize>("delete_tunnel_port", request).await?;
-        Ok(())
+        self.execute_no_response("delete_tunnel_port", request).await
     }
 
     /// Sends the request and deserializes a JSON response
@@ -277,6 +261,37 @@ impl TunnelManagementClient {
 
         res
     }
+
+    /// Executes a request in which 200 status codes indicate success and 
+    /// 404 indicates an unsuccessful deletion but is not an error.
+    async fn execute_no_response(&self, _: &'static str, request: Request) -> HttpResult<bool> {
+        let url_clone = request.url().clone();
+        let res = self
+            .client
+            .execute(request)
+            .await
+            .map_err(HttpError::ConnectionError)?;
+        
+        if res.status().is_success() {
+            Ok(true)
+        } else if res.status().as_u16() == 404 {
+            Ok(false)
+        } else {
+            let request_id = res
+                .headers()
+                .get("VsSaaS-Request-Id")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_owned());
+
+            Err(HttpError::ResponseError(ResponseError {
+                url: url_clone,
+                status_code: res.status(),
+                data: res.text().await.ok(),
+                request_id,
+            }))
+        }
+    }
+
     /// Sends the request and deserializes a JSON response
     #[cfg(not(feature = "instrumentation"))]
     async fn execute_json<T>(&self, _: &'static str, request: Request) -> HttpResult<T>
