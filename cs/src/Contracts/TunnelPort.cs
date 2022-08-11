@@ -108,5 +108,11 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// </remarks>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? SshUser { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether inspection is enabled for the port.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? InspectionEnabled { get; set; }
     }
 }
