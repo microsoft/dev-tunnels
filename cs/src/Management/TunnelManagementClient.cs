@@ -34,7 +34,7 @@ namespace Microsoft.DevTunnels.Management
         private const string ClustersPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
-        private const string CheckNameAvailableSubPath = "/checkNameAvailable";
+        private const string CheckAvailableSubPath = "/checkAvailable";
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
@@ -1250,7 +1250,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(name, nameof(name));
             
-            var uri = BuildUri(clusterId: null, TunnelsApiPath + "/" + name + CheckNameAvailableSubPath, null);
+            var uri = BuildUri(clusterId: null, TunnelsApiPath + CheckAvailableSubPath + "/" + name, null);
             bool? result = await this.SendTunnelRequestAsync<bool>(
                 tunnel: null,
                 null,
