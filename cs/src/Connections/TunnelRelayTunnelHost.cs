@@ -443,8 +443,6 @@ namespace Microsoft.VsSaaS.TunnelService
             // For forwarded-tcpip do not check RemoteForwarders because they may not be updated yet.
             // There is a small time interval in ForwardPortAsync() between the port
             // being forwarded with ForwardFromRemotePortAsync() and RemoteForwarders updated.
-            // See https://github.com/microsoft/basis-planning/issues/467
-
             // Setting PFS.AcceptRemoteConnectionsForNonForwardedPorts to false makes PFS reject forwarding requests from the
             // clients for the ports that are not forwarded and are missing in PFS.remoteConnectors.
             // Call to PFS.ForwardFromRemotePortAsync() in ForwardPortAsync() adds the connector to PFS.remoteConnectors.
