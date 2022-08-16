@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+use std::sync::Arc;
+
 use reqwest::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, Method, Request,
@@ -14,13 +16,14 @@ use crate::contracts::{
 };
 
 use super::{
-    Authorization, HttpError, HttpResult, ResponseError, TunnelLocator, TunnelRequestOptions,
+    Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError, TunnelLocator,
+    TunnelRequestOptions,
 };
 
 #[derive(Clone)]
 pub struct TunnelManagementClient {
     client: Client,
-    authorization: Authorization,
+    authorization: Arc<Box<dyn AuthorizationProvider>>,
     user_agent: HeaderValue,
     environment: TunnelServiceProperties,
 }
@@ -411,8 +414,8 @@ impl TunnelManagementClient {
         let headers = request.headers_mut();
         headers.insert("User-Agent", self.user_agent.clone());
 
-        if let Some(a) = &self.authorization.as_header() {
-            headers.insert(AUTHORIZATION, HeaderValue::from_str(a).unwrap());
+        if let Some(a) = self.authorization.get_authorization().await?.as_header() {
+            headers.insert(AUTHORIZATION, HeaderValue::from_str(&a).unwrap());
         }
 
         Ok(request)
@@ -430,7 +433,7 @@ where
 }
 
 pub struct TunnelClientBuilder {
-    authorization: Authorization,
+    authorization: Box<dyn AuthorizationProvider>,
     client: Option<Client>,
     user_agent: HeaderValue,
     environment: TunnelServiceProperties,
@@ -440,7 +443,7 @@ pub struct TunnelClientBuilder {
 /// to get the client instance (or cast automatically).
 pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
     TunnelClientBuilder {
-        authorization: Authorization::Anonymous,
+        authorization: Box::new(super::StaticAuthorizationProvider(Authorization::Anonymous)),
         client: None,
         user_agent: HeaderValue::from_str(user_agent).unwrap(),
         environment: env_production(),
@@ -449,7 +452,15 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
 
 impl TunnelClientBuilder {
     pub fn authorization(&mut self, authorization: Authorization) -> &mut Self {
-        self.authorization = authorization;
+        self.authorization = Box::new(super::StaticAuthorizationProvider(authorization));
+        self
+    }
+
+    pub fn authorization_provider(
+        &mut self,
+        provider: impl AuthorizationProvider + 'static,
+    ) -> &mut Self {
+        self.authorization = Box::new(provider);
         self
     }
 
@@ -467,7 +478,7 @@ impl TunnelClientBuilder {
 impl From<TunnelClientBuilder> for TunnelManagementClient {
     fn from(builder: TunnelClientBuilder) -> Self {
         TunnelManagementClient {
-            authorization: builder.authorization,
+            authorization: Arc::new(builder.authorization),
             client: builder.client.unwrap_or_else(Client::new),
             user_agent: builder.user_agent,
             environment: builder.environment,
