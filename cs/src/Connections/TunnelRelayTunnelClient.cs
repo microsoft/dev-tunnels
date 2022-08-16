@@ -18,7 +18,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// <summary>
     /// Tunnel client implementation that connects via a tunnel relay.
     /// </summary>
-    public class TunnelRelayTunnelClient : TunnelClientBase, IRelayClient
+    public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     {
         /// <summary>
         /// Web socket sub-protocol to connect to the tunnel relay endpoint.

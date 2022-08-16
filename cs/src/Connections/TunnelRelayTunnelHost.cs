@@ -23,7 +23,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// Tunnel host implementation that uses data-plane relay
     /// to accept client connections.
     /// </summary>
-    public class TunnelRelayTunnelHost : TunnelHostBase, IRelayClient
+    public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     {
         /// <summary>
         /// Web socket sub-protocol to connect to the tunnel relay endpoint.

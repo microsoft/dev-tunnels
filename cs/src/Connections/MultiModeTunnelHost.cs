@@ -15,7 +15,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// <summary>
     /// Aggregation of multiple tunnel hosts.
     /// </summary>
-    public class MultiModeTunnelHost : TunnelBase, ITunnelHost
+    public class MultiModeTunnelHost : TunnelConnection, ITunnelHost
     {
         /// <summary>
         /// Gets or sets a host ID. An initial value is automatically generated for the process.

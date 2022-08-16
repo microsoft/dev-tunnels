@@ -15,16 +15,16 @@ namespace Microsoft.VsSaaS.TunnelService;
 /// <summary>
 /// Base class for tunnel client and host.
 /// </summary>
-public abstract class TunnelBase : IAsyncDisposable
+public abstract class TunnelConnection : IAsyncDisposable
 {
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
     private ConnectionStatus connectionStatus;
 
     /// <summary>
-    /// Creates a new instance of the <see cref="TunnelBase"/> class.
+    /// Creates a new instance of the <see cref="TunnelConnection"/> class.
     /// </summary>
-    public TunnelBase(ITunnelManagementClient? managementClient, TraceSource trace)
+    public TunnelConnection(ITunnelManagementClient? managementClient, TraceSource trace)
     {
         ManagementClient = managementClient;
         Trace = Requires.NotNull(trace, nameof(trace));
