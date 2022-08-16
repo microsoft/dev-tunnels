@@ -19,14 +19,13 @@ pub enum HttpError {
     /// An error returned from the remote server.
     ResponseError(ResponseError),
     /// An error was returned from the authorization callback.
-    AuthorizationError(Box<dyn Error>),
+    AuthorizationError(String),
 }
 
 impl Error for HttpError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             HttpError::ConnectionError(e) => Some(e),
-            HttpError::AuthorizationError(e) => Some(e.as_ref()),
             _ => None,
         }
     }

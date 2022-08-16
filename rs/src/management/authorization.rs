@@ -1,3 +1,7 @@
+use async_trait::async_trait;
+
+use super::HttpError;
+
 #[derive(Clone)]
 pub enum Authorization {
     /// No authorization.
@@ -21,5 +25,19 @@ impl Authorization {
             Authorization::Bearer(token) => Some(format!("bearer {}", token)),
             Authorization::Anonymous => None,
         }
+    }
+}
+
+#[async_trait]
+pub trait AuthorizationProvider: Send + Sync {
+    async fn get_authorization(&self) -> Result<Authorization, HttpError>;
+}
+
+pub(crate) struct StaticAuthorizationProvider(pub Authorization);
+
+#[async_trait]
+impl AuthorizationProvider for StaticAuthorizationProvider {
+    async fn get_authorization(&self) -> Result<Authorization, HttpError> {
+        Ok(self.0.clone())
     }
 }
