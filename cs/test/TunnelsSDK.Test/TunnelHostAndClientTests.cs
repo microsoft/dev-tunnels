@@ -739,6 +739,57 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     }
 
     [Fact]
+    public async Task ConnectRelayHostThenConnectRelayClientToForwardedPortStream()
+    {
+        var managementClient = new MockTunnelManagementClient();
+        managementClient.HostRelayUri = MockHostRelayUri;
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+
+        var port = GetAvailableTcpPort();
+        var tunnel = CreateRelayTunnel(port);
+
+        using var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
+
+        using var clientRelayStream = await multiChannelStream.OpenStreamAsync(
+            TunnelRelayTunnelHost.ClientStreamChannelType);
+
+        using var clientSshSession = CreateSshClientSession();
+        await clientSshSession.ConnectAsync(clientRelayStream).WithTimeout(Timeout);
+        var clientCredentials = new SshClientCredentials("tunnel", password: null);
+        await clientSshSession.AuthenticateAsync(clientCredentials);
+
+        await clientSshSession.WaitForForwardedPortAsync(port, TimeoutToken);
+        using var sshStream = await clientSshSession.ConnectToForwardedPortAsync(port, TimeoutToken);
+    }
+
+    [Fact]
+    public async Task ConnectRelayHostThenConnectRelayClientToDifferentPort_Fails()
+    {
+        var managementClient = new MockTunnelManagementClient();
+        managementClient.HostRelayUri = MockHostRelayUri;
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+
+        var port = GetAvailableTcpPort();
+        var tunnel = CreateRelayTunnel(port);
+
+        using var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
+
+        using var clientRelayStream = await multiChannelStream.OpenStreamAsync(
+            TunnelRelayTunnelHost.ClientStreamChannelType);
+
+        using var clientSshSession = CreateSshClientSession();
+        await clientSshSession.ConnectAsync(clientRelayStream).WithTimeout(Timeout);
+        var clientCredentials = new SshClientCredentials("tunnel", password: null);
+        await clientSshSession.AuthenticateAsync(clientCredentials);
+
+        await clientSshSession.WaitForForwardedPortAsync(port, TimeoutToken);
+
+        var differentPort = port < 60_000 ? port + 1 : port - 1;
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => clientSshSession.ConnectToForwardedPortAsync(differentPort, TimeoutToken));
+    }
+
+    [Fact]
     public async Task ConnectRelayHostAddPort()
     {
         var managementClient = new MockTunnelManagementClient();

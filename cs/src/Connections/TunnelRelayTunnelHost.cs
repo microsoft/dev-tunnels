@@ -440,35 +440,15 @@ namespace Microsoft.VsSaaS.TunnelService
                     e.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
                 }
             }
-            else if (portForwardRequest.ChannelType == "forwarded-tcpip")
+            // For forwarded-tcpip do not check RemoteForwarders because they may not be updated yet.
+            // There is a small time interval in ForwardPortAsync() between the port
+            // being forwarded with ForwardFromRemotePortAsync() and RemoteForwarders updated.
+            // Setting PFS.AcceptRemoteConnectionsForNonForwardedPorts to false makes PFS reject forwarding requests from the
+            // clients for the ports that are not forwarded and are missing in PFS.remoteConnectors.
+            // Call to PFS.ForwardFromRemotePortAsync() in ForwardPortAsync() adds the connector to PFS.remoteConnectors.
+            else if (portForwardRequest.ChannelType != "forwarded-tcpip")
             {
-                if (sender is not SshServerSession sshSession)
-                {
-                    Trace.Warning("Rejecting request due to invalid sender");
-                    e.FailureReason = SshChannelOpenFailureReason.ConnectFailed;
-                    return;
-                }
-                else
-                {
-                    var sessionId = sshSession.SessionId;
-                    if (sessionId == null)
-                    {
-                        Trace.Warning("Rejecting request as session has no Id");
-                        e.FailureReason = SshChannelOpenFailureReason.ConnectFailed;
-                        return;
-                    }
-
-                    if (!RemoteForwarders.ContainsKey(new SessionPortKey(sessionId, (ushort)portForwardRequest.Port)))
-                    {
-                        Trace.Warning("Rejecting request to connect to non-forwarded port:" +
-                            portForwardRequest.Port);
-                        e.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
-                    }
-                }
-            }
-            else
-            {
-                Trace.Warning("Nonrecognized channel type " + portForwardRequest.ChannelType);
+                Trace.Warning("Unrecognized channel type " + portForwardRequest.ChannelType);
                 e.FailureReason = SshChannelOpenFailureReason.UnknownChannelType;
             }
         }

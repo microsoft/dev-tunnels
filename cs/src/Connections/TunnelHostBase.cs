@@ -191,6 +191,12 @@ namespace Microsoft.VsSaaS.TunnelService
                 return;
             }
 
+            // Capture the remote forwarder for the session id / remote port pair.
+            // This is needed later to stop forwarding for this port when the remote forwarder is disposed.
+            // Note when the client tries to open an SSH channel to PFS, the port forwarding service checks
+            // its remoteConnectors whether the port is being forwarded.
+            // Disposing of the RemotePortForwarder stops the forwarding and removes the remote connector
+            // from PFS.remoteConnectors.
             RemoteForwarders.TryAdd(
                 new SessionPortKey(sessionId, (ushort)forwarder.RemotePort),
                 forwarder);
