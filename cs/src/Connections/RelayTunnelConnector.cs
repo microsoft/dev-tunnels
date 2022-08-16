@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,24 +23,30 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
     private const int ReconnectInitialDelayMs = 100;
 
     private readonly IRelayClient relayClient;
+    private readonly Action<RetryingTunnelConnectionEventArgs> retryHandler;
 
-    public RelayTunnelConnector(IRelayClient relayClient)
+    public RelayTunnelConnector(
+        IRelayClient relayClient,
+        Action<RetryingTunnelConnectionEventArgs> retryHandler)
     {
         this.relayClient = Requires.NotNull(relayClient, nameof(relayClient));
         Requires.NotNull(relayClient.Trace, nameof(IRelayClient.Trace));
+        this.retryHandler = Requires.NotNull(retryHandler, nameof(retryHandler));
     }
 
     private TraceSource Trace => this.relayClient.Trace;
 
     /// <inheritdoc/>
-    public async Task ConnectSessionAsync(bool isReconnect, CancellationToken cancellation)
+    public async Task ConnectSessionAsync(
+        bool isReconnect,
+        CancellationToken cancellation)
     {
         int attempt = 0;
-        int attempDelayMs = ReconnectInitialDelayMs;
+        int attemptDelayMs = ReconnectInitialDelayMs;
         bool isTunnelAccessTokenRefreshed = false;
 
         bool isDelayNeeded;
-        object? errorDescription;
+        string? errorDescription;
         SshDisconnectReason disconnectReason;
         Exception? exception;
 
@@ -94,25 +101,29 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
 
                 if (wse.WebSocketErrorCode == WebSocketError.NotAWebSocket)
                 {
-                    int? statusCode = wse.Data.Contains("HttpStatusCode") ? (int)wse.Data["HttpStatusCode"]! : null;
+                    var statusCode = TunnelConnectionException.GetHttpStatusCode(wse);
                     switch (statusCode)
                     {
-                        case 401:
+                        case HttpStatusCode.Unauthorized:
                             // Unauthorized error may happen when the tunnel access token is no longer valid, e.g. expired.
                             // Try refreshing it.
                             await RefreshTunnelAccessTokenAsync(wse);
+                            exception = new UnauthorizedAccessException(
+                                $"Unauthorized (401). Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope.",
+                                wse);
                             break;
 
-                        case 403:
+                        case HttpStatusCode.Forbidden:
                             throw exception = new UnauthorizedAccessException(
                                 $"Forbidden (403). Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope.", 
                                 wse);
 
-                        case 404:
+                        case HttpStatusCode.NotFound:
                             throw exception = new TunnelConnectionException($"The tunnel or port is not found (404).", wse);
 
-                        case 429:
+                        case HttpStatusCode.TooManyRequests:
                             errorDescription = "Rate limit exceeded (429). Too many requests in a given amount of time.";
+                            exception = new TunnelConnectionException(errorDescription, wse);
                             break;
 
                         default:
@@ -122,8 +133,8 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 }
 
                 // Other web socket errors may be recoverable
+                exception ??= wse;
                 errorDescription ??= wse.Message;
-                exception = wse;
             }
             catch (OperationCanceledException)
             {
@@ -142,7 +153,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                     throw;
                 }
 
-                errorDescription = ex;
+                errorDescription = ex.Message;
                 exception = ex;
             }
             finally
@@ -158,21 +169,38 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 }
             }
 
-            var retryTiming = isDelayNeeded ? $" in {(attempDelayMs < 1000 ? $"0.{attempDelayMs / 100}s" : $"{attempDelayMs / 1000}s")}" : string.Empty;
+            if (exception != null)
+            {
+                var retryDelay = TimeSpan.FromMilliseconds(isDelayNeeded ? attemptDelayMs : 0);
+                var retryingArgs = new RetryingTunnelConnectionEventArgs(exception, retryDelay);
+                this.retryHandler(retryingArgs);
+                if (!retryingArgs.Retry)
+                {
+                    throw exception;
+                }
+                else if (retryingArgs.Delay >= TimeSpan.Zero)
+                {
+                    attemptDelayMs = (int)retryingArgs.Delay.TotalMilliseconds;
+                    isDelayNeeded = attemptDelayMs > 0;
+                }
+            }
+
+            var retryTiming = isDelayNeeded ? $" in {(attemptDelayMs < 1000 ? $"0.{attemptDelayMs / 100}s" : $"{attemptDelayMs / 1000}s")}" : string.Empty;
             Trace.Verbose($"Error connecting to tunnel SSH session, retrying{retryTiming}{(errorDescription != null ? $": {errorDescription}" : string.Empty)}");
 
             if (isDelayNeeded)
             {
-                await Task.Delay(attempDelayMs, cancellation);
+                await Task.Delay(attemptDelayMs, cancellation);
                 if (attempt < ReconnectAttemptsDoublingDelay)
                 {
-                    attempDelayMs <<= 1;
+                    attemptDelayMs <<= 1;
                 }
             }
 
             async Task RefreshTunnelAccessTokenAsync(Exception exception)
             {
-                var statusCode = exception.Data.Contains("HttpStatusCode") ? $" ({exception.Data["HttpStatusCode"]})" : string.Empty;
+                var statusCode = TunnelConnectionException.GetHttpStatusCode(exception);
+                var statusCodeText = statusCode != default ? $" ({(int)statusCode})" : string.Empty;
                 if (!isTunnelAccessTokenRefreshed)
                 {
                     try

@@ -127,7 +127,7 @@ namespace Microsoft.VsSaaS.TunnelService
 
             this.relayUri = new Uri(endpoint.HostRelayUri, UriKind.Absolute);
 
-            return new RelayTunnelConnector(this);
+            return new RelayTunnelConnector(this, OnRetrying);
         }
 
         /// <summary>
@@ -420,7 +420,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 if (e.Request is ChannelOpenMessage channelOpenMessage)
                 {
                     // This allows the Go SDK to open an unused terminal channel
-                    if (channelOpenMessage.ChannelType == "session")
+                    if (channelOpenMessage.ChannelType == SshChannel.SessionChannelType)
                     {
                         return;
                     }

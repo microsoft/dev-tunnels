@@ -138,6 +138,14 @@ public abstract class TunnelBase : IAsyncDisposable
     public event EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken;
 
     /// <summary>
+    /// Event raised when a tunnel connection attempt failed and is about to be retried.
+    /// </summary>
+    /// <remarks>
+    /// An event handler can cancel the retry by setting <see cref="RetryingTunnelConnectionEventArgs.Retry"/> to false.
+    /// </remarks>
+    public event EventHandler<RetryingTunnelConnectionEventArgs>? RetryingTunnelConnection;
+
+    /// <summary>
     /// Connection status changed event.
     /// </summary>
     public event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
@@ -346,5 +354,13 @@ public abstract class TunnelBase : IAsyncDisposable
         {
             this.reconnectTask = null;
         }
+    }
+
+    /// <summary>
+    /// Raise an event that allows event-handlers to be aware of retry and potentially cancel it.
+    /// </summary>
+    internal void OnRetrying(RetryingTunnelConnectionEventArgs e)
+    {
+        RetryingTunnelConnection?.Invoke(this, e);
     }
 }

@@ -92,7 +92,7 @@ namespace Microsoft.VsSaaS.TunnelService
             Tunnel.AccessTokens?.TryGetValue(TunnelAccessScope, out this.accessToken);
             this.relayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
 
-            ITunnelConnector result = new RelayTunnelConnector(this);
+            ITunnelConnector result = new RelayTunnelConnector(this, OnRetrying);
             return Task.FromResult(result);
         }
 
@@ -107,7 +107,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 {
                     this.relayUri = new Uri(clientRelayUri, UriKind.Absolute);
                     this.accessToken = accessToken;
-                    this.connector = new RelayTunnelConnector(this);
+                    this.connector = new RelayTunnelConnector(this, OnRetrying);
                     return this.connector.ConnectSessionAsync(isReconnect: false, cancellation);
                 },
                 cancellation);
