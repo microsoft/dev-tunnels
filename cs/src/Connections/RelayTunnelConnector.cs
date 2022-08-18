@@ -23,15 +23,11 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
     private const int ReconnectInitialDelayMs = 100;
 
     private readonly IRelayClient relayClient;
-    private readonly Action<RetryingTunnelConnectionEventArgs> retryHandler;
 
-    public RelayTunnelConnector(
-        IRelayClient relayClient,
-        Action<RetryingTunnelConnectionEventArgs> retryHandler)
+    public RelayTunnelConnector(IRelayClient relayClient)
     {
         this.relayClient = Requires.NotNull(relayClient, nameof(relayClient));
         Requires.NotNull(relayClient.Trace, nameof(IRelayClient.Trace));
-        this.retryHandler = Requires.NotNull(retryHandler, nameof(retryHandler));
     }
 
     private TraceSource Trace => this.relayClient.Trace;
@@ -173,7 +169,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
             {
                 var retryDelay = TimeSpan.FromMilliseconds(isDelayNeeded ? attemptDelayMs : 0);
                 var retryingArgs = new RetryingTunnelConnectionEventArgs(exception, retryDelay);
-                this.retryHandler(retryingArgs);
+                this.relayClient.OnRetrying(retryingArgs);
                 if (!retryingArgs.Retry)
                 {
                     throw exception;

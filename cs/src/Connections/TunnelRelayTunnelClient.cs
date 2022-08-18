@@ -92,7 +92,7 @@ namespace Microsoft.VsSaaS.TunnelService
             Tunnel.AccessTokens?.TryGetValue(TunnelAccessScope, out this.accessToken);
             this.relayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
 
-            ITunnelConnector result = new RelayTunnelConnector(this, OnRetrying);
+            ITunnelConnector result = new RelayTunnelConnector(this);
             return Task.FromResult(result);
         }
 
@@ -107,7 +107,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 {
                     this.relayUri = new Uri(clientRelayUri, UriKind.Absolute);
                     this.accessToken = accessToken;
-                    this.connector = new RelayTunnelConnector(this, OnRetrying);
+                    this.connector = new RelayTunnelConnector(this);
                     return this.connector.ConnectSessionAsync(isReconnect: false, cancellation);
                 },
                 cancellation);
@@ -165,6 +165,9 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <inheritdoc />
         Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>
             RefreshTunnelAccessTokenAsync(cancellation);
+
+        /// <inheritdoc />
+        void IRelayClient.OnRetrying(RetryingTunnelConnectionEventArgs e) => OnRetrying(e);
 
         #endregion IRelayClient
     }

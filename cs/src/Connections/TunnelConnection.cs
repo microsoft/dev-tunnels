@@ -357,7 +357,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     }
 
     /// <summary>
-    /// Raise an event that allows event-handlers to be aware of retry and potentially cancel it.
+    /// Notifies about a connection retry, giving the application a chance to delay or cancel it.
     /// </summary>
     internal void OnRetrying(RetryingTunnelConnectionEventArgs e)
     {

@@ -127,7 +127,7 @@ namespace Microsoft.VsSaaS.TunnelService
 
             this.relayUri = new Uri(endpoint.HostRelayUri, UriKind.Absolute);
 
-            return new RelayTunnelConnector(this, OnRetrying);
+            return new RelayTunnelConnector(this);
         }
 
         /// <summary>
@@ -184,6 +184,9 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <inheritdoc />
         Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>
             RefreshTunnelAccessTokenAsync(cancellation);
+
+        /// <inheritdoc />
+        void IRelayClient.OnRetrying(RetryingTunnelConnectionEventArgs e) => OnRetrying(e);
 
         #endregion IRelayClient
 
