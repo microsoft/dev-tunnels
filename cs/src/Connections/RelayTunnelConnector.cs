@@ -19,8 +19,8 @@ namespace Microsoft.VsSaaS.TunnelService;
 /// </summary>
 internal sealed class RelayTunnelConnector : ITunnelConnector
 {
-    private const int ReconnectAttemptsDoublingDelay = 7; // After the 6th attemt, each next attempt will happen after a delay of 2^7 * 100ms = 12.8s
-    private const int ReconnectInitialDelayMs = 100;
+    private const int RetryMaxDelayMs = 12_800; // After the 6th attempt the delay will reach 2^7 * 100ms = 12.8s and stop doubling
+    private const int RetryInitialDelayMs = 100;
 
     private readonly IRelayClient relayClient;
 
@@ -38,7 +38,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
         CancellationToken cancellation)
     {
         int attempt = 0;
-        int attemptDelayMs = ReconnectInitialDelayMs;
+        int attemptDelayMs = RetryInitialDelayMs;
         bool isTunnelAccessTokenRefreshed = false;
 
         bool isDelayNeeded;
@@ -174,10 +174,14 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 {
                     throw exception;
                 }
-                else if (retryingArgs.Delay >= TimeSpan.Zero)
+                else if ((int)retryingArgs.Delay.TotalMilliseconds > 0)
                 {
                     attemptDelayMs = (int)retryingArgs.Delay.TotalMilliseconds;
-                    isDelayNeeded = attemptDelayMs > 0;
+                    isDelayNeeded = true;
+                }
+                else
+                {
+                    isDelayNeeded = false;
                 }
             }
 
@@ -187,7 +191,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
             if (isDelayNeeded)
             {
                 await Task.Delay(attemptDelayMs, cancellation);
-                if (attempt < ReconnectAttemptsDoublingDelay)
+                if (attemptDelayMs < RetryMaxDelayMs)
                 {
                     attemptDelayMs <<= 1;
                 }
