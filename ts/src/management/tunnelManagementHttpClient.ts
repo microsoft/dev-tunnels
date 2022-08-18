@@ -22,6 +22,8 @@ import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 
+type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
+
 const tunnelsApiPath = '/api/v1/tunnels';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
@@ -164,19 +166,26 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): Promise<Tunnel[]> {
         const queryParams = [clusterId ? null : 'global=true', domain ? `domain=${domain}` : null];
         const query = queryParams.filter((p) => !!p).join('&');
-        const uri = this.buildUri(clusterId, tunnelsApiPath, options, query);
-
-        const config = await this.getAxiosRequestConfig(undefined, options, readAccessTokenScopes);
-        const results = await this.request<Tunnel[]>('GET', uri, undefined, config);
+        const results = (await this.sendRequest<Tunnel[]>(
+            'GET',
+            clusterId,
+            tunnelsApiPath,
+            query,
+            options,
+        ))!;
         results.forEach(parseTunnelDates);
         return results;
     }
 
     public async getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null> {
-        const uri = this.buildUriForTunnel(tunnel, options);
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, readAccessTokenScopes);
-        const result = await this.request<Tunnel | null>('GET', uri, undefined, config);
+        const result = await this.sendTunnelRequest<Tunnel | null>(
+            'GET',
+            tunnel,
+            readAccessTokenScopes,
+            undefined,
+            undefined,
+            options,
+        );
         parseTunnelDates(result);
         return result;
     }
@@ -187,25 +196,29 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             throw new Error('An ID may not be specified when creating a tunnel.');
         }
 
-        const uri = this.buildUri(tunnel.clusterId, tunnelsApiPath, options);
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, manageAccessTokenScope);
         tunnel = this.convertTunnelForRequest(tunnel);
-        const result = await this.request<Tunnel>('POST', uri, tunnel, config);
+        const result = (await this.sendRequest<Tunnel>(
+            'POST',
+            tunnel.clusterId,
+            tunnelsApiPath,
+            undefined,
+            options,
+            tunnel,
+        ))!;
         parseTunnelDates(result);
         return result;
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
-        const uri = this.buildUriForTunnel(tunnel, options);
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, manageAccessTokenScope);
-        const result = await this.request<Tunnel>(
+        const result = (await this.sendTunnelRequest<Tunnel>(
             'PUT',
-            uri,
+            tunnel,
+            manageAccessTokenScope,
+            undefined,
+            undefined,
+            options,
             this.convertTunnelForRequest(tunnel),
-            config,
-        );
+        ))!;
 
         if (!options?.tokenScopes) {
             // If no new tokens were requested in the update, preserve any existing
@@ -218,10 +231,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     public async deleteTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<boolean> {
-        const uri = this.buildUriForTunnel(tunnel, options);
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, manageAccessTokenScope);
-        return await this.request<boolean>('DELETE', uri, undefined, config);
+        return await this.sendTunnelRequest<boolean>(
+            'DELETE',
+            tunnel,
+            manageAccessTokenScope,
+            undefined,
+            undefined,
+            options,
+            undefined,
+            true,
+        );
     }
 
     public async updateTunnelEndpoint(
@@ -229,14 +248,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         endpoint: TunnelEndpoint,
         options?: TunnelRequestOptions,
     ): Promise<TunnelEndpoint> {
-        const uri = this.buildUriForTunnel(
+        const path = `${endpointsApiSubPath}/${endpoint.hostId}/${endpoint.connectionMode}`;
+        const result = (await this.sendTunnelRequest<TunnelEndpoint>(
+            'PUT',
             tunnel,
+            hostAccessTokenScope,
+            path,
+            undefined,
             options,
-            `${endpointsApiSubPath}/${endpoint.hostId}/${endpoint.connectionMode}`,
-        );
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, hostAccessTokenScope);
-        const result = await this.request<TunnelEndpoint>('PUT', uri, endpoint, config);
+            endpoint,
+        ))!;
 
         if (tunnel.endpoints) {
             // Also update the endpoint in the local tunnel object.
@@ -258,15 +279,20 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         connectionMode?: TunnelConnectionMode,
         options?: TunnelRequestOptions,
     ): Promise<boolean> {
-        let path =
+        const path =
             connectionMode == null
                 ? `${endpointsApiSubPath}/${hostId}`
                 : `${endpointsApiSubPath}/${hostId}/${connectionMode}`;
-
-        const uri = this.buildUriForTunnel(tunnel, options, path);
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, hostAccessTokenScope);
-        const result = await this.request<boolean>('DELETE', uri, undefined, config);
+        const result = await this.sendTunnelRequest<boolean>(
+            'DELETE',
+            tunnel,
+            hostAccessTokenScope,
+            path,
+            undefined,
+            options,
+            undefined,
+            true,
+        );
 
         if (result && tunnel.endpoints) {
             // Also delete the endpoint in the local tunnel object.
@@ -282,10 +308,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort[]> {
-        const uri = this.buildUriForTunnel(tunnel, options, portsApiSubPath);
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, readAccessTokenScopes);
-        const results = await this.request<TunnelPort[]>('GET', uri, undefined, config);
+        const results = (await this.sendTunnelRequest<TunnelPort[]>(
+            'GET',
+            tunnel,
+            readAccessTokenScopes,
+            portsApiSubPath,
+            undefined,
+            options,
+        ))!;
         results.forEach(parseTunnelPortDates);
         return results;
     }
@@ -294,11 +324,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         portNumber: number,
         options?: TunnelRequestOptions,
-    ): Promise<TunnelPort> {
-        const uri = this.buildUriForTunnel(tunnel, options, `${portsApiSubPath}/${portNumber}`);
-
-        const config = await this.getAxiosRequestConfig(tunnel, options, readAccessTokenScopes);
-        const result = await this.request<TunnelPort>('GET', uri, undefined, config);
+    ): Promise<TunnelPort | null> {
+        const path = `${portsApiSubPath}/${portNumber}`;
+        const result = await this.sendTunnelRequest<TunnelPort>(
+            'GET',
+            tunnel,
+            readAccessTokenScopes,
+            path,
+            undefined,
+            options,
+        );
         parseTunnelPortDates(result);
         return result;
     }
@@ -308,15 +343,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort> {
-        const uri = this.buildUriForTunnel(tunnel, options, portsApiSubPath);
-
-        const config = await this.getAxiosRequestConfig(
-            tunnel,
-            options,
-            hostOrManageAccessTokenScopes,
-        );
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
-        const result = await this.request<TunnelPort>('POST', uri, tunnelPort, config);
+        const result = (await this.sendTunnelRequest<TunnelPort>(
+            'POST',
+            tunnel,
+            hostOrManageAccessTokenScopes,
+            portsApiSubPath,
+            undefined,
+            options,
+            tunnelPort,
+        ))!;
 
         if (tunnel.ports) {
             // Also add the port to the local tunnel object.
@@ -338,21 +374,19 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (tunnelPort.clusterId && tunnel.clusterId && tunnelPort.clusterId !== tunnel.clusterId) {
             throw new Error('Tunnel port cluster ID is not consistent.');
         }
-        let portNumber = tunnelPort.portNumber;
 
-        const uri = this.buildUriForTunnel(tunnel, options, `${portsApiSubPath}/${portNumber}`);
-
-        const config = await this.getAxiosRequestConfig(
-            tunnel,
-            options,
-            hostOrManageAccessTokenScopes,
-        );
-        const result = await this.request<TunnelPort>(
+        const portNumber = tunnelPort.portNumber;
+        const path = `${portsApiSubPath}/${portNumber}`;
+        tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
+        const result = (await this.sendTunnelRequest<TunnelPort>(
             'PUT',
-            uri,
-            this.convertTunnelPortForRequest(tunnel, tunnelPort),
-            config,
-        );
+            tunnel,
+            hostOrManageAccessTokenScopes,
+            path,
+            undefined,
+            options,
+            tunnelPort,
+        ))!;
 
         if (tunnel.ports) {
             // Also update the port in the local tunnel object.
@@ -377,13 +411,17 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         portNumber: number,
         options?: TunnelRequestOptions,
     ): Promise<boolean> {
-        const uri = this.buildUriForTunnel(tunnel, options, `${portsApiSubPath}/${portNumber}`);
-        const config = await this.getAxiosRequestConfig(
+        const path = `${portsApiSubPath}/${portNumber}`;
+        const result = await this.sendTunnelRequest<boolean>(
+            'DELETE',
             tunnel,
-            options,
             hostOrManageAccessTokenScopes,
+            path,
+            undefined,
+            options,
+            undefined,
+            true,
         );
-        const result = await this.request<boolean>('DELETE', uri, undefined, config);
 
         if (result && tunnel.ports) {
             // Also delete the port in the local tunnel object.
@@ -392,6 +430,66 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 .sort(comparePorts);
         }
 
+        return result;
+    }
+
+    /**
+     * Sends an HTTP request to the tunnel management API, targeting a specific tunnel.
+     * This protected method enables subclasses to support additional tunnel management APIs.
+     * @param method HTTP request method.
+     * @param tunnel Tunnel that the request is targeting.
+     * @param accessTokenScopes Required array of access scopes for tokens in `tunnel.accessTokens`
+     * that could be used to authorize the request.
+     * @param path Optional request sub-path relative to the tunnel.
+     * @param query Optional query string to append to the request.
+     * @param options Request options.
+     * @param body Optional request body object.
+     * @param allowNotFound If true, a 404 response is returned as a null or false result
+     * instead of an error.
+     * @returns Result of the request.
+     */
+    protected async sendTunnelRequest<TResult>(
+        method: Method,
+        tunnel: Tunnel,
+        accessTokenScopes: string[],
+        path?: string,
+        query?: string,
+        options?: TunnelRequestOptions,
+        body?: object,
+        allowNotFound?: boolean,
+    ): Promise<NullableIfNotBoolean<TResult>> {
+        const uri = this.buildUriForTunnel(tunnel, path, query, options);
+        const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
+        const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
+        return result;
+    }
+
+    /**
+     * Sends an HTTP request to the tunnel management API.
+     * This protected method enables subclasses to support additional tunnel management APIs.
+     * @param method HTTP request method.
+     * @param clusterId Optional tunnel service cluster ID to direct the request to. If unspecified,
+     * the request will use the global traffic-manager to find the nearest cluster.
+     * @param path Required request path.
+     * @param query Optional query string to append to the request.
+     * @param options Request options.
+     * @param body Optional request body object.
+     * @param allowNotFound If true, a 404 response is returned as a null or false result
+     * instead of an error.
+     * @returns Result of the request.
+     */
+    protected async sendRequest<TResult>(
+        method: Method,
+        clusterId: string | undefined,
+        path: string,
+        query?: string,
+        options?: TunnelRequestOptions,
+        body?: object,
+        allowNotFound?: boolean,
+    ): Promise<NullableIfNotBoolean<TResult>> {
+        const uri = this.buildUri(clusterId, path, query, options);
+        const config = await this.getAxiosRequestConfig(undefined, options);
+        const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
     }
 
@@ -430,10 +528,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     // Helper functions
     private buildUri(
-        clusterId?: string,
-        path?: string,
-        options?: TunnelRequestOptions,
+        clusterId: string | undefined,
+        path: string,
         query?: string,
+        options?: TunnelRequestOptions,
     ) {
         let baseAddress = this.baseAddress;
 
@@ -472,9 +570,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     private buildUriForTunnel(
         tunnel: Tunnel,
-        options?: TunnelRequestOptions,
         path?: string,
         query?: string,
+        options?: TunnelRequestOptions,
     ) {
         let tunnelPath = '';
         if (tunnel.clusterId && tunnel.tunnelId) {
@@ -488,7 +586,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnelPath = `${tunnelsApiPath}/${tunnel.name}`;
         }
 
-        return this.buildUri(tunnel.clusterId, tunnelPath + (path ? path : ''), options, query);
+        return this.buildUri(tunnel.clusterId, tunnelPath + (path ? path : ''), query, options);
     }
 
     private async getAxiosRequestConfig(
@@ -641,12 +739,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     /**
      * Makes an HTTP request using Axios, while tracing request and response details.
      */
-    private async request<TResponse>(
+    private async request<TResult>(
         method: Method,
         uri: string,
         data: any,
         config: AxiosRequestConfig,
-    ): Promise<TResponse> {
+        allowNotFound?: boolean,
+    ): Promise<NullableIfNotBoolean<TResult>> {
         this.trace(`${method} ${uri}`);
         this.traceHeaders(config.headers);
         this.traceContent(data);
@@ -662,13 +761,22 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             config.method = method;
             config.data = data;
 
-            let response = await axios.request<TResponse>(config);
+            let response = await axios.request<TResult>(config);
             traceResponse(response);
-            return response.data;
+
+            // This assumes that TResult is always boolean for DELETE requests.
+            return <NullableIfNotBoolean<TResult>>(method === 'DELETE' ? true : response.data);
         } catch (e) {
             if (!(e instanceof Error) || !(e as AxiosError).isAxiosError) throw e;
             const requestError = e as AxiosError;
-            if (requestError.response) traceResponse(requestError.response);
+            if (requestError.response) {
+                traceResponse(requestError.response);
+
+                if (allowNotFound && requestError.response.status === 404) {
+                    return <NullableIfNotBoolean<TResult>>(method === 'DELETE' ? false : null);
+                }
+            }
+
             requestError.message = this.getResponseErrorMessage(requestError);
 
             // Axios errors have too much redundant detail! Delete some of it.
