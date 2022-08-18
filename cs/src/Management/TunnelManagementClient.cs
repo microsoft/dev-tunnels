@@ -215,41 +215,206 @@ namespace Microsoft.VsSaaS.TunnelService
         private ProductInfoHeaderValue[] UserAgents { get; }
 
         /// <summary>
-        /// Sends an HTTP request for a tunnel, with authorization header from either tunnel
-        /// properties or options.
+        /// Sends an HTTP request to the tunnel management API, targeting a specific tunnel.
         /// </summary>
-        private Task<TResult?> SendTunnelRequestAsync<TResult>(
-            Tunnel? tunnel,
-            TunnelRequestOptions? options,
+        /// <param name="method">HTTP request method.</param>
+        /// <param name="tunnel">Tunnel that the request is targeting.</param>
+        /// <param name="accessTokenScopes">Required list of access scopes for tokens in
+        /// <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that could be used to
+        /// authorize the request.</param>
+        /// <param name="path">Optional request sub-path relative to the tunnel.</param>
+        /// <param name="query">Optional query string to append to the request.</param>
+        /// <param name="options">Request options.</param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <typeparam name="TResult">The expected result type.</typeparam>
+        /// <returns>Result of the request.</returns>
+        /// <exception cref="ArgumentException">The request parameters were invalid.</exception>
+        /// <exception cref="UnauthorizedAccessException">The request was unauthorized or forbidden.
+        /// The WWW-Authenticate response header may be captured in the exception data.</exception>
+        /// <exception cref="InvalidOperationException">The request would have caused a conflict
+        /// or exceeded a limit.</exception>
+        /// <exception cref="HttpRequestException">The request failed for some other
+        /// reason.</exception>
+        /// <remarks>
+        /// This protected method enables subclasses to support additional tunnel management APIs.
+        /// Authentication will use one of the following, if available, in order of preference:
+        ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
+        ///   - token provided by the user token callback
+        ///   - token in <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that matches
+        ///     one of the scopes in <paramref name="accessTokenScopes"/>
+        /// </remarks>
+        protected Task<TResult?> SendTunnelRequestAsync<TResult>(
             HttpMethod method,
-            Uri uri,
+            Tunnel tunnel,
             string[] accessTokenScopes,
-            bool allowNotFound,
+            string? path,
+            string? query,
+            TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
             return SendTunnelRequestAsync<object, TResult>(
-                tunnel, options, method, uri, null, accessTokenScopes, allowNotFound, cancellation);
+                method,
+                tunnel,
+                accessTokenScopes,
+                path,
+                query,
+                options,
+                body: null,
+                cancellation);
         }
 
         /// <summary>
-        /// Sends an HTTP request for a tunnel, with authorization header from either tunnel
-        /// properties or options, along with body content.
+        /// Sends an HTTP request with body content to the tunnel management API, targeting a
+        /// specific tunnel.
         /// </summary>
-        private async Task<TResult?> SendTunnelRequestAsync<TRequest, TResult>(
-            Tunnel? tunnel,
+        /// <param name="method">HTTP request method.</param>
+        /// <param name="tunnel">Tunnel that the request is targeting.</param>
+        /// <param name="accessTokenScopes">Required list of access scopes for tokens in
+        /// <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that could be used to
+        /// authorize the request.</param>
+        /// <param name="path">Optional request sub-path relative to the tunnel.</param>
+        /// <param name="query">Optional query string to append to the request.</param>
+        /// <param name="options">Request options.</param>
+        /// <param name="body">Request body object.</param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <typeparam name="TRequest">The request body type.</typeparam>
+        /// <typeparam name="TResult">The expected result type.</typeparam>
+        /// <returns>Result of the request.</returns>
+        /// <exception cref="ArgumentException">The request parameters were invalid.</exception>
+        /// <exception cref="UnauthorizedAccessException">The request was unauthorized or forbidden.
+        /// The WWW-Authenticate response header may be captured in the exception data.</exception>
+        /// <exception cref="InvalidOperationException">The request would have caused a conflict
+        /// or exceeded a limit.</exception>
+        /// <exception cref="HttpRequestException">The request failed for some other
+        /// reason.</exception>
+        /// <remarks>
+        /// This protected method enables subclasses to support additional tunnel management APIs.
+        /// Authentication will use one of the following, if available, in order of preference:
+        ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
+        ///   - token provided by the user token callback
+        ///   - token in <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that matches
+        ///     one of the scopes in <paramref name="accessTokenScopes"/>
+        /// </remarks>
+        protected async Task<TResult?> SendTunnelRequestAsync<TRequest, TResult>(
+            HttpMethod method,
+            Tunnel tunnel,
+            string[] accessTokenScopes,
+            string? path,
+            string? query,
             TunnelRequestOptions? options,
+            TRequest? body,
+            CancellationToken cancellation)
+            where TRequest : class
+        {
+            var uri = BuildTunnelUri(tunnel, path, query, options);
+            var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
+            return await SendRequestAsync<TRequest, TResult>(
+                method, uri, options, authHeader, body, cancellation);
+        }
+
+        /// <summary>
+        /// Sends an HTTP request to the tunnel management API.
+        /// </summary>
+        /// <param name="method">HTTP request method.</param>
+        /// <param name="clusterId">Optional tunnel service cluster ID to direct the request to.
+        /// If unspecified, the request will use the global traffic-manager to find the nearest
+        /// cluster.</param>
+        /// <param name="path">Required request path.</param>
+        /// <param name="query">Optional query string to append to the request.</param>
+        /// <param name="options">Request options.</param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <typeparam name="TResult">The expected result type.</typeparam>
+        /// <returns>Result of the request.</returns>
+        /// <exception cref="ArgumentException">The request parameters were invalid.</exception>
+        /// <exception cref="UnauthorizedAccessException">The request was unauthorized or forbidden.
+        /// The WWW-Authenticate response header may be captured in the exception data.</exception>
+        /// <exception cref="InvalidOperationException">The request would have caused a conflict
+        /// or exceeded a limit.</exception>
+        /// <exception cref="HttpRequestException">The request failed for some other
+        /// reason.</exception>
+        /// <remarks>
+        /// This protected method enables subclasses to support additional tunnel management APIs.
+        /// Authentication will use one of the following, if available, in order of preference:
+        ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
+        ///   - token provided by the user token callback
+        /// </remarks>
+        protected Task<TResult?> SendRequestAsync<TResult>(
+            HttpMethod method,
+            string? clusterId,
+            string path,
+            string? query,
+            TunnelRequestOptions? options,
+            CancellationToken cancellation)
+        {
+            return SendRequestAsync<object, TResult>(
+                method,
+                clusterId,
+                path, query,
+                options,
+                body: null,
+                cancellation);
+        }
+
+        /// <summary>
+        /// Sends an HTTP request with body content to the tunnel management API.
+        /// </summary>
+        /// <param name="method">HTTP request method.</param>
+        /// <param name="clusterId">Optional tunnel service cluster ID to direct the request to.
+        /// If unspecified, the request will use the global traffic-manager to find the nearest
+        /// cluster.</param>
+        /// <param name="path">Required request path.</param>
+        /// <param name="query">Optional query string to append to the request.</param>
+        /// <param name="options">Request options.</param>
+        /// <param name="body">Request body object.</param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <typeparam name="TRequest">The request body type.</typeparam>
+        /// <typeparam name="TResult">The expected result type.</typeparam>
+        /// <returns>Result of the request.</returns>
+        /// <exception cref="ArgumentException">The request parameters were invalid.</exception>
+        /// <exception cref="UnauthorizedAccessException">The request was unauthorized or forbidden.
+        /// The WWW-Authenticate response header may be captured in the exception data.</exception>
+        /// <exception cref="InvalidOperationException">The request would have caused a conflict
+        /// or exceeded a limit.</exception>
+        /// <exception cref="HttpRequestException">The request failed for some other
+        /// reason.</exception>
+        /// <remarks>
+        /// This protected method enables subclasses to support additional tunnel management APIs.
+        /// Authentication will use one of the following, if available, in order of preference:
+        ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
+        ///   - token provided by the user token callback
+        /// </remarks>
+        protected async Task<TResult?> SendRequestAsync<TRequest, TResult>(
+            HttpMethod method,
+            string? clusterId,
+            string path,
+            string? query,
+            TunnelRequestOptions? options,
+            TRequest? body,
+            CancellationToken cancellation)
+            where TRequest : class
+        {
+            var uri = BuildUri(clusterId, path, query, options);
+            var authHeader = await GetAuthenticationHeaderAsync(
+                tunnel: null, accessTokenScopes: null, options);
+            return await SendRequestAsync<TRequest, TResult>(
+                method, uri, options, authHeader, body, cancellation);
+        }
+
+        /// <summary>
+        /// Sends an HTTP request with body content to the tunnel management API, with an
+        /// explicit authentication header value.
+        /// </summary>
+        private async Task<TResult?> SendRequestAsync<TRequest, TResult>(
             HttpMethod method,
             Uri uri,
-            TRequest? requestObject,
-            string[] accessTokenScopes,
-            bool allowNotFound,
+            TunnelRequestOptions? options,
+            AuthenticationHeaderValue? authHeader,
+            TRequest? body,
             CancellationToken cancellation)
             where TRequest : class
         {
             var request = new HttpRequestMessage(method, uri);
-
-            request.Headers.Authorization = await GetAccessTokenAsync(
-                tunnel, options, accessTokenScopes);
+            request.Headers.Authorization = authHeader;
 
             var emptyHeadersList = Enumerable.Empty<KeyValuePair<string, string>>();
             var additionalHeaders = (AdditionalRequestHeaders ?? emptyHeadersList).Concat(
@@ -266,9 +431,9 @@ namespace Microsoft.VsSaaS.TunnelService
             }
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
-            if (requestObject != null)
+            if (body != null)
             {
-                request.Content = JsonContent.Create(requestObject, null, JsonOptions);
+                request.Content = JsonContent.Create(body, null, JsonOptions);
             }
 
             if (options?.FollowRedirects == false)
@@ -278,8 +443,8 @@ namespace Microsoft.VsSaaS.TunnelService
 
             var response = await this.httpClient.SendAsync(request, cancellation);
             var result = await ConvertResponseAsync<TResult>(
+                method,
                 response,
-                allowNotFound,
                 cancellation);
             return result;
         }
@@ -287,22 +452,32 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <summary>
         /// Converts a tunnel service HTTP response to a result object (or exception).
         /// </summary>
-        /// <typeparam name="T">Type of result expected.</typeparam>
+        /// <typeparam name="T">Type of result expected, or bool to just check for either success or
+        /// not-found.</typeparam>
+        /// <param name="method">Request method.</param>
         /// <param name="response">Response from a tunnel service request.</param>
-        /// <param name="allowNotFound">True if 404 Not Found is a valid response.</param>
         /// <param name="cancellation">Cancellation token.</param>
-        /// <returns>Result object of the requested type, or null if the response is Not Found
-        /// and <paramref name="allowNotFound"/> is true.</returns>
+        /// <returns>Result object of the requested type, or false if the response was 404 and
+        /// the result type is boolean, or null if a GET request for a non-array result object type
+        /// returned 404 Not Found.</returns>
         /// <exception cref="ArgumentException">The service returned a
         /// 400 Bad Request response.</exception>
         /// <exception cref="UnauthorizedAccessException">The service returned a 401 Unauthorized
         /// or 403 Forbidden response.</exception>
         private static async Task<T?> ConvertResponseAsync<T>(
+            HttpMethod method,
             HttpResponseMessage response,
-            bool allowNotFound,
             CancellationToken cancellation)
         {
             Requires.NotNull(response, nameof(response));
+
+            // Requests that expect a boolean result just check for success or not-found result.
+            // GET requests that expect a single object result return null for not found result.
+            // GET requests that expect an array result should throw an error for not-found result
+            // because empty array was expected instead.
+            // PUT/POST/PATCH requests should also throw an error for not-found.
+            bool allowNotFound = typeof(T) == typeof(bool) ||
+                ((method == HttpMethod.Get || method == HttpMethod.Head) && !typeof(T).IsArray);
 
             string? errorMessage = null;
             Exception? innerException = null;
@@ -419,7 +594,7 @@ namespace Microsoft.VsSaaS.TunnelService
                     case HttpStatusCode.RedirectKeepVerb:
                         // Add the redirect location to the exception data.
                         // Normally the HTTP client should automatically follow redirects,
-                        // but this allows tests to  validate the service's redirection behavior
+                        // but this allows tests to validate the service's redirection behavior
                         // when client auto redirection is disabled.
                         hrex.Data["Location"] = response.Headers.Location;
                         throw;
@@ -453,8 +628,8 @@ namespace Microsoft.VsSaaS.TunnelService
         private Uri BuildUri(
             string? clusterId,
             string path,
-            TunnelRequestOptions? options,
-            string? query = null)
+            string? query,
+            TunnelRequestOptions? options)
         {
             Requires.NotNullOrEmpty(path, nameof(path));
 
@@ -499,11 +674,11 @@ namespace Microsoft.VsSaaS.TunnelService
             return builder.Uri;
         }
 
-        private Uri BuildUri(
+        private Uri BuildTunnelUri(
             Tunnel tunnel,
-            TunnelRequestOptions? options,
-            string? path = null,
-            string? query = null)
+            string? path,
+            string? query,
+            TunnelRequestOptions? options)
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
@@ -533,45 +708,52 @@ namespace Microsoft.VsSaaS.TunnelService
             return BuildUri(
                 tunnel.ClusterId,
                 tunnelPath + (!string.IsNullOrEmpty(path) ? path : string.Empty),
-                options,
-                query);
+                query,
+                options);
         }
 
-        private async Task<AuthenticationHeaderValue?> GetAccessTokenAsync(
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tunnel"></param>
+        /// <param name="accessTokenScopes"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        protected virtual async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
             Tunnel? tunnel,
-            TunnelRequestOptions? options,
-            string[] scopes)
+            string[]? accessTokenScopes,
+            TunnelRequestOptions? options)
         {
-            AuthenticationHeaderValue? token = null;
+            AuthenticationHeaderValue? authHeader = null;
 
             if (!string.IsNullOrEmpty(options?.AccessToken))
             {
                 TunnelAccessTokenProperties.ValidateTokenExpiration(options.AccessToken);
-                token = new AuthenticationHeaderValue(
+                authHeader = new AuthenticationHeaderValue(
                     TunnelAuthenticationScheme, options.AccessToken);
             }
 
-            if (token == null)
+            if (authHeader == null)
             {
-                token = await this.userTokenCallback();
+                authHeader = await this.userTokenCallback();
             }
 
-            if (token == null && tunnel?.AccessTokens != null)
+            if (authHeader == null && tunnel?.AccessTokens != null && accessTokenScopes != null)
             {
-                foreach (var scope in scopes)
+                foreach (var scope in accessTokenScopes)
                 {
                     if (tunnel.AccessTokens.TryGetValue(scope, out var accessToken) == true &&
                         !string.IsNullOrEmpty(accessToken))
                     {
                         TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
-                        token = new AuthenticationHeaderValue(
+                        authHeader = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);
                         break;
                     }
                 }
             }
 
-            return token;
+            return authHeader;
         }
 
         /// <inheritdoc />
@@ -587,15 +769,12 @@ namespace Microsoft.VsSaaS.TunnelService
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
-
-            var uri = BuildUri(clusterId, TunnelsApiPath, options, query);
-            var result = await this.SendTunnelRequestAsync<Tunnel[]>(
-                tunnel: null,
-                options,
+            var result = await this.SendRequestAsync<Tunnel[]>(
                 HttpMethod.Get,
-                uri,
-                ReadAccessTokenScopes,
-                allowNotFound: false,
+                clusterId,
+                TunnelsApiPath,
+                query,
+                options,
                 cancellation);
             return result!;
         }
@@ -618,15 +797,12 @@ namespace Microsoft.VsSaaS.TunnelService
                 $"allTags={requireAllTags}",
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
-
-            var uri = BuildUri(clusterId, TunnelsApiPath, options, query);
-            var result = await this.SendTunnelRequestAsync<Tunnel[]>(
-                tunnel: null,
-                options,
+            var result = await this.SendRequestAsync<Tunnel[]>(
                 HttpMethod.Get,
-                uri,
-                ReadAccessTokenScopes,
-                allowNotFound: false,
+                clusterId,
+                TunnelsApiPath,
+                query,
+                options,
                 cancellation);
             return result!;
         }
@@ -637,14 +813,13 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var uri = BuildUri(tunnel, options);
             var result = await this.SendTunnelRequestAsync<Tunnel>(
-                tunnel,
-                options,
                 HttpMethod.Get,
-                uri,
+                tunnel,
                 ReadAccessTokenScopes,
-                allowNotFound: true,
+                path: null,
+                query: null,
+                options,
                 cancellation);
             return result;
         }
@@ -664,15 +839,13 @@ namespace Microsoft.VsSaaS.TunnelService
                     "An ID may not be specified when creating a tunnel.", nameof(tunnelId));
             }
 
-            var uri = BuildUri(tunnel.ClusterId, TunnelsApiPath, options);
-            var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-                tunnel,
-                options,
+            var result = await this.SendRequestAsync<Tunnel, Tunnel>(
                 HttpMethod.Post,
-                uri,
+                tunnel.ClusterId,
+                TunnelsApiPath,
+                query: null,
+                options,
                 ConvertTunnelForRequest(tunnel),
-                ManageAccessTokenScope,
-                allowNotFound: false,
                 cancellation);
             return result!;
         }
@@ -683,16 +856,14 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var uri = BuildUri(tunnel, options);
-
             var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-                tunnel,
-                options,
                 HttpMethod.Put,
-                uri,
-                ConvertTunnelForRequest(tunnel),
+                tunnel,
                 ManageAccessTokenScope,
-                allowNotFound: false,
+                path: null,
+                query: null,
+                options,
+                ConvertTunnelForRequest(tunnel),
                 cancellation);
 
             // If no new tokens were requested in the update, preserve any existing
@@ -711,16 +882,15 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var uri = BuildUri(tunnel, options);
-            bool? result = await this.SendTunnelRequestAsync<bool>(
-                tunnel,
-                options,
+            var result = await this.SendTunnelRequestAsync<bool>(
                 HttpMethod.Delete,
-                uri,
+                tunnel,
                 ManageAccessTokenScope,
-                allowNotFound: true,
+                path: null,
+                query: null,
+                options,
                 cancellation);
-            return result ?? false;
+            return result;
         }
 
         /// <inheritdoc />
@@ -733,18 +903,15 @@ namespace Microsoft.VsSaaS.TunnelService
             Requires.NotNull(endpoint, nameof(endpoint));
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
 
-            var uri = BuildUri(
-                tunnel,
-                options,
-                $"{EndpointsApiSubPath}/{endpoint.HostId}/{endpoint.ConnectionMode}");
+            var path = $"{EndpointsApiSubPath}/{endpoint.HostId}/{endpoint.ConnectionMode}";
             var result = (await this.SendTunnelRequestAsync<TunnelEndpoint, TunnelEndpoint>(
-                tunnel,
-                options,
                 HttpMethod.Put,
-                uri,
-                endpoint,
+                tunnel,
                 HostAccessTokenScope,
-                allowNotFound: false,
+                path,
+                query: null,
+                options,
+                endpoint,
                 cancellation))!;
 
             if (tunnel.Endpoints != null)
@@ -772,14 +939,13 @@ namespace Microsoft.VsSaaS.TunnelService
 
             var path = connectionMode == null ? $"{EndpointsApiSubPath}/{hostId}" :
                     $"{EndpointsApiSubPath}/{hostId}/{connectionMode}";
-            var uri = BuildUri(tunnel, options, path);
             var result = await this.SendTunnelRequestAsync<bool>(
-                tunnel,
-                options,
                 HttpMethod.Delete,
-                uri,
+                tunnel,
                 HostAccessTokenScope,
-                allowNotFound: true,
+                path,
+                query: null,
+                options,
                 cancellation);
 
             if (result && tunnel.Endpoints != null)
@@ -799,14 +965,13 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var uri = BuildUri(tunnel, options, PortsApiSubPath);
             var result = await this.SendTunnelRequestAsync<TunnelPort[]>(
-                tunnel,
-                options,
                 HttpMethod.Get,
-                uri,
+                tunnel,
                 ReadAccessTokenScopes,
-                allowNotFound: false,
+                PortsApiSubPath,
+                query: null,
+                options,
                 cancellation);
             return result!;
         }
@@ -818,17 +983,14 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var uri = BuildUri(
-                tunnel,
-                options,
-                $"{PortsApiSubPath}/{portNumber}");
+            var path = $"{PortsApiSubPath}/{portNumber}";
             var result = await this.SendTunnelRequestAsync<TunnelPort>(
-                tunnel,
-                options,
                 HttpMethod.Get,
-                uri,
+                tunnel,
                 ReadAccessTokenScopes,
-                allowNotFound: true,
+                path,
+                query: null,
+                options,
                 cancellation);
             return result;
         }
@@ -842,15 +1004,14 @@ namespace Microsoft.VsSaaS.TunnelService
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
 
-            var uri = BuildUri(tunnel, options, PortsApiSubPath);
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
-                tunnel,
-                options,
                 HttpMethod.Post,
-                uri,
-                ConvertTunnelPortForRequest(tunnel, tunnelPort),
+                tunnel,
                 HostOrManageAccessTokenScopes,
-                allowNotFound: false,
+                PortsApiSubPath,
+                query: null,
+                options,
+                ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
 
             if (tunnel.Ports != null)
@@ -883,18 +1044,15 @@ namespace Microsoft.VsSaaS.TunnelService
             }
 
             var portNumber = tunnelPort.PortNumber;
-            var uri = BuildUri(
-                tunnel,
-                options,
-                $"{PortsApiSubPath}/{portNumber}");
+            var path = $"{PortsApiSubPath}/{portNumber}";
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
-                tunnel,
-                options,
                 HttpMethod.Put,
-                uri,
-                ConvertTunnelPortForRequest(tunnel, tunnelPort),
+                tunnel,
                 HostOrManageAccessTokenScopes,
-                allowNotFound: false,
+                path,
+                query: null,
+                options,
+                ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
 
             if (tunnel.Ports != null)
@@ -924,17 +1082,14 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var uri = BuildUri(
-                tunnel,
-                options,
-                $"{PortsApiSubPath}/{portNumber}");
+            var path = $"{PortsApiSubPath}/{portNumber}";
             var result = await this.SendTunnelRequestAsync<bool>(
-                tunnel,
-                options,
                 HttpMethod.Delete,
-                uri,
+                tunnel,
                 HostOrManageAccessTokenScopes,
-                allowNotFound: true,
+                path,
+                query: null,
+                options,
                 cancellation);
 
             if (result && tunnel.Ports != null)
@@ -1013,16 +1168,14 @@ namespace Microsoft.VsSaaS.TunnelService
                 return subjects;
             }
 
-            var uri = BuildUri(clusterId: null, SubjectsApiPath + "/format", options);
-            var formattedSubjects = await SendTunnelRequestAsync
+            var formattedSubjects = await SendRequestAsync
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(
-                tunnel: null,
-                options,
                 HttpMethod.Post,
-                uri,
+                clusterId: null,
+                SubjectsApiPath + "/format",
+                query: null,
+                options,
                 subjects,
-                Array.Empty<string>(),
-                allowNotFound: false,
                 cancellation);
             return formattedSubjects!;
         }
@@ -1040,16 +1193,14 @@ namespace Microsoft.VsSaaS.TunnelService
                 return subjects;
             }
 
-            var uri = BuildUri(clusterId: null, SubjectsApiPath + "/resolve", options);
-            var resolvedSubjects = await SendTunnelRequestAsync
+            var resolvedSubjects = await SendRequestAsync
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(
-                tunnel: null,
-                options,
                 HttpMethod.Post,
-                uri,
+                clusterId: null,
+                SubjectsApiPath + "/resolve",
+                query: null,
+                options,
                 subjects,
-                Array.Empty<string>(),
-                allowNotFound: false,
                 cancellation);
             return resolvedSubjects!;
         }
