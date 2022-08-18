@@ -712,14 +712,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 options);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="tunnel"></param>
-        /// <param name="accessTokenScopes"></param>
-        /// <param name="options"></param>
-        /// <returns></returns>
-        protected virtual async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
+        private async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
             Tunnel? tunnel,
             string[]? accessTokenScopes,
             TunnelRequestOptions? options)
