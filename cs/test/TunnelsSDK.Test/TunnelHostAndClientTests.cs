@@ -214,11 +214,33 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             if (firstAttempt)
             {
                 firstAttempt = false;
-                await ThrowNotAWebSocket(429);
+                await ThrowNotAWebSocket(HttpStatusCode.TooManyRequests);
             }
 
             return this.clientStream;
         }
+    }
+
+    [Fact]
+    public async Task ConnectRelayClientCancelRetryOn429()
+    {
+        var relayClient = new TunnelRelayTunnelClient(TestTS);
+        relayClient.RetryingTunnelConnection += (_, e) => e.Retry = false;
+
+        var tunnel = CreateRelayTunnel();
+        var ex = await Assert.ThrowsAsync<TunnelConnectionException>(async () =>
+        {
+            await ConnectRelayClientAsync(relayClient, tunnel, ConnectToRelayAsync);
+        });
+
+        async Task<Stream> ConnectToRelayAsync(string accessToken)
+        {
+            await Task.Yield();
+            await ThrowNotAWebSocket(HttpStatusCode.TooManyRequests);
+            return this.clientStream;
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, ex.StatusCode);
     }
 
     [Fact]
@@ -259,7 +281,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         var tunnel = CreateRelayTunnel();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => ConnectRelayClientAsync(relayClient, tunnel, (_) => ThrowNotAWebSocket(403)));
+            () => ConnectRelayClientAsync(relayClient, tunnel, (_) => ThrowNotAWebSocket(HttpStatusCode.Forbidden)));
         Assert.IsType<UnauthorizedAccessException>(await disconnectedException.Task);
 
         Assert.Equal(ConnectionStatus.Disconnected, relayClient.ConnectionStatus);
@@ -272,7 +294,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var relayClient = new TunnelRelayTunnelClient(TestTS);
         var tunnel = CreateRelayTunnel();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => ConnectRelayClientAsync(relayClient, tunnel, (_) => ThrowNotAWebSocket(401)));
+            () => ConnectRelayClientAsync(relayClient, tunnel, (_) => ThrowNotAWebSocket(HttpStatusCode.Unauthorized)));
 
         Assert.Equal(ConnectionStatus.Disconnected, relayClient.ConnectionStatus);
         Assert.IsType<UnauthorizedAccessException>(relayClient.DisconnectException);
@@ -690,7 +712,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         // Reconnection will fail with WebSocketException emulating Relay returning 404 (tunnel not found).
         // This is not recoverable and tunnel client reconnection should give up.
         var wse = new WebSocketException(WebSocketError.NotAWebSocket);
-        wse.Data["HttpStatusCode"] = 404;
+        wse.Data["HttpStatusCode"] = HttpStatusCode.NotFound;
         clientMultiChannelStream = new TaskCompletionSource<MultiChannelStream>();
         clientMultiChannelStream.SetException(wse);
 
@@ -847,7 +869,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Empty(tunnel.Ports);
     }
 
-    private static Task<Stream> ThrowNotAWebSocket(int statusCode)
+    private static Task<Stream> ThrowNotAWebSocket(HttpStatusCode statusCode)
     {
         var wse = new WebSocketException(WebSocketError.NotAWebSocket, $"The server returned status code '{statusCode:D}' when status code '101' was expected.");
         wse.Data["HttpStatusCode"] = statusCode;

@@ -46,4 +46,9 @@ internal interface IRelayClient
     /// Refresh tunnel access token. This may be useful when the Relay service responds with 401 Unauthorized.
     /// </summary>
     Task<bool> RefreshTunnelAccessTokenAsync(CancellationToken cancellation);
+
+    /// <summary>
+    /// Notifies about a connection retry, giving the relay client a chance to delay or cancel it.
+    /// </summary>
+    void OnRetrying(RetryingTunnelConnectionEventArgs e);
 }

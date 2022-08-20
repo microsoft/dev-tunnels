@@ -21,7 +21,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// <summary>
     /// Base class for Hosts that host one tunnel
     /// </summary>
-    public abstract class TunnelHostBase : TunnelBase, ITunnelHost
+    public abstract class TunnelHost : TunnelConnection, ITunnelHost
     {
         /// <summary>
         /// Sessions created between this host and clients. Lock on this hash set to be thread-safe.
@@ -29,9 +29,9 @@ namespace Microsoft.VsSaaS.TunnelService
         protected HashSet<SshServerSession> sshSessions = new();
 
         /// <summary>
-        /// Creates a new instance of the <see cref="TunnelHostBase" /> class.
+        /// Creates a new instance of the <see cref="TunnelHost" /> class.
         /// </summary>
-        public TunnelHostBase(ITunnelManagementClient managementClient, TraceSource trace) : base(managementClient, trace)
+        public TunnelHost(ITunnelManagementClient managementClient, TraceSource trace) : base(managementClient, trace)
         {
         }
 

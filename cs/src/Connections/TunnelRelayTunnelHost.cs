@@ -23,7 +23,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// Tunnel host implementation that uses data-plane relay
     /// to accept client connections.
     /// </summary>
-    public class TunnelRelayTunnelHost : TunnelHostBase, IRelayClient
+    public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     {
         /// <summary>
         /// Web socket sub-protocol to connect to the tunnel relay endpoint.
@@ -184,6 +184,9 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <inheritdoc />
         Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>
             RefreshTunnelAccessTokenAsync(cancellation);
+
+        /// <inheritdoc />
+        void IRelayClient.OnRetrying(RetryingTunnelConnectionEventArgs e) => OnRetrying(e);
 
         #endregion IRelayClient
 
@@ -420,7 +423,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 if (e.Request is ChannelOpenMessage channelOpenMessage)
                 {
                     // This allows the Go SDK to open an unused terminal channel
-                    if (channelOpenMessage.ChannelType == "session")
+                    if (channelOpenMessage.ChannelType == SshChannel.SessionChannelType)
                     {
                         return;
                     }
