@@ -13,220 +13,183 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Ssh;
 using Microsoft.VisualStudio.Ssh.Algorithms;
+using Microsoft.VisualStudio.Ssh.Messages;
 using Microsoft.VisualStudio.Ssh.Tcp;
 using Microsoft.VsSaaS.TunnelService.Contracts;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.VsSaaS.TunnelService;
+
+/// <summary>
+/// Base class for Hosts that host one tunnel
+/// </summary>
+public abstract class TunnelHost : TunnelConnection, ITunnelHost
 {
+    internal const string RefreshPortsRequestType = "RefreshPorts";
+
     /// <summary>
-    /// Base class for Hosts that host one tunnel
+    /// Sessions created between this host and clients. Lock on this hash set to be thread-safe.
     /// </summary>
-    public abstract class TunnelHost : TunnelConnection, ITunnelHost
+    protected HashSet<SshServerSession> sshSessions = new();
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="TunnelHost" /> class.
+    /// </summary>
+    public TunnelHost(ITunnelManagementClient managementClient, TraceSource trace) : base(managementClient, trace)
     {
-        /// <summary>
-        /// Sessions created between this host and clients. Lock on this hash set to be thread-safe.
-        /// </summary>
-        protected HashSet<SshServerSession> sshSessions = new();
+    }
 
-        /// <summary>
-        /// Creates a new instance of the <see cref="TunnelHost" /> class.
-        /// </summary>
-        public TunnelHost(ITunnelManagementClient managementClient, TraceSource trace) : base(managementClient, trace)
+    /// <summary>
+    /// Enumeration of sessions created between this host and clients. Thread safe.
+    /// </summary>
+    protected IEnumerable<SshServerSession> SshSessions 
+    { 
+        get 
         {
-        }
-
-        /// <summary>
-        /// Enumeration of sessions created between this host and clients. Thread safe.
-        /// </summary>
-        protected IEnumerable<SshServerSession> SshSessions 
-        { 
-            get 
+            lock (this.sshSessions)
             {
-                lock (this.sshSessions)
-                {
-                    return this.sshSessions.ToArray();
-                }
+                return this.sshSessions.ToArray();
             }
         }
+    }
 
-        /// <summary>
-        /// Port Forwarders between host and clients
-        /// </summary>
-        public ConcurrentDictionary<SessionPortKey, RemotePortForwarder> RemoteForwarders { get; } = new ConcurrentDictionary<SessionPortKey, RemotePortForwarder>();
+    /// <summary>
+    /// Port Forwarders between host and clients
+    /// </summary>
+    public ConcurrentDictionary<SessionPortKey, RemotePortForwarder> RemoteForwarders { get; } = new ConcurrentDictionary<SessionPortKey, RemotePortForwarder>();
 
-        /// <summary>
-        /// Private key used for connections.
-        /// </summary>
-        protected IKeyPair HostPrivateKey { get; } = SshAlgorithms.PublicKey.ECDsaSha2Nistp384.GenerateKeyPair();
+    /// <summary>
+    /// Private key used for connections.
+    /// </summary>
+    protected IKeyPair HostPrivateKey { get; } = SshAlgorithms.PublicKey.ECDsaSha2Nistp384.GenerateKeyPair();
 
-        /// <inheritdoc />
-        protected override string TunnelAccessScope => TunnelAccessScopes.Host;
+    /// <inheritdoc />
+    protected override string TunnelAccessScope => TunnelAccessScopes.Host;
 
-        /// <inheritdoc />
-        public async Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
+    /// <inheritdoc />
+    public async Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
+    {
+        Requires.NotNull(tunnel, nameof(tunnel));
+
+        if (Tunnel != null)
         {
-            Requires.NotNull(tunnel, nameof(tunnel));
-
-            if (Tunnel != null)
-            {
-                throw new InvalidOperationException(
-                    "Already hosting a tunnel. Use separate instances to host multiple tunnels.");
-            }
-
-            Requires.NotNull(tunnel.Ports!, nameof(tunnel.Ports));
-            await ConnectTunnelSessionAsync(tunnel, cancellation);
+            throw new InvalidOperationException(
+                "Already hosting a tunnel. Use separate instances to host multiple tunnels.");
         }
 
-        /// <inheritdoc />
-        public async Task<TunnelPort> AddPortAsync(
-            TunnelPort portToAdd,
-            CancellationToken cancellation)
+        Requires.NotNull(tunnel.Ports!, nameof(tunnel.Ports));
+        await ConnectTunnelSessionAsync(tunnel, cancellation);
+    }
+
+    internal async Task ForwardPortAsync(
+        PortForwardingService pfs,
+        TunnelPort port,
+        CancellationToken cancellation)
+    {
+        var sessionId = Requires.NotNull(pfs.Session.SessionId!, nameof(pfs.Session.SessionId));
+
+        var portNumber = (int)port.PortNumber;
+
+        if (pfs.LocalForwardedPorts.Any((p) => p.LocalPort == portNumber))
         {
-            if (Tunnel == null)
-            {
-                throw new InvalidOperationException("Tunnel must be running");
-            }
-
-            var port = await ManagementClient!.CreateTunnelPortAsync(Tunnel, portToAdd, null, cancellation);
-            await Task.WhenAll(SshSessions.Select(sshSession => Task.Run(async () =>
-            {
-                if (sshSession.Principal == null || !sshSession.IsConnected)
-                {
-                    // Two possible cases:
-                    // - The session is not yet authenticated; all ports will be forwarded after the session is authenticated.
-                    // - The session is currently disconnected and will reconnect; all ports will be re-forwarded after the session is reconnected.
-                    return;
-                }
-
-                var sessionId = sshSession.SessionId;
-                var pfs = sshSession.GetService<PortForwardingService>();
-                if (pfs == null)
-                {
-                    throw new InvalidOperationException("PFS must be active to add ports");
-                }
-
-                await ForwardPortAsync(pfs, port, cancellation);
-            })));
-
-            return port;
-        }
-
-        /// <inheritdoc />
-        public async Task<bool> RemovePortAsync(
-            ushort portNumberToRemove,
-            CancellationToken cancellation)
-        {
-            if (Tunnel == null || Tunnel.Ports == null)
-            {
-                throw new InvalidOperationException("Tunnel must be running and have ports to delete");
-            }
-
-            var portDeleted = await ManagementClient!.DeleteTunnelPortAsync(Tunnel, portNumberToRemove, null, cancellation);
-
-            Parallel.ForEach(SshSessions, sshSession =>
-            {
-                var sessionId = sshSession.SessionId;
-                if (sessionId != null && sshSession.IsConnected)
-                {
-                    foreach (KeyValuePair<SessionPortKey, RemotePortForwarder> entry in RemoteForwarders)
-                    {
-                        if (entry.Value.LocalPort == portNumberToRemove && Enumerable.SequenceEqual(entry.Key.SessionId, sessionId))
-                        {
-                            var remoteForwarderFound = RemoteForwarders.TryRemove(entry.Key, out var remoteForwarder);
-                            if (remoteForwarderFound && remoteForwarder != null)
-                            {
-                                remoteForwarder.Dispose();
-                            }
-
-                            break;
-                        }
-                    }
-                }
-            });
-
-            return portDeleted;
-        }
-
-        /// <inheritdoc />
-        public async Task<TunnelPort> UpdatePortAsync(
-            TunnelPort updatedPort,
-            CancellationToken cancellation)
-        {
-            if (Tunnel == null || Tunnel.Ports == null)
-            {
-                throw new InvalidOperationException("Tunnel must be running and have ports to update");
-            }
-
-            var port = await ManagementClient!.UpdateTunnelPortAsync(Tunnel, updatedPort, null, cancellation);
-            return port;
-        }
-
-        internal async Task ForwardPortAsync(
-            PortForwardingService pfs,
-            TunnelPort port,
-            CancellationToken cancellation)
-        {
-            var sessionId = Requires.NotNull(pfs.Session.SessionId!, nameof(pfs.Session.SessionId));
-
-            var portNumber = (int)port.PortNumber;
-
-            if (pfs.LocalForwardedPorts.Any((p) => p.LocalPort == portNumber))
-            {
-                // The port is already forwarded. This may happen if we try to add the same port twice after reconnection.
-                return;
-            }
-
-            // When forwarding from a Remote port we assume that the RemotePortNumber
-            // and requested LocalPortNumber are the same.
-            var forwarder = await pfs.ForwardFromRemotePortAsync(
-                IPAddress.Loopback,
-                portNumber,
-                IPAddress.Loopback.ToString(),
-                portNumber,
-                cancellation);
-
-            if (forwarder == null)
-            {
-                // The forwarding request was rejected by the client.
-                return;
-            }
-
-            // Capture the remote forwarder for the session id / remote port pair.
-            // This is needed later to stop forwarding for this port when the remote forwarder is disposed.
-            // Note when the client tries to open an SSH channel to PFS, the port forwarding service checks
-            // its remoteConnectors whether the port is being forwarded.
-            // Disposing of the RemotePortForwarder stops the forwarding and removes the remote connector
-            // from PFS.remoteConnectors.
-            RemoteForwarders.TryAdd(
-                new SessionPortKey(sessionId, (ushort)forwarder.RemotePort),
-                forwarder);
+            // The port is already forwarded. This may happen if we try to add the same port twice after reconnection.
             return;
         }
 
-        /// <summary>
-        /// Add client SSH session. Duplicates are ignored.
-        /// Thread-safe.
-        /// </summary>
-        protected void AddClientSshSession(SshServerSession session)
+        // When forwarding from a Remote port we assume that the RemotePortNumber
+        // and requested LocalPortNumber are the same.
+        var forwarder = await pfs.ForwardFromRemotePortAsync(
+            IPAddress.Loopback,
+            portNumber,
+            IPAddress.Loopback.ToString(),
+            portNumber,
+            cancellation);
+
+        if (forwarder == null)
         {
-            Requires.NotNull(session, nameof(session));
-            lock (this.sshSessions)
+            // The forwarding request was rejected by the client.
+            return;
+        }
+
+        // Capture the remote forwarder for the session id / remote port pair.
+        // This is needed later to stop forwarding for this port when the remote forwarder is disposed.
+        // Note when the client tries to open an SSH channel to PFS, the port forwarding service checks
+        // its remoteConnectors whether the port is being forwarded.
+        // Disposing of the RemotePortForwarder stops the forwarding and removes the remote connector
+        // from PFS.remoteConnectors.
+        RemoteForwarders.TryAdd(
+            new SessionPortKey(sessionId, (ushort)forwarder.RemotePort),
+            forwarder);
+        return;
+    }
+
+
+    /// <inheritdoc />
+    public async Task RefreshPortsAsync(CancellationToken cancellation)
+    {
+        if (Tunnel == null || ManagementClient == null)
+        {
+            return;
+        }
+
+        var updatedTunnel = await ManagementClient.GetTunnelAsync(
+            Tunnel, new TunnelRequestOptions { IncludePorts = true });
+
+        var updatedPorts = updatedTunnel?.Ports ?? Array.Empty<TunnelPort>();
+        Tunnel.Ports = updatedPorts;
+
+        foreach (var port in updatedPorts)
+        {
+            foreach (var session in SshSessions
+                .Where((s) => s.IsConnected && s.SessionId != null))
             {
-                this.sshSessions.Add(session);
+                var key = new SessionPortKey(session.SessionId!, port.PortNumber);
+                if (!RemoteForwarders.ContainsKey(key))
+                {
+                    // Overlapping refresh operations could cause duplicate forward requests to be
+                    // sent to clients, but clients should ignore the duplicate requests.
+                    var pfs = session.GetService<PortForwardingService>() !;
+                    await ForwardPortAsync(pfs, port, cancellation);
+                }
             }
         }
 
-        /// <summary>
-        /// Remove client SSH session. Noop if the session is not added.
-        /// Thread-safe.
-        /// </summary>
-        protected void RemoveClientSshSession(SshServerSession session)
+        foreach (var forwarder in RemoteForwarders)
         {
-            Requires.NotNull(session, nameof(session));
-            lock (this.sshSessions)
+            if (!updatedPorts.Any((p) => p.PortNumber == forwarder.Value.LocalPort))
             {
-                this.sshSessions.Remove(session);
+                // Since RemoteForwarders is a concurrent dictionary, overlapping refresh
+                // operations will only be able to remove and dispose a forwarder once.
+                if (RemoteForwarders.TryRemove(forwarder.Key, out _))
+                {
+                    forwarder.Value.Dispose();
+                }
             }
+        }
+    }
+
+    /// <summary>
+    /// Add client SSH session. Duplicates are ignored.
+    /// Thread-safe.
+    /// </summary>
+    protected void AddClientSshSession(SshServerSession session)
+    {
+        Requires.NotNull(session, nameof(session));
+        lock (this.sshSessions)
+        {
+            this.sshSessions.Add(session);
+        }
+    }
+
+    /// <summary>
+    /// Remove client SSH session. Noop if the session is not added.
+    /// Thread-safe.
+    /// </summary>
+    protected void RemoveClientSshSession(SshServerSession session)
+    {
+        Requires.NotNull(session, nameof(session));
+        lock (this.sshSessions)
+        {
+            this.sshSessions.Remove(session);
         }
     }
 }
