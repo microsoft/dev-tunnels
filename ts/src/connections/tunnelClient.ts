@@ -4,13 +4,13 @@
 import { TunnelConnectionMode, Tunnel } from '@vs/tunnels-contracts';
 import { SshStream, CancellationToken } from '@vs/vs-ssh';
 import { ForwardedPortsCollection } from '@vs/vs-ssh-tcp';
-import { Disposable } from 'vscode-jsonrpc';
+import { TunnelConnection } from './tunnelConnection';
 
 /**
  * Interface for a client capable of making a connection
  * to a tunnel and forwarding ports over the tunnel.
  */
-export interface TunnelClient extends Disposable {
+export interface TunnelClient extends TunnelConnection {
     /**
      * Gets the list of connection modes that this client supports.
      */

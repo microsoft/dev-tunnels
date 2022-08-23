@@ -10,7 +10,7 @@ import { UserInfo } from './userInfo';
 import { ForwardedPortsCollection, LocalPortForwarder } from '@vs/vs-ssh-tcp';
 import { Tunnel, TunnelPort, TunnelConnectionMode } from '@vs/tunnels-contracts';
 import { TunnelManagementClient } from '@vs/tunnels-management';
-import { TunnelClient, TunnelHost } from '@vs/tunnels-connections';
+import { TunnelClient, TunnelConnectionBase, TunnelHost } from '@vs/tunnels-connections';
 import { CancellationToken, SshStream } from '@vs/vs-ssh';
 
 @suite
@@ -73,7 +73,7 @@ class MockConnectOptions {
     }
 }
 
-class MockTunnelClient implements TunnelClient {
+class MockTunnelClient extends TunnelConnectionBase implements TunnelClient {
     forwardedPorts: ForwardedPortsCollection | undefined;
     public connectionModes: TunnelConnectionMode[] = [];
     public acceptLocalConnectionsForForwardedPorts = true;
@@ -94,10 +94,6 @@ class MockTunnelClient implements TunnelClient {
         throw new Error('Method not implemented.');
     }
     waitForForwardedPort(forwardedPort: number, cancellation?: CancellationToken): Promise<void> {
-        throw new Error('Method not implemented.');
-    }
-
-    dispose(): void {
         throw new Error('Method not implemented.');
     }
 }

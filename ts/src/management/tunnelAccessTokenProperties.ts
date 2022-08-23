@@ -100,6 +100,14 @@ export class TunnelAccessTokenProperties {
         }
     }
 
+    /**
+     * Gets the tunnal access token trace string.
+     * 'none' if null or undefined, parsed token info if can be parsed, or 'token' if cannot be parsed.
+     */
+    public static getTokenTrace(token?: string | null | undefined): string {
+        return !token ? 'none' : TunnelAccessTokenProperties.tryParse(token)?.toString() ?? 'token';
+    }
+
     private static base64UrlDecode(encodedString: string): string | null {
         // Convert from base64url encoding to base64 encoding: replace chars and add padding.
         encodedString = encodedString.replace('-', '+');

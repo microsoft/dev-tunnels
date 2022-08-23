@@ -1,26 +1,25 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelPort, Tunnel } from '@vs/tunnels-contracts';
+import { TunnelPort, Tunnel, TunnelAccessScopes } from '@vs/tunnels-contracts';
 import { TunnelManagementClient } from '@vs/tunnels-management';
-import { KeyPair, SshAlgorithms, SshServerSession, Trace } from '@vs/vs-ssh';
+import { KeyPair, MultiChannelStream, SshAlgorithms, SshServerSession, Trace } from '@vs/vs-ssh';
 import { PortForwardingService, RemotePortForwarder } from '@vs/vs-ssh-tcp';
 import { SessionPortKey } from './sessionPortKey';
+import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
+import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 
 /**
- * Base class for Hosts that host one tunnel
+ * Base class for Hosts that host one tunnel and use SSH MultiChannelStream to connect to the tunnel host service.
  */
-export abstract class TunnelHostBase implements TunnelHost {
+export class TunnelHostBase
+    extends tunnelSshSessionClass<MultiChannelStream>(TunnelConnectionSession)
+    implements TunnelHost {
     /**
      * Sessions created between this host and clients
      */
     public sshSessions: SshServerSession[] = [];
-
-    /**
-     * Get the tunnel that is being hosted.
-     */
-    public tunnel?: Tunnel;
 
     /**
      * Port Forwarders between host and clients
@@ -33,28 +32,19 @@ export abstract class TunnelHostBase implements TunnelHost {
     public hostPrivateKey?: KeyPair;
 
     /**
+     * Public keys used for connections.
+     */
+    public hostPublicKeys?: string[];
+
+    /**
      * Promise task to get private key used for connections.
      */
     public hostPrivateKeyPromise?: Promise<KeyPair>;
 
-    /**
-     * Management client used for connections
-     */
-    public managementClient: TunnelManagementClient;
-
-    /**
-     * Trace used for writing output
-     * @param level
-     * @param eventId
-     * @param msg
-     * @param err
-     */
-    public trace: Trace = (level, eventId, msg, err) => {};
-
     private loopbackIp = '127.0.0.1';
 
-    constructor(managementClient: TunnelManagementClient) {
-        this.managementClient = managementClient;
+    constructor(managementClient: TunnelManagementClient, trace?: Trace) {
+        super(TunnelAccessScopes.Host, trace, managementClient);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
@@ -62,30 +52,11 @@ export abstract class TunnelHostBase implements TunnelHost {
     }
 
     /**
-     * Do start work specific to the type of host.
-     * @param tunnel
-     * @param hostPublicKeys
+     * Connects to a tunnel as a host and starts accepting incoming connections
+     * to local ports as defined on the tunnel.
      */
-    protected abstract startServer(tunnel: Tunnel, hostPublicKeys?: string[]): Promise<void>;
-
     public async start(tunnel: Tunnel): Promise<void> {
-        if (this.tunnel) {
-            throw new Error(
-                'Already hosting a tunnel. Use separate instances to host multiple tunnels.',
-            );
-        }
-
-        if (this.hostPrivateKeyPromise) {
-            const hostPrivateKey = await this.hostPrivateKeyPromise;
-            this.hostPrivateKey = hostPrivateKey;
-            const buffer = await hostPrivateKey.getPublicKeyBytes(hostPrivateKey.keyAlgorithmName);
-            if (buffer) {
-                let hostPublicKeys = [buffer.toString('base64')];
-                await this.startServer(tunnel, hostPublicKeys);
-            } else {
-                throw new Error('Host private key public key bytes is not initialized');
-            }
-        }
+        await this.connectTunnelSession(tunnel);
     }
 
     public async addPort(portToAdd: TunnelPort): Promise<TunnelPort> {
@@ -93,11 +64,12 @@ export abstract class TunnelHostBase implements TunnelHost {
             throw new Error('Tunnel must be running');
         }
 
-        let port = await this.managementClient.createTunnelPort(this.tunnel, portToAdd, undefined);
+        let port = await this.managementClient!.createTunnelPort(this.tunnel, portToAdd, undefined);
         const promises = this.sshSessions.map(async (sshSession) => {
-            if (!sshSession.principal) {
-                // The session is not yet authenticated; all ports will be forwarded after
-                // the session is authenticated.
+            if (!sshSession.principal || !sshSession.isConnected) {
+                // Two possible cases:
+                // - The session is not yet authenticated; all ports will be forwarded after the session is authenticated.
+                // - The session is currently disconnected and will reconnect; all ports will be re-forwarded after the session is reconnected.
                 return;
             }
 
@@ -118,7 +90,7 @@ export abstract class TunnelHostBase implements TunnelHost {
             throw new Error('Tunnel must be running and have ports to delete');
         }
 
-        let portDeleted = await this.managementClient.deleteTunnelPort(
+        let portDeleted = await this.managementClient!.deleteTunnelPort(
             this.tunnel,
             portNumberToRemove,
             undefined,
@@ -126,7 +98,7 @@ export abstract class TunnelHostBase implements TunnelHost {
 
         this.sshSessions.forEach((sshSession) => {
             const sessionId = sshSession.sessionId;
-            if (sessionId) {
+            if (sessionId && sshSession.isConnected) {
                 Object.keys(this.remoteForwarders).forEach((key) => {
                     let entry = this.remoteForwarders[key];
                     if (entry.localPort === portNumberToRemove) {
@@ -149,7 +121,7 @@ export abstract class TunnelHostBase implements TunnelHost {
             throw new Error('Tunnel must be running and have ports to update');
         }
 
-        let port = await this.managementClient.updateTunnelPort(
+        let port = await this.managementClient!.updateTunnelPort(
             this.tunnel,
             updatedPort,
             undefined,
@@ -158,29 +130,60 @@ export abstract class TunnelHostBase implements TunnelHost {
         return port;
     }
 
-    protected async forwardPort(pfs: PortForwardingService, port: TunnelPort): Promise<boolean> {
+    protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
         let sessionId = pfs.session.sessionId;
         if (!sessionId) {
             throw new Error('No session id');
         }
 
+        const portNumber = Number(port.portNumber);
+        if (pfs.localForwardedPorts.find((p) => p.localPort === portNumber)) {
+            // The port is already forwarded. This may happen if we try to add the same port twice after reconnection.
+            return;
+        }
+
         // When forwarding from a Remote port we assume that the RemotePortNumber
         // and requested LocalPortNumber are the same.
-        let forwarder = await pfs.forwardFromRemotePort(
+        const forwarder = await pfs.forwardFromRemotePort(
             this.loopbackIp,
-            Number(port.portNumber),
+            portNumber,
             this.loopbackIp,
-            Number(port.portNumber),
+            portNumber,
         );
         if (!forwarder) {
             // The forwarding request was rejected by the client.
-            return false;
+            return;
         }
 
         const key = new SessionPortKey(sessionId, Number(forwarder.remotePort));
         this.remoteForwarders[key.toString()] = forwarder;
-        return true;
     }
 
-    public abstract dispose(): Promise<void>;
+    /**
+     * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
+     * otherwise, ensure that there is already sufficient data to connect to a tunnel.
+     * @param tunnel Tunnel to use for the connection.
+     *     Tunnel object to get the connection data if defined.
+     *     Undefined if the connection data is already known.
+     */
+    public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
+        if (this.hostPrivateKey && this.hostPublicKeys) {
+            return;
+        }
+        if (!tunnel) {
+            throw new Error('Tunnel is required');
+        }
+
+        if (!this.hostPrivateKeyPromise) {
+            throw new Error('Cannot create host keys');
+        }
+        this.hostPrivateKey = await this.hostPrivateKeyPromise;
+        const buffer = await this.hostPrivateKey.getPublicKeyBytes(
+            this.hostPrivateKey.keyAlgorithmName,
+        );
+        if (!buffer) {
+            throw new Error('Host private key public key bytes is not initialized');
+        }
+        this.hostPublicKeys = [buffer.toString('base64')];
+    }
 }
