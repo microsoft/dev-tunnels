@@ -97,12 +97,23 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
 
         // When forwarding from a Remote port we assume that the RemotePortNumber
         // and requested LocalPortNumber are the same.
-        var forwarder = await pfs.ForwardFromRemotePortAsync(
-            IPAddress.Loopback,
-            portNumber,
-            IPAddress.Loopback.ToString(),
-            portNumber,
-            cancellation);
+        RemotePortForwarder? forwarder;
+
+        try
+        {
+            forwarder = await pfs.ForwardFromRemotePortAsync(
+                IPAddress.Loopback,
+                portNumber,
+                IPAddress.Loopback.ToString(),
+                portNumber,
+                cancellation);
+        }
+        catch (SshConnectionException)
+        {
+            // Ignore exception caused by the session being closed; it will be reported elsewhere.
+            // Treat it as equivalent to the client rejecting the forwarding request.
+            forwarder = null;
+        }
 
         if (forwarder == null)
         {
@@ -137,6 +148,8 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         var updatedPorts = updatedTunnel?.Ports ?? Array.Empty<TunnelPort>();
         Tunnel.Ports = updatedPorts;
 
+        var forwardTasks = new List<Task>();
+
         foreach (var port in updatedPorts)
         {
             foreach (var session in SshSessions
@@ -148,7 +161,7 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
                     // Overlapping refresh operations could cause duplicate forward requests to be
                     // sent to clients, but clients should ignore the duplicate requests.
                     var pfs = session.GetService<PortForwardingService>() !;
-                    await ForwardPortAsync(pfs, port, cancellation);
+                    forwardTasks.Add(ForwardPortAsync(pfs, port, cancellation));
                 }
             }
         }
@@ -165,6 +178,8 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
                 }
             }
         }
+
+        await Task.WhenAll(forwardTasks);
     }
 
     /// <summary>
