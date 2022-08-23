@@ -51,7 +51,7 @@ public interface ITunnelHost : IAsyncDisposable
     /// <remarks>
     /// After calling <see cref="ITunnelManagementClient.CreateTunnelPortAsync"/> or
     /// <see cref="ITunnelManagementClient.DeleteTunnelPortAsync"/>, call this method to have the
-    /// host to update its cached list of ports. Any added or removed ports will then propagate to
+    /// host update its cached list of ports. Any added or removed ports will then propagate to
     /// the set of ports forwarded by all connected clients.
     /// </remarks>
     Task RefreshPortsAsync(CancellationToken cancellation);

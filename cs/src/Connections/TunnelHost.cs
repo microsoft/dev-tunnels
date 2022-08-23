@@ -128,7 +128,7 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         // Disposing of the RemotePortForwarder stops the forwarding and removes the remote connector
         // from PFS.remoteConnectors.
         RemoteForwarders.TryAdd(
-            new SessionPortKey(sessionId, (ushort)forwarder.RemotePort),
+            new SessionPortKey(sessionId, (ushort)forwarder.LocalPort),
             forwarder);
         return;
     }
