@@ -26,39 +26,14 @@ export class MultiModeTunnelHost implements TunnelHost {
         await Promise.all(startTasks);
     }
 
-    public async addPort(portToAdd: TunnelPort): Promise<TunnelPort> {
-        let addTasks: Promise<TunnelPort>[] = [];
+    public async refreshPorts(): Promise<void> {
+        let refreshTasks: Promise<void>[] = [];
+
         this.hosts.forEach((host) => {
-            addTasks.push(host.addPort(portToAdd));
-        });
-        await Promise.all(addTasks);
-
-        return portToAdd;
-    }
-
-    public async removePort(portNumberToRemove: number): Promise<boolean> {
-        let result = true;
-        let removeTasks: Promise<boolean>[] = [];
-        this.hosts.forEach((host) => {
-            removeTasks.push(host.removePort(portNumberToRemove));
+            refreshTasks.push(host.refreshPorts());
         });
 
-        let results = await Promise.all(removeTasks);
-        results.forEach((res) => {
-            result = result && res;
-        });
-
-        return result;
-    }
-
-    public async updatePort(updatedPort: TunnelPort): Promise<TunnelPort> {
-        let updateTasks: Promise<TunnelPort>[] = [];
-        this.hosts.forEach((host) => {
-            updateTasks.push(host.updatePort(updatedPort));
-        });
-
-        await Promise.all(updateTasks);
-        return updatedPort;
+        await Promise.all(refreshTasks);
     }
 
     public dispose(): void {

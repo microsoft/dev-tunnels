@@ -226,6 +226,17 @@ export abstract class TunnelClientBase implements TunnelClient {
         e.authenticationPromise = Promise.resolve({});
     }
 
+    public async refreshPorts(): Promise<void> {
+        if (!this.sshSession || this.sshSession.isClosed) {
+            throw new Error('Not connected.');
+        }
+
+        const request = new SessionRequestMessage();
+        request.requestType = 'RefreshPorts';
+        request.wantReply = true;
+        await this.sshSession.request(request);
+    }
+
     private onSshSessionClosed(e: SshSessionClosedEventArgs) {
         this.sshSessionClosedEmitter.fire(this);
     }

@@ -50,6 +50,10 @@ export class MultiModeTunnelClient implements TunnelClient {
         throw new Error('Method not implemented.');
     }
 
+    public async refreshPorts(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
     public dispose(): void {
         this.clients.forEach((client) => {
             client.dispose();
