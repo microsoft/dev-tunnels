@@ -96,4 +96,8 @@ class MockTunnelClient extends TunnelConnectionBase implements TunnelClient {
     waitForForwardedPort(forwardedPort: number, cancellation?: CancellationToken): Promise<void> {
         throw new Error('Method not implemented.');
     }
+    refreshPorts(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
 }

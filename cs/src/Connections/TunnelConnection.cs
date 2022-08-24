@@ -15,16 +15,16 @@ namespace Microsoft.VsSaaS.TunnelService;
 /// <summary>
 /// Base class for tunnel client and host.
 /// </summary>
-public abstract class TunnelBase : IAsyncDisposable
+public abstract class TunnelConnection : IAsyncDisposable
 {
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
     private ConnectionStatus connectionStatus;
 
     /// <summary>
-    /// Creates a new instance of the <see cref="TunnelBase"/> class.
+    /// Creates a new instance of the <see cref="TunnelConnection"/> class.
     /// </summary>
-    public TunnelBase(ITunnelManagementClient? managementClient, TraceSource trace)
+    public TunnelConnection(ITunnelManagementClient? managementClient, TraceSource trace)
     {
         ManagementClient = managementClient;
         Trace = Requires.NotNull(trace, nameof(trace));
@@ -136,6 +136,14 @@ public abstract class TunnelBase : IAsyncDisposable
     /// The tunnel client or host fires this event when it is not able to use the access token it got from the tunnel.
     /// </summary>
     public event EventHandler<RefreshingTunnelAccessTokenEventArgs>? RefreshingTunnelAccessToken;
+
+    /// <summary>
+    /// Event raised when a tunnel connection attempt failed and is about to be retried.
+    /// </summary>
+    /// <remarks>
+    /// An event handler can cancel the retry by setting <see cref="RetryingTunnelConnectionEventArgs.Retry"/> to false.
+    /// </remarks>
+    public event EventHandler<RetryingTunnelConnectionEventArgs>? RetryingTunnelConnection;
 
     /// <summary>
     /// Connection status changed event.
@@ -346,5 +354,13 @@ public abstract class TunnelBase : IAsyncDisposable
         {
             this.reconnectTask = null;
         }
+    }
+
+    /// <summary>
+    /// Notifies about a connection retry, giving the application a chance to delay or cancel it.
+    /// </summary>
+    internal void OnRetrying(RetryingTunnelConnectionEventArgs e)
+    {
+        RetryingTunnelConnection?.Invoke(this, e);
     }
 }

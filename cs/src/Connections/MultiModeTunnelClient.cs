@@ -18,7 +18,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// <summary>
     /// Tunnel client implementation that selects one of multiple available connection modes.
     /// </summary>
-    public class MultiModeTunnelClient : TunnelBase, ITunnelClient
+    public class MultiModeTunnelClient : TunnelConnection, ITunnelClient
     {
         /// <summary>
         /// Creates a new instance of the <see cref="MultiModeTunnelClient" /> class
@@ -107,6 +107,12 @@ namespace Microsoft.VsSaaS.TunnelService
 
         /// <inheritdoc />
         protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public Task RefreshPortsAsync(CancellationToken cancellation)
         {
             throw new NotImplementedException();
         }

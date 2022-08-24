@@ -530,6 +530,7 @@ export class TunnelHostAndClientTests {
         let relayHost = new TunnelRelayTunnelHost(managementClient);
 
         let tunnel = this.createRelayTunnel();
+        await managementClient.createTunnel(tunnel);
         let multiChannelStream = await this.startRelayHost(relayHost, tunnel);
         let clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
@@ -539,7 +540,8 @@ export class TunnelHostAndClientTests {
         let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
         await clientSshSession.authenticate(clientCredentials);
 
-        await relayHost.addPort({ portNumber: 9985 });
+        await managementClient.createTunnelPort(tunnel, { portNumber: 9985 });
+        await relayHost.refreshPorts();
 
         assert.strictEqual(tunnel.ports!.length, 1);
         const forwardedPort = tunnel.ports![0];
@@ -560,6 +562,7 @@ export class TunnelHostAndClientTests {
         let relayHost = new TunnelRelayTunnelHost(managementClient);
 
         let tunnel = this.createRelayTunnel([9986]);
+        await managementClient.createTunnel(tunnel);
         let multiChannelStream = await this.startRelayHost(relayHost, tunnel);
         let clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
@@ -572,7 +575,8 @@ export class TunnelHostAndClientTests {
         while (Object.keys(relayHost.remoteForwarders).length < 1) {
             await new Promise((r) => setTimeout(r, 2000));
         }
-        await relayHost.removePort(9986);
+        await managementClient.deleteTunnelPort(tunnel, 9985);
+        await relayHost.refreshPorts();
 
         assert.strictEqual(tunnel.ports!.length, 0);
 

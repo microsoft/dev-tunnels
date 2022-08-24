@@ -23,14 +23,14 @@ namespace Microsoft.VsSaaS.TunnelService;
 /// <summary>
 /// Base class for clients that connect to a single host
 /// </summary>
-public abstract class TunnelClientBase : TunnelBase, ITunnelClient
+public abstract class TunnelClient : TunnelConnection, ITunnelClient
 {
     private bool acceptLocalConnectionsForForwardedPorts = true;
 
     /// <summary>
-    /// Creates a new instance of the <see cref="TunnelClientBase" /> class.
+    /// Creates a new instance of the <see cref="TunnelClient" /> class.
     /// </summary>
-    public TunnelClientBase(ITunnelManagementClient? managementClient, TraceSource trace) : base(managementClient, trace)
+    public TunnelClient(ITunnelManagementClient? managementClient, TraceSource trace) : base(managementClient, trace)
     {
     }
 
@@ -129,7 +129,7 @@ public abstract class TunnelClientBase : TunnelBase, ITunnelClient
     /// </summary>
     /// <remarks>
     /// Overwrites <see cref="SshSession"/> property.
-    /// SSH session reconnect is enabled only if <see cref="TunnelBase.connector"/> is not null.
+    /// SSH session reconnect is enabled only if <see cref="TunnelConnection.connector"/> is not null.
     /// </remarks>
     protected async Task StartSshSessionAsync(Stream stream, CancellationToken cancellation)
     {
@@ -297,6 +297,22 @@ public abstract class TunnelClientBase : TunnelBase, ITunnelClient
         }
 
         return null;
+    }
+
+    /// <inheritdoc />
+    public async Task RefreshPortsAsync(CancellationToken cancellation)
+    {
+        if (SshSession == null || SshSession.IsClosed)
+        {
+            throw new InvalidOperationException("Not connected.");
+        }
+
+        var request = new SessionRequestMessage
+        {
+            RequestType = TunnelHost.RefreshPortsRequestType,
+            WantReply = true,
+        };
+        await SshSession.RequestAsync(request, cancellation);
     }
 
     private void SshSession_Closed(object? sender, SshSessionClosedEventArgs e)

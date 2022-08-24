@@ -18,7 +18,7 @@ namespace Microsoft.VsSaaS.TunnelService
     /// <summary>
     /// Tunnel client implementation that connects via a tunnel relay.
     /// </summary>
-    public class TunnelRelayTunnelClient : TunnelClientBase, IRelayClient
+    public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     {
         /// <summary>
         /// Web socket sub-protocol to connect to the tunnel relay endpoint.
@@ -165,6 +165,9 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <inheritdoc />
         Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>
             RefreshTunnelAccessTokenAsync(cancellation);
+
+        /// <inheritdoc />
+        void IRelayClient.OnRetrying(RetryingTunnelConnectionEventArgs e) => OnRetrying(e);
 
         #endregion IRelayClient
     }

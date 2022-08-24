@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -113,7 +114,7 @@ namespace Microsoft.VsSaaS.TunnelService
                             out var statusCode) &&
                         statusCode != 101)
                     {
-                        wse.Data["HttpStatusCode"] = statusCode;
+                        TunnelConnectionException.SetHttpStatusCode(wse, (HttpStatusCode)statusCode);
                         socket.Dispose();
                         throw wse;
                     }

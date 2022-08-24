@@ -59,75 +59,36 @@ export class TunnelHostBase
         await this.connectTunnelSession(tunnel);
     }
 
-    public async addPort(portToAdd: TunnelPort): Promise<TunnelPort> {
-        if (!this.tunnel) {
-            throw new Error('Tunnel must be running');
+    public async refreshPorts(): Promise<void> {
+        if (!this.tunnel || !this.managementClient) {
+            return;
         }
 
-        let port = await this.managementClient!.createTunnelPort(this.tunnel, portToAdd, undefined);
-        const promises = this.sshSessions.map(async (sshSession) => {
-            if (!sshSession.principal || !sshSession.isConnected) {
-                // Two possible cases:
-                // - The session is not yet authenticated; all ports will be forwarded after the session is authenticated.
-                // - The session is currently disconnected and will reconnect; all ports will be re-forwarded after the session is reconnected.
-                return;
+        const updatedTunnel = await this.managementClient.getTunnel(this.tunnel, undefined);
+        const updatedPorts = updatedTunnel?.ports ?? [];
+        this.tunnel.ports = updatedPorts;
+
+        const forwardPromises: Promise<any>[] = [];
+
+        for (let port of updatedPorts) {
+            for (let session of this.sshSessions.filter((s) => s.isConnected && s.sessionId)) {
+                const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
+                const forwarder = this.remoteForwarders[key.toString()];
+                if (!forwarder) {
+                    const pfs = session.getService(PortForwardingService)!;
+                    forwardPromises.push(this.forwardPort(pfs, port));
+                }
             }
-
-            let pfs: PortForwardingService | null = sshSession.getService(PortForwardingService);
-            if (!pfs) {
-                throw new Error('PFS must be active to add ports');
-            }
-
-            await this.forwardPort(pfs, port);
-        });
-        await Promise.all(promises);
-
-        return port;
-    }
-
-    public async removePort(portNumberToRemove: number): Promise<boolean> {
-        if (!this.tunnel || !this.tunnel.ports) {
-            throw new Error('Tunnel must be running and have ports to delete');
         }
 
-        let portDeleted = await this.managementClient!.deleteTunnelPort(
-            this.tunnel,
-            portNumberToRemove,
-            undefined,
-        );
-
-        this.sshSessions.forEach((sshSession) => {
-            const sessionId = sshSession.sessionId;
-            if (sessionId && sshSession.isConnected) {
-                Object.keys(this.remoteForwarders).forEach((key) => {
-                    let entry = this.remoteForwarders[key];
-                    if (entry.localPort === portNumberToRemove) {
-                        // && key.sessionId.equals(sessionId))
-                        let remoteForwarder = this.remoteForwarders[key];
-                        delete this.remoteForwarders[key];
-                        if (remoteForwarder) {
-                            remoteForwarder.dispose();
-                        }
-                    }
-                });
+        for (let [key, forwarder] of Object.entries(this.remoteForwarders)) {
+            if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
+                delete this.remoteForwarders[key];
+                forwarder.dispose();
             }
-        });
-
-        return portDeleted;
-    }
-
-    public async updatePort(updatedPort: TunnelPort): Promise<TunnelPort> {
-        if (!this.tunnel || !this.tunnel.ports) {
-            throw new Error('Tunnel must be running and have ports to update');
         }
 
-        let port = await this.managementClient!.updateTunnelPort(
-            this.tunnel,
-            updatedPort,
-            undefined,
-        );
-
-        return port;
+        await Promise.all(forwardPromises);
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
@@ -155,7 +116,7 @@ export class TunnelHostBase
             return;
         }
 
-        const key = new SessionPortKey(sessionId, Number(forwarder.remotePort));
+        const key = new SessionPortKey(sessionId, Number(forwarder.localPort));
         this.remoteForwarders[key.toString()] = forwarder;
     }
 

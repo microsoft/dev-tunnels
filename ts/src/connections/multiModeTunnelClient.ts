@@ -55,6 +55,10 @@ export class MultiModeTunnelClient extends TunnelConnectionBase implements Tunne
         throw new Error('Method not implemented.');
     }
 
+    public async refreshPorts(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
     public async dispose(): Promise<void> {
         await super.dispose();
         await Promise.all(this.clients.map((client) => client.dispose()));

@@ -27,6 +27,9 @@ import {
     SshChannel,
     Stream,
     SshProtocolExtensionNames,
+    SessionRequestMessage,
+    SshRequestEventArgs,
+    SessionRequestSuccessMessage,
 } from '@vs/vs-ssh';
 import { PortForwardChannelOpenMessage, PortForwardingService, SshServer } from '@vs/vs-ssh-tcp';
 import { CancellationToken, Disposable } from 'vscode-jsonrpc';
@@ -172,6 +175,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         session.onClientAuthenticated(() => {
             this.onSshClientAuthenticated(session);
         });
+        const requestRegistration = session.onRequest((e) => {
+            this.onSshSessionRequest(e, session);
+        });
         const reconnectedEventRegistration = session.onReconnected(() => {
             this.onSshClientReconnected(session);
         });
@@ -190,6 +196,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             await tcs.promise;
         } finally {
             authenticatingEventRegistration.dispose();
+            requestRegistration.dispose();
             channelOpeningEventRegistration.dispose();
             closedEventRegistration.dispose();
             reconnectedEventRegistration.dispose();
@@ -247,6 +254,15 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                     forwarder.dispose();
                 }
             }
+        }
+    }
+
+    private onSshSessionRequest(e: SshRequestEventArgs<SessionRequestMessage>, session: any) {
+        if (e.requestType === 'RefreshPorts') {
+            e.responsePromise = (async () => {
+                await this.refreshPorts();
+                return new SessionRequestSuccessMessage();
+            })();
         }
     }
 
