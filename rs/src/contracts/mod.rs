@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from RustContractWriter.cs
 
+mod cluster_details;
 mod local_network_tunnel_endpoint;
 mod problem_details;
 mod rate_status;
@@ -27,6 +28,7 @@ mod tunnel_relay_tunnel_endpoint;
 mod tunnel_service_properties;
 mod tunnel_status;
 
+pub use cluster_details::*;
 pub use local_network_tunnel_endpoint::*;
 pub use problem_details::*;
 pub use rate_status::*;

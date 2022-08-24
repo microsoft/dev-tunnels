@@ -338,5 +338,11 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelAccessSubject[] subjects,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
+
+        /// <summary>
+        /// Lists all available clusters by region.
+        /// </summary>
+        /// <returns>Array of cluster <see cref="ClusterDetails"/></returns>
+        Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation = default);
     }
 }

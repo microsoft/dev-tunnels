@@ -327,4 +327,9 @@ public class MockTunnelManagementClient : ITunnelManagementClient
             }
         }
     }
+
+    public Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation = default)
+    {
+        throw new NotImplementedException();
+    }
 }
