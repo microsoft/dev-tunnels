@@ -104,14 +104,14 @@ export abstract class TunnelHostBase implements TunnelHost {
                 const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
                 const forwarder = this.remoteForwarders[key.toString()];
                 if (!forwarder) {
-                    const pfs = session.getService(PortForwardingService) !;
+                    const pfs = session.getService(PortForwardingService)!;
                     forwardPromises.push(this.forwardPort(pfs, port));
                 }
             }
         }
 
         for (let [key, forwarder] of Object.entries(this.remoteForwarders)) {
-            if (!updatedPorts.some((p) => p.portNumber == forwarder.localPort)) {
+            if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
                 delete this.remoteForwarders[key];
                 forwarder.dispose();
             }

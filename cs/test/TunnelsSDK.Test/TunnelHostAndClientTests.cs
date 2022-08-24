@@ -540,7 +540,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             new TunnelPort { PortNumber = this.localPortsFixture.Port },
             options: null,
             CancellationToken.None);
-        await relayHost.RefreshPortsAsync(CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
         // Reconnect the tunnel host
@@ -571,7 +571,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
            new TunnelPort { PortNumber = this.localPortsFixture.Port1 },
            options: null,
            CancellationToken.None);
-        await relayHost.RefreshPortsAsync(CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port1, await clientPortAdded.Task);
         Assert.Contains(relayClient.ForwardedPorts, p => p.RemotePort == this.localPortsFixture.Port);
 
@@ -627,7 +627,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             new TunnelPort { PortNumber = this.localPortsFixture.Port },
             options: null,
             CancellationToken.None);
-        await relayHost.RefreshPortsAsync(CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
         // Reconnect the tunnel client
@@ -657,7 +657,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             new TunnelPort { PortNumber = this.localPortsFixture.Port1 },
             options: null,
             CancellationToken.None);
-        await relayHost.RefreshPortsAsync(CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port1, await clientPortAdded.Task);
 
         Assert.Contains(relayClient.ForwardedPorts, p => p.RemotePort == this.localPortsFixture.Port);
