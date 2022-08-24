@@ -13,7 +13,7 @@ import {
     TunnelAccessScopes,
     TunnelRelayTunnelEndpoint,
 } from '@vs/tunnels-contracts';
-import { TunnelRelayTunnelClient, TunnelRelayTunnelHost } from '@vs/tunnels-connections';
+import { ConnectionStatus, RelayConnectionError, RelayErrorType, TunnelRelayTunnelClient, TunnelRelayTunnelHost } from '@vs/tunnels-connections';
 import {
     MultiChannelStream,
     NodeStream,
@@ -26,6 +26,7 @@ import {
     SshServerSession,
     SshSessionConfiguration,
     SshStream,
+    Stream,
 } from '@vs/vs-ssh';
 import { DuplexStream } from './duplexStream';
 import * as net from 'net';
@@ -45,7 +46,7 @@ export class TunnelHostAndClientTests {
 
     public static async after() {}
 
-    private createRelayTunnel(ports?: number[]): Tunnel {
+    private createRelayTunnel(ports?: number[], dontAddClientEndpoint?: boolean): Tunnel {
         return {
             tunnelId: 'test',
             clusterId: 'localhost',
@@ -53,7 +54,7 @@ export class TunnelHostAndClientTests {
                 [TunnelAccessScopes.Host]: 'mock-host-token',
                 [TunnelAccessScopes.Connect]: 'mock-connect-token',
             },
-            endpoints: [
+            endpoints: dontAddClientEndpoint ? [] : [
                 {
                     connectionMode: TunnelConnectionMode.TunnelRelay,
                     clientRelayUri: this.mockClientRelayUri,
@@ -110,6 +111,7 @@ export class TunnelHostAndClientTests {
     private async connectRelayClient(
         relayClient: TestTunnelRelayTunnelClient,
         tunnel: Tunnel,
+        clientStreamFactory?: (stream: Stream) => Promise<Stream>,
     ): Promise<SshServerSession> {
         const [serverStream, clientStream] = await DuplexStream.createStreams();
         const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
@@ -117,10 +119,16 @@ export class TunnelHostAndClientTests {
         let sshSession = await this.createSshServerSession();
         let serverConnectPromise = sshSession.connect(serverStream);
 
-        relayClient.streamFactory = new MockTunnelRelayStreamFactory(
+        const mockStreamFactory =  new MockTunnelRelayStreamFactory(
             TunnelRelayTunnelClient.webSocketSubProtocol,
             clientStream,
         );
+        
+        if (clientStreamFactory) {
+            mockStreamFactory.createRelayStream = () => clientStreamFactory(clientStream);
+        }
+
+        relayClient.streamFactory = mockStreamFactory;
 
         assert.strictEqual(false, relayClient.isSshSessionActiveProperty);
         await relayClient.connect(tunnel, undefined);
@@ -171,6 +179,94 @@ export class TunnelHostAndClientTests {
         await relayClient.dispose();
         assert.strictEqual(false, relayClient.isSshSessionActiveProperty);
         assert.strictEqual(true, sshSessionClosedEventFired);
+        assert.strictEqual(relayClient.disconnectError, undefined);
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
+    }
+
+    @test
+    public async connectRelayClientRetriesOn429() {
+        const relayClient = new TestTunnelRelayTunnelClient();
+        const tunnel = this.createRelayTunnel();
+        let firstAttempt = true;
+
+        const connected = new Promise<void>((resolve, reject) => {
+            relayClient.connectionStatusChanged((e) => {
+                if (e.status === ConnectionStatus.Connected) {
+                    resolve();
+                } else if (e.status === ConnectionStatus.Disconnected) {
+                    reject(new Error('Disconnected unexpectedly.'));
+                }
+            })
+        })
+
+        await this.connectRelayClient(relayClient, tunnel, async (stream) => {
+            if (firstAttempt) {
+                firstAttempt = false;
+                throw new RelayConnectionError('error.tooManyRequests', {errorType: RelayErrorType.TooManyRequests, statusCode: 429});
+            }
+
+            return stream;
+        });
+
+        await connected;
+        assert.strictEqual(relayClient.disconnectError, undefined);
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected);
+
+        await relayClient.dispose();
+        assert.strictEqual(relayClient.disconnectError, undefined);
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
+    }
+
+    @test
+    public connectRelayClientFailsForUnrecoverableError() {
+        return this.connectRelayFailsForError(new Error('Unrecoverable Error'));
+    }
+
+    @test
+    public connectRelayClientFailsFor403ForbiddenError() {
+        const error = new RelayConnectionError(
+            'error.relayClientForbidden', 
+            {errorType: RelayErrorType.Unauthorized, statusCode: 403},
+            );
+        return this.connectRelayFailsForError(
+            error,
+            "Forbidden (403). Provide a fresh tunnel access token with 'connect' scope.");
+    }
+
+    @test
+    public connectRelayClientFailsFor401UnauthorizedError() {
+        const error = new RelayConnectionError(
+            'error.relayClientUnauthorized', 
+            {errorType: RelayErrorType.Unauthorized, statusCode: 401},
+            );
+        return this.connectRelayFailsForError(
+            error,
+            "Not authorized (401). Provide a fresh tunnel access token with 'connect' scope.");
+    }    
+
+    private async connectRelayFailsForError(error: Error, expectedErrorMessage?: string) {
+        const relayClient = new TestTunnelRelayTunnelClient();
+        const tunnel = this.createRelayTunnel();
+        const disconnectError = new Promise<Error | undefined>((resolve) => {
+            relayClient.connectionStatusChanged((e) => {
+                if (e.status === ConnectionStatus.Disconnected) {
+                    resolve(e.disconnectError);
+                }
+            })
+        })
+
+        // Connecting wraps error in a new error object with this error message
+        const expectedConnectErrorMessage = `Failed to connect to tunnel relay. Error: ${expectedErrorMessage ?? error.message}`;
+        try {
+            await this.connectRelayClient(relayClient, tunnel, () => { throw error; });
+        } catch (e) {
+            assert.strictEqual((e as Error).message, expectedConnectErrorMessage);
+        }
+
+        // connectionStatusChanged event and disconnectError contain the original error.
+        assert.strictEqual(await disconnectError, error);
+        assert.strictEqual(relayClient.disconnectError, error);
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);        
     }
 
     @test
@@ -209,6 +305,8 @@ export class TunnelHostAndClientTests {
         forwardedStream.destroy();
         remotePortStreamer?.dispose();
         await relayClient.dispose();
+        assert.strictEqual(relayClient.disconnectError, undefined);
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
     }
 
     @test
@@ -275,6 +373,9 @@ export class TunnelHostAndClientTests {
         let pfs = clientSshSession.activateService(PortForwardingService);
         await clientSshSession.connect(new NodeStream(clientRelayStream));
         clientRelayStream.destroy();
+        await relayHost.dispose();
+        assert.strictEqual(relayHost.disconnectError, undefined);
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
     }
 
     @test
@@ -307,6 +408,9 @@ export class TunnelHostAndClientTests {
         }
         clientRelayStream.destroy();
         clientSshSession.dispose();
+        await relayHost.dispose();
+        assert.strictEqual(relayHost.disconnectError, undefined);
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
     }
 
     @test
@@ -364,5 +468,21 @@ export class TunnelHostAndClientTests {
 
         assert.notStrictEqual(relayHost.remoteForwarders, {});
         clientSshSession.dispose();
+    }
+
+    @test
+    public newRelayClientHasNoConnectionStatus() {
+        const relayClient = new TunnelRelayTunnelClient();
+        assert.strictEqual(relayClient.disconnectError, undefined);
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.None);
+    }
+
+    @test
+    public newRelayHostHasNoConnectionStatus() {
+        let managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        let relayHost = new TunnelRelayTunnelHost(managementClient);
+        assert.strictEqual(relayHost.disconnectError, undefined);
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.None);
     }
 }

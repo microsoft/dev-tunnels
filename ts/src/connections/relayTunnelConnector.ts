@@ -58,7 +58,13 @@ export class RelayTunnelConnector implements TunnelConnector {
         }
 
         function throwError(message: string) {
-            error = new Error(message);
+            if (isError(error)) {
+                // Preserve the error object, just replace the message
+                error.message = message;
+            } else {
+                error = new Error(message);
+            }
+
             throw error;
         }
 

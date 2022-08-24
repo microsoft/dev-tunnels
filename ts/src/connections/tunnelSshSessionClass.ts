@@ -70,8 +70,10 @@ export function tunnelSshSessionClass<
             // Closing the SSH session does nothing if the session is in disconnected state,
             // which may happen for a reconnectable session when the connection drops.
             // Disposing of the session forces closing and frees up the resources.
-            this.sshSession.dispose();
-            this.sshSession = undefined;
+            if (this.sshSession) {
+                this.sshSession.dispose();
+                this.sshSession = undefined;
+            }
         }
 
         /**
