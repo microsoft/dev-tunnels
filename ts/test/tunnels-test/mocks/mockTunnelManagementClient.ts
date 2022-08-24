@@ -124,7 +124,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         }
 
         let newArray: TunnelEndpoint[] = Object.assign([], tunnel.endpoints);
-        newArray[newArray.length - 1] = endpoint;
+        newArray.push(endpoint);
         tunnel.endpoints = newArray;
 
         let tunnelEndpoint: TunnelRelayTunnelEndpoint = endpoint;
