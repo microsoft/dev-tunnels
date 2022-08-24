@@ -21,7 +21,6 @@ import {
     TunnelRelayTunnelHost,
 } from '@vs/tunnels-connections';
 import {
-    MultiChannelStream,
     NodeStream,
     PromiseCompletionSource,
     SshAlgorithms,
@@ -40,6 +39,16 @@ import { MockTunnelRelayStreamFactory } from './mocks/mockTunnelRelayStreamFacto
 import { TestTunnelRelayTunnelClient } from './testTunnelRelayTunnelClient';
 import { TestMultiChannelStream } from './testMultiChannelStream';
 import { Disposable } from 'vscode-jsonrpc';
+
+interface TestConnection {
+    relayHost: TunnelRelayTunnelHost;
+    relayClient: TestTunnelRelayTunnelClient;
+    managementClient: MockTunnelManagementClient;
+    clientMultiChannelStream: TestMultiChannelStream;
+    clientStream: SshStream | undefined;
+    dispose(): Promise<void>;
+    addPortOnHostAndValidateOnClient(portNumber: number): Promise<void>;
+}
 
 @suite
 @slow(3000)
@@ -465,6 +474,7 @@ export class TunnelHostAndClientTests {
         managementClient.hostRelayUri = this.mockHostRelayUri;
         const relayHost = new TunnelRelayTunnelHost(managementClient);
         const tunnel = this.createRelayTunnel();
+        await managementClient.createTunnel(tunnel);
 
         const disconnectError = this.connectionStatusChanged(
             relayHost,
@@ -575,7 +585,7 @@ export class TunnelHostAndClientTests {
         while (Object.keys(relayHost.remoteForwarders).length < 1) {
             await new Promise((r) => setTimeout(r, 2000));
         }
-        await managementClient.deleteTunnelPort(tunnel, 9985);
+        await managementClient.deleteTunnelPort(tunnel, 9986);
         await relayHost.refreshPorts();
 
         assert.strictEqual(tunnel.ports!.length, 0);
@@ -586,11 +596,8 @@ export class TunnelHostAndClientTests {
 
     @test
     public async connectRelayClientToHostAndReconnectHost() {
-        const {
-            relayHost,
-            relayClient,
-            clientMultiChannelStream,
-        } = await this.startHostWithClientAndAddPort();
+        const testConnection = await this.startHostWithClientAndAddPort();
+        const { relayHost, relayClient, clientMultiChannelStream } = testConnection;
 
         // Reconnect the tunnel host
         const reconnectedHostStream = new PromiseCompletionSource<Stream>();
@@ -614,27 +621,22 @@ export class TunnelHostAndClientTests {
         reconnectedClientMultiChannelStream.resolve(newMultiChannelStream);
 
         // Add port to the tunnel host and wait for it on the client
-        await this.addPortOnHostAndValidateOnClient(relayHost, relayClient, 9995);
+        await testConnection.addPortOnHostAndValidateOnClient(9995);
 
         // Clean up
-        await relayClient.dispose();
-        await relayHost.dispose();
+        await testConnection.dispose();
     }
 
     @test
     async connectRelayClientToHostAndReconnectClient() {
-        const {
-            relayHost,
-            relayClient,
-            clientMultiChannelStream,
-            clientStream,
-        } = await this.startHostWithClientAndAddPort();
+        const testConnection = await this.startHostWithClientAndAddPort();
+        const { relayHost, relayClient, clientMultiChannelStream, clientStream } = testConnection;
 
         // Disconnect the tunnel client. It'll eventually reconnect.
         clientStream?.channel.dispose();
 
         // Add port to the tunnel host and wait for it on the client
-        await this.addPortOnHostAndValidateOnClient(relayHost, relayClient, 9995);
+        await testConnection.addPortOnHostAndValidateOnClient(9995);
         assert.strictEqual(clientMultiChannelStream.streamsOpened, 2);
 
         // Clean up
@@ -644,12 +646,8 @@ export class TunnelHostAndClientTests {
 
     @test
     async connectRelayClientToHostAndFailToReconnectClient() {
-        const {
-            relayHost,
-            relayClient,
-            clientMultiChannelStream,
-            clientStream,
-        } = await this.startHostWithClientAndAddPort();
+        const testConnection = await this.startHostWithClientAndAddPort();
+        const { relayClient, clientStream } = testConnection;
 
         // Wait for client disconnection and closed SSH session
         const disconnected = this.connectionStatusChanged(
@@ -675,15 +673,18 @@ export class TunnelHostAndClientTests {
         clientStream?.channel.dispose();
         await sshSessionClosed;
         assert.strictEqual(error, await disconnected);
+
+        await testConnection.dispose();
     }
 
-    private async startHostWithClientAndAddPort() {
+    private async startHostWithClientAndAddPort(): Promise<TestConnection> {
         const managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;
         managementClient.clientRelayUri = this.mockClientRelayUri;
 
         // Create and start tunnel host.
         const tunnel = this.createRelayTunnel([], true); // Hosting a tunnel adds the endpoint
+        await managementClient.createTunnel(tunnel);
         const relayHost = new TunnelRelayTunnelHost(managementClient);
         let clientMultiChannelStream = await this.startRelayHost(relayHost, tunnel);
         assert.strictEqual(clientMultiChannelStream.streamsOpened, 0);
@@ -700,34 +701,40 @@ export class TunnelHostAndClientTests {
         await relayClient.connect(tunnel);
         assert.strictEqual(clientMultiChannelStream.streamsOpened, 1);
 
-        // Add port to the tunnel host and wait for it on the client
-        await this.addPortOnHostAndValidateOnClient(relayHost, relayClient, 9985);
-
-        return { relayHost, relayClient, clientMultiChannelStream, clientStream };
-    }
-
-    private async addPortOnHostAndValidateOnClient(
-        relayHost: TunnelRelayTunnelHost,
-        relayClient: TunnelRelayTunnelClient,
-        portNumber: number,
-    ) {
-        // Add port to the tunnel host and wait for it on the client
-        const disposables: Disposable[] = [];
-        let clientPortAdded = new Promise((resolve, reject) => {
-            relayClient.forwardedPorts?.onPortAdded((e) => resolve(e.port.remotePort), disposables);
-            relayClient.connectionStatusChanged((e) => {
-                if (e.status === ConnectionStatus.Disconnected) {
-                    reject(new Error('Relay client disconnected unexpectedly.'));
+        const result: TestConnection = {
+            relayHost,
+            relayClient,
+            managementClient,
+            clientMultiChannelStream,
+            clientStream,
+            dispose: async () => {
+                await relayClient.dispose();
+                await relayHost.dispose();
+            },
+            addPortOnHostAndValidateOnClient: async (portNumber: number) => {
+                const disposables: Disposable[] = [];
+                let clientPortAdded = new Promise((resolve, reject) => {
+                    relayClient.forwardedPorts?.onPortAdded((e) => resolve(e.port.remotePort), disposables);
+                    relayClient.connectionStatusChanged((e) => {
+                        if (e.status === ConnectionStatus.Disconnected) {
+                            reject(new Error('Relay client disconnected unexpectedly.'));
+                        }
+                    }, disposables);
+                });
+        
+                await managementClient.createTunnelPort(relayHost.tunnel!, { portNumber });
+                await relayHost.refreshPorts();
+                try {
+                    assert.strictEqual(await clientPortAdded, portNumber);
+                } finally {
+                    disposables.forEach((d) => d.dispose());
                 }
-            }, disposables);
-        });
+            }
+        };
 
-        await relayHost.addPort({ portNumber });
-        try {
-            assert.strictEqual(await clientPortAdded, portNumber);
-        } finally {
-            disposables.forEach((d) => d.dispose());
-        }
+        // Add port to the tunnel host and wait for it on the client
+        await result.addPortOnHostAndValidateOnClient(9985);
+        return result;
     }
 
     private async connectionStatusChanged(
