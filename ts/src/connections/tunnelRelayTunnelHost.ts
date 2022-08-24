@@ -24,6 +24,9 @@ import {
     PromiseCompletionSource,
     CancellationError,
     ObjectDisposedError,
+    SessionRequestMessage,
+    SshRequestEventArgs,
+    SessionRequestSuccessMessage,
 } from '@vs/vs-ssh';
 import { PortForwardChannelOpenMessage, PortForwardingService } from '@vs/vs-ssh-tcp';
 import { CancellationToken, CancellationTokenSource, Disposable } from 'vscode-jsonrpc';
@@ -186,6 +189,9 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
         session.onClientAuthenticated(() => {
             this.onSshClientAuthenticated(session);
         });
+        const requestRegistration = session.onRequest((e) => {
+            this.onSshSessionRequest(e, session);
+        });
         const channelOpeningEventRegistration = session.onChannelOpening((e) => {
             this.onSshChannelOpening(e, session);
         });
@@ -200,6 +206,7 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
             await tcs.promise;
         } finally {
             authenticatingEventRegistration.dispose();
+            requestRegistration.dispose();
             channelOpeningEventRegistration.dispose();
             closedEventRegistration.dispose();
         }
@@ -230,6 +237,15 @@ export class TunnelRelayTunnelHost extends TunnelHostBase {
                     );
                 }
             });
+        }
+    }
+
+    private onSshSessionRequest(e: SshRequestEventArgs<SessionRequestMessage>, session: any) {
+        if (e.requestType === 'RefreshPorts') {
+            e.responsePromise = (async () => {
+                await this.refreshPorts();
+                return new SessionRequestSuccessMessage();
+            })();
         }
     }
 

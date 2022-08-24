@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VsSaaS.TunnelService.Contracts;
@@ -78,54 +79,16 @@ namespace Microsoft.VsSaaS.TunnelService
         }
 
         /// <inheritdoc />
-        public async Task<TunnelPort> AddPortAsync(TunnelPort portToAdd, CancellationToken cancellation)
-        {
-            var addTasks = new List<Task>();
-            foreach (ITunnelHost host in Hosts)
-            {
-                addTasks.Add(host.AddPortAsync(portToAdd, cancellation));
-            }
-
-            await Task.WhenAll(addTasks);
-            return portToAdd;
-        }
-
-        /// <inheritdoc />
-        public async Task<bool> RemovePortAsync(ushort portNumberToRemove, CancellationToken cancellation)
-        {
-            var result = true;
-            var removeTasks = new List<Task<bool>>();
-            foreach (ITunnelHost host in Hosts)
-            {
-                removeTasks.Add(host.RemovePortAsync(portNumberToRemove, cancellation));
-            }
-
-            var results = await Task.WhenAll(removeTasks);
-            foreach (bool res in results)
-            {
-                result = result && res;
-            }
-
-            return result;
-        }
-
-        /// <inheritdoc />
-        public async Task<TunnelPort> UpdatePortAsync(TunnelPort updatedPort, CancellationToken cancellation)
-        {
-            var updateTasks = new List<Task>();
-            foreach (ITunnelHost host in Hosts)
-            {
-                updateTasks.Add(host.UpdatePortAsync(updatedPort, cancellation));
-            }
-
-            await Task.WhenAll(updateTasks);
-            return updatedPort;
-        }
-
-        /// <inheritdoc />
         protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
         {
             throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public async Task RefreshPortsAsync(CancellationToken cancellation)
+        {
+            await Task.WhenAll(
+                Hosts.Select((c) => c.RefreshPortsAsync(cancellation)));
         }
     }
 }

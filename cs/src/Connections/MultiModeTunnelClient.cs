@@ -110,5 +110,11 @@ namespace Microsoft.VsSaaS.TunnelService
         {
             throw new NotImplementedException();
         }
+
+        /// <inheritdoc />
+        public Task RefreshPortsAsync(CancellationToken cancellation)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

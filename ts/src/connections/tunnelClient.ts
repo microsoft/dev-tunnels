@@ -60,4 +60,16 @@ export interface TunnelClient extends Disposable {
      * @param cancellation Optional cancellation for the request.
      */
     waitForForwardedPort(forwardedPort: number, cancellation?: CancellationToken): Promise<void>;
+
+    /**
+     * Sends a request to the host to refresh ports that were updated using the management API,
+     * and waits for the refresh to complete.
+     *
+     * After using the management API to add or remove ports, call this method to have a
+     * connected client notify the host to update its cached list of ports. Any added or
+     * removed ports will then propagate back to the set of ports forwarded by the current
+     * client. After the returned task has completed, any newly added ports are usable from
+     * the current client.
+     */
+    refreshPorts(): Promise<void>;
 }
