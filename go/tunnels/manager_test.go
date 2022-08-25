@@ -646,7 +646,7 @@ func TestTunnelEndpoints(t *testing.T) {
 
 	tunnel := &Tunnel{}
 	options := &TunnelRequestOptions{
-		TokenScopes: hostOrManageAccessTokenScopes,
+		TokenScopes: managePortsAccessTokenScopes,
 	}
 	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
 	if err != nil {
