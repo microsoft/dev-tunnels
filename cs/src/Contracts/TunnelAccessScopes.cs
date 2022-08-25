@@ -3,54 +3,62 @@
 // Licensed under the MIT license.
 // </copyright>
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
+namespace Microsoft.VsSaaS.TunnelService.Contracts;
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts
+/// <summary>
+/// Defines scopes for tunnel access tokens.
+/// </summary>
+/// <remarks>
+/// A tunnel access token with one or more of these scopes typically also has cluster ID and
+/// tunnel ID claims that limit the access scope to a specific tunnel, and may also have one
+/// or more port claims that further limit the access to particular ports of the tunnel.
+/// </remarks>
+public static class TunnelAccessScopes
 {
     /// <summary>
-    /// Defines scopes for tunnel access tokens.
+    /// Allows creating tunnels. This scope is valid only in policies at the global, domain,
+    /// or organization level; it is not relevant to an already-created tunnel or tunnel port.
+    /// (Creation of ports requires "manage" or "host" access to the tunnel.)
     /// </summary>
-    public static class TunnelAccessScopes
+    public const string Create = "create";
+
+    /// <summary>
+    /// Allows management operations on tunnels and tunnel ports.
+    /// </summary>
+    public const string Manage = "manage";
+
+    /// <summary>
+    /// Allows management operations on all ports of a tunnel, but does not allow updating any
+    /// other tunnel properties or deleting the tunnel.
+    /// </summary>
+    public const string ManagePorts = "manage:ports";
+
+    /// <summary>
+    /// Allows accepting connections on tunnels as a host. Includes access to update tunnel
+    /// endpoints and ports.
+    /// </summary>
+    public const string Host = "host";
+
+    /// <summary>
+    /// Allows inspecting tunnel connection activity and data.
+    /// </summary>
+    public const string Inspect = "inspect";
+
+    /// <summary>
+    /// Allows connecting to tunnels or ports as a client.
+    /// </summary>
+    public const string Connect = "connect";
+
+    /// <summary>
+    /// Array of all access scopes. Primarily used for validation.
+    /// </summary>
+    public static readonly string[] All = new[]
     {
-        /// <summary>
-        /// Allows creating tunnels. This scope is valid only in policies at the global, domain,
-        /// or organization level; it is not relevant to an already-created tunnel or tunnel port.
-        /// (Creation of ports requires "manage" or "host" access to the tunnel.)
-        /// </summary>
-        public const string Create = "create";
-
-        /// <summary>
-        /// Allows management operations on tunnels and tunnel ports.
-        /// </summary>
-        public const string Manage = "manage";
-
-        /// <summary>
-        /// Allows accepting connections on tunnels as a host.
-        /// </summary>
-        public const string Host = "host";
-
-        /// <summary>
-        /// Allows inspecting tunnel connection activity and data.
-        /// </summary>
-        public const string Inspect = "inspect";
-
-        /// <summary>
-        /// Allows connecting to tunnels as a client.
-        /// </summary>
-        public const string Connect = "connect";
-
-        /// <summary>
-        /// Array of all access scopes.
-        /// </summary>
-        public static readonly string[] All = new[]
-        {
-            Create,
-            Manage,
-            Host,
-            Inspect,
-            Connect,
-        };
-    }
+        Create,
+        Manage,
+        ManagePorts,
+        Host,
+        Inspect,
+        Connect,
+    };
 }

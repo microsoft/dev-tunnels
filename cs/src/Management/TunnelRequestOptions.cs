@@ -81,21 +81,18 @@ namespace Microsoft.VsSaaS.TunnelService
         public bool RequireAllTags { get; set; }
 
         /// <summary>
-        /// Gets or sets an optional list of scopes that should be authorized when retrieving a
-        /// tunnel or tunnel port object.
-        /// </summary>
-        /// <remarks>
-        /// For service-to-service calls using forwarded client credentials, the scope(s) should
-        /// match the action the client is requesting, such as "host" or "connect". This enables
-        /// the calling service to ensure the client is specifically authorized for the supplied
-        /// scope(s), rather than just any scopes permitted by the API.
-        /// </remarks>
-        public string[]? Scopes { get; set; }
-
-        /// <summary>
         /// Gets or sets an optional list of token scopes that are requested when retrieving
         /// a tunnel or tunnel port object.
         /// </summary>
+        /// <remarks>
+        /// Each item in the array must be a single scope from <see cref="TunnelAccessScopes"/>
+        /// or a space-delimited combination of multiple scopes. The service issues an access
+        /// token for each scope or combination and returns the token(s) in the
+        /// <see cref="Tunnel.AccessTokens"/> or <see cref="TunnelPort.AccessTokens"/> dictionary.
+        /// If the caller does not have permission to get a token for one or more scopes then a
+        /// token is not returned but the overall request does not fail. Token properties including
+        /// scopes and expiration may be checked using <see cref="TunnelAccessTokenProperties"/>.
+        /// </remarks>
         public string[]? TokenScopes { get; set; }
 
         /// <summary>
@@ -117,15 +114,10 @@ namespace Microsoft.VsSaaS.TunnelService
                 queryOptions["includePorts"] = TrueOption;
             }
 
-            if (Scopes != null)
-            {
-                TunnelAccessControl.ValidateScopes(Scopes);
-                queryOptions["scopes"] = Scopes;
-            }
-
             if (TokenScopes != null)
             {
-                TunnelAccessControl.ValidateScopes(TokenScopes);
+                TunnelAccessControl.ValidateScopes(
+                    TokenScopes, validScopes: null, allowMultiple: true);
                 queryOptions["tokenScopes"] = TokenScopes;
             }
 

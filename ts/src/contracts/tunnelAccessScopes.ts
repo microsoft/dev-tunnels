@@ -5,6 +5,11 @@
 
 /**
  * Defines scopes for tunnel access tokens.
+ *
+ * A tunnel access token with one or more of these scopes typically also has cluster ID
+ * and tunnel ID claims that limit the access scope to a specific tunnel, and may also
+ * have one or more port claims that further limit the access to particular ports of the
+ * tunnel.
  */
 export enum TunnelAccessScopes {
     /**
@@ -20,7 +25,14 @@ export enum TunnelAccessScopes {
     Manage = 'manage',
 
     /**
-     * Allows accepting connections on tunnels as a host.
+     * Allows management operations on all ports of a tunnel, but does not allow updating
+     * any other tunnel properties or deleting the tunnel.
+     */
+    ManagePorts = 'manage:ports',
+
+    /**
+     * Allows accepting connections on tunnels as a host. Includes access to update tunnel
+     * endpoints and ports.
      */
     Host = 'host',
 
@@ -30,7 +42,7 @@ export enum TunnelAccessScopes {
     Inspect = 'inspect',
 
     /**
-     * Allows connecting to tunnels as a client.
+     * Allows connecting to tunnels or ports as a client.
      */
     Connect = 'connect',
 }

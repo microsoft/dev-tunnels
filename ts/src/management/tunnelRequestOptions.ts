@@ -53,14 +53,16 @@ export interface TunnelRequestOptions {
     requireAllTags?: boolean;
 
     /**
-     * Gets or sets an optional list of scopes that should be authorized when
-     * retrieving a tunnel or tunnel port object.
-     */
-    scopes?: string[];
-
-    /**
-     * Gets or sets an optional list of token scopes that
-     * are requested when retrieving a tunnel or tunnel port object.
+     * Gets or sets an optional list of token scopes that are requested when retrieving a
+     * tunnel or tunnel port object.
+     *
+     * Each item in the array must be a single scope from `TunnelAccessScopes` or a space-
+     * delimited combination of multiple scopes. The service issues an access token for
+     * each scope or combination and returns the token(s) in the `Tunnel.accessTokens` or
+     * `TunnelPort.accessTokens` dictionary. If the caller does not have permission to get
+     * a token for one or more scopes then a token is not returned but the overall request
+     * does not fail. Token properties including scopes and expiration may be checked using
+     * `TunnelAccessTokenProperties`.
      */
     tokenScopes?: string[];
 

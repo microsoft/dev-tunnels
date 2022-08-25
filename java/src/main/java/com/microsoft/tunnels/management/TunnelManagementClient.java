@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -51,18 +52,20 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private String tunnelAuthenticationScheme = "Tunnel";
 
   // Access Scopes
-  private static String[] HostAccessTokenScope = {
-      TunnelAccessScopes.host
-  };
-  private static String[] HostOrManageAccessTokenScope = {
-      TunnelAccessScopes.host,
-      TunnelAccessScopes.manage,
-  };
   private static String[] ManageAccessTokenScope = {
       TunnelAccessScopes.manage
   };
+  private static String[] HostAccessTokenScope = {
+      TunnelAccessScopes.host
+  };
+  private static String[] ManagePortsAccessTokenScopes = {
+      TunnelAccessScopes.manage,
+      TunnelAccessScopes.managePorts,
+      TunnelAccessScopes.host,
+  };
   private static String[] ReadAccessTokenScopes = {
       TunnelAccessScopes.manage,
+      TunnelAccessScopes.managePorts,
       TunnelAccessScopes.host,
       TunnelAccessScopes.connect
   };
@@ -124,7 +127,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       HttpMethod requestMethod,
       URI uri,
       T requestObject,
-      String[] scopes) {
+      String[] accessTokenScopes) {
 
     String authHeaderValue = null;
     if (options != null && options.accessToken != null) {
@@ -136,8 +139,23 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (StringUtils.isBlank(authHeaderValue) && tunnel != null && tunnel.accessTokens != null) {
-      for (String scope : scopes) {
-        var accessToken = tunnel.accessTokens.get(scope);
+      for (String scope : accessTokenScopes) {
+        String accessToken = null;
+        for (Map.Entry<String, String> scopeAndToken : tunnel.accessTokens.entrySet()) {
+          // Each key may be either a single scope or space-delimited list of scopes.
+          if (scopeAndToken.getKey().contains(" ")) {
+            var scopes = scopeAndToken.getKey().split(" ");
+            if (Arrays.asList(scopes).contains(scope)) {
+              accessToken = scopeAndToken.getValue();
+              break;
+            }
+          }
+          else {
+            accessToken = scopeAndToken.getValue();
+            break;
+          }
+        }
+
         if (StringUtils.isNotBlank(accessToken)) {
           authHeaderValue = tunnelAuthenticationScheme + " " + accessToken;
           break;
@@ -510,7 +528,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.POST,
         uri,
-        ManageAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
@@ -589,7 +607,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.PUT,
         uri,
-        HostAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
@@ -626,7 +644,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.DELETE,
         uri,
-        HostOrManageAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         null /* requestObject */,
         responseType);
 

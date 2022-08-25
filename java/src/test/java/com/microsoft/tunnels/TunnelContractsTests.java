@@ -77,13 +77,19 @@ public class TunnelContractsTests {
     var scopes = Arrays.asList("connect", "host");
     var validScopes = Arrays.asList("connect", "create", "inspect", "host", "manage");
     var invalidScopes = Arrays.asList("connect", "invalid");
-    TunnelAccessControl.validateScopes(scopes, null);
-    TunnelAccessControl.validateScopes(validScopes, null);
-    TunnelAccessControl.validateScopes(scopes, validScopes);
-    Exception exception = assertThrows(IllegalArgumentException.class, ()-> {
-      TunnelAccessControl.validateScopes(invalidScopes, validScopes);
+    var multiScopes = Arrays.asList("host connect", "manage");
+    TunnelAccessControl.validateScopes(scopes, null, false);
+    TunnelAccessControl.validateScopes(validScopes, null, false);
+    TunnelAccessControl.validateScopes(scopes, validScopes, false);
+    var exception = assertThrows(IllegalArgumentException.class, ()-> {
+      TunnelAccessControl.validateScopes(invalidScopes, validScopes, false);
     });
     assertTrue(exception.getMessage().equals("Invalid tunnel access scope: invalid"));
+    TunnelAccessControl.validateScopes(multiScopes, null, true);
+    exception = assertThrows(IllegalArgumentException.class, ()-> {
+      TunnelAccessControl.validateScopes(multiScopes, null, false);
+    });
+    assertTrue(exception.getMessage().equals("Invalid tunnel access scope: host connect"));
   }
 
   @Test

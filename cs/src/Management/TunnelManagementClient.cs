@@ -38,11 +38,16 @@ namespace Microsoft.VsSaaS.TunnelService
             new[] { TunnelAccessScopes.Manage };
         private static readonly string[] HostAccessTokenScope =
             new[] { TunnelAccessScopes.Host };
-        private static readonly string[] HostOrManageAccessTokenScopes =
-            new[] { TunnelAccessScopes.Manage, TunnelAccessScopes.Host };
+        private static readonly string[] ManagePortsAccessTokenScopes = new[]
+        {
+            TunnelAccessScopes.Manage,
+            TunnelAccessScopes.ManagePorts,
+            TunnelAccessScopes.Host,
+        };
         private static readonly string[] ReadAccessTokenScopes = new[]
         {
             TunnelAccessScopes.Manage,
+            TunnelAccessScopes.ManagePorts,
             TunnelAccessScopes.Host,
             TunnelAccessScopes.Connect,
         };
@@ -735,8 +740,27 @@ namespace Microsoft.VsSaaS.TunnelService
             {
                 foreach (var scope in accessTokenScopes)
                 {
-                    if (tunnel.AccessTokens.TryGetValue(scope, out var accessToken) == true &&
-                        !string.IsNullOrEmpty(accessToken))
+                    string? accessToken = null;
+                    foreach (var scopeAndToken in tunnel.AccessTokens)
+                    {
+                        // Each key may be either a single scope or space-delimited list of scopes.
+                        if (scopeAndToken.Key.IndexOf(' ') > 0)
+                        {
+                            var scopes = scopeAndToken.Key.Split(' ');
+                            if (scopes.Contains(scope))
+                            {
+                                accessToken = scopeAndToken.Value;
+                                break;
+                            }
+                        }
+                        else if (scopeAndToken.Key == scope)
+                        {
+                            accessToken = scopeAndToken.Value;
+                            break;
+                        }
+                    }
+                    
+                    if (!string.IsNullOrEmpty(accessToken))
                     {
                         TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
                         authHeader = new AuthenticationHeaderValue(
@@ -1000,7 +1024,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
                 HttpMethod.Post,
                 tunnel,
-                HostOrManageAccessTokenScopes,
+                ManagePortsAccessTokenScopes,
                 PortsApiSubPath,
                 query: null,
                 options,
@@ -1041,7 +1065,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
                 HttpMethod.Put,
                 tunnel,
-                HostOrManageAccessTokenScopes,
+                ManagePortsAccessTokenScopes,
                 path,
                 query: null,
                 options,
@@ -1079,7 +1103,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = await this.SendTunnelRequestAsync<bool>(
                 HttpMethod.Delete,
                 tunnel,
-                HostOrManageAccessTokenScopes,
+                ManagePortsAccessTokenScopes,
                 path,
                 query: null,
                 options,
