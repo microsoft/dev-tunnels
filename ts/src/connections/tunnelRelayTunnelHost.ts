@@ -180,9 +180,6 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         const requestRegistration = session.onRequest((e) => {
             this.onSshSessionRequest(e, session);
         });
-        const reconnectedEventRegistration = session.onReconnected(() => {
-            this.onSshClientReconnected(session);
-        });
         const channelOpeningEventRegistration = session.onChannelOpening((e) => {
             this.onSshChannelOpening(e, session);
         });
@@ -201,7 +198,6 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             requestRegistration.dispose();
             channelOpeningEventRegistration.dispose();
             closedEventRegistration.dispose();
-            reconnectedEventRegistration.dispose();
 
             await session.close(SshDisconnectReason.byApplication);
             session.dispose();
@@ -220,17 +216,6 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     }
 
     private onSshClientAuthenticated(session: SshServerSession) {
-        this.startForwardingExistingPorts(session);
-    }
-
-    private onSshClientReconnected(session: SshServerSession) {
-        this.startForwardingExistingPorts(session, true);
-    }
-
-    private async startForwardingExistingPorts(
-        session: SshServerSession,
-        removeUnusedPorts?: boolean,
-    ) {
         let pfs = session.activateService(PortForwardingService);
         let ports = this.tunnel?.ports ?? [];
         ports.forEach(async (port) => {
@@ -240,23 +225,6 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                 this.traceError(`Error forwarding port ${port.portNumber}: ${ex}`);
             }
         });
-
-        // If a tunnel client reconnects, its SSH session Port Forwarding service may
-        // have remote port forwarders for the ports no longer forwarded.
-        // Remove such forwarders.
-        if (removeUnusedPorts && !this.isDisposed) {
-            ports = this.tunnel?.ports ?? [];
-            for (const key of Object.keys(this.remoteForwarders)) {
-                const forwarder = this.remoteForwarders[key];
-                if (
-                    forwarder.session === session &&
-                    !ports.find((tp) => tp.portNumber === forwarder.localPort)
-                ) {
-                    delete this.remoteForwarders[key];
-                    forwarder.dispose();
-                }
-            }
-        }
     }
 
     private onSshSessionRequest(e: SshRequestEventArgs<SessionRequestMessage>, session: any) {
