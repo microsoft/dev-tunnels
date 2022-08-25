@@ -57,8 +57,7 @@ var (
 	manageAccessTokenScope       = []TunnelAccessScope{TunnelAccessScopeManage}
 	hostAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeHost}
 	managePortsAccessTokenScopes = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeManagePorts, TunnelAccessScopeHost}
-	readAccessTokenScopes        = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost, TunnelAccessScopeConnect}
-	readPortsAccessTokenScopes   = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeManagePorts, TunnelAccessScopeHost, TunnelAccessScopeConnect}
+	readAccessTokenScopes        = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeManagePorts, TunnelAccessScopeHost, TunnelAccessScopeConnect}
 )
 
 // UserAgent contains the name and version of the client.
@@ -316,7 +315,7 @@ func (m *Manager) ListTunnelPorts(
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readPortsAccessTokenScopes, false)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScopes, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel ports request: %w", err)
 	}
@@ -337,7 +336,7 @@ func (m *Manager) GetTunnelPort(
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readPortsAccessTokenScopes, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScopes, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending get tunnel port request: %w", err)
 	}

@@ -47,12 +47,6 @@ namespace Microsoft.VsSaaS.TunnelService
         private static readonly string[] ReadAccessTokenScopes = new[]
         {
             TunnelAccessScopes.Manage,
-            TunnelAccessScopes.Host,
-            TunnelAccessScopes.Connect,
-        };
-        private static readonly string[] ReadPortsAccessTokenScopes = new[]
-        {
-            TunnelAccessScopes.Manage,
             TunnelAccessScopes.ManagePorts,
             TunnelAccessScopes.Host,
             TunnelAccessScopes.Connect,
@@ -991,7 +985,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = await this.SendTunnelRequestAsync<TunnelPort[]>(
                 HttpMethod.Get,
                 tunnel,
-                ReadPortsAccessTokenScopes,
+                ReadAccessTokenScopes,
                 PortsApiSubPath,
                 query: null,
                 options,
@@ -1010,7 +1004,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = await this.SendTunnelRequestAsync<TunnelPort>(
                 HttpMethod.Get,
                 tunnel,
-                ReadPortsAccessTokenScopes,
+                ReadAccessTokenScopes,
                 path,
                 query: null,
                 options,

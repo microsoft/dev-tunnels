@@ -65,11 +65,6 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   };
   private static String[] ReadAccessTokenScopes = {
       TunnelAccessScopes.manage,
-      TunnelAccessScopes.host,
-      TunnelAccessScopes.connect
-  };
-  private static String[] ReadPortsAccessTokenScopes = {
-      TunnelAccessScopes.manage,
       TunnelAccessScopes.managePorts,
       TunnelAccessScopes.host,
       TunnelAccessScopes.connect
@@ -491,7 +486,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.GET,
         uri,
-        ReadPortsAccessTokenScopes,
+        ReadAccessTokenScopes,
         null /* requestObject */,
         responseType);
   }
@@ -509,7 +504,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.GET,
         uri,
-        ReadPortsAccessTokenScopes,
+        ReadAccessTokenScopes,
         null,
         responseType);
   }

@@ -68,11 +68,6 @@ const managePortsAccessTokenScopes = [
 ];
 const readAccessTokenScopes = [
     TunnelAccessScopes.Manage,
-    TunnelAccessScopes.Host,
-    TunnelAccessScopes.Connect,
-];
-const readPortsAccessTokenScopes = [
-    TunnelAccessScopes.Manage,
     TunnelAccessScopes.ManagePorts,
     TunnelAccessScopes.Host,
     TunnelAccessScopes.Connect,
@@ -321,7 +316,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const results = (await this.sendTunnelRequest<TunnelPort[]>(
             'GET',
             tunnel,
-            readPortsAccessTokenScopes,
+            readAccessTokenScopes,
             portsApiSubPath,
             undefined,
             options,
@@ -339,7 +334,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = await this.sendTunnelRequest<TunnelPort>(
             'GET',
             tunnel,
-            readPortsAccessTokenScopes,
+            readAccessTokenScopes,
             path,
             undefined,
             options,
