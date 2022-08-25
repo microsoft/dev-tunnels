@@ -28,6 +28,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
 
         /**
          * Tunnel relay URI.
+         * @internal
          */
         public relayUri?: string;
 
@@ -38,6 +39,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
 
         /**
          * Creates a stream to the tunnel.
+         * @internal
          */
         public async createSessionStream(cancellation: CancellationToken): Promise<Stream> {
             if (!this.relayUri) {
@@ -67,6 +69,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          * @param tunnel Tunnel to use for the connection.
          *     Undefined if the connection information is already known and the tunnel is not needed.
          *     Tunnel object to get the connection information from that tunnel.
+         * @internal
          */
         public async connectTunnelSession(tunnel?: Tunnel): Promise<void> {
             try {
@@ -82,6 +85,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          * @param tunnel Tunnel to use for the connection.
          *     Tunnel object to get the connection data if defined.
          *     Undefined if the connection data is already known.
+         * @internal
          */
         public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
             await super.onConnectingToTunnel(tunnel);
@@ -95,6 +99,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
 
         /**
          * Gets the tunnel relay URI.
+         * @internal
          */
         public async getTunnelRelayUri(tunnel?: Tunnel): Promise<string> {
             throw new Error('getTunnelRelayUri() is not implemented');

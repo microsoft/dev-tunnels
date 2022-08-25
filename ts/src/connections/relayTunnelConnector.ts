@@ -12,7 +12,7 @@ import {
     TraceLevel,
 } from '@vs/vs-ssh';
 import { TunnelConnector } from './tunnelConnector';
-import { delay, getErrorMessage, isCancellation, isError } from './utils';
+import { delay, getErrorMessage } from './utils';
 import { BrowserWebSocketRelayError, RelayConnectionError } from './sshHelpers';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { TunnelSession } from './tunnelSession';
@@ -47,10 +47,10 @@ export class RelayTunnelConnector implements TunnelConnector {
         cancellation: CancellationToken,
     ): Promise<void> {
         let disconnectReason: SshDisconnectReason | undefined;
-        let error: any;
+        let error: Error | undefined;
 
         function throwIfCancellation(e: any) {
-            if (isCancellation(e, cancellation)) {
+            if (e instanceof CancellationError && cancellation.isCancellationRequested) {
                 error = undefined;
                 disconnectReason = SshDisconnectReason.byApplication;
                 throw e;
@@ -58,8 +58,8 @@ export class RelayTunnelConnector implements TunnelConnector {
         }
 
         function throwError(message: string) {
-            if (isError(error)) {
-                // Preserve the error object, just replace the message
+            if (error) {
+                // Preserve the error object, just replace the message.
                 error.message = message;
             } else {
                 error = new Error(message);
@@ -132,17 +132,16 @@ export class RelayTunnelConnector implements TunnelConnector {
                 disconnectReason = undefined;
                 return;
             } catch (e) {
-                throwIfCancellation(e);
-
-                error = e;
-                errorDescription = getErrorMessage(e);
-
-                // Not recoverable if we cannot recognize the error object.
-                if (!isError(e)) {
+                if (!(e instanceof Error)) {
+                    // Not recoverable if we cannot recognize the error object.
                     throwError(
-                        `Failed to connect to the tunnel service and start tunnel SSH session: ${errorDescription}`,
+                        `Failed to connect to the tunnel service and start tunnel SSH session: ${e}`,
                     );
                 }
+
+                throwIfCancellation(e);
+                error = <Error>e;
+                errorDescription = error.message;
 
                 // Browser web socket relay error - retry until max number of attempts is exceeded.
                 if (e instanceof BrowserWebSocketRelayError) {
@@ -222,7 +221,7 @@ export class RelayTunnelConnector implements TunnelConnector {
                             continue;
 
                         default:
-                            if (errorDescription.startsWith('error.relayConnectionError ')) {
+                            if (errorDescription?.startsWith('error.relayConnectionError ')) {
                                 const recoverableError = recoverableNetworkErrors.find((s) =>
                                     errorDescription!.includes(s),
                                 );
@@ -237,13 +236,9 @@ export class RelayTunnelConnector implements TunnelConnector {
                 // Everything else is not recoverable
                 throw e;
             } finally {
-                if (error) {
-                    if (!isError(error)) {
-                        error = new Error(String(error));
-                    }
-                    if (disconnectReason) {
-                        error.reason = disconnectReason;
-                    }
+                // Graft SSH disconnect reason on to the error object as 'reason' property.
+                if (error && disconnectReason && !(<any>error).reason) {
+                    (<any>error).reason = disconnectReason;
                 }
 
                 if (disconnectReason) {

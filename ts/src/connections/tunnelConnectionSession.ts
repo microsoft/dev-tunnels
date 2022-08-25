@@ -7,13 +7,13 @@ import {
     TunnelManagementClient,
     TunnelRequestOptions,
 } from '@vs/tunnels-management';
-import { Stream, Trace, TraceLevel } from '@vs/vs-ssh';
+import { CancellationError, Stream, Trace, TraceLevel } from '@vs/vs-ssh';
 import { CancellationToken } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';
 import { TunnelConnector } from './tunnelConnector';
 import { TunnelSession } from './tunnelSession';
-import { getError, getErrorMessage, isCancellation, withCancellation } from './utils';
+import { withCancellation } from './utils';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
 
 /**
@@ -21,7 +21,7 @@ import { TunnelConnectionBase } from './tunnelConnectionBase';
  */
 export class TunnelConnectionSession extends TunnelConnectionBase implements TunnelSession {
     private connectedTunnel: Tunnel | null = null;
-    private connector?: Promise<TunnelConnector>;
+    private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;
 
     /**
@@ -58,9 +58,10 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
-     * Gets a value indicating that this connection has created its connector.
+     * Gets a value indicating that this connection has already created its connector
+     * and so can be reconnected if needed.
      */
-    protected get hasConnector(): boolean {
+    protected get isReconnectable(): boolean {
         return !!this.connector;
     }
 
@@ -129,7 +130,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      */
     protected async getFreshTunnelAccessToken(
         cancellation: CancellationToken,
-    ): Promise<string | undefined> {
+    ): Promise<string | null | undefined> {
         if (!this.isRefreshingTunnelAccessTokenEventHandled) {
             if (!this.tunnel || !this.managementClient) {
                 return;
@@ -153,17 +154,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     /**
      * Creates a tunnel connector
      */
-    protected createTunnelConnector(): Promise<TunnelConnector> {
-        return Promise.resolve(new RelayTunnelConnector(this));
-    }
-
-    private async getConnector(): Promise<TunnelConnector> {
-        this.throwIfDisposed();
-        if (!this.connector) {
-            this.connector = this.createTunnelConnector();
-        }
-
-        return await this.connector;
+    protected createTunnelConnector(): TunnelConnector {
+        return new RelayTunnelConnector(this);
     }
 
     /**
@@ -181,7 +173,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
-     * Trace verbose message.
+     * Trace error message.
      */
     protected traceError(msg: string, err?: Error) {
         this.trace(TraceLevel.Error, 0, msg, err);
@@ -215,11 +207,17 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             await action();
             this.connectionStatus = ConnectionStatus.Connected;
         } catch (e) {
-            if (!isCancellation(e)) {
+            if (!(e instanceof CancellationError)) {
                 const name =
                     this.tunnelAccessScope === TunnelAccessScopes.Connect ? 'client' : 'host';
-                this.traceError(`Error connecting ${name} tunnel session: ${getErrorMessage(e)}`);
-                this.disconnectError = getError(e);
+                if (e instanceof Error) {
+                    this.traceError(`Error connecting ${name} tunnel session: ${e.message}`, e);
+                    this.disconnectError = e;
+                } else {
+                    const message = `Error connecting ${name} tunnel session: ${e}`;
+                    this.traceError(message);
+                    this.disconnectError = new Error(message);
+                }
             }
             this.connectionStatus = ConnectionStatus.Disconnected;
             throw e;
@@ -232,9 +230,14 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      *     Undefined if the connection information is already known and the tunnel is not needed.
      *     Tunnel object to get the connection information from that tunnel.
      */
-    public connectTunnelSession(tunnel?: Tunnel): Promise<void> {
-        return this.connectSession(async () => {
-            const isReconnect = tunnel ? !!this.tunnel : !!this.connector;
+    public async connectTunnelSession(tunnel?: Tunnel): Promise<void> {
+        if (tunnel && this.tunnel) {
+            throw new Error(
+                'Already connected to a tunnel. Use separate instances to connect to multiple tunnels.',
+            );
+        }
+        await this.connectSession(async () => {
+            const isReconnect = this.isReconnectable && !tunnel;
             await this.onConnectingToTunnel(tunnel);
             if (tunnel) {
                 this.tunnel = tunnel;
@@ -242,8 +245,10 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                     this.accessToken = tunnel.accessTokens[this.tunnelAccessScope];
                 }
             }
-            const connector = await this.getConnector();
-            await connector.connectSession(isReconnect, this.disposeToken);
+            if (!this.connector) {
+                this.connector = this.createTunnelConnector();
+            }
+            await this.connector.connectSession(isReconnect, this.disposeToken);
         });
     }
 

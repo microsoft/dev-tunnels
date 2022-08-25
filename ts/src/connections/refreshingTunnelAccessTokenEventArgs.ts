@@ -24,7 +24,7 @@ export class RefreshingTunnelAccessTokenEventArgs {
 
     /**
      * Token promise the event handler may set to asynchnronously fetch the token.
-     * The result of the promise may be a new tunnel access token or undefined if it couldn't get the token.
+     * The result of the promise may be a new tunnel access token or null if it couldn't get the token.
      */
-    public tunnelAccessToken?: Promise<string | undefined>;
+    public tunnelAccessToken?: Promise<string | null>;
 }

@@ -130,7 +130,7 @@ export class TunnelConnectionBase implements TunnelConnection {
      */
     protected async getFreshTunnelAccessToken(
         cancellation: CancellationToken,
-    ): Promise<string | undefined> {
+    ): Promise<string | null | undefined> {
         const event = new RefreshingTunnelAccessTokenEventArgs(
             this.tunnelAccessScope,
             cancellation,

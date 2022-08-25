@@ -20,7 +20,6 @@ export * from './tunnelRelayTunnelClient';
 export * from './tunnelRelayTunnelHost';
 export * from './tunnelConnection';
 export * from './tunnelConnectionBase';
-export * from './tunnelSession';
 export * from './connectionStatus';
 export * from './connectionStatusChangedEventArgs';
 export * from './refreshingTunnelAccessTokenEventArgs';

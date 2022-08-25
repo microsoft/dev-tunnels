@@ -64,6 +64,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
 
     /**
      * Configures the tunnel session with the given stream.
+     * @internal
      */
     public async configureSession(
         stream: Stream,
@@ -83,6 +84,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
 
     /**
      * Gets the tunnel relay URI.
+     * @internal
      */
     public async getTunnelRelayUri(tunnel?: Tunnel): Promise<string> {
         if (!tunnel) {

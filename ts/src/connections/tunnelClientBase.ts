@@ -120,6 +120,7 @@ export class TunnelClientBase
      * @param tunnel Tunnel to use for the connection.
      *     Tunnel object to get the connection data if defined.
      *     Undefined if the connection data is already known.
+     * @internal
      */
     public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
         if (!this.endpoints) {
@@ -175,7 +176,7 @@ export class TunnelClientBase
     public startSshSession(stream: Stream, cancellation?: CancellationToken): Promise<void> {
         return this.connectSession(async () => {
             const clientConfig = new SshSessionConfiguration();
-            if (this.hasConnector) {
+            if (this.isReconnectable) {
                 clientConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
                 clientConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionLatency);
             }

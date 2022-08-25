@@ -36,11 +36,13 @@ export function tunnelSshSessionClass<
     return class SshTunnelSession extends base {
         /**
          * SSH session that is used to connect to the tunnel.
+         * @internal
          */
         public sshSession?: TSshSession;
 
         /**
          * Closes the tunnel SSH session.
+         * @internal
          */
         public async closeSession(error?: Error): Promise<void> {
             await super.closeSession(error);
@@ -85,22 +87,6 @@ export function tunnelSshSessionClass<
                 await this.closeSession(this.disconnectError);
             } catch (e) {
                 if (!(e instanceof ObjectDisposedError)) throw e;
-            }
-        }
-
-        /**
-         * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
-         * otherwise, ensure that there is already sufficient data to connect to a tunnel.
-         * @param tunnel Tunnel to use for the connection.
-         *     Tunnel object to get the connection data if defined.
-         *     Undefined if the connection data is already known.
-         */
-        public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
-            await super.onConnectingToTunnel(tunnel);
-            if (tunnel && this.sshSession) {
-                throw new Error(
-                    'Already connected. Use separate instances to connect to multiple tunnels.',
-                );
             }
         }
     };

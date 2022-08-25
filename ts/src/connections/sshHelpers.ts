@@ -292,8 +292,16 @@ export interface ISharedWorkspaceInfo extends IWorkspaceConnectionInfo {
 export enum RelayErrorType {
     ConnectionError = 1,
     Unauthorized = 2,
+
+    /**
+     * @deprecated This relay error type is not used.
+     */
     EndpointNotFound = 3,
+    /**
+     * @deprecated This relay error type is not used.
+     */
     ListenerOffline = 4,
+
     ServerError = 5,
     TunnelPortNotFound = 6,
     TooManyRequests = 7,
@@ -327,13 +335,7 @@ interface WebSocketClientErrorContext {
  * Web socket client error contexts.
  */
 
-// TODO: Return ProblemDetails from TunnelRelay service. The 404 error messages
-// below match Azure Relay but not TunnelRelay.
-// Status 404 may be used for at least two distinct error conditions.
-// So we have to match on the error message text. This could break when
-// the relay server behavior changes or when updating the client websocket library.
-// But then in the worst case the original error message will be reported.
-
+// TODO: Return ProblemDetails from TunnelRelay service.
 const webSocketClientContexts: WebSocketClientErrorContext[] = [
     {
         regex: /status: 401/,
@@ -348,21 +350,10 @@ const webSocketClientContexts: WebSocketClientErrorContext[] = [
         errorType: RelayErrorType.Unauthorized,
     },
     {
+        regex: /status: 404/,
         statusCode: 404,
         error: 'tunnelPortNotFound',
         errorType: RelayErrorType.TunnelPortNotFound,
-    },
-    {
-        regex: /status: 404 Endpoint does not exist/,
-        statusCode: 404,
-        error: 'relayEndpointNotFound',
-        errorType: RelayErrorType.EndpointNotFound,
-    },
-    {
-        regex: /status: 404 There are no listeners connected/,
-        statusCode: 404,
-        error: 'relayListenerOffline',
-        errorType: RelayErrorType.ListenerOffline,
     },
     {
         regex: /status: 429/,

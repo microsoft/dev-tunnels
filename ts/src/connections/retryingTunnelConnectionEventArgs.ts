@@ -9,7 +9,7 @@ export class RetryingTunnelConnectionEventArgs {
         /**
          * Gets the error that caused the retry.
          */
-        public readonly error: any,
+        public readonly error: Error,
 
         /**
          * Gets the amount of time to wait before retrying. An event handler may change this value.

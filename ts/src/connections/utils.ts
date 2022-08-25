@@ -55,25 +55,6 @@ export function delay(milliseconds: number, cancellation?: CancellationToken): P
 }
 
 /**
- * Checks if {@link e} is {@link CancellationError} and {@link cancellation} has been requested.
- */
-export function isCancellation(e: any, cancellation?: CancellationToken): e is CancellationError {
-    return (
-        e &&
-        typeof e === 'object' &&
-        e instanceof CancellationError &&
-        (!cancellation || cancellation.isCancellationRequested)
-    );
-}
-
-/**
- * Checks if {@link e} is {@link Error}.
- */
-export function isError(e: any): e is Error {
-    return e && typeof e === 'object' && e instanceof Error;
-}
-
-/**
  * Gets the error message.
  */
 export function getErrorMessage(e: any) {
@@ -84,7 +65,7 @@ export function getErrorMessage(e: any) {
  * Wraps e in Error object if e is not Error. If e is Error, returns e as is.
  */
 export function getError(e: any, messagePrefix?: string): Error {
-    return isError(e) ? e : new Error(`${messagePrefix ?? ''}${getErrorMessage(e)}`);
+    return e instanceof Error ? e : new Error(`${messagePrefix ?? ''}${e}`);
 }
 
 /**

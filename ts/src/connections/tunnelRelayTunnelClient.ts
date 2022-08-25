@@ -25,19 +25,23 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 
     /**
      * Gets the tunnel relay URI.
+     * @internal
      */
     public async getTunnelRelayUri(tunnel?: Tunnel): Promise<string> {
-        let tunnelEndpoints = this.endpoints!.map(
-            (endpoint) => endpoint as TunnelRelayTunnelEndpoint,
+        if (!this.endpoints || this.endpoints.length === 0) {
+            throw new Error('No hosts are currently accepting connections for the tunnel.');
+        }
+        const tunnelEndpoints: TunnelRelayTunnelEndpoint[] = this.endpoints.filter(
+            (endpoint) => endpoint.connectionMode === TunnelConnectionMode.TunnelRelay,
         );
-        let tunnelEndpoint;
-        if (tunnelEndpoints && tunnelEndpoints.length === 1) {
-            tunnelEndpoint = tunnelEndpoints[0];
-        } else {
+
+        if (tunnelEndpoints.length === 0) {
             throw new Error('The host is not currently accepting Tunnel relay connections.');
         }
 
-        return tunnelEndpoint.clientRelayUri!;
+        // TODO: What if there are multiple relay endpoints, which one should the tunnel client pick, or is this an error?
+        // For now, just chose the first one.
+        return tunnelEndpoints[0].clientRelayUri!;
     }
 
     /**
@@ -58,6 +62,7 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 
     /**
      * Configures the tunnel session with the given stream.
+     * @internal
      */
     public async configureSession(
         stream: Stream,

@@ -18,6 +18,7 @@ export class TunnelHostBase
     implements TunnelHost {
     /**
      * Sessions created between this host and clients
+     * @internal
      */
     public sshSessions: SshServerSession[] = [];
 
@@ -126,6 +127,7 @@ export class TunnelHostBase
      * @param tunnel Tunnel to use for the connection.
      *     Tunnel object to get the connection data if defined.
      *     Undefined if the connection data is already known.
+     * @internal
      */
     public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
         if (this.hostPrivateKey && this.hostPublicKeys) {
