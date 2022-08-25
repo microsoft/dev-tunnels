@@ -735,8 +735,27 @@ namespace Microsoft.VsSaaS.TunnelService
             {
                 foreach (var scope in accessTokenScopes)
                 {
-                    if (tunnel.AccessTokens.TryGetValue(scope, out var accessToken) == true &&
-                        !string.IsNullOrEmpty(accessToken))
+                    string? accessToken = null;
+                    foreach (var scopeAndToken in tunnel.AccessTokens)
+                    {
+                        // Each key may be either a single scope or space-delimited list of scopes.
+                        if (scopeAndToken.Key.IndexOf(' ') > 0)
+                        {
+                            var scopes = scopeAndToken.Key.Split(' ');
+                            if (scopes.Contains(scope))
+                            {
+                                accessToken = scopeAndToken.Value;
+                                break;
+                            }
+                        }
+                        else if (scopeAndToken.Key == scope)
+                        {
+                            accessToken = scopeAndToken.Value;
+                            break;
+                        }
+                    }
+                    
+                    if (!string.IsNullOrEmpty(accessToken))
                     {
                         TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
                         authHeader = new AuthenticationHeaderValue(

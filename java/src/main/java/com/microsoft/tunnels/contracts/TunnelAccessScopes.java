@@ -6,6 +6,11 @@ package com.microsoft.tunnels.contracts;
 
 /**
  * Defines scopes for tunnel access tokens.
+ *
+ * A tunnel access token with one or more of these scopes typically also has cluster ID
+ * and tunnel ID claims that limit the access scope to a specific tunnel, and may also
+ * have one or more port claims that further limit the access to particular ports of the
+ * tunnel.
  */
 public class TunnelAccessScopes {
     /**
@@ -21,7 +26,14 @@ public class TunnelAccessScopes {
     public static final String manage = "manage";
 
     /**
-     * Allows accepting connections on tunnels as a host.
+     * Allows management operations on all ports of a tunnel, but does not allow updating
+     * any other tunnel properties or deleting the tunnel.
+     */
+    public static final String managePorts = "manage:ports";
+
+    /**
+     * Allows accepting connections on tunnels as a host. Includes access to update tunnel
+     * endpoints and ports.
      */
     public static final String host = "host";
 
@@ -31,7 +43,7 @@ public class TunnelAccessScopes {
     public static final String inspect = "inspect";
 
     /**
-     * Allows connecting to tunnels as a client.
+     * Allows connecting to tunnels or ports as a client.
      */
     public static final String connect = "connect";
 }

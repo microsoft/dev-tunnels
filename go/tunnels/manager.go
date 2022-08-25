@@ -564,7 +564,7 @@ func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {
 	return &errorMessage, nil
 }
 
-func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) (token string) {
+func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, accessTokenScopes []TunnelAccessScope) (token string) {
 	if tunnelRequestOptions.AccessToken != "" {
 		token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelRequestOptions.AccessToken)
 	}
@@ -572,9 +572,28 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 		token = m.tokenProvider()
 	}
 	if token == "" && tunnel != nil {
-		for _, scope := range scopes {
-			if tunnelToken, ok := tunnel.AccessTokens[scope]; ok {
-				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelToken)
+		for _, scope := range accessTokenScopes {
+			var accessToken string
+			tokensLoop:
+			for tokenScope, token := range tunnel.AccessTokens {
+				// Each key may be either a single scope or space-delimited list of scopes.
+				if strings.Contains(string(tokenScope), " ") {
+					var scopes = strings.Split(string(tokenScope), " ")
+					for _, s := range scopes {
+						if s == string(scope) {
+							accessToken = token
+							break tokensLoop
+						}
+					}
+				} else {
+					accessToken = token
+					break
+				}
+			}
+
+			if accessToken != "" {
+				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, accessToken)
+				break
 			}
 		}
 	}

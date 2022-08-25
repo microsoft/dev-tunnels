@@ -592,7 +592,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private async getAxiosRequestConfig(
         tunnel?: Tunnel,
         options?: TunnelRequestOptions,
-        scopes?: string[],
+        accessTokenScopes?: string[],
     ): Promise<AxiosRequestConfig> {
         // Get access token header
         let headers: { [name: string]: string } = {};
@@ -612,8 +612,22 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         if (!(tunnelAuthentication in headers) && tunnel?.accessTokens) {
-            for (let scope of scopes ?? []) {
-                const accessToken = tunnel.accessTokens[scope];
+            for (let scope of accessTokenScopes ?? []) {
+                let accessToken: string | null = null;
+                for (let scopeAndToken of Object.entries(tunnel.accessTokens)) {
+                    // Each key may be either a single scope or space-delimited list of scopes.
+                    if (scopeAndToken[0].includes(' ')) {
+                        const scopes = scopeAndToken[0].split(' ');
+                        if (scopes.includes(scope)) {
+                            accessToken = scopeAndToken[1];
+                            break;
+                        }
+                    } else if (scopeAndToken[0] === scope) {
+                        accessToken = scopeAndToken[1];
+                        break;
+                    }
+                }
+
                 if (accessToken) {
                     TunnelAccessTokenProperties.validateTokenExpiration(accessToken);
                     headers[
@@ -699,13 +713,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 queryOptions['includePorts'] = ['true'];
             }
 
-            if (options.scopes) {
-                TunnelAccessControl.validateScopes(options.scopes);
-                queryOptions['scopes'] = options.scopes;
-            }
-
             if (options.tokenScopes) {
-                TunnelAccessControl.validateScopes(options.tokenScopes);
+                TunnelAccessControl.validateScopes(options.tokenScopes, undefined, true);
                 queryOptions['tokenScopes'] = options.tokenScopes;
             }
 

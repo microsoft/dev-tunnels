@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -124,7 +125,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       HttpMethod requestMethod,
       URI uri,
       T requestObject,
-      String[] scopes) {
+      String[] accessTokenScopes) {
 
     String authHeaderValue = null;
     if (options != null && options.accessToken != null) {
@@ -136,8 +137,23 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
 
     if (StringUtils.isBlank(authHeaderValue) && tunnel != null && tunnel.accessTokens != null) {
-      for (String scope : scopes) {
-        var accessToken = tunnel.accessTokens.get(scope);
+      for (String scope : accessTokenScopes) {
+        String accessToken = null;
+        for (Map.Entry<String, String> scopeAndToken : tunnel.accessTokens.entrySet()) {
+          // Each key may be either a single scope or space-delimited list of scopes.
+          if (scopeAndToken.getKey().contains(" ")) {
+            var scopes = scopeAndToken.getKey().split(" ");
+            if (Arrays.asList(scopes).contains(scope)) {
+              accessToken = scopeAndToken.getValue();
+              break;
+            }
+          }
+          else {
+            accessToken = scopeAndToken.getValue();
+            break;
+          }
+        }
+
         if (StringUtils.isNotBlank(accessToken)) {
           authHeaderValue = tunnelAuthenticationScheme + " " + accessToken;
           break;

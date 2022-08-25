@@ -33,7 +33,7 @@ public class TunnelAccessControl {
     /**
      * Checks that all items in an array of scopes are valid.
      */
-    public static void validateScopes(Collection<String> scopes, Collection<String> validScopes) {
-        TunnelAccessControlStatics.validateScopes(scopes, validScopes);
+    public static void validateScopes(Collection<String> scopes, Collection<String> validScopes, boolean allowMultiple) {
+        TunnelAccessControlStatics.validateScopes(scopes, validScopes, allowMultiple);
     }
 }
