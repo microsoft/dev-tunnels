@@ -374,9 +374,6 @@ impl TunnelManagementClient {
             if tunnel_opts.include_ports {
                 query.append_pair("includePorts", "true");
             }
-            if !tunnel_opts.scopes.is_empty() {
-                query.append_pair("scopes", &tunnel_opts.scopes.join(","));
-            }
             if !tunnel_opts.token_scopes.is_empty() {
                 query.append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
             }

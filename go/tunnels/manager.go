@@ -56,8 +56,8 @@ var (
 var (
 	manageAccessTokenScope       = []TunnelAccessScope{TunnelAccessScopeManage}
 	hostAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeHost}
-	hostOrManageAccessTokenScope = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost}
-	readAccessTokenScope         = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeHost, TunnelAccessScopeConnect}
+	managePortsAccessTokenScopes = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeManagePorts, TunnelAccessScopeHost}
+	readAccessTokenScopes        = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeManagePorts, TunnelAccessScopeHost, TunnelAccessScopeConnect}
 )
 
 // UserAgent contains the name and version of the client.
@@ -124,7 +124,7 @@ func (m *Manager) ListTunnels(
 		queryParams.Add("domain", domain)
 	}
 	url := m.buildUri(clusterID, tunnelsApiPath, options, queryParams.Encode())
-	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, nil, readAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, nil, options, http.MethodGet, url, nil, nil, readAccessTokenScopes, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel request: %w", err)
 	}
@@ -146,7 +146,7 @@ func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *Tunnel
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScopes, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending get tunnel request: %w", err)
 	}
@@ -315,7 +315,7 @@ func (m *Manager) ListTunnelPorts(
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScope, false)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScopes, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel ports request: %w", err)
 	}
@@ -336,7 +336,7 @@ func (m *Manager) GetTunnelPort(
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodGet, url, nil, nil, readAccessTokenScopes, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending get tunnel port request: %w", err)
 	}
@@ -364,7 +364,7 @@ func (m *Manager) CreateTunnelPort(
 		return nil, fmt.Errorf("error converting port for request: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedPort, nil, hostOrManageAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedPort, nil, managePortsAccessTokenScopes, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel port request: %w", err)
 	}
@@ -407,7 +407,7 @@ func (m *Manager) UpdateTunnelPort(
 		return nil, fmt.Errorf("error converting port for request: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedPort, updateFields, hostOrManageAccessTokenScope, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedPort, updateFields, managePortsAccessTokenScopes, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending update tunnel port request: %w", err)
 	}
@@ -443,7 +443,7 @@ func (m *Manager) DeleteTunnelPort(
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
 
-	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, nil, hostOrManageAccessTokenScope, true)
+	_, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodDelete, url, nil, nil, managePortsAccessTokenScopes, true)
 	if err != nil {
 		return fmt.Errorf("error sending get tunnel request: %w", err)
 	}
@@ -564,7 +564,7 @@ func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {
 	return &errorMessage, nil
 }
 
-func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, scopes []TunnelAccessScope) (token string) {
+func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, accessTokenScopes []TunnelAccessScope) (token string) {
 	if tunnelRequestOptions.AccessToken != "" {
 		token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelRequestOptions.AccessToken)
 	}
@@ -572,9 +572,28 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 		token = m.tokenProvider()
 	}
 	if token == "" && tunnel != nil {
-		for _, scope := range scopes {
-			if tunnelToken, ok := tunnel.AccessTokens[scope]; ok {
-				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelToken)
+		for _, scope := range accessTokenScopes {
+			var accessToken string
+			tokensLoop:
+			for tokenScope, token := range tunnel.AccessTokens {
+				// Each key may be either a single scope or space-delimited list of scopes.
+				if strings.Contains(string(tokenScope), " ") {
+					var scopes = strings.Split(string(tokenScope), " ")
+					for _, s := range scopes {
+						if s == string(scope) {
+							accessToken = token
+							break tokensLoop
+						}
+					}
+				} else {
+					accessToken = token
+					break
+				}
+			}
+
+			if accessToken != "" {
+				token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, accessToken)
+				break
 			}
 		}
 	}

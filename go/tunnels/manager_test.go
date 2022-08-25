@@ -21,14 +21,15 @@ var (
 	userAgentManagerTest = []UserAgent{{Name: "Tunnels-Go-SDK-Tests/Manager", Version: PackageVersion}}
 )
 
-func getAccessToken() string {
+func getUserToken() string {
+	// Example: "github <gh-token>" or "Bearer <aad-token>"
 	return ""
 }
 
 // These tests do not automatically run in the PR check github action
 // beacuse they require authentication. If you want to run these tests
 // you must first generate a tunnels access token and paste it in the
-// getAccessToken return value.
+// getUserToken return value.
 func TestTunnelCreateDelete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -40,7 +41,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -79,7 +80,7 @@ func TestListTunnels(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -138,7 +139,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -189,7 +190,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -253,7 +254,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -304,7 +305,7 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -368,7 +369,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -451,13 +452,13 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 
 	tunnel := &Tunnel{}
-	options := &TunnelRequestOptions{IncludePorts: true, Scopes: []TunnelAccessScope{"manage"}, TokenScopes: []TunnelAccessScope{"manage"}}
+	options := &TunnelRequestOptions{IncludePorts: true, TokenScopes: []TunnelAccessScope{"manage"}}
 	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -551,7 +552,7 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -638,14 +639,14 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getAccessToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 
 	tunnel := &Tunnel{}
 	options := &TunnelRequestOptions{
-		TokenScopes: hostOrManageAccessTokenScope,
+		TokenScopes: managePortsAccessTokenScopes,
 	}
 	createdTunnel, err := managementClient.CreateTunnel(ctx, tunnel, options)
 	if err != nil {
@@ -738,5 +739,24 @@ func TestResourceStatusUnmarshal(t *testing.T) {
 
 	if result1.Current != result2.Current {
 		t.Errorf("%d != %d", result1.Current, result2.Current)
+	}
+}
+
+func TestValidTokenScopes(t *testing.T) {
+	var validScopes = TunnelAccessScopes{ "host", "connect" }
+	var invalidScopes = TunnelAccessScopes{ "invalid", "connect" }
+	var multiScopes = TunnelAccessScopes{ "host connect", "manage" }
+
+	if err := validScopes.valid(nil, false); err != nil {
+		t.Error(err)
+	}
+	if err := invalidScopes.valid(nil, false); err == nil {
+		t.Errorf("Invalid scopes should not be valid")
+	}
+	if err := multiScopes.valid(nil, true); err != nil {
+		t.Error(err)
+	}
+	if err := multiScopes.valid(nil, false); err == nil {
+		t.Errorf("Multiple scopes should not be valid without allowMultiple flag")
 	}
 }
