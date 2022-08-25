@@ -38,11 +38,22 @@ namespace Microsoft.VsSaaS.TunnelService
             new[] { TunnelAccessScopes.Manage };
         private static readonly string[] HostAccessTokenScope =
             new[] { TunnelAccessScopes.Host };
-        private static readonly string[] HostOrManageAccessTokenScopes =
-            new[] { TunnelAccessScopes.Manage, TunnelAccessScopes.Host };
+        private static readonly string[] ManagePortsAccessTokenScopes = new[]
+        {
+            TunnelAccessScopes.Manage,
+            TunnelAccessScopes.ManagePorts,
+            TunnelAccessScopes.Host,
+        };
         private static readonly string[] ReadAccessTokenScopes = new[]
         {
             TunnelAccessScopes.Manage,
+            TunnelAccessScopes.Host,
+            TunnelAccessScopes.Connect,
+        };
+        private static readonly string[] ReadPortsAccessTokenScopes = new[]
+        {
+            TunnelAccessScopes.Manage,
+            TunnelAccessScopes.ManagePorts,
             TunnelAccessScopes.Host,
             TunnelAccessScopes.Connect,
         };
@@ -980,7 +991,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = await this.SendTunnelRequestAsync<TunnelPort[]>(
                 HttpMethod.Get,
                 tunnel,
-                ReadAccessTokenScopes,
+                ReadPortsAccessTokenScopes,
                 PortsApiSubPath,
                 query: null,
                 options,
@@ -999,7 +1010,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = await this.SendTunnelRequestAsync<TunnelPort>(
                 HttpMethod.Get,
                 tunnel,
-                ReadAccessTokenScopes,
+                ReadPortsAccessTokenScopes,
                 path,
                 query: null,
                 options,
@@ -1019,7 +1030,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
                 HttpMethod.Post,
                 tunnel,
-                HostOrManageAccessTokenScopes,
+                ManagePortsAccessTokenScopes,
                 PortsApiSubPath,
                 query: null,
                 options,
@@ -1060,7 +1071,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
                 HttpMethod.Put,
                 tunnel,
-                HostOrManageAccessTokenScopes,
+                ManagePortsAccessTokenScopes,
                 path,
                 query: null,
                 options,
@@ -1098,7 +1109,7 @@ namespace Microsoft.VsSaaS.TunnelService
             var result = await this.SendTunnelRequestAsync<bool>(
                 HttpMethod.Delete,
                 tunnel,
-                HostOrManageAccessTokenScopes,
+                ManagePortsAccessTokenScopes,
                 path,
                 query: null,
                 options,

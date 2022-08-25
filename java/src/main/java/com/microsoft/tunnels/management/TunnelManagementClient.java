@@ -52,18 +52,25 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private String tunnelAuthenticationScheme = "Tunnel";
 
   // Access Scopes
-  private static String[] HostAccessTokenScope = {
-      TunnelAccessScopes.host
-  };
-  private static String[] HostOrManageAccessTokenScope = {
-      TunnelAccessScopes.host,
-      TunnelAccessScopes.manage,
-  };
   private static String[] ManageAccessTokenScope = {
       TunnelAccessScopes.manage
   };
+  private static String[] HostAccessTokenScope = {
+      TunnelAccessScopes.host
+  };
+  private static String[] ManagePortsAccessTokenScopes = {
+      TunnelAccessScopes.manage,
+      TunnelAccessScopes.managePorts,
+      TunnelAccessScopes.host,
+  };
   private static String[] ReadAccessTokenScopes = {
       TunnelAccessScopes.manage,
+      TunnelAccessScopes.host,
+      TunnelAccessScopes.connect
+  };
+  private static String[] ReadPortsAccessTokenScopes = {
+      TunnelAccessScopes.manage,
+      TunnelAccessScopes.managePorts,
       TunnelAccessScopes.host,
       TunnelAccessScopes.connect
   };
@@ -484,7 +491,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.GET,
         uri,
-        ReadAccessTokenScopes,
+        ReadPortsAccessTokenScopes,
         null /* requestObject */,
         responseType);
   }
@@ -502,7 +509,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.GET,
         uri,
-        ReadAccessTokenScopes,
+        ReadPortsAccessTokenScopes,
         null,
         responseType);
   }
@@ -526,7 +533,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.POST,
         uri,
-        ManageAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
@@ -605,7 +612,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.PUT,
         uri,
-        HostAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
@@ -642,7 +649,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.DELETE,
         uri,
-        HostOrManageAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         null /* requestObject */,
         responseType);
 

@@ -61,9 +61,19 @@ function parseTunnelPortDates(port: TunnelPort | null) {
 
 const manageAccessTokenScope = [TunnelAccessScopes.Manage];
 const hostAccessTokenScope = [TunnelAccessScopes.Host];
-const hostOrManageAccessTokenScopes = [TunnelAccessScopes.Manage, TunnelAccessScopes.Host];
+const managePortsAccessTokenScopes = [
+    TunnelAccessScopes.Manage,
+    TunnelAccessScopes.ManagePorts,
+    TunnelAccessScopes.Host,
+];
 const readAccessTokenScopes = [
     TunnelAccessScopes.Manage,
+    TunnelAccessScopes.Host,
+    TunnelAccessScopes.Connect,
+];
+const readPortsAccessTokenScopes = [
+    TunnelAccessScopes.Manage,
+    TunnelAccessScopes.ManagePorts,
     TunnelAccessScopes.Host,
     TunnelAccessScopes.Connect,
 ];
@@ -311,7 +321,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const results = (await this.sendTunnelRequest<TunnelPort[]>(
             'GET',
             tunnel,
-            readAccessTokenScopes,
+            readPortsAccessTokenScopes,
             portsApiSubPath,
             undefined,
             options,
@@ -329,7 +339,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = await this.sendTunnelRequest<TunnelPort>(
             'GET',
             tunnel,
-            readAccessTokenScopes,
+            readPortsAccessTokenScopes,
             path,
             undefined,
             options,
@@ -347,7 +357,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'POST',
             tunnel,
-            hostOrManageAccessTokenScopes,
+            managePortsAccessTokenScopes,
             portsApiSubPath,
             undefined,
             options,
@@ -381,7 +391,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'PUT',
             tunnel,
-            hostOrManageAccessTokenScopes,
+            managePortsAccessTokenScopes,
             path,
             undefined,
             options,
@@ -415,7 +425,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = await this.sendTunnelRequest<boolean>(
             'DELETE',
             tunnel,
-            hostOrManageAccessTokenScopes,
+            managePortsAccessTokenScopes,
             path,
             undefined,
             options,
