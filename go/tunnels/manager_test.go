@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	serviceUrl           = "https://localhost:9901/"
+	serviceUrl           = ServiceProperties.ServiceURI
 	ctx                  = context.Background()
 	userAgentManagerTest = []UserAgent{{Name: "Tunnels-Go-SDK-Tests/Manager", Version: PackageVersion}}
 )

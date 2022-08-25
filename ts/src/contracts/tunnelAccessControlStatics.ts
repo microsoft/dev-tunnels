@@ -17,6 +17,7 @@ const allScopes = [
  * @param validScopes Optional subset of scopes to be considered valid;
  * if omitted then all defined scopes are valid.
  * @param allowMultiple Whether to allow multiple space-delimited scopes in a single item.
+ * Multiple scopes are supported when requesting a tunnel access token with a combination of scopes.
  * @throws Error if a scope is not valid.
  */
 export function validateScopes(
