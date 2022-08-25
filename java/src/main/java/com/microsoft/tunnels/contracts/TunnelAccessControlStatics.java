@@ -5,6 +5,7 @@ package com.microsoft.tunnels.contracts;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 import org.apache.maven.shared.utils.StringUtils;
 
@@ -18,7 +19,8 @@ class TunnelAccessControlStatics {
     }
 
     if (allowMultiple) {
-      scopes = scopes.stream().flatMap((s) -> Arrays.stream(s.split(" "))).toList();
+      scopes = scopes.stream().flatMap((s) -> Arrays.stream(s.split(" ")))
+        .collect(Collectors.toList());
     }
 
     var allScopes = Arrays.asList(new String[] {
