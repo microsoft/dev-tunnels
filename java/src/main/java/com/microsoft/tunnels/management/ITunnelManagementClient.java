@@ -3,6 +3,7 @@
 
 package com.microsoft.tunnels.management;
 
+import com.microsoft.tunnels.contracts.ClusterDetails;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
@@ -200,4 +201,10 @@ public interface ITunnelManagementClient {
       Tunnel tunnel,
       int portNumber,
       TunnelRequestOptions options);
+
+  /**
+   * Lists details of tunneling service clusters in all supported Azure regions.
+   * @return Array of {@link ClusterDetails}.
+   */
+  public CompletableFuture<Collection<ClusterDetails>> listClustersAsync();
 }
