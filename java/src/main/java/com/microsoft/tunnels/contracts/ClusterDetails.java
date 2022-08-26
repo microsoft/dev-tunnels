@@ -7,9 +7,17 @@ package com.microsoft.tunnels.contracts;
 import com.google.gson.annotations.Expose;
 
 /**
- * Tunnel service cluster details.
+ * Details of a tunneling service cluster. Each cluster represents an instance of the
+ * tunneling service running in a particular Azure region. New tunnels are created in the
+ * current region unless otherwise specified.
  */
 public class ClusterDetails {
+    ClusterDetails (String clusterId, String uri, String azureLocation) {
+        this.clusterId = clusterId;
+        this.uri = uri;
+        this.azureLocation = azureLocation;
+    }
+
     /**
      * A cluster identifier based on its region.
      */
@@ -17,8 +25,14 @@ public class ClusterDetails {
     public String clusterId;
 
     /**
-     * The cluster DNS host.
+     * The URI of the service cluster.
      */
     @Expose
-    public String host;
+    public String uri;
+
+    /**
+     * The Azure location of the cluster.
+     */
+    @Expose
+    public String azureLocation;
 }

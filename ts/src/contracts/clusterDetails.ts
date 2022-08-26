@@ -4,16 +4,23 @@
 /* eslint-disable */
 
 /**
- * Tunnel service cluster details.
+ * Details of a tunneling service cluster. Each cluster represents an instance of the
+ * tunneling service running in a particular Azure region. New tunnels are created in the
+ * current region unless otherwise specified.
  */
 export interface ClusterDetails {
     /**
      * A cluster identifier based on its region.
      */
-    clusterId?: string;
+    clusterId: string;
 
     /**
-     * The cluster DNS host.
+     * The URI of the service cluster.
      */
-    host?: string;
+    uri: string;
+
+    /**
+     * The Azure location of the cluster.
+     */
+    azureLocation: string;
 }
