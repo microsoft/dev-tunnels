@@ -8,6 +8,7 @@ import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEvent
 import { TunnelConnection } from './tunnelConnection';
 import { RefreshingTunnelAccessTokenEventArgs } from './refreshingTunnelAccessTokenEventArgs';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
+import { TunnelAccessTokenProperties } from '@vs/tunnels-management';
 
 /**
  * Tunnel connection base class.
@@ -136,7 +137,11 @@ export class TunnelConnectionBase implements TunnelConnection {
             cancellation,
         );
         this.refreshingTunnelAccessTokenEmitter.fire(event);
-        return event.tunnelAccessToken ? await event.tunnelAccessToken : undefined;
+        const result = event.tunnelAccessToken ? await event.tunnelAccessToken : undefined;
+        if (result) {
+            TunnelAccessTokenProperties.validateTokenExpiration(result);
+        }
+        return result;
     }
 
     /**

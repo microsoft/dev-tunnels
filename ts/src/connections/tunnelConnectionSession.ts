@@ -145,7 +145,10 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             if (!this.tunnel?.accessTokens) {
                 return;
             }
-            return this.tunnel.accessTokens[this.tunnelAccessScope];
+            return TunnelAccessTokenProperties.getTunnelAccessToken(
+                this.tunnel,
+                this.tunnelAccessScope,
+            );
         }
 
         return await super.getFreshTunnelAccessToken(cancellation);
@@ -241,9 +244,10 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             await this.onConnectingToTunnel(tunnel);
             if (tunnel) {
                 this.tunnel = tunnel;
-                if (tunnel?.accessTokens) {
-                    this.accessToken = tunnel.accessTokens[this.tunnelAccessScope];
-                }
+                this.accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                    tunnel,
+                    this.tunnelAccessScope,
+                );
             }
             if (!this.connector) {
                 this.connector = this.createTunnelConnector();

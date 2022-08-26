@@ -616,30 +616,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
         }
 
-        if (!(tunnelAuthentication in headers) && tunnel?.accessTokens) {
-            for (let scope of accessTokenScopes ?? []) {
-                let accessToken: string | null = null;
-                for (let scopeAndToken of Object.entries(tunnel.accessTokens)) {
-                    // Each key may be either a single scope or space-delimited list of scopes.
-                    if (scopeAndToken[0].includes(' ')) {
-                        const scopes = scopeAndToken[0].split(' ');
-                        if (scopes.includes(scope)) {
-                            accessToken = scopeAndToken[1];
-                            break;
-                        }
-                    } else if (scopeAndToken[0] === scope) {
-                        accessToken = scopeAndToken[1];
-                        break;
-                    }
-                }
-
-                if (accessToken) {
-                    TunnelAccessTokenProperties.validateTokenExpiration(accessToken);
-                    headers[
-                        tunnelAuthentication
-                    ] = `${TunnelAuthenticationSchemes.tunnel} ${accessToken}`;
-                    break;
-                }
+        if (!(tunnelAuthentication in headers)) {
+            const accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                tunnel,
+                accessTokenScopes,
+            );
+            if (accessToken) {
+                headers[
+                    tunnelAuthentication
+                ] = `${TunnelAuthenticationSchemes.tunnel} ${accessToken}`;
             }
         }
 
