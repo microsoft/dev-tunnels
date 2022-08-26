@@ -11,8 +11,8 @@ use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use crate::contracts::{
-    env_production, Tunnel, TunnelRelayTunnelEndpoint, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelServiceProperties,
+    env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
+    TunnelRelayTunnelEndpoint, TunnelServiceProperties,
 };
 
 use super::{
@@ -33,6 +33,17 @@ const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
 
 impl TunnelManagementClient {
+    /// Returns a builder that creates a new client, starting with the current
+    /// client's options.
+    pub fn build(&self) -> TunnelClientBuilder {
+        TunnelClientBuilder {
+            authorization: self.authorization.clone(),
+            client: Some(self.client.clone()),
+            user_agent: self.user_agent.clone(),
+            environment: self.environment.clone(),
+        }
+    }
+
     /// Lists tunnels owned by the user.
     pub async fn list_all_tunnels(
         &self,
@@ -161,7 +172,8 @@ impl TunnelManagementClient {
         let request = self
             .make_tunnel_request(Method::DELETE, url, options)
             .await?;
-        self.execute_no_response("delete_tunnel_endpoints", request).await
+        self.execute_no_response("delete_tunnel_endpoints", request)
+            .await
     }
 
     /// List a tunnel's ports.
@@ -233,7 +245,8 @@ impl TunnelManagementClient {
         let request = self
             .make_tunnel_request(Method::DELETE, url, options)
             .await?;
-        self.execute_no_response("delete_tunnel_port", request).await
+        self.execute_no_response("delete_tunnel_port", request)
+            .await
     }
 
     /// Sends the request and deserializes a JSON response
@@ -262,7 +275,7 @@ impl TunnelManagementClient {
         res
     }
 
-    /// Executes a request in which 200 status codes indicate success and 
+    /// Executes a request in which 200 status codes indicate success and
     /// 404 indicates an unsuccessful deletion but is not an error.
     async fn execute_no_response(&self, _: &'static str, request: Request) -> HttpResult<bool> {
         let url_clone = request.url().clone();
@@ -271,7 +284,7 @@ impl TunnelManagementClient {
             .execute(request)
             .await
             .map_err(HttpError::ConnectionError)?;
-        
+
         if res.status().is_success() {
             Ok(true)
         } else if res.status().as_u16() == 404 {
@@ -430,7 +443,7 @@ where
 }
 
 pub struct TunnelClientBuilder {
-    authorization: Box<dyn AuthorizationProvider>,
+    authorization: Arc<Box<dyn AuthorizationProvider>>,
     client: Option<Client>,
     user_agent: HeaderValue,
     environment: TunnelServiceProperties,
@@ -440,7 +453,9 @@ pub struct TunnelClientBuilder {
 /// to get the client instance (or cast automatically).
 pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
     TunnelClientBuilder {
-        authorization: Box::new(super::StaticAuthorizationProvider(Authorization::Anonymous)),
+        authorization: Arc::new(Box::new(super::StaticAuthorizationProvider(
+            Authorization::Anonymous,
+        ))),
         client: None,
         user_agent: HeaderValue::from_str(user_agent).unwrap(),
         environment: env_production(),
@@ -449,7 +464,7 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
 
 impl TunnelClientBuilder {
     pub fn authorization(&mut self, authorization: Authorization) -> &mut Self {
-        self.authorization = Box::new(super::StaticAuthorizationProvider(authorization));
+        self.authorization = Arc::new(Box::new(super::StaticAuthorizationProvider(authorization)));
         self
     }
 
@@ -457,7 +472,7 @@ impl TunnelClientBuilder {
         &mut self,
         provider: impl AuthorizationProvider + 'static,
     ) -> &mut Self {
-        self.authorization = Box::new(provider);
+        self.authorization = Arc::new(Box::new(provider));
         self
     }
 
@@ -475,7 +490,7 @@ impl TunnelClientBuilder {
 impl From<TunnelClientBuilder> for TunnelManagementClient {
     fn from(builder: TunnelClientBuilder) -> Self {
         TunnelManagementClient {
-            authorization: Arc::new(builder.authorization),
+            authorization: builder.authorization,
             client: builder.client.unwrap_or_else(Client::new),
             user_agent: builder.user_agent,
             environment: builder.environment,
