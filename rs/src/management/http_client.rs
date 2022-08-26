@@ -24,7 +24,7 @@ use super::{
 pub struct TunnelManagementClient {
     client: Client,
     authorization: Arc<Box<dyn AuthorizationProvider>>,
-    user_agent: HeaderValue,
+    pub(crate) user_agent: HeaderValue,
     environment: TunnelServiceProperties,
 }
 
@@ -505,12 +505,15 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
 mod test_end_to_end {
     use std::{env, time::Duration};
 
+    use async_trait::async_trait;
     use serde::Deserialize;
     use tokio::time::sleep;
 
     use crate::{
         contracts::{Tunnel, PROD_FIRST_PARTY_APP_ID},
-        management::{Authorization, TunnelLocator, NO_REQUEST_OPTIONS},
+        management::{
+            Authorization, AuthorizationProvider, HttpError, TunnelLocator, NO_REQUEST_OPTIONS,
+        },
     };
 
     use super::{new_tunnel_management, TunnelManagementClient};
@@ -601,9 +604,11 @@ mod test_end_to_end {
         }
     }
 
-    async fn get_client() -> TunnelManagementClient {
-        let mut c = new_tunnel_management("rs-sdk-tests");
-        c.authorization_fn(|| async {
+    struct AuthCodeProvider();
+
+    #[async_trait]
+    impl AuthorizationProvider for AuthCodeProvider {
+        async fn get_authorization(&self) -> Result<Authorization, HttpError> {
             let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
                 Ok(value) => value,
                 _ => do_device_code_flow(&reqwest::Client::new()).await,
@@ -611,7 +616,12 @@ mod test_end_to_end {
 
             env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
             Ok(Authorization::Bearer(token))
-        });
+        }
+    }
+
+    async fn get_client() -> TunnelManagementClient {
+        let mut c = new_tunnel_management("rs-sdk-tests");
+        c.authorization_provider(AuthCodeProvider());
         c.into()
     }
 }

@@ -11,11 +11,39 @@ url = "2"
 opentelemetry = { version = "0.17", features = ["trace"], optional = true }
 serde_json = "1"
 async-trait = "0.1"
+thiserror = "1.0"
+log = "0.4"
+tokio = { version = "1.20", features = ["macros", "io-util", "time"], optional = true }
+tokio-util = { version = "0.7", optional = true }
+tokio-tungstenite = { version = "0.17", optional = true }
+futures = { version = "0.3", optional = true }
+tungstenite = { version = "0.17", optional = true }
+uuid = { version = "0.8.2", features = ["v4"], optional = true }
+russh = { path = "../../russh/russh", default-features = false, features = ["openssl", "flate2"], optional = true }
+russh-keys = { path = "../../russh/russh-keys", default-features = false, features = ["openssl"], optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.19", features = ["rt", "macros"] }
+tokio = { version = "1.19", features = ["full"] }
+rand = "0.8"
 
 [features]
 default = []
 end_to_end = []
-instrumentation = ["opentelemetry"]
+instrumentation = ["dep:opentelemetry"]
+connections = [
+  "dep:tokio",
+  "dep:tokio-util",
+  "dep:futures",
+  "dep:tokio-tungstenite",
+  "dep:tungstenite",
+  "dep:uuid",
+  "dep:russh",
+  "dep:russh-keys",
+]
+vendored-openssl = [
+  "reqwest/native-tls-vendored",
+  "tokio-tungstenite?/native-tls-vendored",
+  "tungstenite?/native-tls-vendored",
+  "russh?/vendored-openssl",
+  "russh-keys?/vendored-openssl"
+]
