@@ -340,9 +340,10 @@ namespace Microsoft.VsSaaS.TunnelService
             CancellationToken cancellation = default);
 
         /// <summary>
-        /// Lists all available clusters by region.
+        /// Lists details of tunneling service clusters in all supported Azure regions.
         /// </summary>
-        /// <returns>Array of cluster <see cref="ClusterDetails"/></returns>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <returns>Array of <see cref="ClusterDetails"/></returns>
         Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation = default);
     }
 }
