@@ -15,37 +15,27 @@ import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelPort;
 import com.microsoft.tunnels.contracts.TunnelProtocol;
 import com.microsoft.tunnels.management.HttpResponseException;
-import com.microsoft.tunnels.management.ProductHeaderValue;
-import com.microsoft.tunnels.management.TunnelManagementClient;
 import com.microsoft.tunnels.management.TunnelRequestOptions;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * TunnelManagementClient tests.
  */
-public class TunnelManagementClientTests {
-  private static ProductHeaderValue userAgent = new ProductHeaderValue("connection-test",
-      TunnelManagementClientTests.class.getPackage().getSpecificationVersion());
+public class TunnelManagementClientTests extends TunnelTest {
 
-  private TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
-      new ProductHeaderValue[] { userAgent }, () -> "");
-
-  @Ignore
   @Test
   public void createTunnel() {
-
     // Set up tunnel access control.
     var tunnelAccessEntry = new TunnelAccessControlEntry();
     tunnelAccessEntry.type = TunnelAccessControlEntryType.Anonymous;
     tunnelAccessEntry.subjects = new String[] {};
     tunnelAccessEntry.scopes = new String[] { "connect" };
     var access = new TunnelAccessControl();
-    access.entries = new TunnelAccessControlEntry[] { new TunnelAccessControlEntry() };
+    access.entries = new TunnelAccessControlEntry[] { tunnelAccessEntry };
 
     // set up the tunnel port.
     var port = new TunnelPort();
@@ -81,7 +71,6 @@ public class TunnelManagementClientTests {
     tunnelManagementClient.deleteTunnelAsync(createdTunnel).join();
   }
 
-  @Ignore
   @Test
   public void getTunnel() {
     Tunnel tunnel = new Tunnel();
@@ -98,7 +87,6 @@ public class TunnelManagementClientTests {
     tunnelManagementClient.deleteTunnelAsync(createdTunnel, options).join();
   }
 
-  @Ignore
   @Test
   public void updateTunnelAsync() {
     Tunnel tunnel = new Tunnel();
@@ -116,7 +104,6 @@ public class TunnelManagementClientTests {
     tunnelManagementClient.deleteTunnelAsync(createdTunnel, options).join();
   }
 
-  @Ignore
   @Test
   public void createTunnelPort() {
     var port = new TunnelPort();
