@@ -11,8 +11,8 @@ These instructions assume you are using vscode for development as SDK is configu
 1. Get a user token using the CLI.
 2. Create a new tunnel and add a port.
 3. Create a new environment variable `TUNNELS_TOKEN` with a string value "Bearer <token>".
-4. Create a new environment variable `TEST_TUNNEL_NAME` with a value containing the name of the tunnel.
-5. User the CLI to host the tunnel.
+4. Create a new environment variable `TEST_TUNNEL` with a value containing the name of the tunnel.
+5. Use the CLI to host the tunnel.
 6. Run the tests.
 
 ### Publishing
