@@ -2,13 +2,13 @@
 // Licensed under the MIT license.
 
 import { Tunnel, TunnelPort } from '@vs/tunnels-contracts';
-import { Disposable } from 'vscode-jsonrpc';
+import { TunnelConnection } from './tunnelConnection';
 
 /**
  * Interface for a host capable of sharing local ports via
  * a tunnel and accepting tunneled connections to those ports.
  */
-export interface TunnelHost extends Disposable {
+export interface TunnelHost extends TunnelConnection {
     /**
      * Connects to a tunnel as a host and starts accepting incoming connections
      * to local ports as defined on the tunnel.

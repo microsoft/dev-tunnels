@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { Tunnel } from '@vs/tunnels-contracts';
+
 /**
  * Supports parsing tunnel access token JWT properties to allow for some pre-validation
  * and diagnostics.
@@ -97,6 +99,44 @@ export class TunnelAccessTokenProperties {
             return result;
         } catch {
             return null;
+        }
+    }
+
+    /**
+     * Gets the tunnal access token trace string.
+     * 'none' if null or undefined, parsed token info if can be parsed, or 'token' if cannot be parsed.
+     */
+    public static getTokenTrace(token?: string | null | undefined): string {
+        return !token ? 'none' : TunnelAccessTokenProperties.tryParse(token)?.toString() ?? 'token';
+    }
+
+    /**
+     * Gets a tunnel access token that matches any of the provided access token scopes.
+     * Validates token expiration if the token is found and throws an error if it's expired.
+     * @param tunnel The tunnel to get the access tokens from.
+     * @param accessTokenScopes What scopes the token needs to have.
+     * @returns Tunnel access token if found; otherwise, undefined.
+     */
+    public static getTunnelAccessToken(
+        tunnel?: Tunnel,
+        accessTokenScopes?: string | string[],
+    ): string | undefined {
+        if (!tunnel?.accessTokens || !accessTokenScopes) {
+            return;
+        }
+
+        if (!Array.isArray(accessTokenScopes)) {
+            accessTokenScopes = [accessTokenScopes];
+        }
+
+        for (let scope of accessTokenScopes) {
+            for (let [key, accessToken] of Object.entries(tunnel.accessTokens)) {
+                // Each key may be either a single scope or space-delimited list of scopes.
+                if (accessToken && key.split(' ').includes(scope)) {
+                    TunnelAccessTokenProperties.validateTokenExpiration(accessToken);
+                    return accessToken;
+                }
+            }
         }
     }
 

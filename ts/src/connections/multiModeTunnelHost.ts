@@ -1,18 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel, TunnelPort } from '@vs/tunnels-contracts';
+import { Tunnel, TunnelAccessScopes, TunnelPort } from '@vs/tunnels-contracts';
 import { TunnelHost } from '.';
 import { v4 as uuidv4 } from 'uuid';
+import { TunnelConnectionBase } from './tunnelConnectionBase';
 
 /**
  * Aggregation of multiple tunnel hosts.
  */
-export class MultiModeTunnelHost implements TunnelHost {
+export class MultiModeTunnelHost extends TunnelConnectionBase implements TunnelHost {
     public static hostId: string = uuidv4();
     public hosts: TunnelHost[];
 
     constructor() {
+        super(TunnelAccessScopes.Host);
         this.hosts = [];
     }
 
@@ -36,9 +38,8 @@ export class MultiModeTunnelHost implements TunnelHost {
         await Promise.all(refreshTasks);
     }
 
-    public dispose(): void {
-        this.hosts.forEach((host) => {
-            host.dispose();
-        });
+    public async dispose(): Promise<void> {
+        await Promise.all(this.hosts.map((host) => host.dispose()));
+        await super.dispose();
     }
 }
