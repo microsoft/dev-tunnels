@@ -23,6 +23,6 @@ jobs:
       - name: Set java release version env variable
         run: echo "JAVA_RELEASE_VERSION=$(echo ${{github.ref_name}} | cut -c 7-)" >> $GITHUB_ENV
       - name: Publish package
-        run: mvn --batch-mode deploy --file pom.xml -Drevision=$JAVA_RELEASE_VERSION
+        run: mvn --batch-mode deploy --file pom.xml -Drevision=$JAVA_RELEASE_VERSION -Dmaven.test.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
