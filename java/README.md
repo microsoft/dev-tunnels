@@ -8,7 +8,7 @@ These instructions assume you are using vscode for development as SDK is configu
 4. Once you have the extension and JDK installed, run `mvn test` (see next section for test setup).
 
 ### Testing
-1. Get a user token using the CLI: `basis user show --verbose`
+1. Get a user token using the CLI command: `user show --verbose`
 2. Create a new tunnel and add a port.
 3. Create a new environment variable `TEST_TUNNEL_TOKEN` with a string value "Bearer <token>".
 4. Create a new environment variable `TEST_TUNNEL_NAME` with a value containing the name of the tunnel.
