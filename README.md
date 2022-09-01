@@ -7,9 +7,9 @@
 | Management API | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Tunnel Client Connections | ✅ | ✅ | ✅ | ✅ | 🚧 |
 | Tunnel Host Connections | ✅ | ✅ | ❌ | ❌ | 🚧 |
-| Reconnection | 🚧 | 🚧 | 🗓️ | 🗓️ | ❌ |
-| SSH-level Reconnection | 🚧 | 🚧 | ❌ | ❌ | ❌ |
-| Automatic tunnel access token refresh | 🚧 | 🚧 | 🗓️ | 🗓️ | ❌ |
+| Reconnection | ✅ | ✅ | 🗓️ | 🗓️ | ❌ |
+| SSH-level Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Automatic tunnel access token refresh | ✅ | ✅ | 🗓️ | 🗓️ | ❌ |
 
 ✅ - Supported  
 🚧 - In Progress  
