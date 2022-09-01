@@ -1,6 +1,7 @@
 package com.microsoft.tunnels;
 
 import com.microsoft.tunnels.connections.TunnelClient;
+import com.microsoft.tunnels.connections.TunnelRelayTunnelClient;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.management.TunnelRequestOptions;
@@ -27,10 +28,11 @@ public class TunnelClientTests extends TunnelTest {
     var result = this.tunnelManagementClient.getTunnelAsync(tunnel, requestOptions).join();
 
     // Connect to the tunnel
-    TunnelClient client = new TunnelClient();
+    TunnelClient client = new TunnelRelayTunnelClient();
 
     // connect to the tunnel
-    client.connect(result);
+    client.connectAsync(result).join();
+    logger.info("Connected.");
     client.stop();
   }
 }
