@@ -45,8 +45,11 @@ public abstract class TunnelTest {
    * Enables FINE logging for all components (including HTTP, SSL, SSH). VERY verbose.
    */
   private static void enableVerboseLogging() {
+    // SLF4J logging is routed to java.util.logging via the reference to the slf4j-jdk14 package.
     var rootLogger = java.util.logging.Logger.getLogger("");
     rootLogger.setLevel(java.util.logging.Level.FINE);
+
+    // A console log handler is enabled at the root level by default.
     for (var logHandler : rootLogger.getHandlers()) {
       logHandler.setLevel(java.util.logging.Level.ALL);
     }
