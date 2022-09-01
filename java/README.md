@@ -8,12 +8,13 @@ These instructions assume you are using vscode for development as SDK is configu
 4. Once you have the extension and JDK installed, run `mvn test` (see next section for test setup).
 
 ### Testing
-1. Get a user token using the CLI.
+1. Get a user token using the CLI: `basis user show --verbose`
 2. Create a new tunnel and add a port.
-3. Create a new environment variable `TUNNELS_TOKEN` with a string value "Bearer <token>".
-4. Create a new environment variable `TEST_TUNNEL` with a value containing the name of the tunnel.
+3. Create a new environment variable `TEST_TUNNEL_TOKEN` with a string value "Bearer <token>".
+4. Create a new environment variable `TEST_TUNNEL_NAME` with a value containing the name of the tunnel.
+5. Optionally: set `TEST_TUNNEL_VERBOSE=1` to enable verbose console logging during tests.
 5. Use the CLI to host the tunnel.
-6. Run the tests.
+6. Run the tests with `mvn test`, or run a single test with `mvn test -Dtest=TunnelClientTests#connectClient`
 
 ### Publishing
 The Tunnels Java SDK is published as a GitHub package through a [GitHub Action](../.github/workflows/java-sdk-release.yml). Since the repo is shared by multiple language SDKs, the Java packages are distinguished with a tag of the form `java-vX.Y.Z`. See [tags](https://github.com/microsoft/dev-tunnels/tags) for examples.
