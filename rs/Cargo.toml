@@ -19,8 +19,8 @@ tokio-tungstenite = { version = "0.17", optional = true }
 futures = { version = "0.3", optional = true }
 tungstenite = { version = "0.17", optional = true }
 uuid = { version = "0.8.2", features = ["v4"], optional = true }
-russh = { path = "../../russh/russh", default-features = false, features = ["openssl", "flate2"], optional = true }
-russh-keys = { path = "../../russh/russh-keys", default-features = false, features = ["openssl"], optional = true }
+russh = { version = "0.34.0-beta.15", default-features = false, features = ["openssl", "flate2"], optional = true }
+russh-keys = { version = "0.22.0-beta.6", default-features = false, features = ["openssl"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.19", features = ["full"] }
