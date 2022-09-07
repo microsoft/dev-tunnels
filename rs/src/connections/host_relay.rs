@@ -34,6 +34,7 @@ pub struct HostRelay {
     ports_tx: watch::Sender<PortMap>,
     ports_rx: watch::Receiver<PortMap>,
     mgmt: TunnelManagementClient,
+    host_keypair: russh_keys::key::KeyPair,
 }
 
 /// Hello friend. You're probably here because you want to change how tunnel
@@ -127,6 +128,11 @@ impl HostRelay {
             ports_tx,
             ports_rx,
             mgmt,
+            host_keypair: russh_keys::key::KeyPair::generate_rsa(
+                2048,
+                russh_keys::key::SignatureHash::SHA2_512,
+            )
+            .expect("expected to generate rsa keypair"),
         }
     }
 
@@ -166,10 +172,13 @@ impl HostRelay {
         let client_session = Arc::new(client_session);
         let client_session_ret = client_session.clone();
 
+        log::debug!("established host relay primary session");
+
         let mut channels = HashMap::new();
         let ports_rx = self.ports_rx.clone();
+        let host_keypair = self.host_keypair.clone();
         let join = tokio::spawn(async move {
-            let mut server = HostRelay::make_ssh_server();
+            let mut server = HostRelay::make_ssh_server(host_keypair.clone());
             loop {
                 tokio::select! {
                     Some(op) = rx.recv() => match op {
@@ -199,6 +208,8 @@ impl HostRelay {
                 .disconnect(russh::Disconnect::ByApplication, "going away", "en")
                 .await
                 .ok();
+
+            log::debug!("disconnected primary session after EOF");
 
             Ok(())
         });
@@ -301,15 +312,18 @@ impl HostRelay {
         Ok(())
     }
 
-    fn make_ssh_server() -> Server {
+    fn make_ssh_server(keypair: russh_keys::key::KeyPair) -> Server {
         let c = russh::server::Config {
             connection_timeout: None,
             auth_rejection_time: std::time::Duration::from_secs(5),
-            keys: vec![russh_keys::key::KeyPair::generate_rsa(
-                2048,
-                russh_keys::key::SignatureHash::SHA2_512,
-            )
-            .expect("expected to generate rsa keypair")],
+            keys: vec![keypair],
+            window_size: 1024 * 1024 * 64,
+            preferred: russh::Preferred::COMPRESSED,
+            limits: russh::Limits {
+                rekey_read_limit: usize::MAX,
+                rekey_time_limit: Duration::MAX,
+                rekey_write_limit: usize::MAX,
+            },
             ..Default::default()
         };
 
@@ -328,12 +342,13 @@ impl HostRelay {
     > {
         let config = russh::client::Config {
             anonymous: true,
+            window_size: 1024 * 1024 * 64,
             preferred: russh::Preferred {
                 kex: &[russh::kex::NONE],
                 key: &[russh_keys::key::NONE],
                 cipher: &[russh::cipher::NONE],
                 mac: russh::Preferred::DEFAULT.mac,
-                compression: russh::Preferred::COMPRESSED.compression,
+                compression: &["none"],
             },
             ..Default::default()
         };
@@ -595,6 +610,7 @@ impl Server {
 
         let config = self.config.clone();
         tokio::spawn(async move {
+            log::debug!("starting to serve host relay client session");
             let session = match russh::server::run_stream(config, rw, server_session).await {
                 Ok(s) => s,
                 Err(e) => {
@@ -608,6 +624,7 @@ impl Server {
                 return Ok(()); // session closed
             }
 
+            log::debug!("host relay client session successfully authed");
             let mut known_ports: PortMap = HashMap::new();
             tokio::pin!(session);
 
@@ -621,7 +638,7 @@ impl Server {
                             }
                         },
                         None => {
-                            log::debug!("no more connections, ending");
+                            log::debug!("no more connections on host relay client session, ending");
                             return Ok(());
                         },
                     },
