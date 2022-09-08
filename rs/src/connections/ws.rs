@@ -131,8 +131,8 @@ where
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<std::io::Result<()>> {
-        if let Some(v) = self.readbuf.take_data() {
-            return self.readbuf.put_data(buf, &v);
+        if let Some((v, s)) = self.readbuf.take_data() {
+            return self.readbuf.put_data(buf, v, s);
         }
 
         // The following blocks implement the state machine for liveness checks
@@ -186,10 +186,10 @@ where
 
                     match msg {
                         tungstenite::Message::Text(text) => {
-                            return self.readbuf.put_data(buf, text.as_bytes());
+                            return self.readbuf.put_data(buf, text.into_bytes(), 0);
                         }
                         tungstenite::Message::Binary(bin) => {
-                            return self.readbuf.put_data(buf, bin.as_slice());
+                            return self.readbuf.put_data(buf, bin, 0);
                         }
                         tungstenite::Message::Close(_) => return Poll::Ready(Ok(())),
                         tungstenite::Message::Pong(_) => {
@@ -276,8 +276,7 @@ mod test {
         });
 
         let input_len = 1024 * 1024;
-        let mut input = Vec::new();
-        input.reserve(input_len);
+        let mut input = Vec::with_capacity(input_len);
         for i in 0..input_len {
             input.push(i as u8);
         }

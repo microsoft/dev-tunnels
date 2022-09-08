@@ -6,11 +6,11 @@ use std::task::Poll;
 /// Helper used when converting Future interfaces to poll-based interfaces.
 /// Stores excess data that can be reused on future polls.
 #[derive(Default)]
-pub(crate) struct ReadBuffer(Option<Vec<u8>>);
+pub(crate) struct ReadBuffer(Option<(Vec<u8>, usize)>);
 
 impl ReadBuffer {
     /// Removes any data stored in the read buffer
-    pub fn take_data(&mut self) -> Option<Vec<u8>> {
+    pub fn take_data(&mut self) -> Option<(Vec<u8>, usize)> {
         self.0.take()
     }
 
@@ -18,7 +18,8 @@ impl ReadBuffer {
     pub fn put_data(
         &mut self,
         target: &mut tokio::io::ReadBuf<'_>,
-        bytes: &[u8],
+        bytes: Vec<u8>,
+        start: usize,
     ) -> Poll<std::io::Result<()>> {
         if bytes.is_empty() {
             self.0 = None;
@@ -27,12 +28,12 @@ impl ReadBuffer {
             return Poll::Pending;
         }
 
-        if target.remaining() >= bytes.len() {
+        if target.remaining() >= bytes.len() - start {
+            target.put_slice(&bytes);
             self.0 = None;
-            target.put_slice(bytes);
         } else {
-            self.0 = Some(bytes[target.remaining()..].to_vec());
-            target.put_slice(&bytes[..target.remaining()]);
+            target.put_slice(&bytes[start..start + target.remaining()]);
+            self.0 = Some((bytes, start + target.remaining()));
         }
 
         Poll::Ready(Ok(()))

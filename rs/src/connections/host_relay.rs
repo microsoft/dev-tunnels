@@ -1,7 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use std::{collections::HashMap, io, pin::Pin, sync::Arc, task::Poll, time::Duration};
+use std::{
+    collections::HashMap,
+    io,
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    pin::Pin,
+    sync::Arc,
+    task::Poll,
+    time::Duration,
+};
 
 use crate::{
     contracts::{TunnelConnectionMode, TunnelEndpoint, TunnelPort, TunnelRelayTunnelEndpoint},
@@ -26,8 +34,17 @@ use super::{
     ws::{build_websocket_request, AsyncRWWebSocket},
 };
 
+/// Mapping of port numbers to senders to which new port connections should be
+/// sent. Shared by the host relay to each connected session.
 type PortMap = HashMap<u32, mpsc::UnboundedSender<ForwardedPortConnection>>;
 
+/// The HostRelay can host connections via the tunneling service. After
+/// creating it, you will generally want to run `connect()` to create a new
+/// a new connection.
+///
+/// Note that, while ports can be added and remove dynamically from running
+/// tunnels via the appropriate methods on the HostRelay, no ports will be
+/// hosted until those methods are called.
 pub struct HostRelay {
     locator: TunnelLocator,
     host_id: Uuid,
@@ -110,13 +127,6 @@ pub struct HostRelay {
 /// which either forward to a local TCP connection or return the
 /// ForwardedPortConnection directly, respectively.
 
-/// The HostRelay can host connections via the tunneling service. After
-/// creating it, you will generally want to run `connect()` to create a new
-/// a new connection.
-///
-/// Note that, while ports can be added and remove dynamically from running
-/// tunnels via the appropriate methods on the HostRelay, no ports will be
-/// hosted until those methods are called.
 #[allow(dead_code)]
 impl HostRelay {
     pub fn new(locator: TunnelLocator, mgmt: TunnelManagementClient) -> Self {
@@ -259,9 +269,10 @@ impl HostRelay {
             .create_tunnel_port(&self.locator, port_to_add, NO_REQUEST_OPTIONS)
             .await;
 
-        // Allow 200's and 409 statuses. Return an error on anything else.
         match tunnel_port {
+            // created the port:
             Ok(_) => {}
+            // the port's already registered, nothing we need to do:
             Err(HttpError::ResponseError(e)) if e.status_code == 409 => {}
             Err(e) => {
                 return Err(TunnelError::HttpError {
@@ -286,7 +297,7 @@ impl HostRelay {
         let rx = self.add_port_raw(port_to_add).await?;
 
         tokio::spawn(forward_port_to_tcp(
-            format!("127.0.0.1:{}", port_to_add.port_number),
+            SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), port_to_add.port_number).into(),
             rx,
         ));
 
@@ -349,6 +360,11 @@ impl HostRelay {
                 cipher: &[russh::cipher::NONE],
                 mac: russh::Preferred::DEFAULT.mac,
                 compression: &["none"],
+            },
+            limits: russh::Limits {
+                rekey_read_limit: 1024 * 1024 * 8,
+                rekey_time_limit: std::time::Duration::from_secs(60),
+                rekey_write_limit: 1024 * 1024 * 8,
             },
             ..Default::default()
         };
@@ -547,12 +563,12 @@ impl AsyncRead for ForwardedPortReader {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        if let Some(v) = self.readbuf.take_data() {
-            return self.readbuf.put_data(buf, &v);
+        if let Some((v, s)) = self.readbuf.take_data() {
+            return self.readbuf.put_data(buf, v, s);
         }
 
         match self.receiver.poll_recv(cx) {
-            Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, &msg),
+            Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, msg, 0),
             Poll::Ready(None) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF"))),
             Poll::Pending => Poll::Pending,
         }
@@ -666,7 +682,7 @@ impl Server {
 /// Connects connections that are sent to the receiver to TCP services locally.
 /// Runs until the receiver is closed (usually via `delete_port()`).
 async fn forward_port_to_tcp(
-    addr: impl tokio::net::ToSocketAddrs + std::fmt::Display,
+    addr: SocketAddr,
     mut rx: mpsc::UnboundedReceiver<ForwardedPortConnection>,
 ) {
     while let Some(mut conn) = rx.recv().await {
@@ -682,7 +698,7 @@ async fn forward_port_to_tcp(
         log::debug!("Forwarded port to {}", addr);
 
         tokio::spawn(async move {
-            let mut read_buf = [0u8; 1024 * 64];
+            let mut read_buf = vec![0u8; 1024 * 64].into_boxed_slice();
             loop {
                 tokio::select! {
                     n = stream.read(&mut read_buf) => match n {
@@ -1019,12 +1035,12 @@ impl AsyncRead for AsyncRWChannel {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        if let Some(v) = self.readbuf.take_data() {
-            return self.readbuf.put_data(buf, &v);
+        if let Some((v, s)) = self.readbuf.take_data() {
+            return self.readbuf.put_data(buf, v, s);
         }
 
         match self.incoming.poll_recv(cx) {
-            Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, &msg),
+            Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, msg, 0),
             Poll::Ready(None) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF"))),
             Poll::Pending => Poll::Pending,
         }
