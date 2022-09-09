@@ -29,11 +29,12 @@ impl ReadBuffer {
         }
 
         if target.remaining() >= bytes.len() - start {
-            target.put_slice(&bytes);
+            target.put_slice(&bytes[start..]);
             self.0 = None;
         } else {
-            target.put_slice(&bytes[start..start + target.remaining()]);
-            self.0 = Some((bytes, start + target.remaining()));
+            let end = target.remaining();
+            target.put_slice(&bytes[start..end]);
+            self.0 = Some((bytes, end));
         }
 
         Poll::Ready(Ok(()))
