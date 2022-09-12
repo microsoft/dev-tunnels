@@ -61,7 +61,7 @@ export interface TunnelEndpoint {
     portSshCommandFormat?: string;
 
     /**
-     * Gets or sets the Ssh command where the Ssh Gateway can connect to the default ssh
+     * Gets or sets the Ssh command where the Ssh client can connect to the default ssh
      * port of the tunnel.
      */
     tunnelSshCommand?: string;

@@ -44,7 +44,7 @@ type TunnelEndpoint struct {
 	// must be replaced with the actual port number.
 	PortSshCommandFormat string `json:"portSshCommandFormat,omitempty"`
 
-	// Gets or sets the Ssh command where the Ssh Gateway can connect to the default ssh port
+	// Gets or sets the Ssh command where the Ssh client can connect to the default ssh port
 	// of the tunnel.
 	TunnelSshCommand     string `json:"tunnelSshCommand,omitempty"`
 

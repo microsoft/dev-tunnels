@@ -49,7 +49,7 @@ pub struct TunnelEndpoint {
     // that must be replaced with the actual port number.
     pub port_ssh_command_format: Option<String>,
 
-    // Gets or sets the Ssh command where the Ssh Gateway can connect to the default ssh
+    // Gets or sets the Ssh command where the Ssh client can connect to the default ssh
     // port of the tunnel.
     pub tunnel_ssh_command: Option<String>,
 }

@@ -76,7 +76,7 @@ public abstract class TunnelEndpoint
     public string? PortSshCommandFormat { get; set; }
 
     /// <summary>
-    /// Gets or sets the Ssh command where the Ssh Gateway can connect to the default ssh port
+    /// Gets or sets the Ssh command where the Ssh client can connect to the default ssh port
     /// of the tunnel.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
