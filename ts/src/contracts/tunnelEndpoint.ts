@@ -48,10 +48,10 @@ export interface TunnelEndpoint {
     portUriFormat?: string;
 
     /**
-     * Gets or sets the default URIs without the port information in the url and the web
-     * forwarding forwards requests to this url to default port.
+     * Gets or sets the URI where a web client can connect to the default port of the
+     * tunnel.
      */
-    defaultWebUri?: string;
+    tunnelUri?: string;
 
     /**
      * Gets or sets a string used to format ssh command where ssh client can connect to
@@ -61,10 +61,10 @@ export interface TunnelEndpoint {
     portSshCommandFormat?: string;
 
     /**
-     * Gets or sets the default ssh command without the port information in the command
-     * and the ssh gateway forwards requests to the default ssh port.
+     * Gets or sets the Ssh command where the Ssh Gateway can connect to the default ssh
+     * port of the tunnel.
      */
-    defaultSshCommand?: string;
+    tunnelSshCommand?: string;
 }
 
 /**

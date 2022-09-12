@@ -40,18 +40,18 @@ pub struct TunnelEndpoint {
     // replaced with the actual port number.
     pub port_uri_format: Option<String>,
 
-    // Gets or sets the default URIs without the port information in the url and the web
-    // forwarding forwards requests to this url to default port.
-    pub default_web_uri: Option<String>,
+    // Gets or sets the URI where a web client can connect to the default port of the
+    // tunnel.
+    pub tunnel_uri: Option<String>,
 
     // Gets or sets a string used to format ssh command where ssh client can connect to
     // shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortToken`
     // that must be replaced with the actual port number.
     pub port_ssh_command_format: Option<String>,
 
-    // Gets or sets the default ssh command without the port information in the command
-    // and the ssh gateway forwards requests to the default ssh port.
-    pub default_ssh_command: Option<String>,
+    // Gets or sets the Ssh command where the Ssh Gateway can connect to the default ssh
+    // port of the tunnel.
+    pub tunnel_ssh_command: Option<String>,
 }
 
 // Token included in `TunnelEndpoint.PortUriFormat` and
