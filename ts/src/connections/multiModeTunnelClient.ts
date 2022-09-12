@@ -1,21 +1,26 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelConnectionMode, Tunnel } from '@vs/tunnels-contracts';
+import { TunnelConnectionMode, Tunnel, TunnelAccessScopes } from '@vs/tunnels-contracts';
 import { CancellationToken, SshStream } from '@vs/vs-ssh';
 import { ForwardedPortsCollection } from '@vs/vs-ssh-tcp';
 import { TunnelClient } from '.';
+import { TunnelConnectionBase } from './tunnelConnectionBase';
 
 /**
  * Tunnel client implementation that selects one of multiple available connection modes.
  */
-export class MultiModeTunnelClient implements TunnelClient {
+export class MultiModeTunnelClient extends TunnelConnectionBase implements TunnelClient {
     public forwardedPorts: ForwardedPortsCollection | undefined;
     public clients: TunnelClient[] = [];
 
     public connectionModes: TunnelConnectionMode[] = this.clients
         ? [...new Set(...this.clients.map((c) => c.connectionModes))]
         : [];
+
+    constructor() {
+        super(TunnelAccessScopes.Connect);
+    }
 
     /**
      * A value indicating whether local connections for forwarded ports are accepted.
@@ -50,9 +55,12 @@ export class MultiModeTunnelClient implements TunnelClient {
         throw new Error('Method not implemented.');
     }
 
-    public dispose(): void {
-        this.clients.forEach((client) => {
-            client.dispose();
-        });
+    public async refreshPorts(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
+    public async dispose(): Promise<void> {
+        await super.dispose();
+        await Promise.all(this.clients.map((client) => client.dispose()));
     }
 }

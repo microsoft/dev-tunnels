@@ -30,9 +30,6 @@ type TunnelRequestOptions struct {
 	// If false, an item is included if any tag matches.
 	RequireAllTags bool
 
-	// List of scopes that are needed for the current request.
-	Scopes TunnelAccessScopes
-
 	// List of token scopes that are requested when retrieving a tunnel or tunnel port object.
 	TokenScopes TunnelAccessScopes
 
@@ -45,16 +42,9 @@ func (options *TunnelRequestOptions) queryString() string {
 	if options.IncludePorts {
 		queryOptions.Set("includePorts", "true")
 	}
-	if options.Scopes != nil {
-		if err := options.Scopes.valid(nil); err == nil {
-			for _, scope := range options.Scopes {
-				queryOptions.Add("scopes", string(scope))
-			}
 
-		}
-	}
 	if options.TokenScopes != nil {
-		if err := options.TokenScopes.valid(nil); err == nil {
+		if err := options.TokenScopes.valid(nil, true); err == nil {
 			for _, scope := range options.TokenScopes {
 				queryOptions.Add("tokenScopes", string(scope))
 			}

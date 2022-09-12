@@ -33,10 +33,6 @@ pub struct TunnelRequestOptions {
     /// are requested when retrieving a tunnel or tunnel port object.
     pub token_scopes: Vec<String>,
 
-    /// Gets or sets an optional list of scopes that should be authorized when
-    /// retrieving a tunnel or tunnel port object.
-    pub scopes: Vec<String>,
-
     /// If true on a create or update request then upon a name conflict, attempt to rename the
     /// existing tunnel to null and give the name to the tunnel from the request.
     pub force_rename: bool,
@@ -49,6 +45,5 @@ pub const NO_REQUEST_OPTIONS: &TunnelRequestOptions = &TunnelRequestOptions {
     tags: Vec::new(),
     require_all_tags: false,
     token_scopes: Vec::new(),
-    scopes: Vec::new(),
     force_rename: false,
 };

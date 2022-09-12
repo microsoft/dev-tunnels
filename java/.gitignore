@@ -2,3 +2,4 @@
 *.class
 *.jar
 target/
+.flattened-pom.xml

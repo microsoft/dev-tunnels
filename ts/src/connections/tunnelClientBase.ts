@@ -1,7 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel, TunnelConnectionMode, TunnelEndpoint } from '@vs/tunnels-contracts';
+import {
+    Tunnel,
+    TunnelAccessScopes,
+    TunnelConnectionMode,
+    TunnelEndpoint,
+} from '@vs/tunnels-contracts';
 import {
     CancellationToken,
     SessionRequestMessage,
@@ -9,6 +14,7 @@ import {
     SshClientCredentials,
     SshClientSession,
     SshDisconnectReason,
+    SshProtocolExtensionNames,
     SshRequestEventArgs,
     SshSessionClosedEventArgs,
     SshSessionConfiguration,
@@ -20,21 +26,29 @@ import { ForwardedPortsCollection, PortForwardingService } from '@vs/vs-ssh-tcp'
 import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
 import { isNode } from './sshHelpers';
 import { TunnelClient } from './tunnelClient';
-import { List } from './utils';
+import { getError, List } from './utils';
 import { Emitter } from 'vscode-jsonrpc';
+import { TunnelConnectionSession } from './tunnelConnectionSession';
+import { TunnelManagementClient } from '@vs/tunnels-management';
+import { ConnectionStatus } from './connectionStatus';
+import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 
 /**
  * Base class for clients that connect to a single host
  */
-export abstract class TunnelClientBase implements TunnelClient {
+export class TunnelClientBase
+    extends tunnelSshSessionClass<SshClientSession>(TunnelConnectionSession)
+    implements TunnelClient {
     private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
-    /**
-     * Session used to connect to host
-     */
-    public sshSession?: SshClientSession;
 
     public connectionModes: TunnelConnectionMode[] = [];
+
+    /**
+     * Tunnel endpoints this client connects to.
+     * Depending on implementation, the client may connect to one or more endpoints.
+     */
+    public endpoints?: TunnelEndpoint[];
 
     protected get isSshSessionActive(): boolean {
         return !!this.sshSession?.isConnected;
@@ -81,38 +95,47 @@ export abstract class TunnelClientBase implements TunnelClient {
         this.activatePfsIfNeeded();
     }
 
-    /**
-     * Trace to write output to console
-     * @param level
-     * @param eventId
-     * @param msg
-     * @param err
-     */
-    public trace: Trace = (level, eventId, msg, err) => {};
-
     public get forwardedPorts(): ForwardedPortsCollection | undefined {
         let pfs = this.sshSession?.activateService(PortForwardingService);
         return pfs?.remoteForwardedPorts;
     }
 
-    constructor() {}
+    constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
+        super(TunnelAccessScopes.Connect, trace, managementClient);
+    }
 
-    protected abstract connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[]): Promise<void>;
+    public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[]): Promise<void> {
+        this.endpoints = endpoints;
+        await this.connectTunnelSession(tunnel);
+    }
 
     public async connect(tunnel: Tunnel, hostId?: string): Promise<void> {
+        const endpoints = TunnelClientBase.getEndpoints(tunnel, hostId);
+        await this.connectClient(tunnel, endpoints);
+    }
+
+    /**
+     * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
+     * otherwise, ensure that there is already sufficient data to connect to a tunnel.
+     * @param tunnel Tunnel to use for the connection.
+     *     Tunnel object to get the connection data if defined.
+     *     Undefined if the connection data is already known.
+     * @internal
+     */
+    public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
+        if (!this.endpoints) {
+            this.endpoints = TunnelClientBase.getEndpoints(tunnel);
+        }
+        await super.onConnectingToTunnel(tunnel);
+    }
+
+    private static getEndpoints(tunnel?: Tunnel, hostId?: string): TunnelEndpoint[] {
         if (!tunnel) {
-            throw new Error('Tunnel cannot be null');
+            throw new Error('Tunnel must be defined.');
         }
         if (!tunnel.endpoints) {
             throw new Error('Tunnel endpoints cannot be null');
         }
-
-        if (this.sshSession) {
-            throw new Error(
-                'Already connected. Use separate instances to connect to multiple tunnels.',
-            );
-        }
-
         if (tunnel.endpoints.length === 0) {
             throw new Error('No hosts are currently accepting connections for the tunnel.');
         }
@@ -121,10 +144,11 @@ export abstract class TunnelClientBase implements TunnelClient {
             tunnel.endpoints,
             (endpoint: TunnelEndpoint) => endpoint.hostId,
         );
-        let endpointGroup: TunnelEndpoint[] | undefined;
+
+        let endpoints: TunnelEndpoint[];
         if (hostId) {
-            endpointGroup = endpointGroups.get(hostId);
-            if (!endpointGroup) {
+            endpoints = endpointGroups.get(hostId)!;
+            if (!endpoints) {
                 throw new Error(
                     'The specified host is not currently accepting connections to the tunnel.',
                 );
@@ -134,10 +158,10 @@ export abstract class TunnelClientBase implements TunnelClient {
                 'There are multiple hosts for the tunnel. Specify a host ID to connect to.',
             );
         } else {
-            endpointGroup = endpointGroups.entries().next().value[1];
+            endpoints = endpointGroups.entries().next().value[1];
         }
 
-        await this.connectClient(tunnel, endpointGroup!);
+        return endpoints;
     }
 
     private onRequest(e: SshRequestEventArgs<SessionRequestMessage>) {
@@ -149,30 +173,44 @@ export abstract class TunnelClientBase implements TunnelClient {
         }
     }
 
-    public async startSshSession(stream: Stream): Promise<void> {
-        let clientConfig = new SshSessionConfiguration();
+    public startSshSession(stream: Stream, cancellation?: CancellationToken): Promise<void> {
+        return this.connectSession(async () => {
+            const clientConfig = new SshSessionConfiguration();
+            if (this.isReconnectable) {
+                clientConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
+                clientConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionLatency);
+            }
 
-        // Enable port-forwarding via the SSH protocol.
-        clientConfig.addService(PortForwardingService);
+            // Enable port-forwarding via the SSH protocol.
+            clientConfig.addService(PortForwardingService);
 
-        this.sshSession = new SshClientSession(clientConfig);
-        this.sshSession.trace = this.trace;
-        this.sshSession.onClosed((e) => this.onSshSessionClosed(e));
-        this.sshSession.onAuthenticating((e) => this.onSshServerAuthenticating(e));
+            this.sshSession = new SshClientSession(clientConfig);
+            this.sshSession.trace = this.trace;
+            this.sshSession.onClosed((e) => this.onSshSessionClosed(e));
+            this.sshSession.onAuthenticating((e) => this.onSshServerAuthenticating(e));
+            this.sshSession.onDisconnected((e) => this.onSshSessionDisconnected());
 
-        this.activatePfsIfNeeded();
+            try {
+                this.activatePfsIfNeeded();
 
-        this.sshSession.onRequest((e) => this.onRequest(e));
+                this.sshSession.onRequest((e) => this.onRequest(e));
 
-        await this.sshSession.connect(stream);
+                await this.sshSession.connect(stream, cancellation);
 
-        // For now, the client is allowed to skip SSH authentication;
-        // they must have a valid tunnel access token already to get this far.
-        let clientCredentials: SshClientCredentials = {
-            username: 'tunnel',
-            password: undefined,
-        };
-        await this.sshSession.authenticate(clientCredentials);
+                // For now, the client is allowed to skip SSH authentication;
+                // they must have a valid tunnel access token already to get this far.
+                let clientCredentials: SshClientCredentials = {
+                    username: 'tunnel',
+                    password: undefined,
+                };
+
+                await this.sshSession.authenticate(clientCredentials, cancellation);
+            } catch (e) {
+                const error = getError(e, 'Error starting tunnel client SSH session: ');
+                await this.closeSession(error);
+                throw error;
+            }
+        });
     }
 
     private activatePfsIfNeeded() {
@@ -226,13 +264,25 @@ export abstract class TunnelClientBase implements TunnelClient {
         e.authenticationPromise = Promise.resolve({});
     }
 
-    private onSshSessionClosed(e: SshSessionClosedEventArgs) {
-        this.sshSessionClosedEmitter.fire(this);
+    public async refreshPorts(): Promise<void> {
+        if (!this.sshSession || this.sshSession.isClosed) {
+            throw new Error('Not connected.');
+        }
+
+        const request = new SessionRequestMessage();
+        request.requestType = 'RefreshPorts';
+        request.wantReply = true;
+        await this.sshSession.request(request);
     }
 
-    public async dispose(): Promise<void> {
-        if (this.sshSession) {
-            await this.sshSession.close(SshDisconnectReason.byApplication);
+    private onSshSessionClosed(e: SshSessionClosedEventArgs) {
+        this.sshSessionClosedEmitter.fire(this);
+        if (e.reason === SshDisconnectReason.connectionLost) {
+            this.startReconnectingIfNotDisposed();
         }
+    }
+
+    private onSshSessionDisconnected() {
+        this.startReconnectingIfNotDisposed();
     }
 }

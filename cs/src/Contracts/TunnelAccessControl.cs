@@ -77,14 +77,23 @@ namespace Microsoft.VsSaaS.TunnelService.Contracts
         /// <param name="scopes">List of scopes to validate.</param>
         /// <param name="validScopes">Optional subset of scopes to be considered valid;
         /// if omitted then all defined scopes are valid.</param>
+        /// <param name="allowMultiple">Whether to allow multiple space-delimited scopes in a
+        /// single item. Multiple scopes are supported when requesting a tunnel access token
+        /// with a combination of scopes.</param>
         /// <exception cref="ArgumentException">A scope is not valid.</exception>
         public static void ValidateScopes(
             IEnumerable<string> scopes,
-            IEnumerable<string>? validScopes = null)
+            IEnumerable<string>? validScopes = null,
+            bool allowMultiple = false)
         {
             if (scopes == null)
             {
                 throw new ArgumentNullException(nameof(scopes));
+            }
+
+            if (allowMultiple)
+            {
+                scopes = scopes.SelectMany((s) => s.Split(' '));
             }
 
             foreach (var scope in scopes)

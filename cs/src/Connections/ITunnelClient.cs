@@ -107,6 +107,21 @@ namespace Microsoft.VsSaaS.TunnelService
         Task<Stream?> ConnectToForwardedPortAsync(int forwardedPort, CancellationToken cancellation);
 
         /// <summary>
+        /// Sends a request to the host to refresh ports that were updated using the management API,
+        /// and waits for the refresh to complete.
+        /// </summary>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <remarks>
+        /// After calling <see cref="ITunnelManagementClient.CreateTunnelPortAsync"/> or
+        /// <see cref="ITunnelManagementClient.DeleteTunnelPortAsync"/>, call this method to have a
+        /// connected client notify the host to update its cached list of ports. Any added or
+        /// removed ports will then propagate back to the set of ports forwarded by the current
+        /// client. After the returned task has completed, any newly added ports are usable from
+        /// the current client.
+        /// </remarks>
+        Task RefreshPortsAsync(CancellationToken cancellation);
+
+        /// <summary>
         /// Event handler for refreshing the tunnel access token.
         /// The tunnel client will fire this event when it is not able to use the access token it got from the tunnel.
         /// </summary>

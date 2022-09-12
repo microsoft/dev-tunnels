@@ -299,6 +299,22 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         return null;
     }
 
+    /// <inheritdoc />
+    public async Task RefreshPortsAsync(CancellationToken cancellation)
+    {
+        if (SshSession == null || SshSession.IsClosed)
+        {
+            throw new InvalidOperationException("Not connected.");
+        }
+
+        var request = new SessionRequestMessage
+        {
+            RequestType = TunnelHost.RefreshPortsRequestType,
+            WantReply = true,
+        };
+        await SshSession.RequestAsync(request, cancellation);
+    }
+
     private void SshSession_Closed(object? sender, SshSessionClosedEventArgs e)
     {
         if (sender is SshSession sshSession)

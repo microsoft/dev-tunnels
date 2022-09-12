@@ -64,9 +64,14 @@ function parseTunnelPortDates(port: TunnelPort | null) {
 
 const manageAccessTokenScope = [TunnelAccessScopes.Manage];
 const hostAccessTokenScope = [TunnelAccessScopes.Host];
-const hostOrManageAccessTokenScopes = [TunnelAccessScopes.Manage, TunnelAccessScopes.Host];
+const managePortsAccessTokenScopes = [
+    TunnelAccessScopes.Manage,
+    TunnelAccessScopes.ManagePorts,
+    TunnelAccessScopes.Host,
+];
 const readAccessTokenScopes = [
     TunnelAccessScopes.Manage,
+    TunnelAccessScopes.ManagePorts,
     TunnelAccessScopes.Host,
     TunnelAccessScopes.Connect,
 ];
@@ -350,7 +355,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'POST',
             tunnel,
-            hostOrManageAccessTokenScopes,
+            managePortsAccessTokenScopes,
             portsApiSubPath,
             undefined,
             options,
@@ -384,7 +389,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'PUT',
             tunnel,
-            hostOrManageAccessTokenScopes,
+            managePortsAccessTokenScopes,
             path,
             undefined,
             options,
@@ -418,7 +423,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const result = await this.sendTunnelRequest<boolean>(
             'DELETE',
             tunnel,
-            hostOrManageAccessTokenScopes,
+            managePortsAccessTokenScopes,
             path,
             undefined,
             options,
@@ -607,7 +612,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private async getAxiosRequestConfig(
         tunnel?: Tunnel,
         options?: TunnelRequestOptions,
-        scopes?: string[],
+        accessTokenScopes?: string[],
     ): Promise<AxiosRequestConfig> {
         // Get access token header
         let headers: { [name: string]: string } = {};
@@ -626,16 +631,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
         }
 
-        if (!(tunnelAuthentication in headers) && tunnel?.accessTokens) {
-            for (let scope of scopes ?? []) {
-                const accessToken = tunnel.accessTokens[scope];
-                if (accessToken) {
-                    TunnelAccessTokenProperties.validateTokenExpiration(accessToken);
-                    headers[
-                        tunnelAuthentication
-                    ] = `${TunnelAuthenticationSchemes.tunnel} ${accessToken}`;
-                    break;
-                }
+        if (!(tunnelAuthentication in headers)) {
+            const accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                tunnel,
+                accessTokenScopes,
+            );
+            if (accessToken) {
+                headers[
+                    tunnelAuthentication
+                ] = `${TunnelAuthenticationSchemes.tunnel} ${accessToken}`;
             }
         }
 
@@ -714,13 +718,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 queryOptions['includePorts'] = ['true'];
             }
 
-            if (options.scopes) {
-                TunnelAccessControl.validateScopes(options.scopes);
-                queryOptions['scopes'] = options.scopes;
-            }
-
             if (options.tokenScopes) {
-                TunnelAccessControl.validateScopes(options.tokenScopes);
+                TunnelAccessControl.validateScopes(options.tokenScopes, undefined, true);
                 queryOptions['tokenScopes'] = options.tokenScopes;
             }
 

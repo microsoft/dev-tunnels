@@ -2,13 +2,13 @@
 // Licensed under the MIT license.
 
 import { Tunnel, TunnelPort } from '@vs/tunnels-contracts';
-import { Disposable } from 'vscode-jsonrpc';
+import { TunnelConnection } from './tunnelConnection';
 
 /**
  * Interface for a host capable of sharing local ports via
  * a tunnel and accepting tunneled connections to those ports.
  */
-export interface TunnelHost extends Disposable {
+export interface TunnelHost extends TunnelConnection {
     /**
      * Connects to a tunnel as a host and starts accepting incoming connections
      * to local ports as defined on the tunnel.
@@ -17,20 +17,12 @@ export interface TunnelHost extends Disposable {
     start(tunnel: Tunnel): Promise<void>;
 
     /**
-     * Adds and starts forwarding a port to a tunnel that is currently being hosted through Start
-     * @param portToAdd
+     *
+     * Refreshes ports that were updated using the management API.
+     *
+     * After using the management API to add or remove ports, call this method to have the
+     * host update its cached list of ports. Any added or removed ports will then propagate to
+     * the set of ports forwarded by all connected clients.
      */
-    addPort(portToAdd: TunnelPort): Promise<TunnelPort>;
-
-    /**
-     * Removes a port to a tunnel that is currently being hosted through Start
-     * @param portNumberToRemove
-     */
-    removePort(portNumberToRemove: number): Promise<boolean>;
-
-    /**
-     * Updates a port in a tunnel that is currently being hosted through Start
-     * @param updatedPort
-     */
-    updatePort(updatedPort: TunnelPort): Promise<TunnelPort>;
+    refreshPorts(): Promise<void>;
 }

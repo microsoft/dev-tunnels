@@ -25,11 +25,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.maven.shared.utils.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of a client that manages tunnels and tunnel ports via the
@@ -43,35 +46,40 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private static final String USER_AGENT_HEADER = "User-Agent";
 
   // Api strings
-  private String prodServiceUri = "https://global.rel.tunnels.api.visualstudio.com";
-  private String apiV1Path = "/api/v1";
-  private String tunnelsApiPath = apiV1Path + "/tunnels";
-  private String subjectsApiPath = apiV1Path + "/subjects";
-  private String endpointsApiSubPath = "/endpoints";
-  private String portsApiSubPath = "/ports";
+  private static final String prodServiceUri = "https://global.rel.tunnels.api.visualstudio.com";
+  private static final String apiV1Path = "/api/v1";
+  private static final String tunnelsApiPath = apiV1Path + "/tunnels";
+  private static final String subjectsApiPath = apiV1Path + "/subjects";
+  private static final String endpointsApiSubPath = "/endpoints";
+  private static final String portsApiSubPath = "/ports";
   private String clustersApiPath = apiV1Path + "/clusters";
-  private String tunnelAuthenticationScheme = "Tunnel";
+  private static final String tunnelAuthenticationScheme = "Tunnel";
 
   // Access Scopes
-  private static String[] HostAccessTokenScope = {
-      TunnelAccessScopes.host
-  };
-  private static String[] HostOrManageAccessTokenScope = {
-      TunnelAccessScopes.host,
-      TunnelAccessScopes.manage,
-  };
-  private static String[] ManageAccessTokenScope = {
+  private static final String[] ManageAccessTokenScope = {
       TunnelAccessScopes.manage
   };
-  private static String[] ReadAccessTokenScopes = {
+  private static final String[] HostAccessTokenScope = {
+      TunnelAccessScopes.host
+  };
+  private static final String[] ManagePortsAccessTokenScopes = {
       TunnelAccessScopes.manage,
+      TunnelAccessScopes.managePorts,
+      TunnelAccessScopes.host,
+  };
+  private static final String[] ReadAccessTokenScopes = {
+      TunnelAccessScopes.manage,
+      TunnelAccessScopes.managePorts,
       TunnelAccessScopes.host,
       TunnelAccessScopes.connect
   };
 
-  private ProductHeaderValue[] userAgents;
-  private Supplier<String> userTokenCallback;
-  private String baseAddress;
+  private static final Logger logger = LoggerFactory.getLogger(TunnelManagementClient.class);
+
+  private final HttpClient httpClient;
+  private final ProductHeaderValue[] userAgents;
+  private final Supplier<CompletableFuture<String>> userTokenCallback;
+  private final String baseAddress;
 
   public TunnelManagementClient(ProductHeaderValue[] userAgents) {
     this(userAgents, null, null);
@@ -79,7 +87,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   public TunnelManagementClient(
       ProductHeaderValue[] userAgents,
-      Supplier<String> userTokenCallback) {
+      Supplier<CompletableFuture<String>> userTokenCallback) {
     this(userAgents, userTokenCallback, null);
   }
 
@@ -95,14 +103,16 @@ public class TunnelManagementClient implements ITunnelManagementClient {
    */
   public TunnelManagementClient(
       ProductHeaderValue[] userAgents,
-      Supplier<String> userTokenCallback,
+      Supplier<CompletableFuture<String>> userTokenCallback,
       String tunnelServiceUri) {
     if (userAgents.length == 0) {
       throw new IllegalArgumentException("user agents cannot be empty");
     }
     this.userAgents = userAgents;
-    this.userTokenCallback = userTokenCallback != null ? userTokenCallback : () -> "";
+    this.userTokenCallback = userTokenCallback != null ? userTokenCallback :
+        () -> CompletableFuture.completedFuture(null);
     this.baseAddress = tunnelServiceUri != null ? tunnelServiceUri : prodServiceUri;
+    this.httpClient = HttpClient.newHttpClient();
   }
 
   private <T, U> CompletableFuture<U> requestAsync(
@@ -113,60 +123,102 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       String[] scopes,
       T requestObject,
       Type responseType) {
-    var client = HttpClient.newHttpClient();
-    HttpRequest request = creatHttpRequest(
-        tunnel, options, requestMethod, uri, requestObject, scopes);
-    return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-        .thenApply(response -> parseResponse(response, responseType));
+    return createHttpRequest(tunnel, options, requestMethod, uri, requestObject, scopes)
+      .thenCompose(request -> {
+        long startTime = System.nanoTime();
+        return this.httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+          .thenApply(response -> {
+            long stopTime = System.nanoTime();
+            long durationMs = (stopTime - startTime) / 1000000;
+            var statusCode = response.statusCode();
+            var message = requestMethod + " " + uri + " -> " + statusCode + " (" + durationMs + " ms)";
+            if (statusCode >= 200 && statusCode < 300) {
+              logger.info(message);
+            } else {
+              logger.warn(message);
+            }
+            return response;
+          });
+      })
+      .thenApply(response -> parseResponse(response, responseType));
   }
 
-  private <T> HttpRequest creatHttpRequest(
+  private CompletableFuture<String> getAuthHeaderValue(
+      Tunnel tunnel,
+      TunnelRequestOptions options,
+      String[] accessTokenScopes) {
+    if (options != null && StringUtils.isNotBlank(options.accessToken)) {
+      logger.debug("Authenticating the request with an access token from request options.");
+      return CompletableFuture.completedFuture(
+        tunnelAuthenticationScheme + " " + options.accessToken);
+    }
+
+    return this.userTokenCallback.get().thenApply(userAuthHeader -> {
+      if (StringUtils.isNotBlank(userAuthHeader)) {
+        logger.debug("Authenticating the request via the user token callback.");
+        return userAuthHeader;
+      }
+
+      if (tunnel != null && tunnel.accessTokens != null) {
+        for (String scope : accessTokenScopes) {
+          String accessToken = null;
+          for (Map.Entry<String, String> scopeAndToken : tunnel.accessTokens.entrySet()) {
+            // Each key may be either a single scope or space-delimited list of scopes.
+            if (scopeAndToken.getKey().contains(" ")) {
+              var scopes = scopeAndToken.getKey().split(" ");
+              if (Arrays.asList(scopes).contains(scope)) {
+                accessToken = scopeAndToken.getValue();
+                break;
+              }
+            } else {
+              accessToken = scopeAndToken.getValue();
+              break;
+            }
+          }
+
+          if (StringUtils.isNotBlank(accessToken)) {
+            logger.debug(
+              "Authenticating the request with a '" + scope + "' token from the tunnel object.");
+            return tunnelAuthenticationScheme + " " + accessToken;
+          }
+        }
+      }
+
+      logger.debug("The request will be unauthenticated. No authentication token is available.");
+      return null;
+    });
+  }
+
+  private <T> CompletableFuture<HttpRequest> createHttpRequest(
       Tunnel tunnel,
       TunnelRequestOptions options,
       HttpMethod requestMethod,
       URI uri,
       T requestObject,
-      String[] scopes) {
-
-    String authHeaderValue = null;
-    if (options != null && options.accessToken != null) {
-      authHeaderValue = tunnelAuthenticationScheme + " " + options.accessToken;
-    }
-
-    if (StringUtils.isBlank(authHeaderValue)) {
-      authHeaderValue = this.userTokenCallback.get();
-    }
-
-    if (StringUtils.isBlank(authHeaderValue) && tunnel != null && tunnel.accessTokens != null) {
-      for (String scope : scopes) {
-        var accessToken = tunnel.accessTokens.get(scope);
-        if (StringUtils.isNotBlank(accessToken)) {
-          authHeaderValue = tunnelAuthenticationScheme + " " + accessToken;
-          break;
-        }
+      String[] accessTokenScopes) {
+    return getAuthHeaderValue(tunnel, options, accessTokenScopes).thenApply(authHeaderValue -> {
+      String userAgentString = "";
+      for (ProductHeaderValue userAgent : this.userAgents) {
+        userAgentString = userAgent.productName
+            + "/" + userAgent.version + " " + userAgentString;
       }
-    }
-    String userAgentString = "";
-    for (ProductHeaderValue userAgent : this.userAgents) {
-      userAgentString = userAgent.productName
-          + "/" + userAgent.version + " " + userAgentString;
-    }
-    userAgentString = userAgentString + SDK_USER_AGENT;
-    var requestBuilder = HttpRequest.newBuilder()
-        .uri(uri)
-        .header(USER_AGENT_HEADER, userAgentString)
-        .header(CONTENT_TYPE_HEADER, "application/json");
-    if (StringUtils.isNotBlank(authHeaderValue)) {
-      requestBuilder.header(AUTH_HEADER, authHeaderValue);
-    }
+      userAgentString = userAgentString + SDK_USER_AGENT;
+      var requestBuilder = HttpRequest.newBuilder()
+          .uri(uri)
+          .header(USER_AGENT_HEADER, userAgentString)
+          .header(CONTENT_TYPE_HEADER, "application/json");
+      if (StringUtils.isNotBlank(authHeaderValue)) {
+        requestBuilder.header(AUTH_HEADER, authHeaderValue);
+      }
 
-    Gson gson = TunnelContracts.getGson();
-    var requestJson = gson.toJson(requestObject);
-    var bodyPublisher = requestMethod == HttpMethod.POST || requestMethod == HttpMethod.PUT
-        ? BodyPublishers.ofString(requestJson)
-        : BodyPublishers.noBody();
-    requestBuilder.method(requestMethod.toString(), bodyPublisher);
-    return requestBuilder.build();
+      Gson gson = TunnelContracts.getGson();
+      var requestJson = gson.toJson(requestObject);
+      var bodyPublisher = requestMethod == HttpMethod.POST || requestMethod == HttpMethod.PUT
+          ? BodyPublishers.ofString(requestJson)
+          : BodyPublishers.noBody();
+      requestBuilder.method(requestMethod.toString(), bodyPublisher);
+      return requestBuilder.build();
+    });
   }
 
   private <T> T parseResponse(HttpResponse<String> response, Type typeOfT) {
@@ -262,6 +314,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
   }
 
+  @Override
   public CompletableFuture<Collection<Tunnel>> listTunnelsAsync(
       String clusterId,
       String domain,
@@ -512,7 +565,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.POST,
         uri,
-        ManageAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
@@ -591,7 +644,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.PUT,
         uri,
-        HostAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
@@ -628,7 +681,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         options,
         HttpMethod.DELETE,
         uri,
-        HostOrManageAccessTokenScope,
+        ManagePortsAccessTokenScopes,
         null /* requestObject */,
         responseType);
 

@@ -2,12 +2,33 @@
 // Licensed under the MIT license.
 
 import * as ssh from '@vs/vs-ssh';
+import { IncomingMessage } from 'http';
 import {
     client as WebSocketClient,
     connection as WebSocketConnection,
     IClientConfig,
 } from 'websocket';
 
+declare module 'websocket' {
+    // eslint-disable-next-line @typescript-eslint/tslint/config
+    interface client {
+        /**
+         * 'httpResponse' event in WebSocketClient is fired when the server responds but the HTTP request doesn't properly upgrade to a web socket,
+         * i.e. the status code is not 101 `Switching Protocols`. The argument of the event callback is the recieved response.
+         */
+        on(event: 'httpResponse', cb: (response: IncomingMessage) => void): this;
+    }
+}
+
+/**
+ * Error class for errors connecting to a web socket in non-node (browser) context.
+ * There is no status code or underlying network error info in the browser context.
+ */
+export class BrowserWebSocketRelayError extends Error {
+    constructor(message?: string) {
+        super(message);
+    }
+}
 /**
  * Ssh connection helper
  */
@@ -100,7 +121,11 @@ export class SshHelpers {
                 resolve(new ssh.WebSocketStream(socket));
             };
             socket.onerror = (e) => {
-                reject(new Error(`Failed to connect to relay url`));
+                // Note: as per web socket guidance https://websockets.spec.whatwg.org/#eventdef-websocket-error,
+                // the user agents must not convey extended error information including the cases where the server
+                // didn't complete the opening handshake (e.g. because it was not a WebSocket server).
+                // So we cannot obtain the response status code.
+                reject(new BrowserWebSocketRelayError(`Failed to connect to relay url`));
             };
         });
     }
@@ -136,43 +161,37 @@ export class SshHelpers {
             client.on('connect', (connection: any) => {
                 resolve(new ssh.WebSocketStream(new WebsocketStreamAdapter(connection)));
             });
-            client.on('connectFailed', (e: any) => {
-                if (e.message && e.message.startsWith('Error: ')) {
-                    e.message = e.message.substr(7);
+
+            // If the server responds but doesn't properly upgrade the connection to web socket, WebSocketClient fires 'httpResponse' event.
+            // TODO: Return ProblemDetails from TunnelRelay service
+            client.on('httpResponse', ({ statusCode, statusMessage }) => {
+                const errorContext = webSocketClientContexts.find(
+                    (c) => c.statusCode === statusCode,
+                ) ?? {
+                    statusCode,
+                    errorType: RelayErrorType.ServerError,
+                    error: `relayConnectionError Server responded with a non-101 status: ${statusCode} ${statusMessage}`,
+                };
+
+                reject(new RelayConnectionError(`error.${errorContext.error}`, errorContext));
+            });
+
+            // All other failure cases - cannot connect and get the response, or the web socket handshake failed.
+            client.on('connectFailed', ({ message }) => {
+                if (message && message.startsWith('Error: ')) {
+                    message = message.substr(7);
                 }
 
-                let errorType = RelayErrorType.ServerError;
-
-                // Unfortunately the status code can only be obtained from the error message.
-                // Also status 404 may be used for at least two distinct error conditions.
-                // So we have to match on the error message text. This could break when
-                // the relay server behavior changes or when updating the client websocket library.
-                // But then in the worst case the original error message will be reported.
-
-                // TODO: Return ProblemDetails from TunnelRelay service. The 404 error messages
-                // below match Azure Relay but not TunnelRelay.
-                if (/status: 401/.test(e.message)) {
-                    e.message = 'error.relayClientUnauthorized';
-                    errorType = RelayErrorType.Unauthorized;
-                } else if (/status: 403/.test(e.message)) {
-                    e.message = 'error.relayClientForbidden';
-                    errorType = RelayErrorType.Unauthorized;
-                } else if (/status: 404 Endpoint does not exist/.test(e.message)) {
-                    e.message = 'error.relayEndpointNotFound';
-                    errorType = RelayErrorType.EndpointNotFound;
-                } else if (/status: 404 There are no listeners connected/.test(e.message)) {
-                    e.message = 'error.relayListenerOffline';
-                    errorType = RelayErrorType.ListenerOffline;
-                } else if (/status: 500/.test(e.message)) {
-                    e.message = 'error.relayServerError';
-                    errorType = RelayErrorType.ServerError;
-                } else {
+                const errorContext = webSocketClientContexts.find(
+                    (c) => c.regex && c.regex.test(message),
+                ) ?? {
                     // Other errors are most likely connectivity issues.
                     // The original error message may have additional helpful details.
-                    e.message = 'error.relayConnectionError' + ' ' + e.message;
-                }
+                    errorType: RelayErrorType.ServerError,
+                    error: `relayConnectionError ${message}`,
+                };
 
-                reject(new RelayConnectionError(e.message, { errorType }));
+                reject(new RelayConnectionError(`error.${errorContext.error}`, errorContext));
             });
             client.connect(relayUri, protocols, undefined, headers);
         });
@@ -273,9 +292,19 @@ export interface ISharedWorkspaceInfo extends IWorkspaceConnectionInfo {
 export enum RelayErrorType {
     ConnectionError = 1,
     Unauthorized = 2,
+
+    /**
+     * @deprecated This relay error type is not used.
+     */
     EndpointNotFound = 3,
+    /**
+     * @deprecated This relay error type is not used.
+     */
     ListenerOffline = 4,
+
     ServerError = 5,
+    TunnelPortNotFound = 6,
+    TooManyRequests = 7,
 }
 /**
  * Error used when a connection to an Azure relay failed.
@@ -285,8 +314,57 @@ export class RelayConnectionError extends Error {
         message: string,
         public readonly errorContext: {
             errorType: RelayErrorType;
+            statusCode?: number;
         },
     ) {
         super(message);
     }
 }
+
+/**
+ * Web socket client error context.
+ */
+interface WebSocketClientErrorContext {
+    readonly regex?: RegExp;
+    readonly statusCode?: number;
+    readonly error: string;
+    readonly errorType: RelayErrorType;
+}
+
+/**
+ * Web socket client error contexts.
+ */
+
+// TODO: Return ProblemDetails from TunnelRelay service.
+const webSocketClientContexts: WebSocketClientErrorContext[] = [
+    {
+        regex: /status: 401/,
+        statusCode: 401,
+        error: 'relayClientUnauthorized',
+        errorType: RelayErrorType.Unauthorized,
+    },
+    {
+        regex: /status: 403/,
+        statusCode: 403,
+        error: 'relayClientForbidden',
+        errorType: RelayErrorType.Unauthorized,
+    },
+    {
+        regex: /status: 404/,
+        statusCode: 404,
+        error: 'tunnelPortNotFound',
+        errorType: RelayErrorType.TunnelPortNotFound,
+    },
+    {
+        regex: /status: 429/,
+        statusCode: 429,
+        error: 'tooManyRequests',
+        errorType: RelayErrorType.TooManyRequests,
+    },
+    {
+        regex: /status: 500/,
+        statusCode: 500,
+        error: 'relayServerError',
+        errorType: RelayErrorType.ServerError,
+    },
+];

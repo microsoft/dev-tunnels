@@ -510,6 +510,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         // Create and start tunnel host
         var tunnel = CreateRelayTunnel(addClientEndpoint: false); // Hosting a tunnel adds the endpoint
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
         var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
         var clientMultiChannelStream = new TaskCompletionSource<MultiChannelStream>();
@@ -534,7 +535,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var clientPortAdded = new TaskCompletionSource<int?>();
         relayClient.ForwardedPorts.PortAdded += (sender, args) => clientPortAdded.TrySetResult(args.Port.RemotePort);
 
-        await relayHost.AddPortAsync(new TunnelPort { PortNumber = this.localPortsFixture.Port }, CancellationToken.None);
+        await managementClient.CreateTunnelPortAsync(
+            tunnel,
+            new TunnelPort { PortNumber = this.localPortsFixture.Port },
+            options: null,
+            CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
         // Reconnect the tunnel host
@@ -560,7 +566,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         clientMultiChannelStream.TrySetResult(newMultiChannelStream);
 
         clientPortAdded = new TaskCompletionSource<int?>();
-        await relayHost.AddPortAsync(new TunnelPort { PortNumber = this.localPortsFixture.Port1 }, CancellationToken.None);
+        await managementClient.CreateTunnelPortAsync(
+           tunnel,
+           new TunnelPort { PortNumber = this.localPortsFixture.Port1 },
+           options: null,
+           CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port1, await clientPortAdded.Task);
         Assert.Contains(relayClient.ForwardedPorts, p => p.RemotePort == this.localPortsFixture.Port);
 
@@ -580,6 +591,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         // Create and start tunnel host
         var tunnel = CreateRelayTunnel(addClientEndpoint: false); // Hosting a tunnel adds the endpoint
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
         var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
         var clientMultiChannelStream = new TaskCompletionSource<MultiChannelStream>();
@@ -610,7 +622,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         relayClient.ForwardedPorts.PortAdded += (sender, args) =>
             clientPortAdded.TrySetResult(args.Port.RemotePort);
 
-        await relayHost.AddPortAsync(new TunnelPort { PortNumber = this.localPortsFixture.Port }, CancellationToken.None);
+        await managementClient.CreateTunnelPortAsync(
+            tunnel,
+            new TunnelPort { PortNumber = this.localPortsFixture.Port },
+            options: null,
+            CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
         // Reconnect the tunnel client
@@ -635,7 +652,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         await relayClientReconnected.Task;
 
         clientPortAdded = new TaskCompletionSource<int?>();
-        await relayHost.AddPortAsync(new TunnelPort { PortNumber = this.localPortsFixture.Port1 }, CancellationToken.None);
+        await managementClient.CreateTunnelPortAsync(
+            tunnel,
+            new TunnelPort { PortNumber = this.localPortsFixture.Port1 },
+            options: null,
+            CancellationToken.None);
+        await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port1, await clientPortAdded.Task);
 
         Assert.Contains(relayClient.ForwardedPorts, p => p.RemotePort == this.localPortsFixture.Port);
@@ -656,6 +678,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         // Create and start tunnel host
         var tunnel = CreateRelayTunnel(addClientEndpoint: false); // Hosting a tunnel adds the endpoint
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
         var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
         var clientMultiChannelStream = new TaskCompletionSource<MultiChannelStream>();
@@ -686,7 +709,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         relayClient.ForwardedPorts.PortAdded += (sender, args) =>
             clientPortAdded.TrySetResult(args.Port.RemotePort);
 
-        await relayHost.AddPortAsync(new TunnelPort { PortNumber = this.localPortsFixture.Port }, CancellationToken.None);
+        await managementClient.CreateTunnelPortAsync(
+            tunnel,
+            new TunnelPort { PortNumber = this.localPortsFixture.Port },
+            options: null,
+            CancellationToken.None);
+        await relayHost.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
         // Expect disconnection
@@ -819,6 +847,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
 
         var tunnel = CreateRelayTunnel();
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
 
         using var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
 
@@ -833,8 +862,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Empty(relayHost.RemoteForwarders);
 
         var testPort = GetAvailableTcpPort();
-        await relayHost.AddPortAsync(
-            new TunnelPort { PortNumber = (ushort)testPort }, CancellationToken.None);
+        await managementClient.CreateTunnelPortAsync(
+            tunnel,
+            new TunnelPort { PortNumber = (ushort)testPort },
+            options: null,
+            CancellationToken.None);
+        await relayHost.RefreshPortsAsync(CancellationToken.None);
         var forwarder = relayHost.RemoteForwarders.Values.Single();
         var forwardedPort = tunnel.Ports.Single();
         Assert.Equal((int)forwardedPort.PortNumber, forwarder.LocalPort);
@@ -864,7 +897,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         await TaskExtensions.WaitUntil(() => relayHost.RemoteForwarders.Count > 0)
             .WithTimeout(Timeout);
 
-        await relayHost.RemovePortAsync((ushort)testPort, CancellationToken.None);
+        await managementClient.DeleteTunnelPortAsync(
+            tunnel,
+            (ushort)testPort,
+            options: null,
+            CancellationToken.None);
+        await relayHost.RefreshPortsAsync(CancellationToken.None);
         Assert.Empty(relayHost.RemoteForwarders);
         Assert.Empty(tunnel.Ports);
     }

@@ -39,7 +39,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         return Promise.resolve(tunnels);
     }
 
-    getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null> {
+    async getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null> {
         const clusterId = tunnel.clusterId;
         const tunnelId = tunnel.tunnelId;
         const name = tunnel.name;
@@ -50,8 +50,12 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
                 (t.clusterId === clusterId && t.tunnelId === tunnelId),
         );
 
+        if (!t) {
+            return null;
+        }
+
         this.issueMockTokens(tunnel, options);
-        return Promise.resolve(tunnel);
+        return tunnel;
     }
 
     async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
@@ -125,7 +129,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         }
 
         let newArray: TunnelEndpoint[] = Object.assign([], tunnel.endpoints);
-        newArray[newArray.length - 1] = endpoint;
+        newArray.push(endpoint);
         tunnel.endpoints = newArray;
 
         let tunnelEndpoint: TunnelRelayTunnelEndpoint = endpoint;
