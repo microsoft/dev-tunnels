@@ -24,6 +24,10 @@ export function getPortUri(endpoint: ITunnelEndpoint, portNumber?: number): stri
         throw new TypeError('A tunnel endpoint is required.');
     }
 
+    if (typeof portNumber !== 'number' && !endpoint.defaultWebUri) {
+        return endpoint.defaultWebUri;
+    }
+
     if (typeof portNumber !== 'number' || !endpoint.portUriFormat) {
         return undefined;
     }
@@ -37,6 +41,10 @@ export function getPortSshCommand(
 ): string | undefined {
     if (!endpoint) {
         throw new TypeError('A tunnel endpoint is required.');
+    }
+
+    if (typeof portNumber !== 'number' && !endpoint.defaultSshCommand) {
+        return endpoint.defaultSshCommand;
     }
 
     if (typeof portNumber !== 'number' || !endpoint.portSshCommandFormat) {

@@ -48,11 +48,23 @@ export interface TunnelEndpoint {
     portUriFormat?: string;
 
     /**
+     * Gets or sets the default URIs without the port information in the url and the web
+     * forwarding forwards requests to this url to default port.
+     */
+    defaultWebUri?: string;
+
+    /**
      * Gets or sets a string used to format ssh command where ssh client can connect to
      * shared ssh port of the tunnel. The string includes a {@link
      * TunnelEndpoint.portToken} that must be replaced with the actual port number.
      */
     portSshCommandFormat?: string;
+
+    /**
+     * Gets or sets the default ssh command without the port information in the command
+     * and the ssh gateway forwards requests to the default ssh port.
+     */
+    defaultSshCommand?: string;
 }
 
 /**
