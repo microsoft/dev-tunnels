@@ -62,12 +62,25 @@ public abstract class TunnelEndpoint
     public string? PortUriFormat { get; set; }
 
     /// <summary>
+    /// Gets or sets the URI where a web client can connect to the default port of the tunnel.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TunnelUri { get; set; }
+
+    /// <summary>
     /// Gets or sets a string used to format ssh command where ssh client can connect to
     /// shared ssh port of the tunnel. The string includes a <see cref="PortToken"/> that must be
     /// replaced with the actual port number.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PortSshCommandFormat { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Ssh command where the Ssh client can connect to the default ssh port
+    /// of the tunnel.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TunnelSshCommand { get; set; }
 
     /// <summary>
     /// Token included in <see cref="PortUriFormat"/> and <see cref="PortSshCommandFormat"/>
@@ -93,7 +106,17 @@ public abstract class TunnelEndpoint
     /// </remarks>
     public static Uri? GetPortUri(TunnelEndpoint endpoint, int? portNumber)
     {
-        if (portNumber == null || string.IsNullOrEmpty(endpoint.PortUriFormat))
+        if (portNumber == null)
+        {
+            if (string.IsNullOrEmpty(endpoint.TunnelUri))
+            {
+                return null;
+            }
+
+            return new Uri(endpoint.TunnelUri);
+        }
+
+        if (string.IsNullOrEmpty(endpoint.PortUriFormat))
         {
             return null;
         }
@@ -118,7 +141,17 @@ public abstract class TunnelEndpoint
     /// </remarks>
     public static string? GetPortSshCommand(TunnelEndpoint endpoint, int? portNumber)
     {
-        if (portNumber == null || string.IsNullOrEmpty(endpoint.PortSshCommandFormat))
+        if (portNumber == null)
+        {
+            if (string.IsNullOrEmpty(endpoint.TunnelSshCommand))
+            {
+                return null;
+            }
+            
+            return endpoint.TunnelSshCommand;
+        }
+
+        if (string.IsNullOrEmpty(endpoint.PortSshCommandFormat))
         {
             return null;
         }

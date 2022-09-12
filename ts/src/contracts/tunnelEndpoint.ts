@@ -48,11 +48,23 @@ export interface TunnelEndpoint {
     portUriFormat?: string;
 
     /**
+     * Gets or sets the URI where a web client can connect to the default port of the
+     * tunnel.
+     */
+    tunnelUri?: string;
+
+    /**
      * Gets or sets a string used to format ssh command where ssh client can connect to
      * shared ssh port of the tunnel. The string includes a {@link
      * TunnelEndpoint.portToken} that must be replaced with the actual port number.
      */
     portSshCommandFormat?: string;
+
+    /**
+     * Gets or sets the Ssh command where the Ssh client can connect to the default ssh
+     * port of the tunnel.
+     */
+    tunnelSshCommand?: string;
 }
 
 /**

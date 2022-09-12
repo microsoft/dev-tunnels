@@ -36,10 +36,17 @@ type TunnelEndpoint struct {
 	// with the actual port number.
 	PortURIFormat        string `json:"portUriFormat,omitempty"`
 
+	// Gets or sets the URI where a web client can connect to the default port of the tunnel.
+	TunnelURI            string `json:"tunnelUri,omitempty"`
+
 	// Gets or sets a string used to format ssh command where ssh client can connect to
 	// shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortToken` that
 	// must be replaced with the actual port number.
 	PortSshCommandFormat string `json:"portSshCommandFormat,omitempty"`
+
+	// Gets or sets the Ssh command where the Ssh client can connect to the default ssh port
+	// of the tunnel.
+	TunnelSshCommand     string `json:"tunnelSshCommand,omitempty"`
 
 	LocalNetworkTunnelEndpoint
 	TunnelRelayTunnelEndpoint

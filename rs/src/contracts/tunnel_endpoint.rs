@@ -40,10 +40,18 @@ pub struct TunnelEndpoint {
     // replaced with the actual port number.
     pub port_uri_format: Option<String>,
 
+    // Gets or sets the URI where a web client can connect to the default port of the
+    // tunnel.
+    pub tunnel_uri: Option<String>,
+
     // Gets or sets a string used to format ssh command where ssh client can connect to
     // shared ssh port of the tunnel. The string includes a `TunnelEndpoint.PortToken`
     // that must be replaced with the actual port number.
     pub port_ssh_command_format: Option<String>,
+
+    // Gets or sets the Ssh command where the Ssh client can connect to the default ssh
+    // port of the tunnel.
+    pub tunnel_ssh_command: Option<String>,
 }
 
 // Token included in `TunnelEndpoint.PortUriFormat` and

@@ -54,12 +54,26 @@ public class TunnelEndpoint {
     public String portUriFormat;
 
     /**
+     * Gets or sets the URI where a web client can connect to the default port of the
+     * tunnel.
+     */
+    @Expose
+    public String tunnelUri;
+
+    /**
      * Gets or sets a string used to format ssh command where ssh client can connect to
      * shared ssh port of the tunnel. The string includes a {@link
      * TunnelEndpoint#portToken} that must be replaced with the actual port number.
      */
     @Expose
     public String portSshCommandFormat;
+
+    /**
+     * Gets or sets the Ssh command where the Ssh client can connect to the default ssh
+     * port of the tunnel.
+     */
+    @Expose
+    public String tunnelSshCommand;
 
     /**
      * Token included in {@link TunnelEndpoint#portUriFormat} and {@link
