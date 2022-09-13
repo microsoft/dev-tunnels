@@ -1230,7 +1230,7 @@ namespace Microsoft.VsSaaS.TunnelService
             CancellationToken cancellation = default)
         {
             return (await this.SendTunnelRequestAsync<string>(
-                HttpMethod.Post,
+                HttpMethod.Get,
                 tunnel,
                 ReadAccessTokenScopes,
                 SshKeysApiSubPath,
