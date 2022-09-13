@@ -32,7 +32,7 @@ impl ReadBuffer {
             target.put_slice(&bytes[start..]);
             self.0 = None;
         } else {
-            let end = target.remaining();
+            let end = start + target.remaining();
             target.put_slice(&bytes[start..end]);
             self.0 = Some((bytes, end));
         }
