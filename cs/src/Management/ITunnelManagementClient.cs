@@ -338,5 +338,18 @@ namespace Microsoft.VsSaaS.TunnelService
             TunnelAccessSubject[] subjects,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
+
+        /// <summary>
+        /// Gets the ssh public key for an ssh client to connect to a shared ssh server.
+        /// </summary>
+        /// <param name="tunnel">Tunnel object including at least either a tunnel name
+        /// (globally unique, if configured) or tunnel ID and cluster ID.</param>
+        /// <param name="options">Request options.</param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <returns>Ssh key for the provided tunnel.</returns>
+        Task<string?> GetSshPublicKeyAsync(
+            Tunnel tunnel,
+            TunnelRequestOptions? options = null,
+            CancellationToken cancellation = default);
     }
 }

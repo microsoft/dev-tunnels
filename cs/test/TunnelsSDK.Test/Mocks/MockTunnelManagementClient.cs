@@ -327,4 +327,9 @@ public class MockTunnelManagementClient : ITunnelManagementClient
             }
         }
     }
+
+    public Task<string> GetSshPublicKeyAsync(Tunnel tunnel, TunnelRequestOptions options = null, CancellationToken cancellation = default)
+    {
+        throw new NotImplementedException();
+    }
 }

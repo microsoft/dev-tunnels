@@ -11,6 +11,7 @@ import {
 } from '@vs/tunnels-contracts';
 
 export class MockTunnelManagementClient implements TunnelManagementClient {
+    httpsAgent?: any;
     private idCounter: number = 0;
     public tunnels: Tunnel[] = [];
     public hostRelayUri?: string;
@@ -216,6 +217,13 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         }
 
         return Promise.resolve(false);
+    }
+
+    getSshPublicKeyAsync(
+        tunnel: Tunnel,
+        options?: TunnelRequestOptions | undefined
+    ): Promise<string | null> {
+        throw new Error('Method not implemented.');
     }
 
     private issueMockTokens(tunnel: Tunnel, options?: TunnelRequestOptions) {

@@ -148,6 +148,17 @@ export interface TunnelManagementClient {
         portNumber: number,
         options?: TunnelRequestOptions,
     ): Promise<boolean>;
+
+    /**
+     * Gets the ssh public key for an ssh client to connect to a shared ssh server.
+     * @param tunnel
+     * @param portNumber
+     * @param options
+     */
+     getSshPublicKeyAsync(
+        tunnel: Tunnel,
+        options?: TunnelRequestOptions,
+    ): Promise<string | null>;
 }
 
 /**

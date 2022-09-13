@@ -27,6 +27,7 @@ type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 const tunnelsApiPath = '/api/v1/tunnels';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
+const sshKeysApiSubPath = '/sshkeys';
 const tunnelAuthentication = 'Authorization';
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
@@ -436,6 +437,20 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         return result;
+    }
+
+    public async getSshPublicKeyAsync(
+        tunnel: Tunnel,
+        options?: TunnelRequestOptions | undefined
+    ): Promise<string | null> {
+        return await this.sendTunnelRequest<string | null>(
+            'GET',
+            tunnel,
+            readAccessTokenScopes,
+            sshKeysApiSubPath,
+            undefined,
+            options,
+        );
     }
 
     /**

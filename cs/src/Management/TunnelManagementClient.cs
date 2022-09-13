@@ -31,6 +31,7 @@ namespace Microsoft.VsSaaS.TunnelService
         private const string SubjectsApiPath = ApiV1Path + "/subjects";
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
+        private const string SshKeysApiSubPath = "/sshkeys";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
 
@@ -1220,6 +1221,22 @@ namespace Microsoft.VsSaaS.TunnelService
                 subjects,
                 cancellation);
             return resolvedSubjects!;
+        }
+
+        /// <inheritdoc/>
+        public async Task<string?> GetSshPublicKeyAsync(
+            Tunnel tunnel,
+            TunnelRequestOptions? options = null,
+            CancellationToken cancellation = default)
+        {
+            return (await this.SendTunnelRequestAsync<string>(
+                HttpMethod.Post,
+                tunnel,
+                ReadAccessTokenScopes,
+                SshKeysApiSubPath,
+                query: null,
+                options,
+                cancellation)) !;
         }
     }
 }
