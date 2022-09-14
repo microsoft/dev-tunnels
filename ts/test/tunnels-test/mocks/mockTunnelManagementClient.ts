@@ -8,6 +8,7 @@ import {
     TunnelPort,
     TunnelConnectionMode,
     TunnelEndpoint,
+    TunnelSshKeyResponse,
 } from '@vs/tunnels-contracts';
 
 export class MockTunnelManagementClient implements TunnelManagementClient {
@@ -222,7 +223,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
     getSshPublicKeyAsync(
         tunnel: Tunnel,
         options?: TunnelRequestOptions | undefined
-    ): Promise<string | null> {
+    ): Promise<TunnelSshKeyResponse | null> {
         throw new Error('Method not implemented.');
     }
 

@@ -347,7 +347,7 @@ namespace Microsoft.VsSaaS.TunnelService
         /// <param name="options">Request options.</param>
         /// <param name="cancellation">Cancellation token.</param>
         /// <returns>Ssh key for the provided tunnel.</returns>
-        Task<string?> GetSshPublicKeyAsync(
+        Task<TunnelSshKeyResponse?> GetSshPublicKeyAsync(
             Tunnel tunnel,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);

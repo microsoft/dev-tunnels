@@ -158,7 +158,7 @@ export interface TunnelManagementClient {
      getSshPublicKeyAsync(
         tunnel: Tunnel,
         options?: TunnelRequestOptions,
-    ): Promise<string | null>;
+    ): Promise<TunnelSshKeyResponse | null>;
 }
 
 /**

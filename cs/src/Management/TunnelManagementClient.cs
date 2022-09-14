@@ -1224,12 +1224,12 @@ namespace Microsoft.VsSaaS.TunnelService
         }
 
         /// <inheritdoc/>
-        public async Task<string?> GetSshPublicKeyAsync(
+        public async Task<TunnelSshKeyResponse?> GetSshPublicKeyAsync(
             Tunnel tunnel,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default)
         {
-            return (await this.SendTunnelRequestAsync<string>(
+            return (await this.SendTunnelRequestAsync<TunnelSshKeyResponse>(
                 HttpMethod.Get,
                 tunnel,
                 ReadAccessTokenScopes,

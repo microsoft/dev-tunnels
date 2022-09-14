@@ -10,6 +10,7 @@ import {
     TunnelPort,
     ProblemDetails,
     TunnelServiceProperties,
+    TunnelSshKeyResponse,
 } from '@vs/tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -441,9 +442,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async getSshPublicKeyAsync(
         tunnel: Tunnel,
-        options?: TunnelRequestOptions | undefined
-    ): Promise<string | null> {
-        return await this.sendTunnelRequest<string | null>(
+        options?: TunnelRequestOptions | undefined,
+    ): Promise<TunnelSshKeyResponse | null> {
+        return await this.sendTunnelRequest<TunnelSshKeyResponse | null>(
             'GET',
             tunnel,
             readAccessTokenScopes,
