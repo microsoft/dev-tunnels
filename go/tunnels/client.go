@@ -193,9 +193,15 @@ func (c *Client) RefreshPorts(ctx context.Context) error {
 	request := messages.NewSessionRequestMessage("RefreshPorts", true)
 	data, err := request.Marshal()
 	if err != nil {
-		return fmt.Errorf("failed to marshal port forward channel open message: %w", err)
+		return fmt.Errorf("failed to marshal refresh port message: %w", err)
 	}
-	_, err = c.ssh.Session.SendRequest("RefreshPorts", true, data)
+	res, data, err := c.ssh.SendSessionRequest("RefreshPorts", true, data)
+	if err != nil {
+		return fmt.Errorf("failed to send port refresh message: %w", err)
+	}
+	if res != true {
+		return fmt.Errorf("failed to refresh ports: %w", err)
+	}
 	return err
 }
 
