@@ -15,6 +15,13 @@ func readUint32(buf io.Reader) (i uint32, err error) {
 	return i, nil
 }
 
+func readBool(buf io.Reader) (b bool, err error) {
+	if err := binary.Read(buf, binary.BigEndian, &b); err != nil {
+		return false, err
+	}
+	return b, nil
+}
+
 func readString(buf io.Reader) (s string, err error) {
 	var l uint32
 	if l, err = readUint32(buf); err != nil {

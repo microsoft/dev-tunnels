@@ -186,6 +186,19 @@ func (c *Client) WaitForForwardedPort(ctx context.Context, port uint16) error {
 	}
 }
 
+func (c *Client) RefreshPorts(ctx context.Context) error {
+	if c.ssh == nil {
+		return fmt.Errorf("not Connected")
+	}
+	request := messages.NewSessionRequestMessage("RefreshPorts", true)
+	data, err := request.Marshal()
+	if err != nil {
+		return fmt.Errorf("failed to marshal port forward channel open message: %w", err)
+	}
+	_, err = c.ssh.Session.SendRequest("RefreshPorts", true, data)
+	return err
+}
+
 func awaitError(ctx context.Context, errc chan error) error {
 	select {
 	case err := <-errc:
