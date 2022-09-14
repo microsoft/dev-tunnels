@@ -31,7 +31,7 @@ namespace Microsoft.VsSaaS.TunnelService
         private const string SubjectsApiPath = ApiV1Path + "/subjects";
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
-        private const string SshKeysApiSubPath = "/sshkeys";
+        private const string SshKeyApiSubPath = "/sshkey";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
 
@@ -1233,7 +1233,7 @@ namespace Microsoft.VsSaaS.TunnelService
                 HttpMethod.Get,
                 tunnel,
                 ReadAccessTokenScopes,
-                SshKeysApiSubPath,
+                SshKeyApiSubPath,
                 query: null,
                 options,
                 cancellation)) !;
