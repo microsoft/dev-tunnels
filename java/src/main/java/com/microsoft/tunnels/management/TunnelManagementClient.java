@@ -5,6 +5,7 @@ package com.microsoft.tunnels.management;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.microsoft.tunnels.contracts.ClusterDetails;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
@@ -51,6 +52,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private static final String subjectsApiPath = apiV1Path + "/subjects";
   private static final String endpointsApiSubPath = "/endpoints";
   private static final String portsApiSubPath = "/ports";
+  private String clustersApiPath = apiV1Path + "/clusters";
   private static final String tunnelAuthenticationScheme = "Tunnel";
 
   // Access Scopes
@@ -694,5 +696,27 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     }
     return result;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public CompletableFuture<Collection<ClusterDetails>> listClustersAsync() {
+    URI uri;
+    try {
+      uri = new URI(this.baseAddress + this.clustersApiPath);
+      final Type responseType = new TypeToken<Collection<ClusterDetails>>() {
+      }.getType();
+      return requestAsync(
+          null,
+          null,
+          HttpMethod.GET,
+          uri,
+          null,
+          null,
+          responseType);
+    } catch (URISyntaxException e) {
+      throw new Error("Error parsing URI: " + this.baseAddress + this.clustersApiPath);
+    }
   }
 }

@@ -1,7 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort } from '@vs/tunnels-contracts';
+import {
+    ClusterDetails,
+    Tunnel,
+    TunnelConnectionMode,
+    TunnelEndpoint,
+    TunnelPort,
+} from '@vs/tunnels-contracts';
 import { TunnelRequestOptions } from './tunnelRequestOptions';
 import * as https from 'https';
 
@@ -148,6 +154,11 @@ export interface TunnelManagementClient {
         portNumber: number,
         options?: TunnelRequestOptions,
     ): Promise<boolean>;
+
+    /**
+     * Lists details of tunneling service clusters in all supported Azure regions.
+     */
+    listClusters(): Promise<ClusterDetails[]>;
 }
 
 /**

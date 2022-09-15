@@ -10,6 +10,7 @@ import {
     TunnelPort,
     ProblemDetails,
     TunnelServiceProperties,
+    ClusterDetails,
 } from '@vs/tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -24,9 +25,11 @@ import * as https from 'https';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
-const tunnelsApiPath = '/api/v1/tunnels';
+const apiV1Path = `/api/v1`;
+const tunnelsApiPath = apiV1Path + '/tunnels';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
+const clustersApiPath = apiV1Path + '/clusters';
 const tunnelAuthentication = 'Authorization';
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
@@ -436,6 +439,18 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         return result;
+    }
+
+    public async listClusters(): Promise<ClusterDetails[]> {
+        return (await this.sendRequest<ClusterDetails[]>(
+            'GET',
+            undefined,
+            clustersApiPath,
+            undefined,
+            undefined,
+            undefined,
+            false,
+        ))!;
     }
 
     /**

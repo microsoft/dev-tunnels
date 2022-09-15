@@ -31,6 +31,7 @@ namespace Microsoft.VsSaaS.TunnelService
         private const string SubjectsApiPath = ApiV1Path + "/subjects";
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
+        private const string ClustersPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
 
@@ -1220,6 +1221,21 @@ namespace Microsoft.VsSaaS.TunnelService
                 subjects,
                 cancellation);
             return resolvedSubjects!;
+        }
+
+        /// <inheritdoc/>
+        public async Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation) {
+            var baseAddress = this.httpClient.BaseAddress!;
+            var builder = new UriBuilder(baseAddress);
+            builder.Path = ClustersPath;
+            var clusterDetails = await SendRequestAsync<object, ClusterDetails[]>(
+                HttpMethod.Get,
+                builder.Uri,
+                options: null,
+                authHeader: null,
+                body: null,
+                cancellation);
+            return clusterDetails!;
         }
     }
 }

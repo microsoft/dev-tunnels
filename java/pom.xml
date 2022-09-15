@@ -88,6 +88,7 @@
           <consoleOutput>true</consoleOutput>
           <failsOnError>true</failsOnError>
           <linkXRef>false</linkXRef>
+          <excludes>**/contracts/*</excludes>
         </configuration>
         <executions>
           <execution>
