@@ -10,7 +10,7 @@ import (
 	"github.com/rodaine/table"
 )
 
-const PackageVersion = "0.0.4"
+const PackageVersion = "0.0.6"
 
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	convertedTunnel := &Tunnel{
@@ -150,7 +150,7 @@ func (rs *ResourceStatus) UnmarshalJSON(data []byte) (err error) {
 	// First attempt to un-marshal as a ResourceStatus object.
 	var obj map[string]uint64
 	err = json.Unmarshal(data, &obj)
-	if (err == nil) {
+	if err == nil {
 		rs.Current = obj["current"]
 		rs.Limit = obj["limit"]
 	} else {

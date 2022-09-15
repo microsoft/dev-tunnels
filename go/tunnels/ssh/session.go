@@ -164,3 +164,7 @@ func (s *SSHSession) Read(p []byte) (n int, err error) {
 func (s *SSHSession) Write(p []byte) (n int, err error) {
 	return s.writer.Write(p)
 }
+
+func (s *SSHSession) SendSessionRequest(name string, wantReply bool, payload []byte) (bool, []byte, error) {
+	return s.conn.SendRequest(name, wantReply, payload)
+}

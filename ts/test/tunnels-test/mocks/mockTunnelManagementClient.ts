@@ -8,6 +8,7 @@ import {
     TunnelPort,
     TunnelConnectionMode,
     TunnelEndpoint,
+    ClusterDetails,
     TunnelSshKeyResponse,
 } from '@vs/tunnels-contracts';
 
@@ -218,6 +219,10 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         }
 
         return Promise.resolve(false);
+    }
+
+    listClusters(): Promise<ClusterDetails[]> {
+        throw new Error('Method not implemented.');
     }
 
     getSshPublicKeyAsync(

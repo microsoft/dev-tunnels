@@ -43,6 +43,7 @@ const (
 	apiV1Path                  = "/api/v1"
 	tunnelsApiPath             = apiV1Path + "/tunnels"
 	subjectsApiPath            = apiV1Path + "/subjects"
+	clustersApiPath            = apiV1Path + "/clusters"
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
@@ -459,6 +460,22 @@ func (m *Manager) DeleteTunnelPort(
 	return nil
 }
 
+func (m *Manager) ListClusters(ctx context.Context) (clusters []*ClusterDetails, err error) {
+	url := m.buildUri("", clustersApiPath, nil, "")
+	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting list of clusters: %w", err)
+	}
+
+	err = json.Unmarshal(response, &clusters)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to ClusterDetails: %w", err)
+	}
+
+	return clusters, nil
+}
+
 func (m *Manager) sendTunnelRequest(
 	ctx context.Context,
 	tunnel *Tunnel,
@@ -470,19 +487,30 @@ func (m *Manager) sendTunnelRequest(
 	accessTokenScopes []TunnelAccessScope,
 	allowNotFound bool,
 ) ([]byte, error) {
-	tunnelJson, err := partialMarshal(requestObject, partialFields)
+	authHeaderValue := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes);
+	return m.sendRequest(ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound)
+}
+
+func (m *Manager) sendRequest(
+	ctx context.Context,
+	method string,
+	uri *url.URL,
+	requestObject interface{},
+	partialFields []string,
+	authHeaderValue string,
+	allowNotFound bool,
+) ([]byte, error) {
+	request, err := m.createRequest(ctx, method, uri, requestObject, partialFields)
 	if err != nil {
-		return nil, fmt.Errorf("error converting tunnel to json: %w", err)
-	}
-	request, err := http.NewRequest(method, uri.String(), bytes.NewBuffer(tunnelJson))
-	if err != nil {
-		return nil, fmt.Errorf("error creating tunnel request request: %w", err)
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	//Add authorization header
-	if token := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes); token != "" {
-		request.Header.Add("Authorization", token)
+	// Add authorization header
+	if (authHeaderValue != "") {
+		request.Header.Add("Authorization", authHeaderValue)
 	}
+
+	// Add user agent header
 	userAgentString := ""
 	for _, userAgent := range m.userAgents {
 		if len(userAgent.Version) == 0 {
@@ -499,9 +527,6 @@ func (m *Manager) sendTunnelRequest(
 
 	// Add additional headers
 	for header, headerValue := range m.additionalHeaders {
-		request.Header.Add(header, headerValue)
-	}
-	for header, headerValue := range tunnelRequestOptions.AdditionalHeaders {
 		request.Header.Add(header, headerValue)
 	}
 
@@ -525,6 +550,23 @@ func (m *Manager) sendTunnelRequest(
 	}
 
 	return io.ReadAll(result.Body)
+}
+
+func (m *Manager) createRequest(
+	ctx context.Context,
+	method string,
+	uri *url.URL,
+	requestObject interface{},
+	partialFields []string,
+) (*http.Request, error) {
+	if (requestObject == nil) {
+		return http.NewRequest(method, uri.String(), nil)
+	}
+	requestJson, err := partialMarshal(requestObject, partialFields)
+	if err != nil {
+		return nil, fmt.Errorf("error converting request object to json: %w", err)
+	}
+	return http.NewRequest(method, uri.String(), bytes.NewBuffer(requestJson))
 }
 
 func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {

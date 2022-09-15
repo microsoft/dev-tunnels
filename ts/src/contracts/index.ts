@@ -17,4 +17,5 @@ export { TunnelProtocol } from './tunnelProtocol';
 export { TunnelRelayTunnelEndpoint } from './tunnelRelayTunnelEndpoint';
 export { TunnelServiceProperties } from './tunnelServiceProperties';
 export { TunnelStatus } from './tunnelStatus';
+export { ClusterDetails } from './clusterDetails';
 export { TunnelSshKeyResponse } from './tunnelSshKeyResponse';

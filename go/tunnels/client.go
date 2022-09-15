@@ -186,6 +186,22 @@ func (c *Client) WaitForForwardedPort(ctx context.Context, port uint16) error {
 	}
 }
 
+func (c *Client) RefreshPorts(ctx context.Context) error {
+	if c.ssh == nil {
+		return fmt.Errorf("not Connected")
+	}
+
+	res, _, err := c.ssh.SendSessionRequest("RefreshPorts", true, make([]byte, 0))
+	if err != nil {
+		return fmt.Errorf("failed to send port refresh message: %w", err)
+	}
+	if !res {
+		return fmt.Errorf("failed to refresh ports: %w", err)
+	}
+
+	return err
+}
+
 func awaitError(ctx context.Context, errc chan error) error {
 	select {
 	case err := <-errc:

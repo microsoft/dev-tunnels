@@ -340,6 +340,13 @@ namespace Microsoft.VsSaaS.TunnelService
             CancellationToken cancellation = default);
 
         /// <summary>
+        /// Lists details of tunneling service clusters in all supported Azure regions.
+        /// </summary>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <returns>Array of <see cref="ClusterDetails"/></returns>
+        Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation = default);
+
+        /// <summary>
         /// Gets the ssh public key for an ssh client to connect to a shared ssh server.
         /// </summary>
         /// <param name="tunnel">Tunnel object including at least either a tunnel name
