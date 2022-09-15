@@ -26,6 +26,7 @@ mod tunnel_port_status;
 mod tunnel_protocol;
 mod tunnel_relay_tunnel_endpoint;
 mod tunnel_service_properties;
+mod tunnel_ssh_key_response;
 mod tunnel_status;
 
 pub use cluster_details::*;
@@ -52,4 +53,5 @@ pub use tunnel_port_status::*;
 pub use tunnel_protocol::*;
 pub use tunnel_relay_tunnel_endpoint::*;
 pub use tunnel_service_properties::*;
+pub use tunnel_ssh_key_response::*;
 pub use tunnel_status::*;
