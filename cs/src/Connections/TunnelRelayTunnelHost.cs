@@ -172,6 +172,12 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     async Task IRelayClient.ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
     {
         this.hostSession = new MultiChannelStream(stream, Trace.WithName("HostSSH"));
+
+        // Increase max window size to work around channel congestion bug.
+        // This does not entirely eliminate the problem, but reduces the chance.
+        // TODO: Change the protocol to avoid layering SSH sessions, which will resolve the issue.
+        this.hostSession.ChannelMaxWindowSize = SshChannel.DefaultMaxWindowSize * 5;
+
         this.hostSession.ChannelOpening += HostSession_ChannelOpening;
         this.hostSession.Closed += HostSession_Closed;
         await this.hostSession.ConnectAsync(cancellation);
