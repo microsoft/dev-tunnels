@@ -72,6 +72,12 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         cancellation: CancellationToken,
     ): Promise<void> {
         this.sshSession = new MultiChannelStream(stream);
+
+        // Increase max window size to work around channel congestion bug.
+        // This does not entirely eliminate the problem, but reduces the chance.
+        // TODO: Change the protocol to avoid layering SSH sessions, which will resolve the issue.
+        this.sshSession.channelMaxWindowSize = SshChannel.defaultMaxWindowSize * 5;
+
         const channelOpenEventRegistration = this.sshSession.onChannelOpening((e) => {
             this.hostSession_ChannelOpening(this.sshSession!, e);
         });
