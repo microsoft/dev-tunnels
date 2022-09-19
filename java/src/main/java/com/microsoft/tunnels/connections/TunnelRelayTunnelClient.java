@@ -130,7 +130,7 @@ public class TunnelRelayTunnelClient implements TunnelClient {
       requestBuffer.putString(refreshPortsRequestType);
       requestBuffer.putBoolean(true); // WantReply
       try {
-        this.session.request(refreshPortsRequestType, requestBuffer, sshSessionTimeout);
+        this.session.request(refreshPortsRequestType, requestBuffer, Duration.ofSeconds(20));
       } catch (IOException e) {
         throw new TunnelConnectionException("Error refreshing ports.", e);
       }
