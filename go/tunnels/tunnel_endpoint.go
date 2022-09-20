@@ -48,6 +48,10 @@ type TunnelEndpoint struct {
 	// of the tunnel.
 	TunnelSshCommand     string `json:"tunnelSshCommand,omitempty"`
 
+	// Gets or sets the Ssh gateway public key which should be added to the authorized_keys
+	// file so that tunnel service can connect to the shared ssh server.
+	SshGatewayPublicKey  string `json:"sshGatewayPublicKey,omitempty"`
+
 	LocalNetworkTunnelEndpoint
 	TunnelRelayTunnelEndpoint
 }
