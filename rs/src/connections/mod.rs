@@ -3,7 +3,7 @@
 
 mod errors;
 mod io;
-mod host_relay;
+mod relay_tunnel_host;
 mod ws;
 
-pub use host_relay::*;
+pub use relay_tunnel_host::*;

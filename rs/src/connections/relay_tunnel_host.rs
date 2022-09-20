@@ -38,14 +38,14 @@ use super::{
 /// sent. Shared by the host relay to each connected session.
 type PortMap = HashMap<u32, mpsc::UnboundedSender<ForwardedPortConnection>>;
 
-/// The HostRelay can host connections via the tunneling service. After
+/// The RelayTunnelHost can host connections via the tunneling service. After
 /// creating it, you will generally want to run `connect()` to create a new
 /// a new connection.
 ///
 /// Note that, while ports can be added and remove dynamically from running
-/// tunnels via the appropriate methods on the HostRelay, no ports will be
+/// tunnels via the appropriate methods on the RelayTunnelHost, no ports will be
 /// hosted until those methods are called.
-pub struct HostRelay {
+pub struct RelayTunnelHost {
     locator: TunnelLocator,
     host_id: Uuid,
     ports_tx: watch::Sender<PortMap>,
@@ -109,7 +109,7 @@ pub struct HostRelay {
 ///
 /// ## How this Package Works
 ///
-/// The HostRelay allows the consumer to `connect()` to a tunnel. It's legal
+/// The RelayTunnelHost allows the consumer to `connect()` to a tunnel. It's legal
 /// to call this in parallel (though not generally useful...) The host keeps
 /// a map of the forwarded ports in a tokio watch channel, which allows
 /// connected channels to update them in realtime. Each port also has a channel
@@ -128,11 +128,11 @@ pub struct HostRelay {
 /// ForwardedPortConnection directly, respectively.
 
 #[allow(dead_code)]
-impl HostRelay {
+impl RelayTunnelHost {
     pub fn new(locator: TunnelLocator, mgmt: TunnelManagementClient) -> Self {
         let host_id = Uuid::new_v4();
         let (ports_tx, ports_rx) = watch::channel(HashMap::new());
-        HostRelay {
+        RelayTunnelHost {
             host_id,
             locator,
             ports_tx,
@@ -167,7 +167,7 @@ impl HostRelay {
     /// The handle may be dropped in order to disconnect from the relay, and
     /// will be closed if connection to the relay fails. Consumers should
     /// reconnect if this happens, and they can reconnect using the same
-    /// HostRelay.
+    /// RelayTunnelHost.
     pub async fn connect(&mut self, host_token: &str) -> Result<RelayHandle, TunnelError> {
         let (cnx, endpoint) = self.create_websocket(host_token).await?;
         let cnx = AsyncRWWebSocket::new(super::ws::AsyncRWWebSocketOptions {
@@ -176,7 +176,7 @@ impl HostRelay {
             ping_timeout: Duration::from_secs(10),
         });
 
-        let (client_session, mut rx) = HostRelay::make_ssh_client(cnx)
+        let (client_session, mut rx) = RelayTunnelHost::make_ssh_client(cnx)
             .await
             .map_err(TunnelError::TunnelRelayDisconnected)?;
         let client_session = Arc::new(client_session);
@@ -188,7 +188,7 @@ impl HostRelay {
         let ports_rx = self.ports_rx.clone();
         let host_keypair = self.host_keypair.clone();
         let join = tokio::spawn(async move {
-            let mut server = HostRelay::make_ssh_server(host_keypair.clone());
+            let mut server = RelayTunnelHost::make_ssh_server(host_keypair.clone());
             loop {
                 tokio::select! {
                     Some(op) = rx.recv() => match op {
@@ -328,7 +328,7 @@ impl HostRelay {
             connection_timeout: None,
             auth_rejection_time: std::time::Duration::from_secs(5),
             keys: vec![keypair],
-            window_size: 1024 * 1024 * 64,
+            window_size: 1024 * 1024 * 1,
             preferred: russh::Preferred::COMPRESSED,
             limits: russh::Limits {
                 rekey_read_limit: usize::MAX,
@@ -353,7 +353,7 @@ impl HostRelay {
     > {
         let config = russh::client::Config {
             anonymous: true,
-            window_size: 1024 * 1024 * 64,
+            window_size: 1024 * 1024 * 5,
             preferred: russh::Preferred {
                 kex: &[russh::kex::NONE],
                 key: &[russh_keys::key::NONE],
