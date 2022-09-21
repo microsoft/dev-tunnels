@@ -8,6 +8,9 @@ import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelPort;
 import com.microsoft.tunnels.management.HttpResponseException;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -54,47 +57,66 @@ public class TunnelClientTests extends TunnelTest {
       }
     });
 
-    // Add a new port via the tunnelManagementClient and verify that the client
-    // does not pick it up.
-    Runnable updateTunnelPort = () -> {
-      Assert.assertEquals("Expected no ports to be forwarded yet.",
-          0, client.getForwardedPorts().size());
-      logger.info("Adding port " + testPort.portNumber + " to test tunnel " +
-          testTunnelName);
-      tunnelManagementClient.createTunnelPortAsync(testTunnel, testPort,
-          null).thenRun(() -> {
-            Assert.assertEquals("Expected forwarded ports to not be updated.",
-                0, client.getForwardedPorts().size());
-          });
-    };
-
-    // Verify that calling refreshPorts on the client adds new ports to the
-    // collection.
-    Runnable refreshTunnelPorts = () -> {
-      logger.info("Refreshing ports of test tunnel " + testTunnelName);
-      client.refreshPortsAsync().thenRun(() -> {
-        Assert.assertEquals("Expected port " + testPort.portNumber
-            + " to be added to the forwarded ports collection.",
-            1, client.getForwardedPorts().size());
-      });
-    };
-
+    // Ensure the port was deleted on previous test.
     try {
-      client.connectAsync(testTunnel)
-          .thenRun(updateTunnelPort)
-          .thenRun(refreshTunnelPorts)
-          .thenRun(refreshTunnelPorts) // calling refresh a second time shouldn't affect anything.
-          .join();
-    } finally {
-      try {
-        // Delete the port and verify that the correct port is removed from the collection.
-        logger.info("Deleting port " + testPort.portNumber + " of test tunnel " + testTunnelName);
-        tunnelManagementClient.deleteTunnelPortAsync(testTunnel, testPort.portNumber, null)
-          .thenRun(refreshTunnelPorts)
-          .join();
-      } finally {
-        client.stop();
+      tunnelManagementClient.deleteTunnelPortAsync(testTunnel, testPort.portNumber, null).join();
+    } catch (CompletionException e) {
+      var cause = e.getCause();
+      if (cause instanceof HttpResponseException
+          && ((HttpResponseException) cause).statusCode != 404) {
+        throw e;
       }
     }
+
+    client.connectAsync(testTunnel).join();
+
+    // Ensure that the test port is not being forwarded.
+    logForwardedPorts(client);
+    Assert.assertEquals("Expected no ports to be forwarded yet",
+        0, client.getForwardedPorts().size());
+
+    // Add a port using the management client
+    logger.info("Adding port " + testPort.portNumber + " to test tunnel " + testTunnelName);
+    tunnelManagementClient.createTunnelPortAsync(testTunnel, testPort, null).join();
+    logForwardedPorts(client);
+
+    // Verify that the local port is not updated without calling refreshPorts
+    Assert.assertEquals("Expected forwarded ports to not be updated.",
+        0, client.getForwardedPorts().size());
+    logger.info("Refreshing ports of test tunnel " + testTunnelName);
+
+    // Call refresh ports and verify that the port is updated.
+    client.refreshPortsAsync().join();
+    logForwardedPorts(client);
+    Assert.assertEquals("Expected port " + testPort.portNumber
+        + " to be added to the forwarded ports collection.", 1, client.getForwardedPorts().size());
+
+    // Calling refresh with no new ports added should do nothing.
+    client.refreshPortsAsync().join();
+    Assert.assertEquals("Expected port " + testPort.portNumber
+        + " to be added to the forwarded ports collection.",
+        1, client.getForwardedPorts().size());
+
+    // Delete the port and verify that the correct port is removed from the
+    // collection.
+    logger.info("Deleting port " + testPort.portNumber + " of test tunnel " + testTunnelName);
+    tunnelManagementClient.deleteTunnelPortAsync(testTunnel, testPort.portNumber, null).join();
+    client.refreshPortsAsync().join();
+    logForwardedPorts(client);
+    Assert.assertEquals("Expected port " + testPort.portNumber
+        + " to be removed from the forwarded ports collection.",
+        0, client.getForwardedPorts().size());
+
+    client.stop();
+  }
+
+  private void logForwardedPorts(TunnelRelayTunnelClient tunnelClient) {
+    var ports = tunnelClient.getForwardedPorts();
+    String message = "Forwarded ports: [";
+    for (ForwardedPort port : ports) {
+      message += "{ local: " + port.getLocalPort() + ", remote: " + port.getRemotePort() + " },";
+    }
+    message += "]";
+    logger.info(message);
   }
 }
