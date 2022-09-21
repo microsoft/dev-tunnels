@@ -3,9 +3,13 @@
 
 package com.microsoft.tunnels;
 
+import com.microsoft.tunnels.contracts.Tunnel;
+import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.management.ProductHeaderValue;
 import com.microsoft.tunnels.management.TunnelManagementClient;
+import com.microsoft.tunnels.management.TunnelRequestOptions;
 
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -21,15 +25,16 @@ public abstract class TunnelTest {
       TunnelManagementClientTests.class.getPackage().getSpecificationVersion());
 
   // Test tunnel used for local testing of tunnel connections.
-  protected final String testTunnelName = System.getenv("TEST_TUNNEL_NAME");
+  protected static final String testTunnelName = System.getenv("TEST_TUNNEL_NAME");
   // User token for creating tunnels in local tests.
-  protected final String testToken = System.getenv("TEST_TUNNEL_TOKEN");
+  protected static final String testToken = System.getenv("TEST_TUNNEL_TOKEN");
 
-  protected final Supplier<CompletableFuture<String>> userTokenCallback = StringUtils.isNotBlank(testToken)
-      ? () -> CompletableFuture.completedFuture(testToken)
-      : null;
+  protected static final Supplier<CompletableFuture<String>> userTokenCallback = StringUtils
+      .isNotBlank(testToken)
+          ? () -> CompletableFuture.completedFuture(testToken)
+          : null;
 
-  protected TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
+  protected static TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
       new ProductHeaderValue[] { userAgent },
       userTokenCallback);
 
@@ -42,10 +47,12 @@ public abstract class TunnelTest {
   }
 
   /**
-   * Enables FINE logging for all components (including HTTP, SSL, SSH). VERY verbose.
+   * Enables FINE logging for all components (including HTTP, SSL, SSH). VERY
+   * verbose.
    */
   private static void enableVerboseLogging() {
-    // SLF4J logging is routed to java.util.logging via the reference to the slf4j-jdk14 package.
+    // SLF4J logging is routed to java.util.logging via the reference to the
+    // slf4j-jdk14 package.
     var rootLogger = java.util.logging.Logger.getLogger("");
     rootLogger.setLevel(java.util.logging.Level.FINE);
 
@@ -53,5 +60,20 @@ public abstract class TunnelTest {
     for (var logHandler : rootLogger.getHandlers()) {
       logHandler.setLevel(java.util.logging.Level.ALL);
     }
+  }
+
+  protected static Tunnel getTestTunnel() {
+    // Set up tunnel
+    Tunnel tunnel = new Tunnel();
+    tunnel.name = testTunnelName;
+
+    // Configure tunnel request options
+    var requestOptions = new TunnelRequestOptions();
+    requestOptions.tokenScopes = Arrays.asList(TunnelAccessScopes.connect);
+    requestOptions.includePorts = true;
+
+    // get tunnel
+    var result = tunnelManagementClient.getTunnelAsync(tunnel, requestOptions).join();
+    return result;
   }
 }
