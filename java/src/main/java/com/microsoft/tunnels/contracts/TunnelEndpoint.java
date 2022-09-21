@@ -76,6 +76,13 @@ public class TunnelEndpoint {
     public String tunnelSshCommand;
 
     /**
+     * Gets or sets the Ssh gateway public key which should be added to the
+     * authorized_keys file so that tunnel service can connect to the shared ssh server.
+     */
+    @Expose
+    public String sshGatewayPublicKey;
+
+    /**
      * Token included in {@link TunnelEndpoint#portUriFormat} and {@link
      * TunnelEndpoint#portSshCommandFormat} that is to be replaced by a specified port
      * number.

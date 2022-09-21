@@ -65,6 +65,12 @@ export interface TunnelEndpoint {
      * port of the tunnel.
      */
     tunnelSshCommand?: string;
+
+    /**
+     * Gets or sets the Ssh gateway public key which should be added to the
+     * authorized_keys file so that tunnel service can connect to the shared ssh server.
+     */
+    sshGatewayPublicKey?: string;
 }
 
 /**

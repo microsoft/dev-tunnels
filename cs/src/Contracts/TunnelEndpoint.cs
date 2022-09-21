@@ -83,6 +83,13 @@ public abstract class TunnelEndpoint
     public string? TunnelSshCommand { get; set; }
 
     /// <summary>
+    /// Gets or sets the Ssh gateway public key which should be added to the authorized_keys
+    /// file so that tunnel service can connect to the shared ssh server.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SshGatewayPublicKey { get; set; }
+
+    /// <summary>
     /// Token included in <see cref="PortUriFormat"/> and <see cref="PortSshCommandFormat"/>
     ///  that is to be replaced by a specified port number.
     /// </summary>

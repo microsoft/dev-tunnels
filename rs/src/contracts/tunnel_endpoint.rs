@@ -52,6 +52,10 @@ pub struct TunnelEndpoint {
     // Gets or sets the Ssh command where the Ssh client can connect to the default ssh
     // port of the tunnel.
     pub tunnel_ssh_command: Option<String>,
+
+    // Gets or sets the Ssh gateway public key which should be added to the
+    // authorized_keys file so that tunnel service can connect to the shared ssh server.
+    pub ssh_gateway_public_key: Option<String>,
 }
 
 // Token included in `TunnelEndpoint.PortUriFormat` and
