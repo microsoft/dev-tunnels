@@ -922,7 +922,7 @@ namespace Microsoft.VsSaaS.TunnelService
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
 
             string? query = null;
-            if (tunnel.Ports != null && tunnel.Ports.Where((p) => p.Protocol == TunnelProtocol.Ssh).Any())
+            if (tunnel.Ports != null && tunnel.Ports.Any((p) => p.Protocol == TunnelProtocol.Ssh))
             {
                 query = "includeSshGatewayPublicKey=true";
             }
