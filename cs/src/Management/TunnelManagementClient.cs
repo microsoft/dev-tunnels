@@ -921,13 +921,19 @@ namespace Microsoft.VsSaaS.TunnelService
             Requires.NotNull(endpoint, nameof(endpoint));
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
 
+            string? query = null;
+            if (tunnel.Ports != null && tunnel.Ports.Where((p) => p.Protocol == TunnelProtocol.Ssh).Any())
+            {
+                query = "includeSshGatewayPublicKey=true";
+            }
+
             var path = $"{EndpointsApiSubPath}/{endpoint.HostId}/{endpoint.ConnectionMode}";
             var result = (await this.SendTunnelRequestAsync<TunnelEndpoint, TunnelEndpoint>(
                 HttpMethod.Put,
                 tunnel,
                 HostAccessTokenScope,
                 path,
-                query: null,
+                query,
                 options,
                 endpoint,
                 cancellation))!;
