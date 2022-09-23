@@ -262,7 +262,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (
             tunnel.ports &&
             tunnel.ports.filter((t) => t.protocol === TunnelProtocol.Ssh).length > 0
-            ) {
+        ) {
             query = 'includeSshGatewayPublicKey=true';
         }
 
