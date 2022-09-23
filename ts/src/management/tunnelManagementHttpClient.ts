@@ -259,8 +259,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): Promise<TunnelEndpoint> {
         const path = `${endpointsApiSubPath}/${endpoint.hostId}/${endpoint.connectionMode}`;
         let query;
-        if (tunnel.ports && tunnel.ports.filter((t) => t.protocol === TunnelProtocol.Ssh).length > 0)
-        {
+        if (
+            tunnel.ports &&
+            tunnel.ports.filter((t) => t.protocol === TunnelProtocol.Ssh).length > 0
+            ) {
             query = 'includeSshGatewayPublicKey=true';
         }
 
