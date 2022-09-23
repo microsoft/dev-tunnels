@@ -924,7 +924,7 @@ namespace Microsoft.VsSaaS.TunnelService
             string? query = null;
             if (tunnel.Ports != null && tunnel.Ports.Any((p) => p.Protocol == TunnelProtocol.Ssh))
             {
-                query = "includeSshGatewayPublicKey=true";
+                query = $"{TunnelEndpointQueryParameters.IncludeSshGatewayPublicKey}=true";
             }
 
             var path = $"{EndpointsApiSubPath}/{endpoint.HostId}/{endpoint.ConnectionMode}";

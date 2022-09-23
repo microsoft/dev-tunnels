@@ -11,6 +11,7 @@ import {
     ProblemDetails,
     TunnelServiceProperties,
     ClusterDetails,
+    TunnelProtocol,
 } from '@vs/tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -257,12 +258,18 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
     ): Promise<TunnelEndpoint> {
         const path = `${endpointsApiSubPath}/${endpoint.hostId}/${endpoint.connectionMode}`;
+        let query;
+        if (tunnel.ports && tunnel.ports.filter((t) => t.protocol === TunnelProtocol.Ssh).length > 0)
+        {
+            query = 'includeSshGatewayPublicKey=true';
+        }
+
         const result = (await this.sendTunnelRequest<TunnelEndpoint>(
             'PUT',
             tunnel,
             hostAccessTokenScope,
             path,
-            undefined,
+            query,
             options,
             endpoint,
         ))!;
