@@ -66,7 +66,7 @@ func (options *TunnelRequestOptions) queryString() string {
 		}
 	}
 
-	if options.AdditionalQueryParameters != null {
+	if options.AdditionalQueryParameters != nil {
 		for paramName, paramValue := range options.AdditionalQueryParameters {
 			queryOptions.Add(paramName, paramValue)
 		}
