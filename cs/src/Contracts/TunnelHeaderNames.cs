@@ -27,9 +27,4 @@ public static class TunnelHeaderNames
     /// Github Ssh public key which can be used to validate if it belongs to tunnel's owner.
     /// </summary>
     public const string XGithubSshKey = "X-Github-Ssh-Key";
-
-    /// <summary>
-    /// Header that will skip the antiphishing page when connection to a tunnel through web forwarding.
-    /// </summary>
-    public const string XTunnelSkipPhishing = "X-Tunnel-Skip-Phishing-Page";
 }
