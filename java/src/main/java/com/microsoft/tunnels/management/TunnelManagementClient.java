@@ -211,6 +211,12 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         requestBuilder.header(AUTH_HEADER, authHeaderValue);
       }
 
+      if (options != null && options.additionalHeaders != null) {
+        options.additionalHeaders.forEach(
+          (key, value) -> requestBuilder.header(key, value)
+        );
+      }
+
       Gson gson = TunnelContracts.getGson();
       var requestJson = gson.toJson(requestObject);
       var bodyPublisher = requestMethod == HttpMethod.POST || requestMethod == HttpMethod.PUT

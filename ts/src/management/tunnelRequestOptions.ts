@@ -19,6 +19,12 @@ export interface TunnelRequestOptions {
      */
     additionalHeaders?: { [header: string]: string };
 
+
+    /**
+     * Gets or sets additional query parameters to be included in the request.
+     */
+     additionalQueryParameters?: { [name: string]: string };
+
     /**
      * Gets or sets a value that indicates whether HTTP redirect responses will be
      * automatically followed.

@@ -15,6 +15,9 @@ type TunnelRequestOptions struct {
 	// Additional headers to be included in the request.
 	AdditionalHeaders map[string]string
 
+	// Additional qurey parameters to be included in the request.
+	AdditionalQueryParameters map[string]string
+
 	// Indicates whether HTTP redirect responses will be automatically followed.
 	FollowRedirects bool
 
@@ -60,6 +63,12 @@ func (options *TunnelRequestOptions) queryString() string {
 
 		if options.RequireAllTags {
 			queryOptions.Set("allTags", "true")
+		}
+	}
+
+	if options.AdditionalQueryParameters {
+		for paramName, paramValue := range m.AdditionalQueryParameters {
+			queryOptions.Add(paramName, paramValue)
 		}
 	}
 

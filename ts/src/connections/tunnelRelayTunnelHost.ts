@@ -5,6 +5,7 @@ import {
     Tunnel,
     TunnelAccessScopes,
     TunnelConnectionMode,
+    TunnelProtocol,
     TunnelRelayTunnelEndpoint,
 } from '@vs/tunnels-contracts';
 import { TunnelManagementClient } from '@vs/tunnels-management';
@@ -102,8 +103,14 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             hostPublicKeys: this.hostPublicKeys,
             connectionMode: TunnelConnectionMode.TunnelRelay,
         };
+        let additionalQueryParameters = undefined;
+        if (tunnel.ports != null && tunnel.ports.find((v) => v.protocol == TunnelProtocol.Ssh)) {
+            additionalQueryParameters = {"includeSshGatewayPublicKey": "true"}; 
+        }
 
-        endpoint = await this.managementClient!.updateTunnelEndpoint(tunnel, endpoint);
+        endpoint = await this.managementClient!.updateTunnelEndpoint(tunnel, endpoint, {
+            additionalQueryParameters: additionalQueryParameters,
+        });
         return endpoint.hostRelayUri!;
     }
 
