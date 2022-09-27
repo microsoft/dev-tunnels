@@ -606,13 +606,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnelPath = `${tunnelsApiPath}/${tunnel.name}`;
         }
 
-        var additionalQuery = '';
+        let additionalQuery = '';
         if (options?.additionalQueryParameters) {
             for (let [paramName, paramValue] of Object.entries(options.additionalQueryParameters)) {
                 additionalQuery = `${paramName}=${paramValue}`;
             }
         }
-        
+
         if (additionalQuery) {
             if (query) {
                 query += additionalQuery;
