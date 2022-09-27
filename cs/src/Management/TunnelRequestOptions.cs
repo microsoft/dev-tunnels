@@ -43,7 +43,7 @@ namespace Microsoft.VsSaaS.TunnelService
         public IEnumerable<KeyValuePair<string, string>>? AdditionalHeaders { get; set; }
 
         /// <summary>
-        /// Gets or sets additional headers to be included in the request.
+        /// Gets or sets additional query parameters to be included in the request.
         /// </summary>
         public IEnumerable<KeyValuePair<string, string>>? AdditionalQueryParameters { get; set; }
 
