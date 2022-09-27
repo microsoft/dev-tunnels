@@ -105,7 +105,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         };
         let additionalQueryParameters = undefined;
         if (tunnel.ports != null && tunnel.ports.find((v) => v.protocol === TunnelProtocol.Ssh)) {
-            additionalQueryParameters = { includeSshGatewayPublicKey: 'true' }; 
+            additionalQueryParameters = { includeSshGatewayPublicKey: 'true' };
         }
 
         endpoint = await this.managementClient!.updateTunnelEndpoint(tunnel, endpoint, {
