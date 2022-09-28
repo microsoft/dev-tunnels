@@ -113,11 +113,19 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             HostId = this.hostId,
             HostPublicKeys = hostPublicKeys,
         };
+        List<KeyValuePair<string, string>>? additionalQueryParams = null;
+        if (Tunnel.Ports != null && Tunnel.Ports.Any((p) => p.Protocol == TunnelProtocol.Ssh))
+        {
+            additionalQueryParams = new () {new KeyValuePair<string, string>("includeSshGatewayPublicKey", "true")};
+        }
 
         endpoint = (TunnelRelayTunnelEndpoint)await ManagementClient!.UpdateTunnelEndpointAsync(
             Tunnel,
             endpoint,
-            options: null,
+            options: new TunnelRequestOptions()
+            {
+                AdditionalQueryParameters = additionalQueryParams,
+            },
             cancellation);
 
         Requires.Argument(

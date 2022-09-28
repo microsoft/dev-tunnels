@@ -36,6 +36,11 @@ public class TunnelRequestOptions {
   public HashMap<String, String> additionalHeaders;
 
   /**
+   * Gets or sets additional query parameters to be included in the request.
+   */
+  public HashMap<String, String> additionalQueryParameters;
+
+  /**
    * <p>
    * Gets or sets a value that indicates whether HTTP redirect responses will be
    * automatically followed.
@@ -123,6 +128,12 @@ public class TunnelRequestOptions {
       if (this.requireAllTags) {
         queryOptions.put("allTags", Arrays.asList("true"));
       }
+    }
+
+    if (this.additionalQueryParameters != null) {
+      this.additionalQueryParameters.forEach(
+        (key, value) -> queryOptions.put(key, Arrays.asList(value))
+      );
     }
 
     Stream<String> encodedParameters = queryOptions.entrySet().stream().map(o -> {

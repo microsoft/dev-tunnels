@@ -606,6 +606,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnelPath = `${tunnelsApiPath}/${tunnel.name}`;
         }
 
+        if (options?.additionalQueryParameters) {
+            for (let [paramName, paramValue] of Object.entries(options.additionalQueryParameters)) {
+                if (query) {
+                    query += `&${paramName}=${paramValue}`;
+                } else {
+                    query = `${paramName}=${paramValue}`;
+                }
+            }
+        }
+
         return this.buildUri(tunnel.clusterId, tunnelPath + (path ? path : ''), query, options);
     }
 

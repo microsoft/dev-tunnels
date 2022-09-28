@@ -43,6 +43,11 @@ namespace Microsoft.VsSaaS.TunnelService
         public IEnumerable<KeyValuePair<string, string>>? AdditionalHeaders { get; set; }
 
         /// <summary>
+        /// Gets or sets additional query parameters to be included in the request.
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, string>>? AdditionalQueryParameters { get; set; }
+
+        /// <summary>
         /// Gets or sets a value that indicates whether HTTP redirect responses will be
         /// automatically followed.
         /// </summary>
@@ -132,6 +137,14 @@ namespace Microsoft.VsSaaS.TunnelService
                 if (RequireAllTags)
                 {
                     queryOptions["allTags"] = TrueOption;
+                }
+            }
+
+            if (AdditionalQueryParameters != null)
+            {
+                foreach (var queryParam in AdditionalQueryParameters)
+                {
+                    queryOptions.Add(queryParam.Key, new string[] {queryParam.Value});
                 }
             }
 
