@@ -57,7 +57,7 @@ steps:
     workingDirectory: 'cs'
     feedsToUse: 'config'
     nugetConfigPath: cs/NuGet.config
-    includeNugetOrg: 'true'
+    nugetFeedType: 'external'
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     externalFeedCredentials: 'dev-tunnels-nuget'
     publishPackageMetadata: true
