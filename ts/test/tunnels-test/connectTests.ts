@@ -8,9 +8,9 @@ import { MockUserManager } from './mocks/mockUserManager';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
 import { UserInfo } from './userInfo';
 import { ForwardedPortsCollection, LocalPortForwarder } from '@microsoft/dev-tunnels-ssh-tcp';
-import { Tunnel, TunnelPort, TunnelConnectionMode } from '@vs/tunnels-contracts';
-import { TunnelManagementClient } from '@vs/tunnels-management';
-import { TunnelClient, TunnelConnectionBase, TunnelHost } from '@vs/tunnels-connections';
+import { Tunnel, TunnelPort, TunnelConnectionMode } from '@microsoft/tunnels-contracts';
+import { TunnelManagementClient } from '@microsoft/tunnels-management';
+import { TunnelClient, TunnelConnectionBase, TunnelHost } from '@microsoft/tunnels-connections';
 import { CancellationToken, SshStream } from '@microsoft/dev-tunnels-ssh';
 
 @suite

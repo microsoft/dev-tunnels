@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelRelayTunnelClient } from "@vs/tunnels-connections";
+import { TunnelRelayTunnelClient } from "@microsoft/tunnels-connections";
 
 /**
  * Test TunnelRelayTunnelClient that exposes protected members for testing.

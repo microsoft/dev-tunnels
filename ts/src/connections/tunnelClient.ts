@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelConnectionMode, Tunnel } from '@vs/tunnels-contracts';
+import { TunnelConnectionMode, Tunnel } from '@microsoft/tunnels-contracts';
 import { SshStream, CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TunnelConnection } from './tunnelConnection';

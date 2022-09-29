@@ -1,5 +1,5 @@
 {
-	"name": "@vs/tunnels",
+	"name": "@microsoft/tunnels",
 	"description": "Tunnels library",
 	"keywords": [
 		"Tunnels"
@@ -40,7 +40,7 @@
 		"@types/yargs": "^17.0.3",
 		"@typescript-eslint/eslint-plugin-tslint": "^4.14.2",
 		"@typescript-eslint/parser": "^4.14.2",
-		"@vs/mocha-trx-reporter": "^1.0.4987",
+		"mocha-junit-reporter": "^2.0.2",
 		"brfs": "^2.0.2",
 		"browserify": "^16.2.3",
 		"chalk": "^2.4.2",

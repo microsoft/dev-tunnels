@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel } from '@vs/tunnels-contracts';
+import { Tunnel } from '@microsoft/tunnels-contracts';
 
 /**
  * Supports parsing tunnel access token JWT properties to allow for some pre-validation

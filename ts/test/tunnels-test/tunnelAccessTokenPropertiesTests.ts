@@ -3,8 +3,8 @@
 
 import * as assert from 'assert';
 import { suite, test } from '@testdeck/mocha';
-import { TunnelAccessTokenProperties } from '@vs/tunnels-management';
-import { Tunnel } from '@vs/tunnels-contracts';
+import { TunnelAccessTokenProperties } from '@microsoft/tunnels-management';
+import { Tunnel } from '@microsoft/tunnels-contracts';
 
 const tunnel: Tunnel = {
     accessTokens: { 'woof': 'dog', 'meow purr': 'cat' },

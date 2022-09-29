@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelRelayTunnelClient } from '@vs/tunnels-connections';
-import { Tunnel, TunnelConnectionMode } from '@vs/tunnels-contracts';
-import { TunnelManagementHttpClient, TunnelRequestOptions } from '@vs/tunnels-management';
+import { TunnelRelayTunnelClient } from '@microsoft/tunnels-connections';
+import { Tunnel, TunnelConnectionMode } from '@microsoft/tunnels-contracts';
+import { TunnelManagementHttpClient, TunnelRequestOptions } from '@microsoft/tunnels-management';
 import * as yargs from 'yargs';
 
 const userAgent = 'test-connection/1.0';

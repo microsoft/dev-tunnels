@@ -17,13 +17,13 @@
 		"experimentalDecorators": true,
 		"baseUrl": ".",
 		"paths": {
-			"@vs/tunnels-contracts": [
+			"@microsoft/tunnels-contracts": [
 				"./src/contracts"
 			],
-			"@vs/tunnels-management": [
+			"@microsoft/tunnels-management": [
 				"./src/management"
 			],
-			"@vs/tunnels-connections": [
+			"@microsoft/tunnels-connections": [
 				"./src/connections"
 			]
 		}
