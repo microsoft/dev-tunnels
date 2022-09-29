@@ -50,16 +50,15 @@ steps:
     artifactName: 'drop'
     publishLocation: 'Container'
 
-- task: DotNetCoreCLI@2
-  displayName: "DotNet Push"
+- task: NuGetCommand@2
+  displayName: "Publish NuGet packages to nuget.org"
   inputs:
     command: 'push'
     workingDirectory: 'cs'
-    verbosity: 'Minimal'
-    feedsToUse: Config
+    feedsToUse: 'config'
     nugetConfigPath: cs/NuGet.config
-    nugetFeedType: 'external'
-    externalEndpoint: 'dev-tunnels-nuget'
-    publishPackageMetadata: true
+    includeNugetOrg: 'true'
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+    externalFeedCredentials: 'dev-tunnels-nuget'
+    publishPackageMetadata: true
     condition: $(publishNugetPackages)
