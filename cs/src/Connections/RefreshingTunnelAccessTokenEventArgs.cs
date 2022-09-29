@@ -7,7 +7,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.VsSaaS.TunnelService;
+namespace Microsoft.DevTunnels.TunnelService;
 
 /// <summary>
 /// Event args for tunnel access token refresh event.

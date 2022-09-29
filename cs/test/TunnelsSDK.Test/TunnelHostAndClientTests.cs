@@ -13,12 +13,12 @@ using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Algorithms;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Tcp;
-using Microsoft.VsSaaS.TunnelService.Contracts;
-using Microsoft.VsSaaS.TunnelService.Test.Mocks;
+using Microsoft.DevTunnels.TunnelService.Contracts;
+using Microsoft.DevTunnels.TunnelService.Test.Mocks;
 using Nerdbank.Streams;
 using Xunit;
 
-namespace Microsoft.VsSaaS.TunnelService.Test;
+namespace Microsoft.DevTunnels.TunnelService.Test;
 
 using static TcpUtils;
 

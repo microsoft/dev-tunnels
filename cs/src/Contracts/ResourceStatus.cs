@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.TunnelService.Contracts;
 
 /// <summary>
 /// Current value and limit for a limited resource related to a tunnel or tunnel port.

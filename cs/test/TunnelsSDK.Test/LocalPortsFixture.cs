@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace Microsoft.VsSaaS.TunnelService.Test
+namespace Microsoft.DevTunnels.TunnelService.Test
 {
     public class LocalPortsFixture : IDisposable
     {

@@ -3,7 +3,7 @@
 // Licensed under the MIT license.
 // </copyright>
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.TunnelService.Contracts;
 
 /// <summary>
 /// Parameters for connecting to a tunnel via a local network connection.

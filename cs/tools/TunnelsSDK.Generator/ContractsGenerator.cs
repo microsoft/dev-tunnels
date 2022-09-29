@@ -9,14 +9,14 @@ using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace Microsoft.VsSaaS.TunnelService.Generator;
+namespace Microsoft.DevTunnels.TunnelService.Generator;
 
 [Generator]
 public class ContractsGenerator : ISourceGenerator
 {
     private const string DiagnosticPrefix = "TUN";
     private const string DiagnosticCategory = "Tunnels";
-    private const string ContractsNamespace = "Microsoft.VsSaaS.TunnelService.Contracts";
+    private const string ContractsNamespace = "Microsoft.DevTunnels.TunnelService.Contracts";
     internal static readonly string[] ExcludedContractTypes = new[]
     {
         "TunnelContracts",

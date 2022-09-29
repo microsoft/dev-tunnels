@@ -6,9 +6,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.TunnelService.Contracts;
 
-namespace Microsoft.VsSaaS.TunnelService;
+namespace Microsoft.DevTunnels.TunnelService;
 
 /// <summary>
 /// Interface for a host capable of sharing local ports via a tunnel and accepting

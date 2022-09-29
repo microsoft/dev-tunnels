@@ -12,7 +12,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.TunnelService
 {
     /// <summary>
     /// Wraps a <see cref="WebSocket"/> to adapt it to <see cref="Stream"/>.

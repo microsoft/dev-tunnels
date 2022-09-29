@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh.Tcp;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.TunnelService
 {
     /// <summary>
     /// Implementation of a TCP listener factory that retries forwarding with nearby ports and falls back to a random port.

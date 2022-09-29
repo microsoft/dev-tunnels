@@ -8,9 +8,9 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.TunnelService.Contracts;
 
-namespace Microsoft.VsSaaS.TunnelService;
+namespace Microsoft.DevTunnels.TunnelService;
 
 /// <summary>
 /// Base class for tunnel client and host.

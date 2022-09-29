@@ -3,7 +3,7 @@
 // Licensed under the MIT license.
 // </copyright>
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.TunnelService.Contracts;
 
 /// <summary>
 /// Defines string constants for authentication schemes supported by tunnel service APIs.

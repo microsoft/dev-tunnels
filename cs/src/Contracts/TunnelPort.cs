@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts
+namespace Microsoft.DevTunnels.TunnelService.Contracts
 {
     /// <summary>
     /// Data contract for tunnel port objects managed through the tunnel service REST API.

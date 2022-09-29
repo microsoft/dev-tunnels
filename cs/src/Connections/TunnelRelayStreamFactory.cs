@@ -9,7 +9,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.TunnelService
 {
     /// <summary>
     /// Default factory for creating streams to a tunnel relay.

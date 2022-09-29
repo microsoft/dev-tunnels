@@ -9,9 +9,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh.Tcp.Events;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.TunnelService.Contracts;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.TunnelService
 {
     /// <summary>
     /// Interface for a client capable of making a connection to a tunnel and

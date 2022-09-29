@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Microsoft.VsSaaS.TunnelService.Contracts</RootNamespace>
-    <AssemblyName>Microsoft.VsSaaS.TunnelService.Contracts</AssemblyName>
+    <RootNamespace>Microsoft.DevTunnels.TunnelService.Contracts</RootNamespace>
+    <AssemblyName>Microsoft.DevTunnels.TunnelService.Contracts</AssemblyName>
     <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <IsPackable>true</IsPackable>

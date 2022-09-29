@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts
+namespace Microsoft.DevTunnels.TunnelService.Contracts
 {
     /// <summary>
     /// Data contract for an access control entry on a <see cref="Tunnel"/> or

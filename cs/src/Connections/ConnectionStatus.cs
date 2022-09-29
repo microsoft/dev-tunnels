@@ -3,7 +3,7 @@
 // Licensed under the MIT license.
 // </copyright>
 
-namespace Microsoft.VsSaaS.TunnelService;
+namespace Microsoft.DevTunnels.TunnelService;
 
 /// <summary>
 /// Tunnel client or host connection status.

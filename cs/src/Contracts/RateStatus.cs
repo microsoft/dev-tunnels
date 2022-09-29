@@ -5,7 +5,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.TunnelService.Contracts;
 
 /// <summary>
 /// Current value and limit information for a rate-limited operation related to a tunnel or port.
