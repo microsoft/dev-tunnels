@@ -14,18 +14,19 @@
   <!-- Package Versions -->
   <PropertyGroup>
     <Authors>Microsoft</Authors>
-    <Copyright>Copyright (c) Microsoft Corporation. All rights reserved.</Copyright>
+    <Copyright>&#169; Microsoft Corporation. All rights reserved.</Copyright>
     <Owners>Microsoft</Owners>
     <RepositoryType>Git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/microsoft/dev-tunnels</RepositoryUrl>
     <PackageProjectUrl>https://github.com/microsoft/dev-tunnels</PackageProjectUrl>
   </PropertyGroup>
 
   <!-- Product Properties -->
   <PropertyGroup>
-    <Product>Visual Studio Tunnel Service</Product>
-    <Tags>Microsoft;VSTunnels</Tags>
-    <Title>Visual Studio Tunnel Service</Title>
+    <Product>DevTunnels Tunnel Service</Product>
+    <Tags>Microsoft;VSTunnels;DevTunnels</Tags>
+    <Title>DevTunnels Tunnel Service</Title>
   </PropertyGroup>
 
 </Project>
