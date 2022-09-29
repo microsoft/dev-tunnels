@@ -23,4 +23,4 @@ steps:
     verbose: false
     customCommand: 'run publish'
     publishRegistry: useExternalRegistry
-    publishEndpoint: 'DevTunnelsNpm'
+    publishEndpoint: 'dev-tunnels-npm'

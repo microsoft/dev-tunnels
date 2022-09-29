@@ -59,7 +59,7 @@ steps:
     feedsToUse: Config
     nugetConfigPath: cs/NuGet.config
     nugetFeedType: 'external'
-    externalEndpoint: 'DevTunnelsNuget'
+    externalEndpoint: 'dev-tunnels-nuget'
     publishPackageMetadata: true
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     condition: $(publishNugetPackages)
