@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh;
+using Microsoft.DevTunnels.Ssh;
 using Microsoft.VsSaaS.TunnelService.Contracts;
 
 namespace Microsoft.VsSaaS.TunnelService

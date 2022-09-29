@@ -10,10 +10,10 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh;
-using Microsoft.VisualStudio.Ssh.Events;
-using Microsoft.VisualStudio.Ssh.Tcp;
-using Buffer = Microsoft.VisualStudio.Ssh.Buffer;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Events;
+using Microsoft.DevTunnels.Ssh.Tcp;
+using Buffer = Microsoft.DevTunnels.Ssh.Buffer;
 
 namespace Microsoft.VsSaaS.TunnelService
 {

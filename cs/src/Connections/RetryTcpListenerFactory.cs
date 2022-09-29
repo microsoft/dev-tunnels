@@ -9,7 +9,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh.Tcp;
+using Microsoft.DevTunnels.Ssh.Tcp;
 
 namespace Microsoft.VsSaaS.TunnelService
 {

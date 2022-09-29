@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh.Tcp.Events;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 using Microsoft.VsSaaS.TunnelService.Contracts;
 
 namespace Microsoft.VsSaaS.TunnelService

@@ -10,7 +10,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh;
+using Microsoft.DevTunnels.Ssh;
 
 namespace Microsoft.VsSaaS.TunnelService;
 
