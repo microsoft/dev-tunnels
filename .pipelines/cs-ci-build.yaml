@@ -55,9 +55,8 @@ steps:
   inputs:
     command: 'push'
     workingDirectory: 'cs'
-    feedsToUse: 'config'
+    feedsToUse: 'select'
     includeNuGetOrg: true
-    nugetConfigPath: cs/NuGet.config
     nugetFeedType: 'external'
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     externalFeedCredentials: 'dev-tunnels-nuget'
