@@ -56,9 +56,10 @@ steps:
     command: 'push'
     workingDirectory: 'cs'
     verbosity: 'Minimal'
-    feedsToUse: Select
-    nugetFeedType: 'internal'
-    publishVstsFeed: VS
+    feedsToUse: Config
+    nugetConfigPath: cs/NuGet.config
+    nugetFeedType: 'external'
+    externalEndpoint: 'DevTunnelsNuget'
     publishPackageMetadata: true
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     condition: $(publishNugetPackages)
