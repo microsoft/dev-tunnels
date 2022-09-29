@@ -18,6 +18,7 @@
     <Owners>Microsoft</Owners>
     <RepositoryType>Git</RepositoryType>
     <RepositoryUrl>https://github.com/microsoft/dev-tunnels</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/microsoft/dev-tunnels</PackageProjectUrl>
   </PropertyGroup>
 
   <!-- Product Properties -->
