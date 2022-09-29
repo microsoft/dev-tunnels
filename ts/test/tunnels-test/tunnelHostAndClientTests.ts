@@ -4,7 +4,7 @@
 import * as assert from 'assert';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
-import { PortForwardingService } from '@vs/vs-ssh-tcp';
+import { PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import {
     Tunnel,
     TunnelPort,
@@ -32,7 +32,7 @@ import {
     SshSessionConfiguration,
     SshStream,
     Stream,
-} from '@vs/vs-ssh';
+} from '@microsoft/dev-tunnels-ssh';
 import { DuplexStream } from './duplexStream';
 import * as net from 'net';
 import { MockTunnelRelayStreamFactory } from './mocks/mockTunnelRelayStreamFactory';

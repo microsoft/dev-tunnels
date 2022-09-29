@@ -10,7 +10,7 @@ import {
     connection as WebSocketConnection,
     w3cwebsocket as W3CWebSocket,
 } from 'websocket';
-import { BaseStream, Stream, WebSocketStream } from '@vs/vs-ssh';
+import { BaseStream, Stream, WebSocketStream } from '@microsoft/dev-tunnels-ssh';
 
 /**
  * Creates a pair of connected stream adapters for testing purposes.

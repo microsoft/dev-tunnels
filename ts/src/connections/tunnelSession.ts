@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import { Tunnel } from '@vs/tunnels-contracts';
-import { Stream, Trace } from '@vs/vs-ssh';
+import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken, Disposable } from 'vscode-jsonrpc';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 

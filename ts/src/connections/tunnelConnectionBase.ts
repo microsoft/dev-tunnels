@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { CancellationError } from '@vs/vs-ssh';
+import { CancellationError } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken, CancellationTokenSource, Emitter } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEventArgs';

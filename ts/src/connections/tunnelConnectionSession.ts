@@ -7,7 +7,7 @@ import {
     TunnelManagementClient,
     TunnelRequestOptions,
 } from '@vs/tunnels-management';
-import { CancellationError, Stream, Trace, TraceLevel } from '@vs/vs-ssh';
+import { CancellationError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';

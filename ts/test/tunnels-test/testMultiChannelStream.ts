@@ -1,4 +1,4 @@
-import { CancellationToken, MultiChannelStream, SshStream, Stream } from "@vs/vs-ssh";
+import { CancellationToken, MultiChannelStream, SshStream, Stream } from "@microsoft/dev-tunnels-ssh";
 
 export class TestMultiChannelStream extends MultiChannelStream {
     constructor(

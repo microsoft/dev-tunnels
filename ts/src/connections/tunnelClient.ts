@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 
 import { TunnelConnectionMode, Tunnel } from '@vs/tunnels-contracts';
-import { SshStream, CancellationToken } from '@vs/vs-ssh';
-import { ForwardedPortsCollection } from '@vs/vs-ssh-tcp';
+import { SshStream, CancellationToken } from '@microsoft/dev-tunnels-ssh';
+import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TunnelConnection } from './tunnelConnection';
 
 /**

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import * as ssh from '@vs/vs-ssh';
+import * as ssh from '@microsoft/dev-tunnels-ssh';
 import { IncomingMessage } from 'http';
 import {
     client as WebSocketClient,

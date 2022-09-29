@@ -7,7 +7,7 @@ import {
     SshConnectionError,
     SshDisconnectReason,
     SshReconnectError,
-} from '@vs/vs-ssh';
+} from '@microsoft/dev-tunnels-ssh';
 import { TunnelSession } from './tunnelSession';
 import { TunnelConnection } from './tunnelConnection';
 import { TunnelConnectionSession } from './tunnelConnectionSession';

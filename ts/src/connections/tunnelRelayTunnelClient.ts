@@ -4,7 +4,7 @@
 import { TunnelConnectionMode, Tunnel, TunnelRelayTunnelEndpoint } from '@vs/tunnels-contracts';
 import { CancellationToken } from 'vscode-jsonrpc';
 import { TunnelManagementClient } from '@vs/tunnels-management';
-import { Stream, Trace } from '@vs/vs-ssh';
+import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
 import { TunnelClientBase } from './tunnelClientBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
 

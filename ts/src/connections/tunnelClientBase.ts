@@ -21,8 +21,8 @@ import {
     SshStream,
     Stream,
     Trace,
-} from '@vs/vs-ssh';
-import { ForwardedPortsCollection, PortForwardingService } from '@vs/vs-ssh-tcp';
+} from '@microsoft/dev-tunnels-ssh';
+import { ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
 import { isNode } from './sshHelpers';
 import { TunnelClient } from './tunnelClient';

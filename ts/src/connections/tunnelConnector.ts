@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { CancellationToken } from '@vs/vs-ssh';
+import { CancellationToken } from '@microsoft/dev-tunnels-ssh';
 
 /**
  * Tunnel connector.

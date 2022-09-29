@@ -8,7 +8,7 @@ import {
     PromiseCompletionSource,
     SshStream,
     Stream,
-} from '@vs/vs-ssh';
+} from '@microsoft/dev-tunnels-ssh';
 import { IClientConfig } from 'websocket';
 
 export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {

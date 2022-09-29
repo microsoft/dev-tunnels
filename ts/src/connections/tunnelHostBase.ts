@@ -3,8 +3,14 @@
 
 import { TunnelPort, Tunnel, TunnelAccessScopes } from '@vs/tunnels-contracts';
 import { TunnelManagementClient } from '@vs/tunnels-management';
-import { KeyPair, MultiChannelStream, SshAlgorithms, SshServerSession, Trace } from '@vs/vs-ssh';
-import { PortForwardingService, RemotePortForwarder } from '@vs/vs-ssh-tcp';
+import {
+    KeyPair,
+    MultiChannelStream,
+    SshAlgorithms,
+    SshServerSession,
+    Trace,
+} from '@microsoft/dev-tunnels-ssh';
+import { PortForwardingService, RemotePortForwarder } from '@microsoft/dev-tunnels-ssh-tcp';
 import { SessionPortKey } from './sessionPortKey';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
