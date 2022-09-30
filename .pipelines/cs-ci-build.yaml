@@ -58,4 +58,4 @@ steps:
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     publishFeedCredentials: 'dev-tunnels-nuget'
     publishPackageMetadata: true
-    condition: $(publishNugetPackages)
+    condition: and(succeeded(), eq(variables['publishNugetPackages'], 'true'))
