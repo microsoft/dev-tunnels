@@ -15,12 +15,7 @@ pr: none
 variables:
   TeamName: "Visual Studio"
   enableSigning: true
-  ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
-    signType: real
-    publishNugetPackages: ${{ true }}
-  ${{ else }}:
-    signType: test
-    publishNugetPackages: ${{ false }}
+  signType: real
 
 steps:
 
@@ -58,4 +53,3 @@ steps:
     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     publishFeedCredentials: 'dev-tunnels-nuget'
     publishPackageMetadata: true
-    condition: and(succeeded(), eq(variables['publishNugetPackages'], 'true'))
