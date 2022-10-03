@@ -8,7 +8,7 @@ import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEvent
 import { TunnelConnection } from './tunnelConnection';
 import { RefreshingTunnelAccessTokenEventArgs } from './refreshingTunnelAccessTokenEventArgs';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
-import { TunnelAccessTokenProperties } from '@microsoft/tunnels-management';
+import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
 
 /**
  * Tunnel connection base class.

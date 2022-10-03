@@ -1,14 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelRelayTunnelHost } from '@microsoft/tunnels-connections';
+import { TunnelRelayTunnelHost } from '@microsoft/dev-tunnels-connections';
 import {
     Tunnel,
     TunnelAccessControlEntry,
     TunnelAccessControlEntryType,
     TunnelConnectionMode,
-} from '@microsoft/tunnels-contracts';
-import { TunnelManagementHttpClient, TunnelRequestOptions } from '@microsoft/tunnels-management';
+} from '@microsoft/dev-tunnels-contracts';
+import { TunnelManagementHttpClient, TunnelRequestOptions } from '@microsoft/dev-tunnels-management';
 import * as yargs from 'yargs';
 import * as https from 'https';
 

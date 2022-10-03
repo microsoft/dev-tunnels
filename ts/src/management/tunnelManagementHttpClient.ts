@@ -11,7 +11,7 @@ import {
     ProblemDetails,
     TunnelServiceProperties,
     ClusterDetails,
-} from '@microsoft/tunnels-contracts';
+} from '@microsoft/dev-tunnels-contracts';
 import {
     ProductHeaderValue,
     TunnelAuthenticationSchemes,

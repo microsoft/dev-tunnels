@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelRelayStreamFactory, TunnelRelayTunnelHost } from '@microsoft/tunnels-connections';
+import { TunnelRelayStreamFactory, TunnelRelayTunnelHost } from '@microsoft/dev-tunnels-connections';
 import {
     MultiChannelStream,
     NodeStream,

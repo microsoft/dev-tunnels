@@ -7,8 +7,8 @@ import {
     TunnelConnectionMode,
     TunnelProtocol,
     TunnelRelayTunnelEndpoint,
-} from '@microsoft/tunnels-contracts';
-import { TunnelManagementClient } from '@microsoft/tunnels-management';
+} from '@microsoft/dev-tunnels-contracts';
+import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
     MultiChannelStream,
     SshChannelOpeningEventArgs,

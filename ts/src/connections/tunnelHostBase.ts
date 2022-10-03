@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelPort, Tunnel, TunnelAccessScopes } from '@microsoft/tunnels-contracts';
-import { TunnelManagementClient } from '@microsoft/tunnels-management';
+import { TunnelPort, Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-contracts';
+import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
     KeyPair,
     MultiChannelStream,

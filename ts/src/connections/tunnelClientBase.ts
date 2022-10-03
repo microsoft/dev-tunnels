@@ -6,7 +6,7 @@ import {
     TunnelAccessScopes,
     TunnelConnectionMode,
     TunnelEndpoint,
-} from '@microsoft/tunnels-contracts';
+} from '@microsoft/dev-tunnels-contracts';
 import {
     CancellationToken,
     SessionRequestMessage,
@@ -29,7 +29,7 @@ import { TunnelClient } from './tunnelClient';
 import { getError, List } from './utils';
 import { Emitter } from 'vscode-jsonrpc';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
-import { TunnelManagementClient } from '@microsoft/tunnels-management';
+import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { ConnectionStatus } from './connectionStatus';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 

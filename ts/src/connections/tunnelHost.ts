@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel, TunnelPort } from '@microsoft/tunnels-contracts';
+import { Tunnel, TunnelPort } from '@microsoft/dev-tunnels-contracts';
 import { TunnelConnection } from './tunnelConnection';
 
 /**

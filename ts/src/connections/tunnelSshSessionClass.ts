@@ -11,7 +11,7 @@ import {
 import { TunnelSession } from './tunnelSession';
 import { TunnelConnection } from './tunnelConnection';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
-import { Tunnel } from '@microsoft/tunnels-contracts';
+import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
 type CloseableSshSession = {

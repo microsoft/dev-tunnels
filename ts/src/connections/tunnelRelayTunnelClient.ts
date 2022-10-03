@@ -5,9 +5,9 @@ import {
     TunnelConnectionMode,
     Tunnel,
     TunnelRelayTunnelEndpoint,
-} from '@microsoft/tunnels-contracts';
+} from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken } from 'vscode-jsonrpc';
-import { TunnelManagementClient } from '@microsoft/tunnels-management';
+import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
 import { TunnelClientBase } from './tunnelClientBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';

@@ -82,7 +82,7 @@ yargs.command('build-ts', 'Build TypeScript code', async (yargs) => {
     const tsPackageNames = ['contracts', 'management', 'connections'];
 
     for (let packageName of tsPackageNames) {
-        await linkLib('@microsoft/tunnels-' + packageName, packageName);
+        await linkLib('@microsoft/dev-tunnels-' + packageName, packageName);
     }
 
     await executeCommand(__dirname, `npm run --silent compile`);
@@ -156,17 +156,17 @@ yargs.command('pack-ts', 'Build TypeScript npm packages', async (yargs) => {
 yargs.command('publish-ts', 'Publish TypeScrypt npm packages', async (yargs) => {
     const buildVersion = await getBuildVersion();
 
-    let fileName = `tunnels-contracts-${buildVersion}.tgz`;
+    let fileName = `dev-tunnels-contracts-${buildVersion}.tgz`;
     let packageFilePath = path.join(packageDir, fileName);
     let publishCommand = `npm publish "${packageFilePath}"`;
     await executeCommand(__dirname, publishCommand);
 
-    fileName = `tunnels-management-${buildVersion}.tgz`;
+    fileName = `dev-tunnels-management-${buildVersion}.tgz`;
     packageFilePath = path.join(packageDir, fileName);
     publishCommand = `npm publish "${packageFilePath}"`;
     await executeCommand(__dirname, publishCommand);
 
-    fileName = `tunnels-connections-${buildVersion}.tgz`;
+    fileName = `dev-tunnels-connections-${buildVersion}.tgz`;
     packageFilePath = path.join(packageDir, fileName);
     publishCommand = `npm publish "${packageFilePath}"`;
     await executeCommand(__dirname, publishCommand);

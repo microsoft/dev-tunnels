@@ -1,5 +1,5 @@
 {
-	"name": "@microsoft/tunnels-test",
+	"name": "@microsoft/dev-tunnels-test",
 	"description": "Tests for the tunnels library for Visual Studio tools",
 	"keywords": [
 		"Tunnels"

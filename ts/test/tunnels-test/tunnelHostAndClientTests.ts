@@ -11,7 +11,7 @@ import {
     TunnelConnectionMode,
     TunnelAccessScopes,
     TunnelRelayTunnelEndpoint,
-} from '@microsoft/tunnels-contracts';
+} from '@microsoft/dev-tunnels-contracts';
 import {
     ConnectionStatus,
     RelayConnectionError,
@@ -19,7 +19,7 @@ import {
     TunnelConnection,
     TunnelRelayTunnelClient,
     TunnelRelayTunnelHost,
-} from '@microsoft/tunnels-connections';
+} from '@microsoft/dev-tunnels-connections';
 import {
     NodeStream,
     PromiseCompletionSource,

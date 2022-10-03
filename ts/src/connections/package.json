@@ -1,5 +1,5 @@
 {
-	"name": "@microsoft/tunnels-connections",
+	"name": "@microsoft/dev-tunnels-connections",
 	"version": "",
 	"description": "Tunnels library for Visual Studio tools",
 	"keywords": [
@@ -16,8 +16,8 @@
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
 		"vscode-jsonrpc": "^4.0.0",
-		"@microsoft/tunnels-contracts": "^1.0.0",
-		"@microsoft/tunnels-management": "^1.0.0",
+		"@microsoft/dev-tunnels-contracts": "^1.0.0",
+		"@microsoft/dev-tunnels-management": "^1.0.0",
 		"@microsoft/dev-tunnels-ssh": "^3.9.3",
 		"@microsoft/dev-tunnels-ssh-tcp": "^3.9.3",
 		"uuid": "^3.3.3",
