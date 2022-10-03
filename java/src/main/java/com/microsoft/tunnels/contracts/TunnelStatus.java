@@ -87,4 +87,11 @@ public class TunnelStatus {
      */
     @Expose
     public RateStatus apiUpdateRate;
+
+    /**
+     * Gets or sets the current value and limit for the rate of http requests to the
+     * tunnel.
+     */
+    @Expose
+    public RateStatus httpRequestRate;
 }

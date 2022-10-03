@@ -77,4 +77,10 @@ export interface TunnelStatus {
      * operations for the tunnel or tunnel ports.
      */
     apiUpdateRate?: RateStatus;
+
+    /**
+     * Gets or sets the current value and limit for the rate of http requests to the
+     * tunnel.
+     */
+    httpRequestRate?: RateStatus;
 }

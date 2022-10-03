@@ -59,4 +59,8 @@ pub struct TunnelStatus {
     // Gets or sets the current value and limit for the rate of management API update
     // operations for the tunnel or tunnel ports.
     pub api_update_rate: Option<RateStatus>,
+
+    // Gets or sets the current value and limit for the rate of http requests to the
+    // tunnel.
+    pub http_request_rate: Option<RateStatus>,
 }
