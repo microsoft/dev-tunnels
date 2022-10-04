@@ -10,9 +10,10 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DevTunnels.Management;
 using Microsoft.DevTunnels.Ssh;
 
-namespace Microsoft.DevTunnels;
+namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Tunnel connector that connects to Tunnel Relay service.

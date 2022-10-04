@@ -12,8 +12,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 
-namespace Microsoft.DevTunnels
+namespace Microsoft.DevTunnels.Connections
 {
     /// <summary>
     /// Tunnel client implementation that connects via a tunnel relay.

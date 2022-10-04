@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 
-namespace Microsoft.DevTunnels;
+namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Relay service client.

@@ -16,8 +16,9 @@ using Microsoft.DevTunnels.Ssh.Algorithms;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 
-namespace Microsoft.DevTunnels;
+namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Base class for Hosts that host one tunnel

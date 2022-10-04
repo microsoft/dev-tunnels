@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Web;
 using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels
+namespace Microsoft.DevTunnels.Management
 {
     /// <summary>
     /// Options for tunnel service requests.

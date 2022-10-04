@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DevTunnels;
+namespace Microsoft.DevTunnels.Management;
 
 /// <summary>
 /// HTTP 
@@ -58,11 +58,11 @@ internal class FollowRedirectsHttpHandler : DelegatingHandler
     public static bool IsFollowRedirectsEnabledForRequest(HttpRequestMessage request)
     {
         IDictionary<string, object?> requestOptions;
-        #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
         requestOptions = request.Options;
-        #else
+#else
         requestOptions = request.Properties;
-        #endif
+#endif
 
         if (requestOptions.TryGetValue(FollowRedirectsRequestPropertyName, out var value) &&
             value is bool)
@@ -77,11 +77,11 @@ internal class FollowRedirectsHttpHandler : DelegatingHandler
     public static void SetFollowRedirectsEnabledForRequest(HttpRequestMessage request, bool value)
     {
         IDictionary<string, object?> requestOptions;
-        #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
         requestOptions = request.Options;
-        #else
+#else
         requestOptions = request.Properties;
-        #endif
+#endif
 
         requestOptions[FollowRedirectsRequestPropertyName] = value;
     }

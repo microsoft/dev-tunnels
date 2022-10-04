@@ -8,7 +8,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DevTunnels
+namespace Microsoft.DevTunnels.Connections
 {
     /// <summary>
     /// Interface for a factory capable of creating streams to a tunnel relay.

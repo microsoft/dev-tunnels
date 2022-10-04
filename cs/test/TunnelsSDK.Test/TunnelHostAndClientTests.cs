@@ -17,6 +17,7 @@ using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Test.Mocks;
 using Nerdbank.Streams;
 using Xunit;
+using Microsoft.DevTunnels.Connections;
 
 namespace Microsoft.DevTunnels.Test;
 

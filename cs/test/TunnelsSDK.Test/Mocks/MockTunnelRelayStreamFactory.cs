@@ -1,3 +1,4 @@
+using Microsoft.DevTunnels.Connections;
 using Xunit;
 
 namespace Microsoft.DevTunnels.Test.Mocks;

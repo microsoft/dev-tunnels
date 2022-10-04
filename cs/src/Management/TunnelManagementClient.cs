@@ -18,7 +18,7 @@ using System.Web;
 using Microsoft.DevTunnels.Contracts;
 using static Microsoft.DevTunnels.Contracts.TunnelContracts;
 
-namespace Microsoft.DevTunnels
+namespace Microsoft.DevTunnels.Management
 {
     /// <summary>
     /// Implementation of a client that manages tunnels and tunnel ports via the tunnel service

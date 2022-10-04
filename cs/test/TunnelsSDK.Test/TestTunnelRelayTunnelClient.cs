@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.DevTunnels.Connections;
+using System.Diagnostics;
 
 namespace Microsoft.DevTunnels.Test;
 

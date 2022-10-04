@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels
+namespace Microsoft.DevTunnels.Management
 {
     /// <summary>
     /// Interface for a client that manages tunnels and tunnel ports via the tunnel service

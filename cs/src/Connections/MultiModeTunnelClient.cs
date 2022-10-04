@@ -12,8 +12,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh.Tcp.Events;
 using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 
-namespace Microsoft.DevTunnels
+namespace Microsoft.DevTunnels.Connections
 {
     /// <summary>
     /// Tunnel client implementation that selects one of multiple available connection modes.

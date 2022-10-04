@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels
+namespace Microsoft.DevTunnels.Management
 {
     /// <summary>
     /// Extension methods for working with <see cref="TunnelAccessControl"/> and

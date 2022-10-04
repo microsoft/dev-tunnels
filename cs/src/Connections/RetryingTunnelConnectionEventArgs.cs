@@ -5,7 +5,7 @@
 
 using System;
 
-namespace Microsoft.DevTunnels;
+namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Event args for tunnel connection retry event.
