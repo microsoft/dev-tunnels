@@ -61,6 +61,6 @@ pub struct TunnelStatus {
     pub api_update_rate: Option<RateStatus>,
 
     // Gets or sets the current value and limit for the rate of http requests to the
-    // tunnel.
+    // tunnel when web forwarding.
     pub http_request_rate: Option<RateStatus>,
 }

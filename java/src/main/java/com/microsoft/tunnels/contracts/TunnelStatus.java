@@ -90,7 +90,7 @@ public class TunnelStatus {
 
     /**
      * Gets or sets the current value and limit for the rate of http requests to the
-     * tunnel.
+     * tunnel when web forwarding.
      */
     @Expose
     public RateStatus httpRequestRate;

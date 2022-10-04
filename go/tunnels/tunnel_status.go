@@ -60,6 +60,7 @@ type TunnelStatus struct {
 	// operations for the tunnel or tunnel ports.
 	ApiUpdateRate            *RateStatus `json:"apiUpdateRate,omitempty"`
 
-	// Gets or sets the current value and limit for the rate of http requests to the tunnel.
+	// Gets or sets the current value and limit for the rate of http requests to the tunnel
+	// when web forwarding.
 	HttpRequestRate          *RateStatus `json:"httpRequestRate,omitempty"`
 }

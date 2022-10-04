@@ -96,7 +96,8 @@ public class TunnelStatus
     public RateStatus? ApiUpdateRate { get; set; }
 
     /// <summary>
-    /// Gets or sets the current value and limit for the rate of http requests to the tunnel.
+    /// Gets or sets the current value and limit for the rate of http requests to the tunnel
+    /// when web forwarding.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public RateStatus? HttpRequestRate { get; set; }
