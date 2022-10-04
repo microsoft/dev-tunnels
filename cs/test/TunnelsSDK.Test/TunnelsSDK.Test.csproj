@@ -15,9 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Contracts\TunnelService.Contracts.csproj" />
-    <ProjectReference Include="..\..\src\Management\TunnelService.Management.csproj" />
-    <ProjectReference Include="..\..\src\Connections\TunnelService.Connections.csproj" />
+    <ProjectReference Include="..\..\src\Contracts\DevTunnels.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Management\DevTunnels.Management.csproj" />
+    <ProjectReference Include="..\..\src\Connections\DevTunnels.Connections.csproj" />
   </ItemGroup>
 
 </Project>

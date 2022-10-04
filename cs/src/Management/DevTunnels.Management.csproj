@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <AssemblyName>Microsoft.DevTunnels.Management</AssemblyName>
-    <RootNamespace>Microsoft.DevTunnels</RootNamespace>
+    <RootNamespace>Microsoft.DevTunnels.Management</RootNamespace>
     <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <IsPackable>true</IsPackable>
@@ -16,7 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Contracts\TunnelService.Contracts.csproj" />
+    <ProjectReference Include="..\Contracts\DevTunnels.Contracts.csproj" />
   </ItemGroup>
 
   <!--
