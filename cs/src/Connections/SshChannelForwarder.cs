@@ -15,7 +15,7 @@ using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Buffer = Microsoft.DevTunnels.Ssh.Buffer;
 
-namespace Microsoft.DevTunnels.TunnelService
+namespace Microsoft.DevTunnels
 {
     internal class SshChannelForwarder : IDisposable
     {

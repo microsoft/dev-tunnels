@@ -8,7 +8,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.DevTunnels.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.Contracts;
 
 /// <summary>
 /// Base class for tunnel connection parameters.

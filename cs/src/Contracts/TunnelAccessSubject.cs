@@ -5,7 +5,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace Microsoft.DevTunnels.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.Contracts;
 
 /// <summary>
 /// Properties about a subject of a tunnel access control entry (ACE), used when resolving

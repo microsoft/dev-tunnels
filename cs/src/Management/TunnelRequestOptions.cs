@@ -7,9 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Web;
-using Microsoft.DevTunnels.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels.TunnelService
+namespace Microsoft.DevTunnels
 {
     /// <summary>
     /// Options for tunnel service requests.

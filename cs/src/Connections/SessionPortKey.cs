@@ -8,7 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Microsoft.DevTunnels.TunnelService
+namespace Microsoft.DevTunnels
 {
     /// <summary>
     /// Class for comparing equality in sessionId port pairs

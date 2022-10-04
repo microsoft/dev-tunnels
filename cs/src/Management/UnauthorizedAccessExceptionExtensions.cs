@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Headers;
 
-namespace Microsoft.DevTunnels.TunnelService;
+namespace Microsoft.DevTunnels;
 
 /// <summary>
 /// Extension methods for <see cref="UnauthorizedAccessException"/>.

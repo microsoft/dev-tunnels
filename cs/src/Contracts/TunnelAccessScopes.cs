@@ -3,7 +3,7 @@
 // Licensed under the MIT license.
 // </copyright>
 
-namespace Microsoft.DevTunnels.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.Contracts;
 
 /// <summary>
 /// Defines scopes for tunnel access tokens.

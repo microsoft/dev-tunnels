@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 
-namespace Microsoft.DevTunnels.TunnelService;
+namespace Microsoft.DevTunnels;
 
 /// <summary>
 /// Tunnel connector that connects to Tunnel Relay service.

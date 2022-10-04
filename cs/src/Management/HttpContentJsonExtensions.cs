@@ -12,7 +12,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DevTunnels.TunnelService
+namespace Microsoft.DevTunnels
 {
 #if !NET5_0_OR_GREATER
     /// <summary>

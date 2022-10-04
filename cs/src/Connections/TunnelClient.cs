@@ -16,9 +16,9 @@ using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Ssh.Tcp.Events;
-using Microsoft.DevTunnels.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels.TunnelService;
+namespace Microsoft.DevTunnels;
 
 /// <summary>
 /// Base class for clients that connect to a single host

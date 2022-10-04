@@ -5,7 +5,7 @@
 
 using System;
 
-namespace Microsoft.DevTunnels.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.Contracts;
 
 /// <summary>
 /// Provides environment-dependent properties about the service.

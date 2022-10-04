@@ -6,7 +6,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.DevTunnels.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.Contracts;
 
 /// <summary>
 /// Tunnel constraints.

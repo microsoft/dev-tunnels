@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Microsoft.DevTunnels.TunnelService.Test</AssemblyName>
-    <RootNamespace>Microsoft.DevTunnels.TunnelService.Test</RootNamespace>
+    <AssemblyName>Microsoft.DevTunnels.Test</AssemblyName>
+    <RootNamespace>Microsoft.DevTunnels.Test</RootNamespace>
     <Nullable>disable</Nullable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>

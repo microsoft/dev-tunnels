@@ -5,7 +5,7 @@
 
 using System;
 
-namespace Microsoft.DevTunnels.TunnelService.Contracts
+namespace Microsoft.DevTunnels.Contracts
 {
 #if !NET5_0_OR_GREATER
     /// <summary>

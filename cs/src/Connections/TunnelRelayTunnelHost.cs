@@ -15,9 +15,9 @@ using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
-using Microsoft.DevTunnels.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels.TunnelService;
+namespace Microsoft.DevTunnels;
 
 /// <summary>
 /// Tunnel host implementation that uses data-plane relay

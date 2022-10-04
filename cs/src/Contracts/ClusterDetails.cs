@@ -1,4 +1,4 @@
-namespace Microsoft.DevTunnels.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.Contracts;
 
 /// <summary>
 /// Details of a tunneling service cluster. Each cluster represents an instance of the

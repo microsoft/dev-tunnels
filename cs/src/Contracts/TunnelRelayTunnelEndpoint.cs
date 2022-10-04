@@ -5,7 +5,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace Microsoft.DevTunnels.TunnelService.Contracts;
+namespace Microsoft.DevTunnels.Contracts;
 
 /// <summary>
 /// Parameters for connecting to a tunnel via the tunnel service's built-in relay function.

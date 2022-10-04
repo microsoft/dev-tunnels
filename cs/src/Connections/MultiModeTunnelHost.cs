@@ -9,9 +9,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DevTunnels.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels.TunnelService
+namespace Microsoft.DevTunnels
 {
     /// <summary>
     /// Aggregation of multiple tunnel hosts.

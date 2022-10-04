@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Microsoft.DevTunnels.TunnelService.Test;
+namespace Microsoft.DevTunnels.Test;
 
 internal class TestTunnelRelayTunnelClient : TunnelRelayTunnelClient
 {

@@ -6,7 +6,7 @@
 using System.Net.Http.Headers;
 using System.Reflection;
 
-namespace Microsoft.DevTunnels.TunnelService;
+namespace Microsoft.DevTunnels;
 
 /// <summary>
 /// User Agent helper for <see cref="TunnelManagementClient.UserAgents"/>.

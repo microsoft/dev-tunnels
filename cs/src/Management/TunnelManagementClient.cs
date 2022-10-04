@@ -15,10 +15,10 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Microsoft.DevTunnels.TunnelService.Contracts;
-using static Microsoft.DevTunnels.TunnelService.Contracts.TunnelContracts;
+using Microsoft.DevTunnels.Contracts;
+using static Microsoft.DevTunnels.Contracts.TunnelContracts;
 
-namespace Microsoft.DevTunnels.TunnelService
+namespace Microsoft.DevTunnels
 {
     /// <summary>
     /// Implementation of a client that manages tunnels and tunnel ports via the tunnel service

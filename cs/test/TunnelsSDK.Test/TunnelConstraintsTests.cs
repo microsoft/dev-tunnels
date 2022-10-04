@@ -1,8 +1,8 @@
 using System;
-using Microsoft.DevTunnels.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 using Xunit;
 
-namespace Microsoft.DevTunnels.TunnelService.Test;
+namespace Microsoft.DevTunnels.Test;
 
 using static TunnelConstraints;
 

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DevTunnels.TunnelService.Test;
+namespace Microsoft.DevTunnels.Test;
 
 internal static class TaskExtensions
 {

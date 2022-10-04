@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DevTunnels.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.DevTunnels.TunnelService.Test.Mocks;
+namespace Microsoft.DevTunnels.Test.Mocks;
 
 public class MockTunnelManagementClient : ITunnelManagementClient
 {

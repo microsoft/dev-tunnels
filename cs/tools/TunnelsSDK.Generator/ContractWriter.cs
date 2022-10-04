@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Microsoft.DevTunnels.TunnelService.Generator;
+namespace Microsoft.DevTunnels.Generator;
 
 internal abstract class ContractWriter
 {
