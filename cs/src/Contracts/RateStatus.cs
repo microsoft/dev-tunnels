@@ -26,5 +26,5 @@ public class RateStatus : ResourceStatus
     /// Gets or sets the unix time when this status will be reset.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public uint? ResetTime { get; set; }
+    public long? ResetTime { get; set; }
 }

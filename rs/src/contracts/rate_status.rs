@@ -21,5 +21,5 @@ pub struct RateStatus {
     pub period_seconds: Option<u32>,
 
     // Gets or sets the unix time when this status will be reset.
-    pub reset_time: Option<u32>,
+    pub reset_time: Option<i64>,
 }

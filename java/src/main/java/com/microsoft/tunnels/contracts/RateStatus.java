@@ -25,5 +25,5 @@ public class RateStatus extends ResourceStatus {
      * Gets or sets the unix time when this status will be reset.
      */
     @Expose
-    public int resetTime;
+    public long resetTime;
 }

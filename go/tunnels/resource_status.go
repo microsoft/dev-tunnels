@@ -29,5 +29,5 @@ type RateStatus struct {
 	PeriodSeconds uint32 `json:"periodSeconds,omitempty"`
 
 	// Gets or sets the unix time when this status will be reset.
-	ResetTime     uint32 `json:"resetTime,omitempty"`
+	ResetTime     int64 `json:"resetTime,omitempty"`
 }
