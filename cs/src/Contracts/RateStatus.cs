@@ -23,9 +23,8 @@ public class RateStatus : ResourceStatus
     public uint? PeriodSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of seconds until the current measurement period ends and the
-    /// current rate value resets.
+    /// Gets or sets the unix time when this status will be reset.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public uint? ResetSeconds { get; set; }
+    public long? ResetTime { get; set; }
 }

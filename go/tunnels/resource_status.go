@@ -28,7 +28,6 @@ type RateStatus struct {
 	// estimate, since the actual duration may vary by the calendar.
 	PeriodSeconds uint32 `json:"periodSeconds,omitempty"`
 
-	// Gets or sets the number of seconds until the current measurement period ends and the
-	// current rate value resets.
-	ResetSeconds  uint32 `json:"resetSeconds,omitempty"`
+	// Gets or sets the unix time when this status will be reset.
+	ResetTime     int64 `json:"resetTime,omitempty"`
 }
