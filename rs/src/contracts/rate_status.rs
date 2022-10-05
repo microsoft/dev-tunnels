@@ -20,7 +20,6 @@ pub struct RateStatus {
     // an estimate, since the actual duration may vary by the calendar.
     pub period_seconds: Option<u32>,
 
-    // Gets or sets the number of seconds until the current measurement period ends and
-    // the current rate value resets.
-    pub reset_seconds: Option<u32>,
+    // Gets or sets the unix time when this status will be reset.
+    pub reset_time: Option<u32>,
 }

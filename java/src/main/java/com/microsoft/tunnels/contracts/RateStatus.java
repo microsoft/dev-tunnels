@@ -22,9 +22,8 @@ public class RateStatus extends ResourceStatus {
     public int periodSeconds;
 
     /**
-     * Gets or sets the number of seconds until the current measurement period ends and
-     * the current rate value resets.
+     * Gets or sets the unix time when this status will be reset.
      */
     @Expose
-    public int resetSeconds;
+    public int resetTime;
 }
