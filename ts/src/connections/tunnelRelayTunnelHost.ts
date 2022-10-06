@@ -273,33 +273,13 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                 );
                 e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
             }
-        } else if (portForwardRequest.channelType === 'forwarded-tcpip') {
-            if (!(session instanceof SshServerSession)) {
-                this.trace(TraceLevel.Warning, 0, 'Rejecting request due to invalid sender');
-                e.failureReason = SshChannelOpenFailureReason.connectFailed;
-            } else {
-                let sessionId = (session as SshServerSession).sessionId;
-                if (!sessionId) {
-                    this.trace(TraceLevel.Warning, 0, 'Rejecting request as session has no Id');
-                    e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
-                    return;
-                }
-
-                if (
-                    !this.remoteForwarders[
-                        new SessionPortKey(sessionId, portForwardRequest.port).toString()
-                    ]
-                ) {
-                    this.trace(
-                        TraceLevel.Warning,
-                        0,
-                        'Rejecting request to connect to non-forwarded port:' +
-                            portForwardRequest.port,
-                    );
-                    e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
-                }
-            }
-        } else {
+        } else if (portForwardRequest.channelType !== 'forwarded-tcpip') {
+            // For forwarded-tcpip do not check remoteForwarders because they may not be updated yet.
+            // There is a small time interval in forwardPort() between the port
+            // being forwarded with forwardFromRemotePort and remoteForwarders updated.
+            // Setting PFS.acceptRemoteConnectionsForNonForwardedPorts to false makes PFS reject forwarding requests from the
+            // clients for the ports that are not forwarded and are missing in PFS.remoteConnectors.
+            // Call to pfs.forwardFromRemotePort() in forwardPort() adds the connector to PFS.remoteConnectors.
             this.trace(
                 TraceLevel.Warning,
                 0,

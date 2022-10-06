@@ -534,6 +534,36 @@ export class TunnelHostAndClientTests {
     }
 
     @test
+    public async ConnectRelayHostThenConnectRelayClientToDifferentPort_Fails() {
+        let managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        let relayHost = new TunnelRelayTunnelHost(managementClient);
+
+        let testPort = 9886;
+        let differentPort = 9887;
+
+        let tunnel = this.createRelayTunnel([testPort]);
+        await managementClient.createTunnel(tunnel);
+        let multiChannelStream = await this.startRelayHost(relayHost, tunnel);
+        let clientRelayStream = await multiChannelStream.openStream(
+            TunnelRelayTunnelHost.clientStreamChannelType,
+        );
+
+        let clientSshSession = this.createSshClientSession();
+        let pfs = clientSshSession.activateService(PortForwardingService);
+        await clientSshSession.connect(new NodeStream(clientRelayStream));
+
+        let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+        await clientSshSession.authenticate(clientCredentials);
+        
+        await pfs.waitForForwardedPort(testPort);
+        await assert.rejects(pfs.connectToForwardedPort(differentPort));
+
+        clientSshSession.dispose();
+        multiChannelStream.dispose();
+    }
+
+    @test
     public async connectRelayHostAddPort() {
         let managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;
