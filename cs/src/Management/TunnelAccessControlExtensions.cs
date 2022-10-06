@@ -6,9 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.Management
 {
     /// <summary>
     /// Extension methods for working with <see cref="TunnelAccessControl"/> and

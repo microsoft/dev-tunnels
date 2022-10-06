@@ -7,8 +7,8 @@ import {
     TunnelConnectionMode,
     TunnelProtocol,
     TunnelRelayTunnelEndpoint,
-} from '@vs/tunnels-contracts';
-import { TunnelManagementClient } from '@vs/tunnels-management';
+} from '@microsoft/dev-tunnels-contracts';
+import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
     MultiChannelStream,
     SshChannelOpeningEventArgs,
@@ -31,8 +31,12 @@ import {
     SessionRequestMessage,
     SshRequestEventArgs,
     SessionRequestSuccessMessage,
-} from '@vs/vs-ssh';
-import { PortForwardChannelOpenMessage, PortForwardingService, SshServer } from '@vs/vs-ssh-tcp';
+} from '@microsoft/dev-tunnels-ssh';
+import {
+    PortForwardChannelOpenMessage,
+    PortForwardingService,
+    SshServer,
+} from '@microsoft/dev-tunnels-ssh-tcp';
 import { CancellationToken, Disposable } from 'vscode-jsonrpc';
 import { SessionPortKey } from '.';
 import { MultiModeTunnelHost } from './multiModeTunnelHost';

@@ -1,8 +1,8 @@
 using System;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 using Xunit;
 
-namespace Microsoft.VsSaaS.TunnelService.Test;
+namespace Microsoft.DevTunnels.Test;
 
 using static TunnelConstraints;
 

@@ -14,8 +14,8 @@
 
         <PropertyGroup>
             <!-- Enable doc links between the different assemblies in the SDK. -->
-            <DocumentationReferenceAssemblies Condition="! $(TargetName.EndsWith('.Contracts'))">$(DocumentationReferenceAssemblies) --external Microsoft.VsSaaS.TunnelService.Contracts</DocumentationReferenceAssemblies>
-            <DocumentationReferenceAssemblies Condition="$(TargetName.EndsWith('.Connections'))">$(DocumentationReferenceAssemblies) --external Microsoft.VsSaaS.TunnelService.Management</DocumentationReferenceAssemblies>
+            <DocumentationReferenceAssemblies Condition="! $(TargetName.EndsWith('.Contracts'))">$(DocumentationReferenceAssemblies) --external Microsoft.DevTunnels.Contracts</DocumentationReferenceAssemblies>
+            <DocumentationReferenceAssemblies Condition="$(TargetName.EndsWith('.Connections'))">$(DocumentationReferenceAssemblies) --external Microsoft.DevTunnels.Management</DocumentationReferenceAssemblies>
         </PropertyGroup>
 
         <Message Importance="High" Text="Generating documentation for $(TargetName)..." />

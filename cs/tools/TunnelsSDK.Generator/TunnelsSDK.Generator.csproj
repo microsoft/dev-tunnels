@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Microsoft.VsSaaS.TunnelService.Generator</RootNamespace>
-    <AssemblyName>Microsoft.VsSaaS.TunnelService.Generator</AssemblyName>
+    <RootNamespace>Microsoft.DevTunnels.Generator</RootNamespace>
+    <AssemblyName>Microsoft.DevTunnels.Generator</AssemblyName>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>

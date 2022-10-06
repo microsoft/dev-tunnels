@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.VsSaaS.TunnelService.Generator;
+namespace Microsoft.DevTunnels.Generator;
 
 internal class TSContractWriter : ContractWriter
 {

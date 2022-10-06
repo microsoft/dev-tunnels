@@ -1,5 +1,5 @@
 {
-	"name": "@vs/tunnels-management",
+	"name": "@microsoft/dev-tunnels-management",
 	"version": "",
 	"description": "Tunnels library for Visual Studio tools",
 	"keywords": [
@@ -16,7 +16,7 @@
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
 		"vscode-jsonrpc": "^4.0.0",
-		"@vs/tunnels-contracts": "^1.0.0",
+		"@microsoft/dev-tunnels-contracts": "^1.0.0",
 		"axios": "^0.21.1"
 	}
 }

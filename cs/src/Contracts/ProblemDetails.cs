@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts
+namespace Microsoft.DevTunnels.Contracts
 {
     /// <summary>
     /// Structure of error details returned by the tunnel service, including validation errors.

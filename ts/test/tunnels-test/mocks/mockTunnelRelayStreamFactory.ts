@@ -1,14 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelRelayStreamFactory, TunnelRelayTunnelHost } from '@vs/tunnels-connections';
+import { TunnelRelayStreamFactory, TunnelRelayTunnelHost } from '@microsoft/dev-tunnels-connections';
 import {
     MultiChannelStream,
     NodeStream,
     PromiseCompletionSource,
     SshStream,
     Stream,
-} from '@vs/vs-ssh';
+} from '@microsoft/dev-tunnels-ssh';
 import { IClientConfig } from 'websocket';
 
 export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {

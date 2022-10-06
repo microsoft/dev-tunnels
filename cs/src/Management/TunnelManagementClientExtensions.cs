@@ -7,9 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.Contracts;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.Management
 {
     /// <summary>
     /// Extension methods <see cref="ITunnelManagementClient"/>.

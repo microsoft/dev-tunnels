@@ -1,5 +1,5 @@
 {
-	"name": "@vs/tunnels-contracts",
+	"name": "@microsoft/dev-tunnels-contracts",
 	"version": "",
 	"description": "Tunnels library for Visual Studio tools",
 	"keywords": [

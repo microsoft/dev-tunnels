@@ -16,9 +16,11 @@ steps:
 - template: typescript-build-steps.yaml
 
 - task: Npm@1
-  displayName: 'Publish packages to internal feed'
+  displayName: 'Publish packages to external feed'
   inputs:
     command: custom
     workingDir: ts
     verbose: false
-    customCommand: 'run publish'
+    customCommand: 'run publish --access public'
+    customRegistry: useNpmrc
+    customEndpoint: 'dev-tunnels-npm'

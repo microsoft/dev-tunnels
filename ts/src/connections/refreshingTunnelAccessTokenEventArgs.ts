@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { CancellationToken, SshDisconnectReason, Stream, Trace } from '@vs/vs-ssh';
+import { CancellationToken, SshDisconnectReason, Stream, Trace } from '@microsoft/dev-tunnels-ssh';
 
 /**
  * Event args for tunnel access token refresh event.

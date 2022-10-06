@@ -3,7 +3,7 @@
 
 import * as assert from 'assert';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
-import { TunnelManagementHttpClient } from '@vs/tunnels-management';
+import { TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
 import { AxiosRequestConfig, Method } from 'axios';
 
 @suite

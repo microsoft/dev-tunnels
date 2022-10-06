@@ -9,16 +9,17 @@ using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh;
-using Microsoft.VisualStudio.Ssh.Algorithms;
-using Microsoft.VisualStudio.Ssh.Events;
-using Microsoft.VisualStudio.Ssh.Tcp;
-using Microsoft.VsSaaS.TunnelService.Contracts;
-using Microsoft.VsSaaS.TunnelService.Test.Mocks;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Algorithms;
+using Microsoft.DevTunnels.Ssh.Events;
+using Microsoft.DevTunnels.Ssh.Tcp;
+using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Test.Mocks;
 using Nerdbank.Streams;
 using Xunit;
+using Microsoft.DevTunnels.Connections;
 
-namespace Microsoft.VsSaaS.TunnelService.Test;
+namespace Microsoft.DevTunnels.Test;
 
 using static TcpUtils;
 

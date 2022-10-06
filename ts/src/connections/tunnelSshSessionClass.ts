@@ -7,11 +7,11 @@ import {
     SshConnectionError,
     SshDisconnectReason,
     SshReconnectError,
-} from '@vs/vs-ssh';
+} from '@microsoft/dev-tunnels-ssh';
 import { TunnelSession } from './tunnelSession';
 import { TunnelConnection } from './tunnelConnection';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
-import { Tunnel } from '@vs/tunnels-contracts';
+import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
 type CloseableSshSession = {

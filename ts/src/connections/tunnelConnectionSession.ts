@@ -1,13 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel, TunnelAccessScopes } from '@vs/tunnels-contracts';
+import { Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-contracts';
 import {
     TunnelAccessTokenProperties,
     TunnelManagementClient,
     TunnelRequestOptions,
-} from '@vs/tunnels-management';
-import { CancellationError, Stream, Trace, TraceLevel } from '@vs/vs-ssh';
+} from '@microsoft/dev-tunnels-management';
+import { CancellationError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';

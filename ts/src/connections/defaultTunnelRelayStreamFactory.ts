@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Stream } from '@vs/vs-ssh';
+import { Stream } from '@microsoft/dev-tunnels-ssh';
 import { TunnelRelayStreamFactory } from './tunnelRelayStreamFactory';
 import { isNode, SshHelpers } from './sshHelpers';
 import { IClientConfig } from 'websocket';

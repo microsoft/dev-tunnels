@@ -1,6 +1,7 @@
+using Microsoft.DevTunnels.Connections;
 using Xunit;
 
-namespace Microsoft.VsSaaS.TunnelService.Test.Mocks;
+namespace Microsoft.DevTunnels.Test.Mocks;
 
 public class MockTunnelRelayStreamFactory : ITunnelRelayStreamFactory
 {

@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.VsSaaS.TunnelService.Contracts
+namespace Microsoft.DevTunnels.Contracts
 {
     /// <summary>
     /// Data contract for access control on a <see cref="Tunnel"/> or <see cref="TunnelPort"/>.

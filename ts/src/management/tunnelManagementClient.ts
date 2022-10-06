@@ -7,7 +7,7 @@ import {
     TunnelConnectionMode,
     TunnelEndpoint,
     TunnelPort,
-} from '@vs/tunnels-contracts';
+} from '@microsoft/dev-tunnels-contracts';
 import { TunnelRequestOptions } from './tunnelRequestOptions';
 import * as https from 'https';
 

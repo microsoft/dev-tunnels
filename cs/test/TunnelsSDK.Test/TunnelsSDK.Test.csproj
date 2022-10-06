@@ -3,21 +3,21 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Microsoft.VsSaaS.TunnelService.Test</AssemblyName>
-    <RootNamespace>Microsoft.VsSaaS.TunnelService.Test</RootNamespace>
+    <AssemblyName>Microsoft.DevTunnels.Test</AssemblyName>
+    <RootNamespace>Microsoft.DevTunnels.Test</RootNamespace>
     <Nullable>disable</Nullable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Nerdbank.Streams" Version="2.5.76" />
-    <PackageReference Include="Microsoft.VisualStudio.Ssh.Tcp" Version="$(VsSshPackageVersion)" />
+    <PackageReference Include="Microsoft.DevTunnels.Ssh.Tcp" Version="$(DevTunnelsSshPackageVersion)" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Contracts\TunnelService.Contracts.csproj" />
-    <ProjectReference Include="..\..\src\Management\TunnelService.Management.csproj" />
-    <ProjectReference Include="..\..\src\Connections\TunnelService.Connections.csproj" />
+    <ProjectReference Include="..\..\src\Contracts\DevTunnels.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Management\DevTunnels.Management.csproj" />
+    <ProjectReference Include="..\..\src\Connections\DevTunnels.Connections.csproj" />
   </ItemGroup>
 
 </Project>

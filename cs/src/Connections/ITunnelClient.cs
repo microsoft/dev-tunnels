@@ -8,10 +8,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh.Tcp.Events;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
+using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.Connections
 {
     /// <summary>
     /// Interface for a client capable of making a connection to a tunnel and

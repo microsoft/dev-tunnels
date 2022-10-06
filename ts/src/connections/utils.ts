@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { CancellationToken, CancellationError } from '@vs/vs-ssh';
+import { CancellationToken, CancellationError } from '@microsoft/dev-tunnels-ssh';
 import { Disposable } from 'vscode-jsonrpc';
 
 export class List {

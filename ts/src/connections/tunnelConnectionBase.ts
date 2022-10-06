@@ -1,14 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { CancellationError } from '@vs/vs-ssh';
+import { CancellationError } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken, CancellationTokenSource, Emitter } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEventArgs';
 import { TunnelConnection } from './tunnelConnection';
 import { RefreshingTunnelAccessTokenEventArgs } from './refreshingTunnelAccessTokenEventArgs';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
-import { TunnelAccessTokenProperties } from '@vs/tunnels-management';
+import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
 
 /**
  * Tunnel connection base class.

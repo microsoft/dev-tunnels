@@ -9,9 +9,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh.Tcp;
+using Microsoft.DevTunnels.Ssh.Tcp;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.Connections
 {
     /// <summary>
     /// Implementation of a TCP listener factory that retries forwarding with nearby ports and falls back to a random port.

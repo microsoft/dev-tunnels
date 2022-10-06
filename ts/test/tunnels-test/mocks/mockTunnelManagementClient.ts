@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { TunnelManagementClient, TunnelRequestOptions } from '@vs/tunnels-management';
+import { TunnelManagementClient, TunnelRequestOptions } from '@microsoft/dev-tunnels-management';
 import {
     Tunnel,
     TunnelRelayTunnelEndpoint,
@@ -9,7 +9,7 @@ import {
     TunnelConnectionMode,
     TunnelEndpoint,
     ClusterDetails,
-} from '@vs/tunnels-contracts';
+} from '@microsoft/dev-tunnels-contracts';
 
 export class MockTunnelManagementClient implements TunnelManagementClient {
     private idCounter: number = 0;

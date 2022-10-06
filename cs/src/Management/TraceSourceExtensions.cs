@@ -6,7 +6,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 
-namespace Microsoft.VsSaaS.TunnelService
+namespace Microsoft.DevTunnels.Management
 {
     /// <summary>
     /// Extension methods for tracing with a <see cref="TraceSource" />.

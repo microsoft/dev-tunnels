@@ -11,13 +11,14 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Ssh;
-using Microsoft.VisualStudio.Ssh.Events;
-using Microsoft.VisualStudio.Ssh.Messages;
-using Microsoft.VisualStudio.Ssh.Tcp;
-using Microsoft.VsSaaS.TunnelService.Contracts;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Events;
+using Microsoft.DevTunnels.Ssh.Messages;
+using Microsoft.DevTunnels.Ssh.Tcp;
+using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 
-namespace Microsoft.VsSaaS.TunnelService;
+namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Tunnel host implementation that uses data-plane relay

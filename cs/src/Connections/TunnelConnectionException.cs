@@ -6,7 +6,7 @@
 using System;
 using System.Net;
 
-namespace Microsoft.VsSaaS.TunnelService;
+namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Exception thrown when a host or client failed to connect to a tunnel.

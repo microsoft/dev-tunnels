@@ -10,7 +10,7 @@ import {
     Stream,
     Trace,
     TraceLevel,
-} from '@vs/vs-ssh';
+} from '@microsoft/dev-tunnels-ssh';
 import { TunnelConnector } from './tunnelConnector';
 import { delay, getErrorMessage } from './utils';
 import { BrowserWebSocketRelayError, RelayConnectionError } from './sshHelpers';
