@@ -39,6 +39,18 @@ namespace TunnelConstraints {
     export const tunnelNameMaxLength: number = 60;
 
     /**
+     * Maximum number of access control entries (ACEs) in a tunnel or tunnel port access
+     * control list (ACL).
+     */
+    export const accessControlMaxEntries: number = 40;
+
+    /**
+     * Maximum number of subjects (such as user IDs) in a tunnel or tunnel port access
+     * control entry (ACE).
+     */
+    export const accessControlMaxSubjects: number = 100;
+
+    /**
      * Gets a regular expression that can match or validate tunnel cluster ID strings.
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.

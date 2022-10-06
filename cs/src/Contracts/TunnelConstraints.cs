@@ -45,6 +45,20 @@ public static class TunnelConstraints
     public static int TunnelNameMaxLength { get; } = 60;
 
     /// <summary>
+    /// Maximum number of access control entries (ACEs) in a tunnel or tunnel port
+    /// access control list (ACL).
+    /// </summary>
+    /// <seealso cref="TunnelAccessControl.Entries" />
+    public static int AccessControlMaxEntries { get; } = 40;
+
+    /// <summary>
+    /// Maximum number of subjects (such as user IDs) in a tunnel or tunnel port
+    /// access control entry (ACE).
+    /// </summary>
+    /// <seealso cref="TunnelAccessControlEntry.Subjects" />
+    public static int AccessControlMaxSubjects { get; } = 100;
+
+    /// <summary>
     /// Gets a regular expression that can match or validate tunnel cluster ID strings.
     /// </summary>
     /// <remarks>

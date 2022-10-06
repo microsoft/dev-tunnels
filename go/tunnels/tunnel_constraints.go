@@ -29,6 +29,14 @@ const (
 
 	// Max length of tunnel name.
 	TunnelConstraintsTunnelNameMaxLength = 60
+
+	// Maximum number of access control entries (ACEs) in a tunnel or tunnel port access
+	// control list (ACL).
+	TunnelConstraintsAccessControlMaxEntries = 40
+
+	// Maximum number of subjects (such as user IDs) in a tunnel or tunnel port access
+	// control entry (ACE).
+	TunnelConstraintsAccessControlMaxSubjects = 100
 )
 var (
 	// A regular expression that can match or validate tunnel cluster ID strings.
