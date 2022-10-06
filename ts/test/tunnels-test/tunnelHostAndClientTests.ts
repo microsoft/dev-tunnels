@@ -534,7 +534,7 @@ export class TunnelHostAndClientTests {
     }
 
     @test
-    public async connectRelayHostThenConnectRelayClientToForwardedPortStream() {
+    public async ConnectRelayHostThenConnectRelayClientToDifferentPort_Fails() {
         let managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;
         let relayHost = new TunnelRelayTunnelHost(managementClient);
