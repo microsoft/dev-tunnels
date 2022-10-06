@@ -20,8 +20,7 @@ export interface RateStatus extends ResourceStatus {
     periodSeconds?: number;
 
     /**
-     * Gets or sets the number of seconds until the current measurement period ends and
-     * the current rate value resets.
+     * Gets or sets the unix time when this status will be reset.
      */
-    resetSeconds?: number;
+    resetTime?: number;
 }
