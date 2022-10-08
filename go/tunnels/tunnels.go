@@ -127,9 +127,12 @@ func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error)
 		return nil, fmt.Errorf("tunnel port tunnel ID does not match tunnel")
 	}
 	convertedPort := &TunnelPort{
-		PortNumber: tunnelPort.PortNumber,
-		Protocol:   tunnelPort.Protocol,
-		Options:    tunnelPort.Options,
+		PortNumber:  tunnelPort.PortNumber,
+		Protocol:    tunnelPort.Protocol,
+		Description: tunnelPort.Description,
+		Tags:        tunnelPort.Tags,
+		SshUser:     tunnelPort.SshUser,
+		Options:     tunnelPort.Options,
 	}
 	if tunnelPort.AccessControl != nil {
 		var newEntries []TunnelAccessControlEntry

@@ -1166,6 +1166,8 @@ namespace Microsoft.DevTunnels.Management
             {
                 PortNumber = tunnelPort.PortNumber,
                 Protocol = tunnelPort.Protocol,
+                Description = tunnelPort.Description,
+                Tags = tunnelPort.Tags,
                 Options = tunnelPort.Options,
                 AccessControl = tunnelPort.AccessControl == null ? null : new TunnelAccessControl(
                     tunnelPort.AccessControl.Where((ace) => !ace.IsInherited)),

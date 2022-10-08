@@ -607,6 +607,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var converted = new TunnelPort();
     converted.portNumber = tunnelPort.portNumber;
     converted.protocol = tunnelPort.protocol;
+    converted.description = tunnelPort.description;
+    converted.tags = tunnelPort.tags;
+    converted.sshUser = tunnelPort.sshUser;
     converted.options = tunnelPort.options;
     if (tunnelPort.accessControl != null && tunnelPort.accessControl.entries != null) {
       List<TunnelAccessControlEntry> entries = Arrays.asList(tunnel.accessControl.entries);
