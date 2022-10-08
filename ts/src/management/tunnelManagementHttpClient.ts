@@ -709,6 +709,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return {
             portNumber: tunnelPort.portNumber,
             protocol: tunnelPort.protocol,
+            description: tunnelPort.description,
+            tags: tunnelPort.tags,
+            sshUser: tunnelPort.sshUser,
             options: tunnelPort.options,
             accessControl: !tunnelPort.accessControl
                 ? undefined
