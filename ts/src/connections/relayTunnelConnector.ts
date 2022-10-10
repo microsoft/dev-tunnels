@@ -217,8 +217,10 @@ export class RelayTunnelConnector implements TunnelConnector {
                             break;
 
                         case 'error.tooManyRequests':
-                            errorDescription = `Rate limit exceeded${statusCodeText}. Too many requests in a given amount of time.`;
-                            continue;
+                            throwError(
+                                `Rate limit exceeded${statusCodeText}. Too many requests in a given amount of time.`,
+                            );
+                            break;
 
                         default:
                             if (errorDescription?.startsWith('error.relayConnectionError ')) {
