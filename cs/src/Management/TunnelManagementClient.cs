@@ -447,6 +447,8 @@ namespace Microsoft.DevTunnels.Management
                 FollowRedirectsHttpHandler.SetFollowRedirectsEnabledForRequest(request, false);
             }
 
+            options?.SetRequestOptions(request);
+
             var response = await this.httpClient.SendAsync(request, cancellation);
             var result = await ConvertResponseAsync<TResult>(
                 method,
