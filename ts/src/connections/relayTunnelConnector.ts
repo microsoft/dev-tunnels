@@ -222,7 +222,7 @@ export class RelayTunnelConnector implements TunnelConnector {
                                 throwError(errorDescription);
                             }
 
-                            attemptDelayMs = attemptDelayMs << 1
+                            attemptDelayMs = attemptDelayMs << 1;
                             break;
 
                         default:
