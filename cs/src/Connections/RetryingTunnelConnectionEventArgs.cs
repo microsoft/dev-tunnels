@@ -19,6 +19,7 @@ public class RetryingTunnelConnectionEventArgs : EventArgs
     {
         Exception = Requires.NotNull(exception, nameof(exception));
         Retry = true;
+        Delay = delay;
     }
 
     /// <summary>
