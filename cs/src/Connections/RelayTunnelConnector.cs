@@ -125,8 +125,12 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                             {
                                 throw exception;
                             }
+                            
+                            if (attemptDelayMs < RetryMaxDelayMs)
+                            {
+                                attemptDelayMs <<= 1;
+                            }
 
-                            attemptDelayMs <<= 1;
                             Trace.Info($"Rate limit exceeded. Delaying for {attemptDelayMs/1000.0}s before retrying.");
                             break;
                             
