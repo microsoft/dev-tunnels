@@ -21,8 +21,4 @@ const (
 
 	// Github Ssh public key which can be used to validate if it belongs to tunnel's owner.
 	TunnelHeaderNameXGithubSshKey        TunnelHeaderName = "X-Github-Ssh-Key"
-
-	// Header that will skip the antiphishing page when connection to a tunnel through web
-	// forwarding.
-	TunnelHeaderNameXTunnelSkipPhishing  TunnelHeaderName = "X-Tunnel-Skip-Phishing-Page"
 )
