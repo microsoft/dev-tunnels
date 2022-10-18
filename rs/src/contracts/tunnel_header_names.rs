@@ -18,4 +18,4 @@ pub const TUNNEL_HEADER_NAMES_X_GITHUB_SSH_KEY: &str = "X-Github-Ssh-Key";
 
 // Header that will skip the antiphishing page when connection to a tunnel through web
 // forwarding.
-pub const TUNNEL_HEADER_NAMES_X_TUNNEL_SKIP_PHISHING: &str = "X-Tunnel-Skip-Phishing-Page";
+pub const TUNNEL_HEADER_NAMES_X_TUNNEL_SKIP_ANTIPHISHING_PAGE: &str = "X-Tunnel-Skip-AntiPhishing-Page";

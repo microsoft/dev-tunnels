@@ -31,5 +31,5 @@ public static class TunnelHeaderNames
     /// <summary>
     /// Header that will skip the antiphishing page when connection to a tunnel through web forwarding.
     /// </summary>
-    public const string XTunnelSkipPhishing = "X-Tunnel-Skip-Phishing-Page";
+    public const string XTunnelSkipAntiPhishingPage = "X-Tunnel-Skip-AntiPhishing-Page";
 }

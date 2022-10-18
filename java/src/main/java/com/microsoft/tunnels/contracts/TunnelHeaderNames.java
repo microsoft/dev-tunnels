@@ -32,5 +32,5 @@ public class TunnelHeaderNames {
      * Header that will skip the antiphishing page when connection to a tunnel through web
      * forwarding.
      */
-    public static final String xTunnelSkipPhishing = "X-Tunnel-Skip-Phishing-Page";
+    public static final String xTunnelSkipAntiPhishingPage = "X-Tunnel-Skip-AntiPhishing-Page";
 }

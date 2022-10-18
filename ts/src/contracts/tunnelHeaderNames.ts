@@ -31,5 +31,5 @@ export enum TunnelHeaderNames {
      * Header that will skip the antiphishing page when connection to a tunnel through web
      * forwarding.
      */
-    XTunnelSkipPhishing = 'X-Tunnel-Skip-Phishing-Page',
+    XTunnelSkipAntiPhishingPage = 'X-Tunnel-Skip-AntiPhishing-Page',
 }
