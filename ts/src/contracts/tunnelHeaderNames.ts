@@ -26,4 +26,10 @@ export enum TunnelHeaderNames {
      * owner.
      */
     XGithubSshKey = 'X-Github-Ssh-Key',
+
+    /**
+     * Header that will skip the antiphishing page when connection to a tunnel through web
+     * forwarding.
+     */
+    XTunnelSkipAntiPhishingPage = 'X-Tunnel-Skip-AntiPhishing-Page',
 }

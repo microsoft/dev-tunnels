@@ -27,4 +27,10 @@ public class TunnelHeaderNames {
      * owner.
      */
     public static final String xGithubSshKey = "X-Github-Ssh-Key";
+
+    /**
+     * Header that will skip the antiphishing page when connection to a tunnel through web
+     * forwarding.
+     */
+    public static final String xTunnelSkipAntiPhishingPage = "X-Tunnel-Skip-AntiPhishing-Page";
 }
