@@ -218,7 +218,14 @@ export class RelayTunnelConnector implements TunnelConnector {
 
                         case 'error.tooManyRequests':
                             errorDescription = `Rate limit exceeded${statusCodeText}. Too many requests in a given amount of time.`;
-                            continue;
+                            if (attempt > 4) {
+                                throwError(errorDescription);
+                            }
+
+                            if (attemptDelayMs < maxReconnectDelayMs) {
+                                attemptDelayMs = attemptDelayMs << 1;
+                            }
+                            break;
 
                         default:
                             if (errorDescription?.startsWith('error.relayConnectionError ')) {

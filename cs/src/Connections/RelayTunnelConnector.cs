@@ -121,7 +121,19 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                         case HttpStatusCode.TooManyRequests:
                             errorDescription = "Rate limit exceeded (429). Too many requests in a given amount of time.";
                             exception = new TunnelConnectionException(errorDescription, wse);
+                            if (attempt > 4)
+                            {
+                                throw exception;
+                            }
+                            
+                            if (attemptDelayMs < RetryMaxDelayMs)
+                            {
+                                attemptDelayMs <<= 1;
+                            }
+
+                            Trace.Info($"Rate limit exceeded. Delaying for {attemptDelayMs/1000.0}s before retrying.");
                             break;
+                            
 
                         default:
                             // For any other status code we assume the error is not recoverable.
