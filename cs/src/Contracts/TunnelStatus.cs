@@ -71,15 +71,56 @@ public class TunnelStatus
     public RateStatus? ClientConnectionRate { get; set; }
 
     /// <summary>
-    /// Gets or sets the current value and limit for the rate of bytes transferred
-    /// via the tunnel.
+    /// Gets or sets the current value and limit for the rate of bytes being received by the tunnel
+    /// host and uploaded by tunnel clients.
     /// </summary>
     /// <remarks>
-    /// This includes both sending and receiving. All types of tunnel and port connections
-    /// contribute to this rate.
+    /// All types of tunnel and port connections, from potentially multiple clients, can
+    /// contribute to this rate. The reported rate may differ slightly from the rate measurable
+    /// by applications, due to protocol overhead. Data rate status reporting is delayed by a few
+    /// seconds, so this value is a snapshot of the data transfer rate from a few seconds earlier.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public RateStatus? DataTransferRate { get; set; }
+    public RateStatus? UploadRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current value and limit for the rate of bytes being sent by the tunnel
+    /// host and downloaded by tunnel clients.
+    /// </summary>
+    /// <remarks>
+    /// All types of tunnel and port connections, from potentially multiple clients, can
+    /// contribute to this rate. The reported rate may differ slightly from the rate measurable
+    /// by applications, due to protocol overhead. Data rate status reporting is delayed by a few
+    /// seconds, so this value is a snapshot of the data transfer rate from a few seconds earlier.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public RateStatus? DownloadRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of bytes received by the tunnel host and uploaded by tunnel
+    /// clients, over the lifetime of the tunnel.
+    /// </summary>
+    /// <remarks>
+    /// All types of tunnel and port connections, from potentially multiple clients, can
+    /// contribute to this total. The reported value may differ slightly from the value measurable
+    /// by applications, due to protocol overhead. Data transfer status reporting is delayed by
+    /// a few seconds.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ulong? UploadTotal { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of bytes sent by the tunnel host and downloaded by tunnel
+    /// clients, over the lifetime of the tunnel.
+    /// </summary>
+    /// <remarks>
+    /// All types of tunnel and port connections, from potentially multiple clients, can
+    /// contribute to this total. The reported value may differ slightly from the value measurable
+    /// by applications, due to protocol overhead. Data transfer status reporting is delayed by
+    /// a few seconds.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ulong? DownloadTotal { get; set; }
 
     /// <summary>
     /// Gets or sets the current value and limit for the rate of management API read operations 
