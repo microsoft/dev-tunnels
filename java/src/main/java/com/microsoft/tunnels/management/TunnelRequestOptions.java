@@ -102,6 +102,11 @@ public class TunnelRequestOptions {
    */
   public boolean forceRename;
 
+  /**
+   * Limits the number of tunnels returned when searching or listing tunnels.
+   */
+  public Integer limit;
+
 
   /**
    * Converts tunnel request options to a query string for HTTP requests to the
@@ -128,6 +133,10 @@ public class TunnelRequestOptions {
       if (this.requireAllTags) {
         queryOptions.put("allTags", Arrays.asList("true"));
       }
+    }
+
+    if (this.limit != null) {
+      queryOptions.put("limit", Arrays.asList(this.limit.toString()));
     }
 
     if (this.additionalQueryParameters != null) {

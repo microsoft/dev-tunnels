@@ -4,6 +4,7 @@
 package tunnels
 
 import (
+	"fmt"
 	"net/url"
 )
 
@@ -38,6 +39,9 @@ type TunnelRequestOptions struct {
 
 	// If there is another tunnel with the name requested in updateTunnel, try to acquire the name from the other tunnel.
 	ForceRename bool
+
+	// Limits the number of tunnels returned when searching or listing tunnels.
+	Limit uint
 }
 
 func (options *TunnelRequestOptions) queryString() string {
@@ -70,6 +74,10 @@ func (options *TunnelRequestOptions) queryString() string {
 		for paramName, paramValue := range options.AdditionalQueryParameters {
 			queryOptions.Add(paramName, paramValue)
 		}
+	}
+
+	if options.Limit > 0 {
+		queryOptions.Set("limit", fmt.Sprint(options.Limit))
 	}
 
 	return queryOptions.Encode()

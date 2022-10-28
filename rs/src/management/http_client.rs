@@ -399,6 +399,9 @@ impl TunnelManagementClient {
                     query.append_pair("allTags", "true");
                 }
             }
+            if tunnel_opts.limit > 0 {
+                query.append_pair("limit", &tunnel_opts.limit.to_string());
+            }
         }
         let mut request = self.make_request(method, url).await?;
 

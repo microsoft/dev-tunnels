@@ -36,6 +36,9 @@ pub struct TunnelRequestOptions {
     /// If true on a create or update request then upon a name conflict, attempt to rename the
     /// existing tunnel to null and give the name to the tunnel from the request.
     pub force_rename: bool,
+
+    /// Limits the number of tunnels returned when searching or listing tunnels.
+    pub limit: u32,
 }
 
 pub const NO_REQUEST_OPTIONS: &TunnelRequestOptions = &TunnelRequestOptions {
@@ -46,4 +49,5 @@ pub const NO_REQUEST_OPTIONS: &TunnelRequestOptions = &TunnelRequestOptions {
     require_all_tags: false,
     token_scopes: Vec::new(),
     force_rename: false,
+    limit: 0,
 };

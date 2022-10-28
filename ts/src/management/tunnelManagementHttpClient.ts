@@ -747,6 +747,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 }
             }
 
+            if (options.limit) {
+                queryOptions['limit'] = [options.limit.toString()];
+            }
+
             queryItems.push(
                 ...Object.keys(queryOptions).map((key) => {
                     const value = queryOptions[key];
