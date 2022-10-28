@@ -12,6 +12,9 @@ trigger:
 
 pr: none
 
+variables:
+  Codeql.Enabled: true
+
 steps:
 - template: typescript-build-steps.yaml
 
