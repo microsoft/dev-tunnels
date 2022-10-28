@@ -114,6 +114,11 @@ namespace Microsoft.DevTunnels.Management
         public bool ForceRename { get; set; }
 
         /// <summary>
+        /// Limits the number of tunnels returned when searching or listing tunnels.
+        /// </summary>
+        public uint Limit { get; set; }
+
+        /// <summary>
         /// Converts tunnel request options to a query string for HTTP requests to the
         /// tunnel management API.
         /// </summary>
@@ -145,6 +150,11 @@ namespace Microsoft.DevTunnels.Management
                 {
                     queryOptions["allTags"] = TrueOption;
                 }
+            }
+
+            if (Limit > 0)
+            {
+                queryOptions["limit"] = new[] { Limit.ToString() };
             }
 
             if (AdditionalQueryParameters != null)

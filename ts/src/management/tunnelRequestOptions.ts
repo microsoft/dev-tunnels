@@ -76,4 +76,9 @@ export interface TunnelRequestOptions {
      * existing tunnel to null and give the name to the tunnel from the request.
      */
     forceRename?: boolean;
+
+    /**
+     * Limits the number of tunnels returned when searching or listing tunnels.
+     */
+    limit?: number;
 }
