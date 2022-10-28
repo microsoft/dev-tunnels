@@ -45,12 +45,43 @@ type TunnelStatus struct {
 	// See `TunnelPortStatus` for status of per-port client connections.
 	ClientConnectionRate     *RateStatus `json:"clientConnectionRate,omitempty"`
 
-	// Gets or sets the current value and limit for the rate of bytes transferred via the
-	// tunnel.
+	// Gets or sets the current value and limit for the rate of bytes being received by the
+	// tunnel host and uploaded by tunnel clients.
 	//
-	// This includes both sending and receiving. All types of tunnel and port connections
-	// contribute to this rate.
-	DataTransferRate         *RateStatus `json:"dataTransferRate,omitempty"`
+	// All types of tunnel and port connections, from potentially multiple clients, can
+	// contribute to this rate. The reported rate may differ slightly from the rate
+	// measurable by applications, due to protocol overhead. Data rate status reporting is
+	// delayed by a few seconds, so this value is a snapshot of the data transfer rate from a
+	// few seconds earlier.
+	UploadRate               *RateStatus `json:"uploadRate,omitempty"`
+
+	// Gets or sets the current value and limit for the rate of bytes being sent by the
+	// tunnel host and downloaded by tunnel clients.
+	//
+	// All types of tunnel and port connections, from potentially multiple clients, can
+	// contribute to this rate. The reported rate may differ slightly from the rate
+	// measurable by applications, due to protocol overhead. Data rate status reporting is
+	// delayed by a few seconds, so this value is a snapshot of the data transfer rate from a
+	// few seconds earlier.
+	DownloadRate             *RateStatus `json:"downloadRate,omitempty"`
+
+	// Gets or sets the total number of bytes received by the tunnel host and uploaded by
+	// tunnel clients, over the lifetime of the tunnel.
+	//
+	// All types of tunnel and port connections, from potentially multiple clients, can
+	// contribute to this total. The reported value may differ slightly from the value
+	// measurable by applications, due to protocol overhead. Data transfer status reporting
+	// is delayed by a few seconds.
+	UploadTotal              uint64 `json:"uploadTotal,omitempty"`
+
+	// Gets or sets the total number of bytes sent by the tunnel host and downloaded by
+	// tunnel clients, over the lifetime of the tunnel.
+	//
+	// All types of tunnel and port connections, from potentially multiple clients, can
+	// contribute to this total. The reported value may differ slightly from the value
+	// measurable by applications, due to protocol overhead. Data transfer status reporting
+	// is delayed by a few seconds.
+	DownloadTotal            uint64 `json:"downloadTotal,omitempty"`
 
 	// Gets or sets the current value and limit for the rate of management API read
 	// operations  for the tunnel or tunnel ports.

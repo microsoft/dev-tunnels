@@ -27,4 +27,47 @@ public class RateStatus : ResourceStatus
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public long? ResetTime { get; set; }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        var count = base.ToString();
+        if (PeriodSeconds == null)
+        {
+            return count;
+        }
+
+        if (PeriodSeconds.Value == 1)
+        {
+            return count + "/s";
+        }
+        else if (PeriodSeconds.Value == 60)
+        {
+            return count + "/m";
+        }
+        else if (PeriodSeconds.Value == 3600)
+        {
+            return count + "/h";
+        }
+        else if (PeriodSeconds.Value == (24*3600))
+        {
+            return count + "/d";
+        }
+        else if ((PeriodSeconds.Value % (24*3600)) == 0)
+        {
+            return $"{count}/{(PeriodSeconds.Value / (24*3600))}d";
+        }
+        else if (PeriodSeconds.Value % 3600 == 0)
+        {
+            return $"{count}/{PeriodSeconds.Value / 3600}h";
+        }
+        else if (PeriodSeconds.Value % 60 == 0)
+        {
+            return $"{count}/{PeriodSeconds.Value / 60}m";
+        }
+        else
+        {
+            return $"{count}/{PeriodSeconds.Value}s";
+        }
+    }
 }

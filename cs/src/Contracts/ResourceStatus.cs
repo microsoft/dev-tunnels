@@ -44,6 +44,12 @@ public class ResourceStatus
     /// <param name="status"></param>
     public static implicit operator ulong(ResourceStatus status) => status.Current;
 
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return Current.ToString();
+    }
+
     /// <summary>
     /// JSON converter that allows for compatibility with a simple number value
     /// when the resource status does not include a limit.
