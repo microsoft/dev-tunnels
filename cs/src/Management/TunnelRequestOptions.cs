@@ -116,7 +116,7 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Limits the number of tunnels returned when searching or listing tunnels.
         /// </summary>
-        public uint Limit { get; set; }
+        public uint? Limit { get; set; }
 
         /// <summary>
         /// Converts tunnel request options to a query string for HTTP requests to the
@@ -152,9 +152,9 @@ namespace Microsoft.DevTunnels.Management
                 }
             }
 
-            if (Limit > 0)
+            if (Limit != null)
             {
-                queryOptions["limit"] = new[] { Limit.ToString() };
+                queryOptions["limit"] = new[] { Limit!.Value.ToString() };
             }
 
             if (AdditionalQueryParameters != null)
