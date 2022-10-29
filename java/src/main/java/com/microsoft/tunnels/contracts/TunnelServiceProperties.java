@@ -18,55 +18,6 @@ public class TunnelServiceProperties {
     }
 
     /**
-     * Gets production service properties.
-     */
-    public static TunnelServiceProperties production = TunnelServicePropertiesStatics.production;
-
-    /**
-     * Gets properties for the service in the staging environment (PPE).
-     */
-    public static TunnelServiceProperties staging = TunnelServicePropertiesStatics.staging;
-
-    /**
-     * Gets properties for the service in the development environment.
-     */
-    public static TunnelServiceProperties development = TunnelServicePropertiesStatics.development;
-
-    /**
-     * Gets the base URI of the service.
-     */
-    @Expose
-    public String serviceUri;
-
-    /**
-     * Gets the public AAD AppId for the service.
-     *
-     * Clients specify this AppId as the audience property when authenticating to the
-     * service.
-     */
-    @Expose
-    public String serviceAppId;
-
-    /**
-     * Gets the internal AAD AppId for the service.
-     *
-     * Other internal services specify this AppId as the audience property when
-     * authenticating to the tunnel service. Production services must be in the AME tenant
-     * to use this appid.
-     */
-    @Expose
-    public String serviceInternalAppId;
-
-    /**
-     * Gets the client ID for the service's GitHub app.
-     *
-     * Clients apps that authenticate tunnel users with GitHub specify this as the client
-     * ID when requesting a user token.
-     */
-    @Expose
-    public String gitHubAppClientId;
-
-    /**
      * Global DNS name of the production tunnel service.
      */
     static final String prodDnsName = "global.rel.tunnels.api.visualstudio.com";
@@ -136,6 +87,55 @@ public class TunnelServiceProperties {
      * service environments.
      */
     static final String nonProdGitHubAppClientId = "Iv1.b231c327f1eaa229";
+
+    /**
+     * Gets production service properties.
+     */
+    public static final TunnelServiceProperties production = TunnelServicePropertiesStatics.production;
+
+    /**
+     * Gets properties for the service in the staging environment (PPE).
+     */
+    public static final TunnelServiceProperties staging = TunnelServicePropertiesStatics.staging;
+
+    /**
+     * Gets properties for the service in the development environment.
+     */
+    public static final TunnelServiceProperties development = TunnelServicePropertiesStatics.development;
+
+    /**
+     * Gets the base URI of the service.
+     */
+    @Expose
+    public final String serviceUri;
+
+    /**
+     * Gets the public AAD AppId for the service.
+     *
+     * Clients specify this AppId as the audience property when authenticating to the
+     * service.
+     */
+    @Expose
+    public final String serviceAppId;
+
+    /**
+     * Gets the internal AAD AppId for the service.
+     *
+     * Other internal services specify this AppId as the audience property when
+     * authenticating to the tunnel service. Production services must be in the AME tenant
+     * to use this appid.
+     */
+    @Expose
+    public final String serviceInternalAppId;
+
+    /**
+     * Gets the client ID for the service's GitHub app.
+     *
+     * Clients apps that authenticate tunnel users with GitHub specify this as the client
+     * ID when requesting a user token.
+     */
+    @Expose
+    public final String gitHubAppClientId;
 
     /**
      * Gets properties for the service in the specified environment.

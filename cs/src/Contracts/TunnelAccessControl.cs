@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
@@ -61,6 +62,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// to the same subject. However, deny rules are always processed after allow rules,
         /// therefore an allow rule cannot override a deny rule for the same subject.
         /// </remarks>
+        [MaxLength(TunnelConstraints.AccessControlMaxEntries)]
         public TunnelAccessControlEntry[] Entries { get; set; }
 
         /// <inheritdoc/>

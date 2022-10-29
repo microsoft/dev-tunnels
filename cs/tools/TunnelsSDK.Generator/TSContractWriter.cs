@@ -1,4 +1,4 @@
-﻿// <copyright file="TSContractWriter.cs" company="Microsoft">
+// <copyright file="TSContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -59,6 +59,7 @@ internal class TSContractWriter : ContractWriter
     {
         var members = type.GetMembers();
         if (type.BaseType?.Name == nameof(Enum) || members.All((m) =>
+            m.DeclaredAccessibility != Accessibility.Public ||
             (m is IFieldSymbol field &&
              ((field.IsConst && field.Type.Name == nameof(String)) || field.Name == "All")) ||
             (m is IMethodSymbol method && method.MethodKind == MethodKind.StaticConstructor)))
@@ -172,7 +173,8 @@ internal class TSContractWriter : ContractWriter
 
         foreach (var member in type.GetMembers())
         {
-            if (!(member is IFieldSymbol field) || !field.HasConstantValue)
+            if (!(member is IFieldSymbol field) || !field.HasConstantValue ||
+                field.DeclaredAccessibility != Accessibility.Public)
             {
                 continue;
             }
@@ -201,28 +203,30 @@ internal class TSContractWriter : ContractWriter
 
         foreach (var member in type.GetMembers())
         {
-            if (!member.IsStatic || !(member is IPropertySymbol property) || !property.IsReadOnly)
+            var property = member as IPropertySymbol;
+            var field = member as IFieldSymbol;
+            if (!member.IsStatic || !(property?.IsReadOnly == true || field?.IsConst == true))
             {
                 continue;
             }
 
-            var propertyType = property.Type.ToDisplayString();
-            var isNullable = propertyType.EndsWith("?");
+            var memberType = (property?.Type ?? field!.Type).ToDisplayString();
+            var isNullable = memberType.EndsWith("?");
             if (isNullable)
             {
-                propertyType = propertyType.Substring(0, propertyType.Length - 1);
+                memberType = memberType.Substring(0, memberType.Length - 1);
             }
 
             // Make booleans always nullable since undefined is falsy anyway.
-            isNullable |= propertyType == "bool";
+            isNullable |= memberType == "bool";
 
-            var tsName = ToCamelCase(property.Name);
-            var tsType = GetTSTypeForCSType(propertyType, tsName, imports);
-            var value = GetPropertyInitializer(property);
+            var tsName = ToCamelCase(member.Name);
+            var tsType = GetTSTypeForCSType(memberType, tsName, imports);
+            var value = GetMemberInitializer(member);
             if (value != null)
             {
                 s.AppendLine();
-                s.Append(FormatDocComment(property.GetDocumentationCommentXml(), indent + "    "));
+                s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    "));
                 s.AppendLine($"{indent}    " +
                     $"export const {tsName}: {tsType}{(isNullable ? " | null" : "")} = {value};");
             }
@@ -318,9 +322,9 @@ internal class TSContractWriter : ContractWriter
         return s.ToString();
     }
 
-    private static string? GetPropertyInitializer(IPropertySymbol property)
+    private static string? GetMemberInitializer(ISymbol member)
     {
-        var location = property.Locations.Single();
+        var location = member.Locations.Single();
         var sourceSpan = location.SourceSpan;
         var sourceText = location.SourceTree!.ToString();
         var eolIndex = sourceText.IndexOf('\n', sourceSpan.End);
@@ -328,7 +332,7 @@ internal class TSContractWriter : ContractWriter
 
         if (equalsIndex < 0 || equalsIndex > eolIndex)
         {
-            // The property does not have an initializer.
+            // The member does not have an initializer.
             return null;
         }
 
@@ -352,7 +356,11 @@ internal class TSContractWriter : ContractWriter
 
         // Assume any PascalCase identifiers are referncing other variables in scope.
         tsExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
-            tsExpression, (m) => ToCamelCase(m.Value));
+            tsExpression, (m) =>
+            {
+                return (member.ContainingType.MemberNames.Contains(m.Value) ?
+                    member.ContainingType.Name + "." : string.Empty) + ToCamelCase(m.Value);
+            });
 
         return tsExpression;
     }

@@ -296,14 +296,33 @@ internal class RustContractWriter : ContractWriter
             .OfType<IFieldSymbol>()
             .Where((f) => f.HasConstantValue)
             .ToArray();
-        foreach (var field in fields)
+        foreach (var field in fields
+            .Where((f) => f.IsConst && f.DeclaredAccessibility == Accessibility.Public))
         {
-            if (field.IsConst && field.ConstantValue is string value)
+            string? memberExpression = null;
+            if (field.ConstantValue is string stringValue)
             {
+                memberExpression = $"&str = \"{stringValue}\"";
+            }
+            else if (field.ConstantValue is int)
+            {
+                memberExpression = $"&i32 = {field.ConstantValue}";
+            }
+
+            if (memberExpression != null)
+            {
+                // The type name prefix can be long and redundant. Skip it for certain classes
+                // that have sufficiently disticnt member names.
+                var prefix = type.Name switch
+                {
+                    "TunnelConstraints" or "TunnelHeaderNames" => string.Empty,
+                    _ => type.Name,
+                };
+
                 s.AppendLine();
                 s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
-                var rsName = ToSnakeCase($"{type.Name}{field.Name}").ToUpperInvariant();
-                s.AppendLine($"pub const {rsName}: &str = \"{value}\";");
+                var rsName = ToSnakeCase($"{prefix}{field.Name}").ToUpperInvariant();
+                s.AppendLine($"pub const {rsName}: {memberExpression};");
             }
         }
     }

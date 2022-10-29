@@ -75,6 +75,7 @@ internal class GoContractWriter : ContractWriter
     {
         var members = type.GetMembers();
         if (type.BaseType?.Name == nameof(Enum) || members.All((m) =>
+            m.DeclaredAccessibility != Accessibility.Public ||
             (m is IFieldSymbol field &&
              ((field.IsConst && field.Type.Name == nameof(String)) || field.Name == "All")) ||
             (m is IMethodSymbol method && method.MethodKind == MethodKind.StaticConstructor)))
@@ -200,7 +201,7 @@ internal class GoContractWriter : ContractWriter
 
         var fields = type.GetMembers()
             .OfType<IFieldSymbol>()
-            .Where((f) => f.HasConstantValue)
+            .Where((f) => f.HasConstantValue && f.DeclaredAccessibility == Accessibility.Public)
             .ToArray();
         var maxFieldNameLength = fields.Length == 0 ? 0 : fields.Select((p) => p.Name.Length).Max();
         foreach (var field in fields)
@@ -224,15 +225,17 @@ internal class GoContractWriter : ContractWriter
         var constLines = new List<string>();
         var varLines = new List<string>();
 
-        foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
+        foreach (var member in type.GetMembers())
         {
-            if (!property.IsStatic || !property.IsReadOnly)
+            var property = member as IPropertySymbol;
+            var field = member as IFieldSymbol;
+            if (!member.IsStatic || !(property?.IsReadOnly == true || field?.IsConst == true))
             {
                 continue;
             }
 
-            var propertyName = FixPropertyNameCasing(property.Name);
-            var value = GetPropertyInitializer(type, property);
+            var memberName = FixPropertyNameCasing(member.Name);
+            var value = GetMemberInitializer(member);
 
             if (value != null)
             {
@@ -246,9 +249,9 @@ internal class GoContractWriter : ContractWriter
 
                 var lines = (value.All((c) => char.IsDigit(c)) ||
                     (value.StartsWith("\"") && value.EndsWith("\""))) ? constLines : varLines;
-                lines.Add(FormatDocComment(property.GetDocumentationCommentXml(), "\t")
+                lines.Add(FormatDocComment(member.GetDocumentationCommentXml(), "\t")
                     .Replace("// Gets a ", "// A ").TrimEnd());
-                lines.Add($"\t{type.Name}{propertyName} = {value}");
+                lines.Add($"\t{type.Name}{memberName} = {value}");
                 lines.Add(string.Empty);
             }
         }
@@ -327,9 +330,9 @@ internal class GoContractWriter : ContractWriter
         return s.ToString();
     }
 
-    private static string? GetPropertyInitializer(ITypeSymbol type, IPropertySymbol property)
+    private static string? GetMemberInitializer(ISymbol member)
     {
-        var location = property.Locations.Single();
+        var location = member.Locations.Single();
         var sourceSpan = location.SourceSpan;
         var sourceText = location.SourceTree!.ToString();
         var eolIndex = sourceText.IndexOf('\n', sourceSpan.End);
@@ -337,7 +340,7 @@ internal class GoContractWriter : ContractWriter
 
         if (equalsIndex < 0 || equalsIndex > eolIndex)
         {
-            // The property does not have an initializer.
+            // The member does not have an initializer.
             return null;
         }
 
@@ -361,7 +364,7 @@ internal class GoContractWriter : ContractWriter
         // Assume any PascalCase identifiers are referncing other variables in scope.
         // Contvert integer constants to strings, allowing for integer offsets.
         goExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
-            goExpression, (m) => $"{type.Name}{m.Value}");
+            goExpression, (m) => $"{member.ContainingType.Name}{m.Value}");
         goExpression = new Regex("\\(([A-Z][a-z]+){4,7} - \\d\\)").Replace(
             goExpression, (m) => $"strconv.Itoa{m.Value}");
         goExpression = new Regex("\\b([A-Z][a-z]+){3,6}Length\\b(?! - \\d)").Replace(

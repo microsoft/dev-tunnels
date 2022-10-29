@@ -3,6 +3,7 @@
 // Licensed under the MIT license.
 // </copyright>
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Microsoft.DevTunnels.Contracts
@@ -12,6 +13,8 @@ namespace Microsoft.DevTunnels.Contracts
     /// </summary>
     public class TunnelOptions
     {
+        private const int HeaderMaxLength = 500;
+
         // TODO: Consider adding an option to enable multiple hosts for a tunnel.
         // The system supports it, but it would only be used in advanced scenarios,
         // and otherwise could cause confusion in case of mistakes.
@@ -33,6 +36,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// The option is ignored if IsHostHeaderUnchanged is true.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        [StringLength(HeaderMaxLength)]
         public string? HostHeader { get; set; }
 
         /// <summary>
@@ -52,6 +56,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// The option is ignored if IsOriginHeaderUnchanged is true.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        [StringLength(HeaderMaxLength)]
         public string? OriginHeader { get; set; }
 
         /// <summary>

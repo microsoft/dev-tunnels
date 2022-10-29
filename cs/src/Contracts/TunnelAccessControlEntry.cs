@@ -4,9 +4,11 @@
 // </copyright>
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.DevTunnels.Contracts.Validation;
 
 namespace Microsoft.DevTunnels.Contracts
 {
@@ -23,11 +25,17 @@ namespace Microsoft.DevTunnels.Contracts
     [DebuggerDisplay("{ToString(),nq}")]
     public class TunnelAccessControlEntry
     {
+        private const int OrganizationMaxLength = 200;
+        private const int SubjectMaxLength = 200;
+        private const int MaxScopes = 10;
+
         /// <summary>
         /// Constants for well-known identity providers.
         /// </summary>
         public static class Providers
         {
+            internal const int MaxLength = 12;
+
             /// <summary>Microsoft (AAD) identity provider.</summary>
             public const string Microsoft = "microsoft";
 
@@ -79,6 +87,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// For anonymous ACEs, this value is null.
         /// </remarks>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [StringLength(Providers.MaxLength)]
         public string? Provider { get; set; }
 
         /// <summary>
@@ -127,12 +136,15 @@ namespace Microsoft.DevTunnels.Contracts
         /// with any other types of ACEs.
         /// </remarks>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [StringLength(OrganizationMaxLength)]
         public string? Organization { get; set; }
 
         /// <summary>
         /// Gets or sets the subjects for the entry, such as user or group IDs. The format of the
         /// values depends on the <see cref="Type" /> and <see cref="Provider" /> of this entry.
         /// </summary>
+        [MaxLength(TunnelConstraints.AccessControlMaxSubjects)]
+        [ArrayStringLength(SubjectMaxLength)]
         public string[] Subjects { get; set; }
 
         /// <summary>
@@ -141,6 +153,8 @@ namespace Microsoft.DevTunnels.Contracts
         /// <remarks>
         /// These must be one or more values from <see cref="TunnelAccessScopes" />.
         /// </remarks>
+        [MaxLength(MaxScopes)]
+        [ArrayStringLength(TunnelAccessScopes.MaxLength)]
         public string[] Scopes { get; set; }
 
         /// <summary>

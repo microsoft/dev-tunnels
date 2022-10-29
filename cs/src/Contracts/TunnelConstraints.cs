@@ -13,92 +13,185 @@ namespace Microsoft.DevTunnels.Contracts;
 /// </summary>
 public static class TunnelConstraints
 {
+    // Note regular expression patterns must be string constants (for use in attributes), so they
+    // cannot reference the corresponding min/max length integer constants. Be sure to also update
+    // the regex patterns updating min/max length integer constants.
+
     /// <summary>
     /// Min length of tunnel cluster ID.
     /// </summary>
-    public static int ClusterIdMinLength { get; } = 3;
+    public const int ClusterIdMinLength = 3;
 
     /// <summary>
     /// Max length of tunnel cluster ID.
     /// </summary>
-    public static int ClusterIdMaxLength { get; } = 12;
-
-    /// <summary>
-    /// Characters that are valid in tunnel id. Vowels and 'y' are excluded
-    /// to avoid accidentally generating any random words.
-    /// </summary>
-    public static string TunnelIdChars { get; } = "0123456789bcdfghjklmnpqrstvwxz";
+    public const int ClusterIdMaxLength = 12;
 
     /// <summary>
     /// Length of tunnel id.
     /// </summary>
-    public static int TunnelIdLength { get; } = 8;
+    public const int TunnelIdLength = 8;
 
     /// <summary>
     /// Min length of tunnel name.
     /// </summary>
-    public static int TunnelNameMinLength { get; } = 3;
+    public const int TunnelNameMinLength = 3;
 
     /// <summary>
     /// Max length of tunnel name.
     /// </summary>
-    public static int TunnelNameMaxLength { get; } = 60;
+    public const int TunnelNameMaxLength = 60;
+
+    /// <summary>
+    /// Max length of tunnel or port description.
+    /// </summary>
+    public const int DescriptionMaxLength = 400;
+
+    /// <summary>
+    /// Min length of a single tunnel or port tag.
+    /// </summary>
+    public const int TagMinLength = 1;
+
+    /// <summary>
+    /// Max length of a single tunnel or port tag.
+    /// </summary>
+    public const int TagMaxLength = 50;
+
+    /// <summary>
+    /// Maximum number of tags that can be applied to a tunnel or port.
+    /// </summary>
+    public const int MaxTags = 100;
+
+    /// <summary>
+    /// Min length of a tunnel domain.
+    /// </summary>
+    public const int TunnelDomainMinLength = 4;
+
+    /// <summary>
+    /// Max length of a tunnel domain.
+    /// </summary>
+    public const int TunnelDomainMaxLength = 180;
+
+    /// <summary>
+    /// Maximum number of items allowed in the tunnel ports array. The actual limit
+    /// on number of ports that can be created may be much lower, and may depend on various resource
+    /// limitations or policies.
+    /// </summary>
+    /// <seealso cref="Tunnel.Ports"/>
+    public const int TunnelMaxPorts = 1000;
 
     /// <summary>
     /// Maximum number of access control entries (ACEs) in a tunnel or tunnel port
     /// access control list (ACL).
     /// </summary>
     /// <seealso cref="TunnelAccessControl.Entries" />
-    public static int AccessControlMaxEntries { get; } = 40;
+    public const int AccessControlMaxEntries = 40;
 
     /// <summary>
     /// Maximum number of subjects (such as user IDs) in a tunnel or tunnel port
     /// access control entry (ACE).
     /// </summary>
     /// <seealso cref="TunnelAccessControlEntry.Subjects" />
-    public static int AccessControlMaxSubjects { get; } = 100;
+    public const int AccessControlMaxSubjects = 100;
 
     /// <summary>
-    /// Gets a regular expression that can match or validate tunnel cluster ID strings.
+    /// Regular expression that can match or validate tunnel cluster ID strings.
     /// </summary>
     /// <remarks>
     /// Cluster IDs are alphanumeric; hyphens are not permitted.
     /// </remarks>
-    public static Regex ClusterIdRegex { get; } = new Regex(
-        "[a-z][a-z0-9]{" + (ClusterIdMinLength - 1) + "," + (ClusterIdMaxLength - 1) + "}");
+    public const string ClusterIdPattern = "[a-z][a-z0-9]{2,11}";
 
     /// <summary>
-    /// Gets a regular expression that can match or validate tunnel ID strings.
+    /// Regular expression that can match or validate tunnel cluster ID strings.
+    /// </summary>
+    /// <remarks>
+    /// Cluster IDs are alphanumeric; hyphens are not permitted.
+    /// </remarks>
+    public static Regex ClusterIdRegex { get; } = new Regex(ClusterIdPattern);
+
+    /// <summary>
+    /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+    /// excluding vowels and 'y' (to avoid accidentally generating any random words).
+    /// </summary>
+    public const string TunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel ID strings.
     /// </summary>
     /// <remarks>
     /// Tunnel IDs are fixed-length and have a limited character set of
-    /// numbers and some lowercase letters (minus vowels).
+    /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
-    public static Regex TunnelIdRegex { get; } = new Regex(
-        "[" + TunnelIdChars.Replace("0123456789", "0-9") + "]{" + TunnelIdLength + "}");
+    public const string TunnelIdPattern = "[" + TunnelIdChars + "]{8}";
 
     /// <summary>
-    /// Gets a regular expression that can match or validate tunnel names.
+    /// Regular expression that can match or validate tunnel ID strings.
     /// </summary>
     /// <remarks>
-    /// Tunnel names are alphanumeric and may contain hyphens.
+    /// Tunnel IDs are fixed-length and have a limited character set of
+    /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
-    public static Regex TunnelNameRegex { get; } = new Regex(
-        "[a-z0-9][a-z0-9-]{" +
-        (TunnelNameMinLength - 2) + "," + (TunnelNameMaxLength - 2) +
-        "}[a-z0-9]");
+    public static Regex TunnelIdRegex { get; } = new Regex(TunnelIdPattern);
 
     /// <summary>
-    /// Gets a regular expression that can match or validate tunnel names.
+    /// Regular expression that can match or validate tunnel names.
     /// </summary>
-    public static Regex TunnelTagRegex { get; } = new Regex("^[\\w-=]+$");
+    /// <remarks>
+    /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
+    /// allows an empty string because tunnels may be unnamed.
+    /// </remarks>
+    public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel names.
+    /// </summary>
+    /// <remarks>
+    /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
+    /// allows an empty string because tunnels may be unnamed.
+    /// </remarks>
+    public static Regex TunnelNameRegex { get; } = new Regex(TunnelNamePattern);
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel or port tags.
+    /// </summary>
+    public const string TagPattern = "[\\w-=]{1,50}";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel or port tags.
+    /// </summary>
+    public static Regex TagRegex { get; } = new Regex(TagPattern);
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel domains.
+    /// </summary>
+    /// <remarks>
+    /// The tunnel service may perform additional contextual validation at the time the domain
+    /// is registered.
+    /// </remarks>
+    public const string TunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel domains.
+    /// </summary>
+    /// <remarks>
+    /// The tunnel service may perform additional contextual validation at the time the domain
+    /// is registered.
+    /// </remarks>
+    public static Regex TunnelDomainRegex { get; } = new Regex(TunnelDomainPattern);
 
     /// <summary>
     /// Validates <paramref name="clusterId"/> and returns true if it is a valid cluster ID, otherwise false.
     /// </summary>
     public static bool IsValidClusterId(string clusterId)
     {
-        return Equals(ClusterIdRegex.Match(clusterId).Value, clusterId);
+        if (string.IsNullOrEmpty(clusterId))
+        {
+            return false;
+        }
+
+        var m = ClusterIdRegex.Match(clusterId);
+        return m.Index == 0 && m.Length == clusterId.Length;
     }
 
     /// <summary>
@@ -106,8 +199,13 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTunnelId(string tunnelId)
     {
-        return tunnelId?.Length == TunnelIdLength &&
-            TunnelIdRegex.IsMatch(tunnelId);
+        if (tunnelId?.Length != TunnelIdLength)
+        {
+            return false;
+        }
+
+        var m = TunnelIdRegex.Match(tunnelId);
+        return m.Index == 0 && m.Length == tunnelId.Length;
     }
 
     /// <summary>
@@ -115,25 +213,36 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTunnelName(string tunnelName)
     {
-        return Equals(TunnelNameRegex.Match(tunnelName).Value, tunnelName) &&
-            !IsValidTunnelId(tunnelName);
+        if (string.IsNullOrEmpty(tunnelName))
+        {
+            return false;
+        }
+
+        var m = TunnelNameRegex.Match(tunnelName);
+        return m.Index == 0 && m.Length == tunnelName.Length && !IsValidTunnelId(tunnelName);
     }
 
     /// <summary>
     /// Validates <paramref name="tag"/> and returns true if it is a valid tunnel tag, otherwise, false.
     /// </summary>
-    public static bool IsValidTunnelTag(string tag)
+    public static bool IsValidTag(string tag)
     {
-        return TunnelTagRegex.IsMatch(tag);
+        return TagRegex.IsMatch(tag);
     }
-    
+
     /// <summary>
     /// Validates <paramref name="tunnelIdOrName"/> and returns true if it is a valid tunnel id or name.
     /// </summary>
     public static bool IsValidTunnelIdOrName(string tunnelIdOrName)
     {
-        return tunnelIdOrName != null &&
-            TunnelNameRegex.IsMatch(tunnelIdOrName); // Tunnel ID Regex is a subset of Tunnel name Regex
+        if (string.IsNullOrEmpty(tunnelIdOrName))
+        {
+            return false;
+        }
+
+        // Tunnel ID Regex is a subset of Tunnel name Regex
+        var m = TunnelNameRegex.Match(tunnelIdOrName);
+        return m.Index == 0 && m.Length == tunnelIdOrName.Length;
     }
 
     /// <summary>

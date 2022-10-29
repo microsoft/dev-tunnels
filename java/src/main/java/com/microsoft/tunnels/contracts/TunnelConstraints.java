@@ -13,77 +13,154 @@ public class TunnelConstraints {
     /**
      * Min length of tunnel cluster ID.
      */
-    public static int clusterIdMinLength = 3;
+    public static final int clusterIdMinLength = 3;
 
     /**
      * Max length of tunnel cluster ID.
      */
-    public static int clusterIdMaxLength = 12;
-
-    /**
-     * Characters that are valid in tunnel id. Vowels and 'y' are excluded to avoid
-     * accidentally generating any random words.
-     */
-    public static String tunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
+    public static final int clusterIdMaxLength = 12;
 
     /**
      * Length of tunnel id.
      */
-    public static int tunnelIdLength = 8;
+    public static final int tunnelIdLength = 8;
 
     /**
      * Min length of tunnel name.
      */
-    public static int tunnelNameMinLength = 3;
+    public static final int tunnelNameMinLength = 3;
 
     /**
      * Max length of tunnel name.
      */
-    public static int tunnelNameMaxLength = 60;
+    public static final int tunnelNameMaxLength = 60;
+
+    /**
+     * Max length of tunnel or port description.
+     */
+    public static final int descriptionMaxLength = 400;
+
+    /**
+     * Min length of a single tunnel or port tag.
+     */
+    public static final int tagMinLength = 1;
+
+    /**
+     * Max length of a single tunnel or port tag.
+     */
+    public static final int tagMaxLength = 50;
+
+    /**
+     * Maximum number of tags that can be applied to a tunnel or port.
+     */
+    public static final int maxTags = 100;
+
+    /**
+     * Min length of a tunnel domain.
+     */
+    public static final int tunnelDomainMinLength = 4;
+
+    /**
+     * Max length of a tunnel domain.
+     */
+    public static final int tunnelDomainMaxLength = 180;
+
+    /**
+     * Maximum number of items allowed in the tunnel ports array. The actual limit on
+     * number of ports that can be created may be much lower, and may depend on various
+     * resource limitations or policies.
+     */
+    public static final int tunnelMaxPorts = 1000;
 
     /**
      * Maximum number of access control entries (ACEs) in a tunnel or tunnel port access
      * control list (ACL).
      */
-    public static int accessControlMaxEntries = 40;
+    public static final int accessControlMaxEntries = 40;
 
     /**
      * Maximum number of subjects (such as user IDs) in a tunnel or tunnel port access
      * control entry (ACE).
      */
-    public static int accessControlMaxSubjects = 100;
+    public static final int accessControlMaxSubjects = 100;
 
     /**
-     * Gets a regular expression that can match or validate tunnel cluster ID strings.
+     * Regular expression that can match or validate tunnel cluster ID strings.
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
-    public static Pattern clusterIdRegex = java.util.regex.Pattern.compile(
-        "[a-z][a-z0-9]{" + (clusterIdMinLength - 1) + "," + (clusterIdMaxLength - 1) + "}");
+    public static final String clusterIdPattern = "[a-z][a-z0-9]{2,11}";
 
     /**
-     * Gets a regular expression that can match or validate tunnel ID strings.
+     * Regular expression that can match or validate tunnel cluster ID strings.
      *
-     * Tunnel IDs are fixed-length and have a limited character set of numbers and some
-     * lowercase letters (minus vowels).
+     * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
-    public static Pattern tunnelIdRegex = java.util.regex.Pattern.compile(
-        "[" + tunnelIdChars.replace("0123456789", "0-9") + "]{" + tunnelIdLength + "}");
+    public static final Pattern clusterIdRegex = java.util.regex.Pattern.compile(TunnelConstraints.clusterIdPattern);
 
     /**
-     * Gets a regular expression that can match or validate tunnel names.
+     * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+     * excluding vowels and 'y' (to avoid accidentally generating any random words).
+     */
+    public static final String tunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
+
+    /**
+     * Regular expression that can match or validate tunnel ID strings.
      *
-     * Tunnel names are alphanumeric and may contain hyphens.
+     * Tunnel IDs are fixed-length and have a limited character set of numbers and
+     * lowercase letters (minus vowels and y).
      */
-    public static Pattern tunnelNameRegex = java.util.regex.Pattern.compile(
-        "[a-z0-9][a-z0-9-]{" +
-        (tunnelNameMinLength - 2) + "," + (tunnelNameMaxLength - 2) +
-        "}[a-z0-9]");
+    public static final String tunnelIdPattern = "[" + TunnelIdChars + "]{8}";
 
     /**
-     * Gets a regular expression that can match or validate tunnel names.
+     * Regular expression that can match or validate tunnel ID strings.
+     *
+     * Tunnel IDs are fixed-length and have a limited character set of numbers and
+     * lowercase letters (minus vowels and y).
      */
-    public static Pattern tunnelTagRegex = java.util.regex.Pattern.compile("^[\\w-=]+$");
+    public static final Pattern tunnelIdRegex = java.util.regex.Pattern.compile(TunnelConstraints.tunnelIdPattern);
+
+    /**
+     * Regular expression that can match or validate tunnel names.
+     *
+     * Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
+     * empty string because tunnels may be unnamed.
+     */
+    public static final String tunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|";
+
+    /**
+     * Regular expression that can match or validate tunnel names.
+     *
+     * Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
+     * empty string because tunnels may be unnamed.
+     */
+    public static final Pattern tunnelNameRegex = java.util.regex.Pattern.compile(TunnelConstraints.tunnelNamePattern);
+
+    /**
+     * Regular expression that can match or validate tunnel or port tags.
+     */
+    public static final String tagPattern = "[\\w-=]{1,50}";
+
+    /**
+     * Regular expression that can match or validate tunnel or port tags.
+     */
+    public static final Pattern tagRegex = java.util.regex.Pattern.compile(TunnelConstraints.tagPattern);
+
+    /**
+     * Regular expression that can match or validate tunnel domains.
+     *
+     * The tunnel service may perform additional contextual validation at the time the
+     * domain is registered.
+     */
+    public static final String tunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]";
+
+    /**
+     * Regular expression that can match or validate tunnel domains.
+     *
+     * The tunnel service may perform additional contextual validation at the time the
+     * domain is registered.
+     */
+    public static final Pattern tunnelDomainRegex = java.util.regex.Pattern.compile(TunnelConstraints.tunnelDomainPattern);
 
     /**
      * Validates <paramref name="clusterId"/> and returns true if it is a valid cluster
@@ -113,8 +190,8 @@ public class TunnelConstraints {
      * Validates <paramref name="tag"/> and returns true if it is a valid tunnel tag,
      * otherwise, false.
      */
-    public static boolean isValidTunnelTag(String tag) {
-        return TunnelConstraintsStatics.isValidTunnelTag(tag);
+    public static boolean isValidTag(String tag) {
+        return TunnelConstraintsStatics.isValidTag(tag);
     }
 
     /**

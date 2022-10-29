@@ -122,6 +122,10 @@ internal class JavaContractWriter : ContractWriter
             imports.Add(GsonExposeType);
         }
 
+        var enumClass = type.IsStatic && type.GetMembers()
+            .Where((m) => m.DeclaredAccessibility == Accessibility.Public)
+            .All((m) => m is IFieldSymbol);
+
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
         var extends = "";
@@ -137,53 +141,58 @@ internal class JavaContractWriter : ContractWriter
 
         CopyConstructor(s, indent + "    ", type, imports);
 
-        foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
+        foreach (var member in type.GetMembers()
+            .Where((m) => m is IPropertySymbol || m is IFieldSymbol field))
         {
-            s.AppendLine();
-            s.Append(FormatDocComment(property.GetDocumentationCommentXml(), indent + "    "));
-
-            var propertyType = property.Type.ToDisplayString();
-            var isNullable = propertyType.EndsWith("?");
-            if (isNullable)
+            if (member.DeclaredAccessibility != Accessibility.Public &&
+                (enumClass || member.DeclaredAccessibility != Accessibility.Internal))
             {
-                propertyType = propertyType.Substring(0, propertyType.Length - 1);
+                continue;
             }
 
-            var accessMod = property.DeclaredAccessibility == Accessibility.Public ? "public " : "";
-            var staticKeyword = property.IsStatic ? "static " : "";
-            var javaName = ToCamelCase(property.Name);
-            var javaType = GetJavaTypeForCSType(propertyType, javaName, imports);
-            
-            // Static properties in a non-static class are linked to the non-generated *Statics.java class.
-            var value = property.IsStatic && !staticClass ? 
-                $"{type.Name}Statics.{javaName}" : GetPropertyInitializer(property);
+            var property = member as IPropertySymbol;
+            var field = member as IFieldSymbol;
 
-            if (!property.IsStatic) {
+            if (field != null && !field.IsConst)
+            {
+                continue;
+            }
+
+            s.AppendLine();
+            s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    "));
+
+            var memberType = (property?.Type ?? field!.Type).ToDisplayString();
+            var isNullable = memberType.EndsWith("?");
+            if (isNullable)
+            {
+                memberType = memberType.Substring(0, memberType.Length - 1);
+            }
+
+            var accessMod = member.DeclaredAccessibility == Accessibility.Public ? "public " : "";
+            var staticKeyword = member.IsStatic ? "static " : "";
+            var finalKeyword = field?.IsConst == true || property?.IsReadOnly == true ? "final " : "";
+            var javaName = ToCamelCase(member.Name);
+            var javaType = GetJavaTypeForCSType(memberType, javaName, imports);
+
+            // Static properties in a non-static class are linked to the non-generated *Statics.java class.
+            var value = field?.IsConst != true && member.IsStatic && !staticClass ?
+                $"{type.Name}Statics.{javaName}" : GetMemberInitializer(member);
+
+            if (!member.IsStatic && field?.IsConst != true) {
                 s.AppendLine($"{indent}    {GsonExposeTag}");
             }
 
             if (value != null && !value.Equals("null") && !value.Equals("null!"))
             {
-                s.AppendLine($"{indent}    {accessMod}{staticKeyword}{javaType} {javaName} = {value};");
+                s.AppendLine($"{indent}    {accessMod}{staticKeyword}{finalKeyword}{javaType} {javaName} = {value};");
             }
             else
             {
                 // Uninitialized java fields are null by default.
-                s.AppendLine($"{indent}    {accessMod}{staticKeyword}{javaType} {javaName};");
+                s.AppendLine($"{indent}    {accessMod}{staticKeyword}{finalKeyword}{javaType} {javaName};");
             }
         }
 
-        foreach (var field in type.GetMembers().OfType<IFieldSymbol>()
-            .Where((f) => f.IsConst))
-        {
-            s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
-            var accessMod = field.DeclaredAccessibility == Accessibility.Public ? "public " : "";
-            var javaName = ToCamelCase(field.Name);
-            var javaType = GetJavaTypeForCSType(field.Type.ToDisplayString(), javaName, imports);
-            s.AppendLine($"{indent}    {accessMod}static final {javaType} {javaName} = \"{field.ConstantValue}\";");
-        }
-        
         foreach (var method in type.GetMembers().OfType<IMethodSymbol>()) {
             if (method.IsStatic && method.MethodKind == MethodKind.Ordinary && method.DeclaredAccessibility == Accessibility.Public) {
                 s.AppendLine();
@@ -246,8 +255,8 @@ internal class JavaContractWriter : ContractWriter
         {
             if (method.Name == ".ctor")
             {
-                // We assume that 
-                // (1) the constructor only performs property assignments and 
+                // We assume that
+                // (1) the constructor only performs property assignments and
                 // (2) the property and parameter names match.
                 // Then we simply do those assignments.
                 var parameters = new Dictionary<String, String>() { };
@@ -320,9 +329,9 @@ internal class JavaContractWriter : ContractWriter
         return s.ToString();
     }
 
-    private static string? GetPropertyInitializer(IPropertySymbol property)
+    private static string? GetMemberInitializer(ISymbol member)
     {
-        var location = property.Locations.Single();
+        var location = member.Locations.Single();
         var sourceSpan = location.SourceSpan;
         var sourceText = location.SourceTree!.ToString();
         var eolIndex = sourceText.IndexOf('\n', sourceSpan.End);
@@ -330,7 +339,7 @@ internal class JavaContractWriter : ContractWriter
 
         if (equalsIndex < 0 || equalsIndex > eolIndex)
         {
-            // The property does not have an initializer.
+            // The member does not have an initializer.
             return null;
         }
 
@@ -348,13 +357,19 @@ internal class JavaContractWriter : ContractWriter
         // weak assumptions, and will not work for many kinds of expressions. But it might
         // be good enough.
         var javaExpression = csExpression
-            //.Replace('"', '\'')
             .Replace("new Regex", $"{RegexPatternType}.compile")
             .Replace("Replace", "replace");
 
-        // Assume any PascalCase identifiers are referncing other variables in scope.
-        javaExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
-            javaExpression, (m) => ToCamelCase(m.Value));
+        if (!(member is IFieldSymbol field && field.IsConst))
+        {
+            // Assume any PascalCase identifiers are referncing other variables in scope.
+            javaExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
+                javaExpression, (m) =>
+                {
+                    return (member.ContainingType.MemberNames.Contains(m.Value) ?
+                        member.ContainingType.Name + "." : string.Empty) + ToCamelCase(m.Value);
+                });
+        }
 
         return javaExpression;
     }

@@ -3,3 +3,79 @@
 // Generated from ../../../cs/src/Contracts/TunnelConstraints.cs
 
 // Tunnel constraints.
+
+// Min length of tunnel cluster ID.
+pub const CLUSTER_ID_MIN_LENGTH: &i32 = 3;
+
+// Max length of tunnel cluster ID.
+pub const CLUSTER_ID_MAX_LENGTH: &i32 = 12;
+
+// Length of tunnel id.
+pub const TUNNEL_ID_LENGTH: &i32 = 8;
+
+// Min length of tunnel name.
+pub const TUNNEL_NAME_MIN_LENGTH: &i32 = 3;
+
+// Max length of tunnel name.
+pub const TUNNEL_NAME_MAX_LENGTH: &i32 = 60;
+
+// Max length of tunnel or port description.
+pub const DESCRIPTION_MAX_LENGTH: &i32 = 400;
+
+// Min length of a single tunnel or port tag.
+pub const TAG_MIN_LENGTH: &i32 = 1;
+
+// Max length of a single tunnel or port tag.
+pub const TAG_MAX_LENGTH: &i32 = 50;
+
+// Maximum number of tags that can be applied to a tunnel or port.
+pub const MAX_TAGS: &i32 = 100;
+
+// Min length of a tunnel domain.
+pub const TUNNEL_DOMAIN_MIN_LENGTH: &i32 = 4;
+
+// Max length of a tunnel domain.
+pub const TUNNEL_DOMAIN_MAX_LENGTH: &i32 = 180;
+
+// Maximum number of items allowed in the tunnel ports array. The actual limit on number
+// of ports that can be created may be much lower, and may depend on various resource
+// limitations or policies.
+pub const TUNNEL_MAX_PORTS: &i32 = 1000;
+
+// Maximum number of access control entries (ACEs) in a tunnel or tunnel port access
+// control list (ACL).
+pub const ACCESS_CONTROL_MAX_ENTRIES: &i32 = 40;
+
+// Maximum number of subjects (such as user IDs) in a tunnel or tunnel port access control
+// entry (ACE).
+pub const ACCESS_CONTROL_MAX_SUBJECTS: &i32 = 100;
+
+// Regular expression that can match or validate tunnel cluster ID strings.
+//
+// Cluster IDs are alphanumeric; hyphens are not permitted.
+pub const CLUSTER_ID_PATTERN: &str = "[a-z][a-z0-9]{2,11}";
+
+// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+// excluding vowels and 'y' (to avoid accidentally generating any random words).
+pub const TUNNEL_ID_CHARS: &str = "0123456789bcdfghjklmnpqrstvwxz";
+
+// Regular expression that can match or validate tunnel ID strings.
+//
+// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
+// letters (minus vowels and y).
+pub const TUNNEL_ID_PATTERN: &str = "[0123456789bcdfghjklmnpqrstvwxz]{8}";
+
+// Regular expression that can match or validate tunnel names.
+//
+// Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an empty
+// string because tunnels may be unnamed.
+pub const TUNNEL_NAME_PATTERN: &str = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|";
+
+// Regular expression that can match or validate tunnel or port tags.
+pub const TAG_PATTERN: &str = "[\w-=]{1,50}";
+
+// Regular expression that can match or validate tunnel domains.
+//
+// The tunnel service may perform additional contextual validation at the time the domain
+// is registered.
+pub const TUNNEL_DOMAIN_PATTERN: &str = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]";
