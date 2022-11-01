@@ -46,8 +46,8 @@ public class TunnelContractsTests {
     assertTrue(TunnelConstraints.isValidTunnelIdOrName("bcd123fg"));
     assertFalse(TunnelConstraints.isValidTunnelIdOrName("my$unnel"));
 
-    assertTrue(TunnelConstraints.isValidTunnelTag("my-tunnel-tag"));
-    assertFalse(TunnelConstraints.isValidTunnelTag("my-tunnel&tag")); // unallowed specialcharacter
+    assertTrue(TunnelConstraints.isValidTag("my-tunnel-tag"));
+    assertFalse(TunnelConstraints.isValidTag("my-tunnel&tag")); // unallowed specialcharacter
 
     assertNotNull(TunnelConstraints.validateTunnelId("bcdf123g", null));
     assertNotNull(TunnelConstraints.validateTunnelIdOrName("mytunnel", null));

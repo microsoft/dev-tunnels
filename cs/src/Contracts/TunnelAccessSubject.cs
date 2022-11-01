@@ -8,6 +8,8 @@ using System.Text.Json.Serialization;
 
 namespace Microsoft.DevTunnels.Contracts;
 
+using static TunnelConstraints;
+
 /// <summary>
 /// Properties about a subject of a tunnel access control entry (ACE), used when resolving
 /// subject names to IDs when creating new ACEs, or formatting subject IDs to names when
@@ -15,8 +17,6 @@ namespace Microsoft.DevTunnels.Contracts;
 /// </summary>
 public class TunnelAccessSubject
 {
-    private const int SubjectIdMaxLength = 100;
-    private const string SubjectIdPattern = "[0-9a-zA-Z-._]{0,100}";
     private const int SubjectNameMaxLength = 200;
 
     // Note <angle-brackets> are only allowed when they wrap an email address as part of a
@@ -35,8 +35,8 @@ public class TunnelAccessSubject
     /// <remarks>The ID is typically a guid or integer that is unique within the scope of
     /// the identity provider or organization, and never changes for that subject.</remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [StringLength(SubjectIdMaxLength)]
-    [RegularExpression(SubjectIdPattern)]
+    [StringLength(AccessControlSubjectMaxLength)]
+    [RegularExpression(AccessControlSubjectPattern)]
     public string? Id { get; set; }
 
     /// <summary>
@@ -44,8 +44,8 @@ public class TunnelAccessSubject
     /// not implied by the authentication context.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [StringLength(SubjectIdMaxLength)]
-    [RegularExpression(SubjectIdPattern)]
+    [StringLength(AccessControlSubjectMaxLength)]
+    [RegularExpression(AccessControlSubjectPattern)]
     public string? OrganizationId { get; set; }
 
     /// <summary>

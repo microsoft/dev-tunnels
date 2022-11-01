@@ -82,6 +82,16 @@ namespace TunnelConstraints {
     export const accessControlMaxSubjects: number = 100;
 
     /**
+     * Max length of an access control subject or organization ID.
+     */
+    export const accessControlSubjectMaxLength: number = 200;
+
+    /**
+     * Maximum number of scopes in an access control entry.
+     */
+    export const accessControlMaxScopes: number = 10;
+
+    /**
      * Regular expression that can match or validate tunnel cluster ID strings.
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
@@ -158,4 +168,16 @@ namespace TunnelConstraints {
      * domain is registered.
      */
     export const tunnelDomainRegex: RegExp = new RegExp(TunnelConstraints.tunnelDomainPattern);
+
+    /**
+     * Regular expression that can match or validate an access control subject or
+     * organization ID.
+     */
+    export const accessControlSubjectPattern: string = '[0-9a-zA-Z-._]{0,200}';
+
+    /**
+     * Regular expression that can match or validate an access control subject or
+     * organization ID.
+     */
+    export const accessControlSubjectRegex: RegExp = new RegExp(TunnelConstraints.accessControlSubjectPattern);
 }

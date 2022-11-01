@@ -55,6 +55,12 @@ const (
 	// control entry (ACE).
 	TunnelConstraintsAccessControlMaxSubjects = 100
 
+	// Max length of an access control subject or organization ID.
+	TunnelConstraintsAccessControlSubjectMaxLength = 200
+
+	// Maximum number of scopes in an access control entry.
+	TunnelConstraintsAccessControlMaxScopes = 10
+
 	// Regular expression that can match or validate tunnel cluster ID strings.
 	//
 	// Cluster IDs are alphanumeric; hyphens are not permitted.
@@ -81,6 +87,10 @@ const (
 	// The tunnel service may perform additional contextual validation at the time the domain
 	// is registered.
 	TunnelConstraintsTunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]"
+
+	// Regular expression that can match or validate an access control subject or
+	// organization ID.
+	TunnelConstraintsAccessControlSubjectPattern = "[0-9a-zA-Z-._]{0,200}"
 )
 var (
 	// Regular expression that can match or validate tunnel cluster ID strings.
@@ -111,4 +121,8 @@ var (
 	// The tunnel service may perform additional contextual validation at the time the domain
 	// is registered.
 	TunnelConstraintsTunnelDomainRegex = regexp.MustCompile(TunnelConstraintsTunnelDomainPattern)
+
+	// Regular expression that can match or validate an access control subject or
+	// organization ID.
+	TunnelConstraintsAccessControlSubjectRegex = regexp.MustCompile(TunnelConstraintsAccessControlSubjectPattern)
 )

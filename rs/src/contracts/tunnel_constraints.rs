@@ -50,6 +50,12 @@ pub const ACCESS_CONTROL_MAX_ENTRIES: &i32 = 40;
 // entry (ACE).
 pub const ACCESS_CONTROL_MAX_SUBJECTS: &i32 = 100;
 
+// Max length of an access control subject or organization ID.
+pub const ACCESS_CONTROL_SUBJECT_MAX_LENGTH: &i32 = 200;
+
+// Maximum number of scopes in an access control entry.
+pub const ACCESS_CONTROL_MAX_SCOPES: &i32 = 10;
+
 // Regular expression that can match or validate tunnel cluster ID strings.
 //
 // Cluster IDs are alphanumeric; hyphens are not permitted.
@@ -79,3 +85,7 @@ pub const TAG_PATTERN: &str = "[\w-=]{1,50}";
 // The tunnel service may perform additional contextual validation at the time the domain
 // is registered.
 pub const TUNNEL_DOMAIN_PATTERN: &str = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]";
+
+// Regular expression that can match or validate an access control subject or organization
+// ID.
+pub const ACCESS_CONTROL_SUBJECT_PATTERN: &str = "[0-9a-zA-Z-._]{0,200}";

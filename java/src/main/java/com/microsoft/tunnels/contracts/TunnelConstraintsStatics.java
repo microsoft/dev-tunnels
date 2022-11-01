@@ -26,14 +26,14 @@ class TunnelConstraintsStatics {
         && matcher.group(0).equals(tunnelName);
   }
 
-  static boolean isValidTunnelTag(String tag) {
+  static boolean isValidTag(String tag) {
     return !StringUtils.isBlank(tag)
-        && TunnelConstraints.tunnelTagRegex.matcher(tag).find();
+        && TunnelConstraints.tagRegex.matcher(tag).find();
   }
 
   static boolean isValidTunnelIdOrName(String tunnelIdOrName) {
     return !StringUtils.isBlank(tunnelIdOrName)
-        && TunnelConstraints.tunnelTagRegex.matcher(tunnelIdOrName).find();
+        && TunnelConstraints.tagRegex.matcher(tunnelIdOrName).find();
   }
 
   static String validateTunnelId(String tunnelId, String paramName) {

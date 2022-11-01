@@ -13,7 +13,8 @@ namespace Microsoft.DevTunnels.Contracts
     /// </summary>
     public class TunnelOptions
     {
-        private const int HeaderMaxLength = 500;
+        // Max DNS name length (255) + 1 for ':' + 5 for '65535', max port length.
+        private const int HostHeaderMaxLength = 300;
 
         // TODO: Consider adding an option to enable multiple hosts for a tunnel.
         // The system supports it, but it would only be used in advanced scenarios,
@@ -36,7 +37,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// The option is ignored if IsHostHeaderUnchanged is true.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        [StringLength(HeaderMaxLength)]
+        [StringLength(HostHeaderMaxLength)]
         public string? HostHeader { get; set; }
 
         /// <summary>
@@ -56,7 +57,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// The option is ignored if IsOriginHeaderUnchanged is true.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        [StringLength(HeaderMaxLength)]
+        [StringLength(HostHeaderMaxLength)]
         public string? OriginHeader { get; set; }
 
         /// <summary>

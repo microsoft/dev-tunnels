@@ -85,6 +85,16 @@ public class TunnelConstraints {
     public static final int accessControlMaxSubjects = 100;
 
     /**
+     * Max length of an access control subject or organization ID.
+     */
+    public static final int accessControlSubjectMaxLength = 200;
+
+    /**
+     * Maximum number of scopes in an access control entry.
+     */
+    public static final int accessControlMaxScopes = 10;
+
+    /**
      * Regular expression that can match or validate tunnel cluster ID strings.
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
@@ -110,7 +120,7 @@ public class TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    public static final String tunnelIdPattern = "[" + TunnelIdChars + "]{8}";
+    public static final String tunnelIdPattern = "[" + TunnelConstraints.tunnelIdChars + "]{8}";
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -161,6 +171,18 @@ public class TunnelConstraints {
      * domain is registered.
      */
     public static final Pattern tunnelDomainRegex = java.util.regex.Pattern.compile(TunnelConstraints.tunnelDomainPattern);
+
+    /**
+     * Regular expression that can match or validate an access control subject or
+     * organization ID.
+     */
+    public static final String accessControlSubjectPattern = "[0-9a-zA-Z-._]{0,200}";
+
+    /**
+     * Regular expression that can match or validate an access control subject or
+     * organization ID.
+     */
+    public static final Pattern accessControlSubjectRegex = java.util.regex.Pattern.compile(TunnelConstraints.accessControlSubjectPattern);
 
     /**
      * Validates <paramref name="clusterId"/> and returns true if it is a valid cluster
