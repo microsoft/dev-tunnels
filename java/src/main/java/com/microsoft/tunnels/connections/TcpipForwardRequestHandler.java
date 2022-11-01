@@ -55,28 +55,14 @@ class TcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler
         connectionService.getForwarder(), "No TCP/IP forwarder");
 
     String address = buffer.getString();
-    int requestedPort = buffer.getInt();
-
-    // Ignore the request if the port is already in the collection.
-    // This can happen if concurrent refreshPorts requests are made.
-    if (forwardedPorts.stream().filter(p -> p.getRemotePort() == requestedPort)
-        .findFirst().isPresent()) {
-      if (wantReply) {
-        Session session = connectionService.getSession();
-        buffer = session.createBuffer(SshConstants.SSH_MSG_REQUEST_SUCCESS, Integer.BYTES);
-        buffer.putInt(requestedPort);
-        session.writePacket(buffer);
-      }
-      return Result.Replied;
-    }
-
+    int requested = buffer.getInt();
+    int port = requested;
     SshdSocketAddress socketAddress = null;
     SshdSocketAddress bound = null;
-
     // If the port is in use we will get a bind exception so we increment the port
     // until we succeed or run out of attempts.
     for (int attempt = 0; attempt < 10; attempt++) {
-      int port = requestedPort + attempt;
+      port = port + attempt;
       socketAddress = new SshdSocketAddress(address, port);
       try {
         bound = forwarder.localPortForwardingRequested(socketAddress);
@@ -91,7 +77,8 @@ class TcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler
     }
     // If bound is still null, try wildcard port.
     if (bound == null) {
-      socketAddress = new SshdSocketAddress(address, 0);
+      port = 0;
+      socketAddress = new SshdSocketAddress(address, port);
       bound = forwarder.localPortForwardingRequested(socketAddress);
     }
 
@@ -106,14 +93,14 @@ class TcpipForwardRequestHandler extends AbstractConnectionServiceRequestHandler
       return Result.ReplyFailure;
     }
 
-    int port = bound.getPort();
+    port = bound.getPort();
     if (wantReply) {
       Session session = connectionService.getSession();
       buffer = session.createBuffer(SshConstants.SSH_MSG_REQUEST_SUCCESS, Integer.BYTES);
       buffer.putInt(port);
       session.writePacket(buffer);
     }
-    forwardedPorts.addPort(new ForwardedPort(port, requestedPort));
+    forwardedPorts.addPort(new ForwardedPort(port, requested));
     return Result.Replied;
   }
 }
