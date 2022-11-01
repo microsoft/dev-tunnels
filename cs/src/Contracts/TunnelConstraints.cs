@@ -281,7 +281,13 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTag(string tag)
     {
-        return TagRegex.IsMatch(tag);
+        if (string.IsNullOrEmpty(tag))
+        {
+            return false;
+        }
+
+        var m = TagRegex.Match(tag);
+        return m.Index == 0 && m.Length == tag.Length;
     }
 
     /// <summary>
