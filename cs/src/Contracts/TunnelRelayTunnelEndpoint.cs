@@ -12,6 +12,8 @@ namespace Microsoft.DevTunnels.Contracts;
 /// </summary>
 public class TunnelRelayTunnelEndpoint : TunnelEndpoint
 {
+    // TODO: Add validation attributes on properties of this class.
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TunnelRelayTunnelEndpoint"/> class.
     /// </summary>

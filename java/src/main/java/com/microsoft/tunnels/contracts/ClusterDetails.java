@@ -22,17 +22,17 @@ public class ClusterDetails {
      * A cluster identifier based on its region.
      */
     @Expose
-    public String clusterId;
+    public final String clusterId;
 
     /**
      * The URI of the service cluster.
      */
     @Expose
-    public String uri;
+    public final String uri;
 
     /**
      * The Azure location of the cluster.
      */
     @Expose
-    public String azureLocation;
+    public final String azureLocation;
 }

@@ -22,6 +22,8 @@ namespace Microsoft.DevTunnels.Contracts;
 /// </remarks>
 public abstract class TunnelEndpoint
 {
+    // TODO: Add validation attributes on properties of this class.
+
     /// <summary>
     /// Gets or sets the connection mode of the endpoint.
     /// </summary>

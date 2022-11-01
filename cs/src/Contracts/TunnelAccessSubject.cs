@@ -3,9 +3,12 @@
 // Licensed under the MIT license.
 // </copyright>
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Microsoft.DevTunnels.Contracts;
+
+using static TunnelConstraints;
 
 /// <summary>
 /// Properties about a subject of a tunnel access control entry (ACE), used when resolving
@@ -14,6 +17,13 @@ namespace Microsoft.DevTunnels.Contracts;
 /// </summary>
 public class TunnelAccessSubject
 {
+    private const int SubjectNameMaxLength = 200;
+
+    // Note <angle-brackets> are only allowed when they wrap an email address as part of a
+    // formatted name with email. The service will block any other use of angle brackets,
+    // to avoid any XSS risks.
+    private const string SubjectNamePattern = @"[ \w\d-.,""_@()<>]{0,200}";
+
     /// <summary>
     /// Gets or sets the type of subject, e.g. user, group, or organization.
     /// </summary>
@@ -25,6 +35,8 @@ public class TunnelAccessSubject
     /// <remarks>The ID is typically a guid or integer that is unique within the scope of
     /// the identity provider or organization, and never changes for that subject.</remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [StringLength(AccessControlSubjectMaxLength)]
+    [RegularExpression(AccessControlSubjectPattern)]
     public string? Id { get; set; }
 
     /// <summary>
@@ -32,6 +44,8 @@ public class TunnelAccessSubject
     /// not implied by the authentication context.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [StringLength(AccessControlSubjectMaxLength)]
+    [RegularExpression(AccessControlSubjectPattern)]
     public string? OrganizationId { get; set; }
 
     /// <summary>
@@ -43,6 +57,8 @@ public class TunnelAccessSubject
     /// a subject ID to name, the full name is returned if the ID was found.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [StringLength(SubjectNameMaxLength)]
+    [RegularExpression(SubjectNamePattern)]
     public string? Name { get; set; }
 
     /// <summary>

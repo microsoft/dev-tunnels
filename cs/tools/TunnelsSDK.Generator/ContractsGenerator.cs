@@ -1,4 +1,4 @@
-﻿// <copyright file="ContractsGenerator.cs" company="Microsoft">
+// <copyright file="ContractsGenerator.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -65,6 +65,11 @@ public class ContractsGenerator : ISourceGenerator
             else if (type.ContainingType != null)
             {
                 // Nested types will be written as part of their containing type.
+                continue;
+            }
+            else if (type.Name.EndsWith("Attribute"))
+            {
+                // Attributes are excluded from code-generation.
                 continue;
             }
 

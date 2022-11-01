@@ -75,7 +75,7 @@ public class TunnelConstraintsTests
     [InlineData("codespace_id=2e0ffd29-b8fa-42bd-94bc-e764a8381ca9")]
     public void IsValidTunnelTag_Valid(string tag)
     {
-        Assert.True(IsValidTunnelTag(tag));
+        Assert.True(IsValidTag(tag));
     }
 
     [Theory]
@@ -85,6 +85,6 @@ public class TunnelConstraintsTests
     [InlineData("aaaa-bbb-ccc!!!")]
     public void IsValidTunnelTag_NotValid(string tag)
     {
-        Assert.False(IsValidTunnelTag(tag));
+        Assert.False(IsValidTag(tag));
     }
 }

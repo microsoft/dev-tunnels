@@ -15,6 +15,8 @@ namespace Microsoft.DevTunnels.Contracts;
 /// </remarks>
 public static class TunnelAccessScopes
 {
+    internal const int MaxLength = 20;
+
     /// <summary>
     /// Allows creating tunnels. This scope is valid only in policies at the global, domain,
     /// or organization level; it is not relevant to an already-created tunnel or tunnel port.
