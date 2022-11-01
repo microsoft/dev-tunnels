@@ -9,10 +9,9 @@ These instructions assume you are using vscode for development as SDK is configu
 
 ### Testing
 1. Get a user token using the CLI command: `user show --verbose`
-2. Create a new tunnel and add a port.
-3. Create a new environment variable `TEST_TUNNEL_TOKEN` with a string value "Bearer <token>".
-4. Create a new environment variable `TEST_TUNNEL_NAME` with a value containing the name of the tunnel.
-5. Optionally: set `TEST_TUNNEL_VERBOSE=1` to enable verbose console logging during tests.
+2. Create a new environment variable `TEST_TUNNEL_TOKEN` with a string value "Bearer <token>".
+3. Create a new environment variable `TEST_TUNNEL_NAME` with a value containing the name of the tunnel.
+4. Optionally: set `TEST_TUNNEL_VERBOSE=1` to enable verbose console logging during tests.
 5. Use the CLI to host the tunnel.
 6. Run the tests with `mvn test`, or run a single test with `mvn test -Dtest=TunnelClientTests#connectClient`
 
