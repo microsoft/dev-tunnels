@@ -53,6 +53,9 @@ pub const ACCESS_CONTROL_MAX_SUBJECTS: &i32 = 100;
 // Max length of an access control subject or organization ID.
 pub const ACCESS_CONTROL_SUBJECT_MAX_LENGTH: &i32 = 200;
 
+// Max length of an access control subject name, when resolving names to IDs.
+pub const ACCESS_CONTROL_SUBJECT_NAME_MAX_LENGTH: &i32 = 200;
+
 // Maximum number of scopes in an access control entry.
 pub const ACCESS_CONTROL_MAX_SCOPES: &i32 = 10;
 
@@ -88,4 +91,15 @@ pub const TUNNEL_DOMAIN_PATTERN: &str = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]";
 
 // Regular expression that can match or validate an access control subject or organization
 // ID.
-pub const ACCESS_CONTROL_SUBJECT_PATTERN: &str = "[0-9a-zA-Z-._]{0,200}";
+//
+// The : and / characters are allowed because subjects may include IP addresses and
+// ranges.
+pub const ACCESS_CONTROL_SUBJECT_PATTERN: &str = "[0-9a-zA-Z-._:/]{0,200}";
+
+// Regular expression that can match or validate an access control subject name, when
+// resolving subject names to IDs.
+//
+// Note angle-brackets are only allowed when they wrap an email address as part of a
+// formatted name with email. The service will block any other use of angle-brackets, to
+// avoid any XSS risks.
+pub const ACCESS_CONTROL_SUBJECT_NAME_PATTERN: &str = "[ \w\d-.,'\"_@()<>]{0,200}";

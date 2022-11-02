@@ -346,16 +346,16 @@ internal class TSContractWriter : ContractWriter
         var csExpression = sourceText.Substring(
             equalsIndex + 1, semicolonIndex - equalsIndex - 1).Trim();
 
-        // Attempt to convert the CS expression to a TS expression. This involes several
+        // Attempt to convert the CS expression to a TS expression. This involves several
         // weak assumptions, and will not work for many kinds of expressions. But it might
         // be good enough.
         var tsExpression = csExpression
-            .Replace('"', '\'')
+            .Replace("'", "^^^").Replace("\\\"", "$$$").Replace('"', '\'').Replace("$$$", "\"").Replace("^^^", "\\'")
             .Replace("Regex", "RegExp")
             .Replace("Replace", "replace");
 
         // Assume any PascalCase identifiers are referncing other variables in scope.
-        tsExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
+        tsExpression = new Regex("([A-Z][a-z]+){2,6}\\b(?!\\()").Replace(
             tsExpression, (m) =>
             {
                 return (member.ContainingType.MemberNames.Contains(m.Value) ?

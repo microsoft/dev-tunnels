@@ -114,7 +114,15 @@ public static class TunnelConstraints
     /// </summary>
     /// <seealso cref="TunnelAccessControlEntry.Subjects"/>
     /// <seealso cref="TunnelAccessControlEntry.Organization"/>
+    /// <seealso cref="TunnelAccessSubject.Id"/>
+    /// <seealso cref="TunnelAccessSubject.OrganizationId"/>
     public const int AccessControlSubjectMaxLength = 200;
+
+    /// <summary>
+    /// Max length of an access control subject name, when resolving names to IDs.
+    /// </summary>
+    /// <seealso cref="TunnelAccessSubject.Name"/>
+    public const int AccessControlSubjectNameMaxLength = 200;
 
     /// <summary>
     /// Maximum number of scopes in an access control entry.
@@ -225,14 +233,40 @@ public static class TunnelConstraints
     /// </summary>
     /// <seealso cref="TunnelAccessControlEntry.Subjects"/>
     /// <seealso cref="TunnelAccessControlEntry.Organization"/>
-    public const string AccessControlSubjectPattern = "[0-9a-zA-Z-._]{0,200}";
+    /// <seealso cref="TunnelAccessSubject.Id"/>
+    /// <seealso cref="TunnelAccessSubject.OrganizationId"/>
+    /// <remarks>
+    /// The : and / characters are allowed because subjects may include IP addresses and ranges.
+    /// </remarks>
+    public const string AccessControlSubjectPattern = "[0-9a-zA-Z-._:/]{0,200}";
 
     /// <summary>
     /// Regular expression that can match or validate an access control subject or organization ID.
     /// </summary>
     /// <seealso cref="TunnelAccessControlEntry.Subjects"/>
     /// <seealso cref="TunnelAccessControlEntry.Organization"/>
+    /// <seealso cref="TunnelAccessSubject.Id"/>
+    /// <seealso cref="TunnelAccessSubject.OrganizationId"/>
     public static Regex AccessControlSubjectRegex { get; } = new Regex(AccessControlSubjectPattern);
+
+    /// <summary>
+    /// Regular expression that can match or validate an access control subject name, when resolving
+    /// subject names to IDs.
+    /// </summary>
+    /// <seealso cref="TunnelAccessSubject.Name"/>
+    /// <remarks>
+    /// Note angle-brackets are only allowed when they wrap an email address as part of a
+    /// formatted name with email. The service will block any other use of angle-brackets,
+    /// to avoid any XSS risks.
+    /// </remarks>
+    public const string AccessControlSubjectNamePattern = "[ \\w\\d-.,'\"_@()<>]{0,200}";
+
+    /// <summary>
+    /// Regular expression that can match or validate an access control subject name, when resolving
+    /// subject names to IDs.
+    /// </summary>
+    /// <seealso cref="TunnelAccessSubject.Name"/>
+    public static Regex AccessControlSubjectNameRegex { get; } = new Regex(AccessControlSubjectNamePattern);
 
     /// <summary>
     /// Validates <paramref name="clusterId"/> and returns true if it is a valid cluster ID, otherwise false.

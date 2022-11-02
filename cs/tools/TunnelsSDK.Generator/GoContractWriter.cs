@@ -354,7 +354,7 @@ internal class GoContractWriter : ContractWriter
         var csExpression = sourceText.Substring(
             equalsIndex + 1, semicolonIndex - equalsIndex - 1).Trim();
 
-        // Attempt to convert the CS expression to a Go expression. This involes several
+        // Attempt to convert the CS expression to a Go expression. This involves several
         // weak assumptions, and will not work for many kinds of expressions. But it might
         // be good enough.
         var goExpression = csExpression.Replace("new Regex", "regexp.MustCompile");
@@ -363,14 +363,12 @@ internal class GoContractWriter : ContractWriter
 
         // Assume any PascalCase identifiers are referncing other variables in scope.
         // Contvert integer constants to strings, allowing for integer offsets.
-        goExpression = new Regex("([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
+        goExpression = new Regex("([A-Z][a-z]+){2,6}\\b(?!\\()").Replace(
             goExpression, (m) => $"{member.ContainingType.Name}{m.Value}");
         goExpression = new Regex("\\(([A-Z][a-z]+){4,7} - \\d\\)").Replace(
             goExpression, (m) => $"strconv.Itoa{m.Value}");
         goExpression = new Regex("\\b([A-Z][a-z]+){3,6}Length\\b(?! - \\d)").Replace(
             goExpression, (m) => $"strconv.Itoa({m.Value})");
-        goExpression = new Regex("\"(([^\"]*\\\\)+[^\"]*)\"").Replace(
-            goExpression, (m) => $"`{m.Groups[1].Value.Replace("\\\\", "\\")}`");
         goExpression = FixPropertyNameCasing(goExpression);
         goExpression = goExpression.Replace("        ", "\t\t");
 

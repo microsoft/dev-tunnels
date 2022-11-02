@@ -87,6 +87,11 @@ namespace TunnelConstraints {
     export const accessControlSubjectMaxLength: number = 200;
 
     /**
+     * Max length of an access control subject name, when resolving names to IDs.
+     */
+    export const accessControlSubjectNameMaxLength: number = 200;
+
+    /**
      * Maximum number of scopes in an access control entry.
      */
     export const accessControlMaxScopes: number = 10;
@@ -172,12 +177,31 @@ namespace TunnelConstraints {
     /**
      * Regular expression that can match or validate an access control subject or
      * organization ID.
+     *
+     * The : and / characters are allowed because subjects may include IP addresses and
+     * ranges.
      */
-    export const accessControlSubjectPattern: string = '[0-9a-zA-Z-._]{0,200}';
+    export const accessControlSubjectPattern: string = '[0-9a-zA-Z-._:/]{0,200}';
 
     /**
      * Regular expression that can match or validate an access control subject or
      * organization ID.
      */
     export const accessControlSubjectRegex: RegExp = new RegExp(TunnelConstraints.accessControlSubjectPattern);
+
+    /**
+     * Regular expression that can match or validate an access control subject name, when
+     * resolving subject names to IDs.
+     *
+     * Note angle-brackets are only allowed when they wrap an email address as part of a
+     * formatted name with email. The service will block any other use of angle-brackets,
+     * to avoid any XSS risks.
+     */
+    export const accessControlSubjectNamePattern: string = '[ \\w\\d-.,\'"_@()<>]{0,200}';
+
+    /**
+     * Regular expression that can match or validate an access control subject name, when
+     * resolving subject names to IDs.
+     */
+    export const accessControlSubjectNameRegex: RegExp = new RegExp(TunnelConstraints.accessControlSubjectNamePattern);
 }
