@@ -58,6 +58,9 @@ const (
 	// Max length of an access control subject or organization ID.
 	TunnelConstraintsAccessControlSubjectMaxLength = 200
 
+	// Max length of an access control subject name, when resolving names to IDs.
+	TunnelConstraintsAccessControlSubjectNameMaxLength = 200
+
 	// Maximum number of scopes in an access control entry.
 	TunnelConstraintsAccessControlMaxScopes = 10
 
@@ -82,6 +85,9 @@ const (
 	// empty string because tunnels may be unnamed.
 	TunnelConstraintsTunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|"
 
+	// Regular expression that can match or validate tunnel or port tags.
+	TunnelConstraintsTagPattern = "[\\w-=]{1,50}"
+
 	// Regular expression that can match or validate tunnel domains.
 	//
 	// The tunnel service may perform additional contextual validation at the time the domain
@@ -90,7 +96,18 @@ const (
 
 	// Regular expression that can match or validate an access control subject or
 	// organization ID.
-	TunnelConstraintsAccessControlSubjectPattern = "[0-9a-zA-Z-._]{0,200}"
+	//
+	// The : and / characters are allowed because subjects may include IP addresses and
+	// ranges.
+	TunnelConstraintsAccessControlSubjectPattern = "[0-9a-zA-Z-._:/]{0,200}"
+
+	// Regular expression that can match or validate an access control subject name, when
+	// resolving subject names to IDs.
+	//
+	// Note angle-brackets are only allowed when they wrap an email address as part of a
+	// formatted name with email. The service will block any other use of angle-brackets, to
+	// avoid any XSS risks.
+	TunnelConstraintsAccessControlSubjectNamePattern = "[ \\w\\d-.,'\"_@()<>]{0,200}"
 )
 var (
 	// Regular expression that can match or validate tunnel cluster ID strings.
@@ -111,9 +128,6 @@ var (
 	TunnelConstraintsTunnelNameRegex = regexp.MustCompile(TunnelConstraintsTunnelNamePattern)
 
 	// Regular expression that can match or validate tunnel or port tags.
-	TunnelConstraintsTagPattern = `[\w-=]{1,50}`
-
-	// Regular expression that can match or validate tunnel or port tags.
 	TunnelConstraintsTagRegex = regexp.MustCompile(TunnelConstraintsTagPattern)
 
 	// Regular expression that can match or validate tunnel domains.
@@ -125,4 +139,8 @@ var (
 	// Regular expression that can match or validate an access control subject or
 	// organization ID.
 	TunnelConstraintsAccessControlSubjectRegex = regexp.MustCompile(TunnelConstraintsAccessControlSubjectPattern)
+
+	// Regular expression that can match or validate an access control subject name, when
+	// resolving subject names to IDs.
+	TunnelConstraintsAccessControlSubjectNameRegex = regexp.MustCompile(TunnelConstraintsAccessControlSubjectNamePattern)
 )

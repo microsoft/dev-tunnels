@@ -361,7 +361,7 @@ internal class JavaContractWriter : ContractWriter
             .Replace("Replace", "replace");
 
         // Assume any PascalCase identifiers are referncing other variables in scope.
-        javaExpression = new Regex("(?<= |\\()([A-Z][a-z]+){2,4}\\b(?!\\()").Replace(
+        javaExpression = new Regex("(?<= |\\()([A-Z][a-z]+){2,6}\\b(?!\\()").Replace(
             javaExpression, (m) =>
             {
                 return (member.ContainingType.MemberNames.Contains(m.Value) ?

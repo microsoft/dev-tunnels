@@ -90,6 +90,11 @@ public class TunnelConstraints {
     public static final int accessControlSubjectMaxLength = 200;
 
     /**
+     * Max length of an access control subject name, when resolving names to IDs.
+     */
+    public static final int accessControlSubjectNameMaxLength = 200;
+
+    /**
      * Maximum number of scopes in an access control entry.
      */
     public static final int accessControlMaxScopes = 10;
@@ -175,14 +180,33 @@ public class TunnelConstraints {
     /**
      * Regular expression that can match or validate an access control subject or
      * organization ID.
+     *
+     * The : and / characters are allowed because subjects may include IP addresses and
+     * ranges.
      */
-    public static final String accessControlSubjectPattern = "[0-9a-zA-Z-._]{0,200}";
+    public static final String accessControlSubjectPattern = "[0-9a-zA-Z-._:/]{0,200}";
 
     /**
      * Regular expression that can match or validate an access control subject or
      * organization ID.
      */
     public static final Pattern accessControlSubjectRegex = java.util.regex.Pattern.compile(TunnelConstraints.accessControlSubjectPattern);
+
+    /**
+     * Regular expression that can match or validate an access control subject name, when
+     * resolving subject names to IDs.
+     *
+     * Note angle-brackets are only allowed when they wrap an email address as part of a
+     * formatted name with email. The service will block any other use of angle-brackets,
+     * to avoid any XSS risks.
+     */
+    public static final String accessControlSubjectNamePattern = "[ \\w\\d-.,'\"_@()<>]{0,200}";
+
+    /**
+     * Regular expression that can match or validate an access control subject name, when
+     * resolving subject names to IDs.
+     */
+    public static final Pattern accessControlSubjectNameRegex = java.util.regex.Pattern.compile(TunnelConstraints.accessControlSubjectNamePattern);
 
     /**
      * Validates <paramref name="clusterId"/> and returns true if it is a valid cluster
