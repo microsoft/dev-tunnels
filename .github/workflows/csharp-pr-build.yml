@@ -1,0 +1,32 @@
+name: PR Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: cs
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use global.json dotnet version
+        uses: actions/setup-dotnet@v2
+        with:
+          global-json-file: global.json
+
+      - name: Restore packages
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -v:n -c Release --no-restore
+
+      - name: Test
+        run: dotnet test -v:n -c Release -p:CodeCoverage=true --no-build
