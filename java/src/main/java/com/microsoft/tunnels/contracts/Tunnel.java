@@ -103,4 +103,10 @@ public class Tunnel {
      */
     @Expose
     public Date created;
+
+    /**
+     * Gets or the time the tunnel will be deleted if it is not used or updated.
+     */
+    @Expose
+    public final Date expiration;
 }

@@ -132,4 +132,10 @@ public class Tunnel
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? Created { get; set; }
+
+    /// <summary>
+    /// Gets or the time the tunnel will be deleted if it is not used or updated.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? Expiration { get; }
 }
