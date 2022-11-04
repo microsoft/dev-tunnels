@@ -61,4 +61,7 @@ type Tunnel struct {
 
 	// Gets or sets the time in UTC of tunnel creation.
 	Created       *time.Time `json:"created,omitempty"`
+
+	// Gets or the time the tunnel will be deleted if it is not used or updated.
+	Expiration    *time.Time `json:"expiration,omitempty"`
 }
