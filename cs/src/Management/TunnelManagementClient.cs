@@ -80,8 +80,8 @@ namespace Microsoft.DevTunnels.Management
         /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
         /// with an optional client authentication callback.
         /// </summary>
-        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
-        /// case that this SDK is used in a program, such as a CLI, that has users that want 
+        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the
+        /// case that this SDK is used in a program, such as a CLI, that has users that want
         /// to be differentiated. </param>
         /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header, for AAD or GitHub user authentication. This may be null
@@ -123,8 +123,8 @@ namespace Microsoft.DevTunnels.Management
         /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
         /// with a client authentication callback, service URI, and HTTP handler.
         /// </summary>
-        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
-        /// case that this SDK is used in a program, such as a CLI, that has users that want 
+        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the
+        /// case that this SDK is used in a program, such as a CLI, that has users that want
         /// to be differentiated. </param>
         /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header value with access token, for AAD or GitHub user authentication.
@@ -763,7 +763,7 @@ namespace Microsoft.DevTunnels.Management
                             break;
                         }
                     }
-                    
+
                     if (!string.IsNullOrEmpty(accessToken))
                     {
                         TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
@@ -1249,16 +1249,16 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation = default)
         {
             Requires.NotNull(name, nameof(name));
-            
-            var uri = BuildUri(clusterId: null, TunnelsApiPath + CheckAvailableSubPath + "/" + name, null);
-            bool? result = await this.SendTunnelRequestAsync<bool>(
-                tunnel: null,
-                null,
+
+            var uri = BuildUri(clusterId: null, TunnelsApiPath + CheckAvailableSubPath + "/" + name, null, null);
+            bool? result = await this.SendRequestAsync<bool>(
                 HttpMethod.Get,
-                uri,
-                Array.Empty<string>(),
-                true,
-                cancellation);
+                null,
+                TunnelsApiPath + CheckAvailableSubPath + "/" + name,
+                null,
+                null,
+                cancellation
+            );
             return result ?? false;
         }
     }
