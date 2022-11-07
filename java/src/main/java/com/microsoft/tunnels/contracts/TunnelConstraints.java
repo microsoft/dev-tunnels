@@ -182,9 +182,10 @@ public class TunnelConstraints {
      * organization ID.
      *
      * The : and / characters are allowed because subjects may include IP addresses and
-     * ranges.
+     * ranges. The @ character is allowed because MSA subjects may be identified by email
+     * address.
      */
-    public static final String accessControlSubjectPattern = "[0-9a-zA-Z-._:/]{0,200}";
+    public static final String accessControlSubjectPattern = "[0-9a-zA-Z-._:/@]{0,200}";
 
     /**
      * Regular expression that can match or validate an access control subject or
@@ -200,7 +201,7 @@ public class TunnelConstraints {
      * formatted name with email. The service will block any other use of angle-brackets,
      * to avoid any XSS risks.
      */
-    public static final String accessControlSubjectNamePattern = "[ \\w\\d-.,'\"_@()<>]{0,200}";
+    public static final String accessControlSubjectNamePattern = "[ \\w\\d-.,/'\"_@()<>]{0,200}";
 
     /**
      * Regular expression that can match or validate an access control subject name, when

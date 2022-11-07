@@ -179,9 +179,10 @@ namespace TunnelConstraints {
      * organization ID.
      *
      * The : and / characters are allowed because subjects may include IP addresses and
-     * ranges.
+     * ranges. The @ character is allowed because MSA subjects may be identified by email
+     * address.
      */
-    export const accessControlSubjectPattern: string = '[0-9a-zA-Z-._:/]{0,200}';
+    export const accessControlSubjectPattern: string = '[0-9a-zA-Z-._:/@]{0,200}';
 
     /**
      * Regular expression that can match or validate an access control subject or
@@ -197,7 +198,7 @@ namespace TunnelConstraints {
      * formatted name with email. The service will block any other use of angle-brackets,
      * to avoid any XSS risks.
      */
-    export const accessControlSubjectNamePattern: string = '[ \\w\\d-.,\'"_@()<>]{0,200}';
+    export const accessControlSubjectNamePattern: string = '[ \\w\\d-.,/\'"_@()<>]{0,200}';
 
     /**
      * Regular expression that can match or validate an access control subject name, when
