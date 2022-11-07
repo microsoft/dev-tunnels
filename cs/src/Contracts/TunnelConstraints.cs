@@ -237,8 +237,9 @@ public static class TunnelConstraints
     /// <seealso cref="TunnelAccessSubject.OrganizationId"/>
     /// <remarks>
     /// The : and / characters are allowed because subjects may include IP addresses and ranges.
+    /// The @ character is allowed because MSA subjects may be identified by email address.
     /// </remarks>
-    public const string AccessControlSubjectPattern = "[0-9a-zA-Z-._:/]{0,200}";
+    public const string AccessControlSubjectPattern = "[0-9a-zA-Z-._:/@]{0,200}";
 
     /// <summary>
     /// Regular expression that can match or validate an access control subject or organization ID.
@@ -259,7 +260,7 @@ public static class TunnelConstraints
     /// formatted name with email. The service will block any other use of angle-brackets,
     /// to avoid any XSS risks.
     /// </remarks>
-    public const string AccessControlSubjectNamePattern = "[ \\w\\d-.,'\"_@()<>]{0,200}";
+    public const string AccessControlSubjectNamePattern = "[ \\w\\d-.,/'\"_@()<>]{0,200}";
 
     /// <summary>
     /// Regular expression that can match or validate an access control subject name, when resolving
