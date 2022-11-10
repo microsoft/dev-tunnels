@@ -114,4 +114,10 @@ export interface TunnelStatus {
      * operations for the tunnel or tunnel ports.
      */
     apiUpdateRate?: RateStatus;
+
+    /**
+     * Gets or sets the current value and limit for the rate of Ssh Gateway connections
+     * per IP Address.
+     */
+    sshGatewayRateLimitPerIPAddress?: number;
 }

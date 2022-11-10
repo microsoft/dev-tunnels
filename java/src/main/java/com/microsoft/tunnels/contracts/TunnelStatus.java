@@ -127,4 +127,11 @@ public class TunnelStatus {
      */
     @Expose
     public RateStatus apiUpdateRate;
+
+    /**
+     * Gets or sets the current value and limit for the rate of Ssh Gateway connections
+     * per IP Address.
+     */
+    @Expose
+    public long sshGatewayRateLimitPerIPAddress;
 }
