@@ -42,7 +42,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
     private MultiChannelStream? hostSession;
     private Uri? relayUri;
-    
+
     /// <summary>
     /// Creates a new instance of a host that connects to a tunnel via a tunnel relay.
     /// </summary>
@@ -215,7 +215,10 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             "Connection to host tunnel relay closed.{0}",
             DisposeToken.IsCancellationRequested ? string.Empty : " Reconnecting.");
 
-        StartReconnectTaskIfNotDisposed();
+        if (e.Reason == SshDisconnectReason.ConnectionLost)
+        {
+            StartReconnectTaskIfNotDisposed();
+        }
     }
 
     private void HostSession_ChannelOpening(object? sender, SshChannelOpeningEventArgs e)
