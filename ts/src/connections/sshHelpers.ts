@@ -305,6 +305,7 @@ export enum RelayErrorType {
     ServerError = 5,
     TunnelPortNotFound = 6,
     TooManyRequests = 7,
+    ServiceUnavailable = 8,
 }
 /**
  * Error used when a connection to an Azure relay failed.
@@ -366,5 +367,11 @@ const webSocketClientContexts: WebSocketClientErrorContext[] = [
         statusCode: 500,
         error: 'relayServerError',
         errorType: RelayErrorType.ServerError,
+    },
+    {
+        regex: /status: 503/,
+        statusCode: 503,
+        error: 'serviceUnavailable',
+        errorType: RelayErrorType.ServiceUnavailable,
     },
 ];
