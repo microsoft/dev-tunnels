@@ -133,7 +133,15 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
 
                             Trace.Info($"Rate limit exceeded. Delaying for {attemptDelayMs/1000.0}s before retrying.");
                             break;
-                            
+
+                        case HttpStatusCode.ServiceUnavailable:
+                            // Normally nginx choses another healthy pod when it encounters 503.
+                            // However, if there are no other pods, it returns 503 to the client.
+                            // This rare case may happen when the cluster recovers from a failure
+                            // and the nginx controller has started but Relay service has not yet.
+                            errorDescription = "Service temporarily unavailable (503).";
+                            exception = new TunnelConnectionException(errorDescription, wse);
+                            break;
 
                         default:
                             // For any other status code we assume the error is not recoverable.

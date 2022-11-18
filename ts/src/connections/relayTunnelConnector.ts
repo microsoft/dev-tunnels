@@ -216,6 +216,14 @@ export class RelayTunnelConnector implements TunnelConnector {
                             throwError(`The tunnel or port is not found${statusCodeText}`);
                             break;
 
+                        case 'error.serviceUnavailable':
+                            // Normally nginx choses another healthy pod when it encounters 503.
+                            // However, if there are no other pods, it returns 503 to the client.
+                            // This rare case may happen when the cluster recovers from a failure
+                            // and the nginx controller has started but Relay service has not yet.
+                            errorDescription = `Service temporarily unavailable${statusCodeText}`;
+                            continue;
+
                         case 'error.tooManyRequests':
                             errorDescription = `Rate limit exceeded${statusCodeText}. Too many requests in a given amount of time.`;
                             if (attempt > 4) {
