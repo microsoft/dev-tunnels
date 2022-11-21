@@ -34,7 +34,7 @@ namespace Microsoft.DevTunnels.Management
         private const string ClustersPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
-        private const string CheckAvailableSubPath = "/checkAvailable";
+        private const string CheckAvailableSubPath = "/checkNameAvailability";
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
