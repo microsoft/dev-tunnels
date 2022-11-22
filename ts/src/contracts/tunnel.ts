@@ -91,4 +91,9 @@ export interface Tunnel {
      * Gets or sets the time in UTC of tunnel creation.
      */
     created?: Date;
+
+    /**
+     * Gets or the time the tunnel will be deleted if it is not used or updated.
+     */
+    expiration?: Date;
 }

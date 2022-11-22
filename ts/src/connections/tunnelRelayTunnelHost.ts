@@ -87,7 +87,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             this.hostSession_ChannelOpening(this.sshSession!, e);
         });
         const closeEventRegistration = this.sshSession.onClosed((e) => {
-            this.hostSession_Closed(channelOpenEventRegistration, closeEventRegistration);
+            this.hostSession_Closed(e, channelOpenEventRegistration, closeEventRegistration);
         });
 
         await this.sshSession.connect();
@@ -323,6 +323,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     }
 
     private hostSession_Closed(
+        e: SshSessionClosedEventArgs,
         channelOpenEventRegistration: Disposable,
         closeEventRegistration: Disposable,
     ) {
@@ -333,7 +334,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             `Connection to host tunnel relay closed.${this.isDisposed ? '' : ' Reconnecting.'}`,
         );
 
-        this.startReconnectingIfNotDisposed();
+        if (e.reason === SshDisconnectReason.connectionLost) {
+            this.startReconnectingIfNotDisposed();
+        }
     }
 
     /**

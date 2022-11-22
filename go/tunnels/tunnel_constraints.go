@@ -98,8 +98,9 @@ const (
 	// organization ID.
 	//
 	// The : and / characters are allowed because subjects may include IP addresses and
-	// ranges.
-	TunnelConstraintsAccessControlSubjectPattern = "[0-9a-zA-Z-._:/]{0,200}"
+	// ranges. The @ character is allowed because MSA subjects may be identified by email
+	// address.
+	TunnelConstraintsAccessControlSubjectPattern = "[0-9a-zA-Z-._:/@]{0,200}"
 
 	// Regular expression that can match or validate an access control subject name, when
 	// resolving subject names to IDs.
@@ -107,7 +108,7 @@ const (
 	// Note angle-brackets are only allowed when they wrap an email address as part of a
 	// formatted name with email. The service will block any other use of angle-brackets, to
 	// avoid any XSS risks.
-	TunnelConstraintsAccessControlSubjectNamePattern = "[ \\w\\d-.,'\"_@()<>]{0,200}"
+	TunnelConstraintsAccessControlSubjectNamePattern = "[ \\w\\d-.,/'\"_@()<>]{0,200}"
 )
 var (
 	// Regular expression that can match or validate tunnel cluster ID strings.
