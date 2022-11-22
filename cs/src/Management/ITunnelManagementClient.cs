@@ -352,7 +352,7 @@ namespace Microsoft.DevTunnels.Management
         /// <param name="name">Tunnel name to check.</param>
         /// <param name="cancellation">Cancellation token.</param>
         /// <returns>True if the name is available; false if it is already in use.</returns>
-        Task<bool> CheckNameAvailability(
+        Task<bool> CheckNameAvailabilityAsync(
             string name,
             CancellationToken cancellation = default);
     }

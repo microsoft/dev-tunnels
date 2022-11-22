@@ -1244,7 +1244,7 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CheckNameAvailability(
+        public async Task<bool> CheckNameAvailabilityAsync(
             string name,
             CancellationToken cancellation = default)
         {
