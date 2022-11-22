@@ -223,6 +223,10 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         throw new Error('Method not implemented.');
     }
 
+    checkNameAvailablility(tunnelName: string): Promise<boolean> {        
+        throw new Error('Method not implemented.');
+    }
+
     private issueMockTokens(tunnel: Tunnel, options?: TunnelRequestOptions) {
         if (tunnel && options?.tokenScopes) {
             tunnel.accessTokens = {};
