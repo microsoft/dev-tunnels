@@ -334,7 +334,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         throw new NotImplementedException();
     }
     
-    public Task<bool> CheckNameAvailable(string name, CancellationToken cancellation = default)
+    public Task<bool> CheckNameAvailability(string name, CancellationToken cancellation = default)
     {
         throw new NotImplementedException();
     }

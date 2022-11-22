@@ -1244,22 +1244,19 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CheckNameAvailable(
+        public async Task<bool> CheckNameAvailability(
             string name,
             CancellationToken cancellation = default)
         {
             Requires.NotNull(name, nameof(name));
-
-            var uri = BuildUri(clusterId: null, TunnelsApiPath + CheckAvailableSubPath + "/" + name, null, null);
-            bool? result = await this.SendRequestAsync<bool>(
+            return await this.SendRequestAsync<bool>(
                 HttpMethod.Get,
-                null,
-                TunnelsApiPath + CheckAvailableSubPath + "/" + name,
-                null,
-                null,
+                clusterId: null,
+                TunnelsApiPath + "/" + name + CheckAvailableSubPath,
+                query: null,
+                options: null,
                 cancellation
             );
-            return result ?? false;
         }
     }
 }
