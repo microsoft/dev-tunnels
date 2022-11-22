@@ -162,7 +162,7 @@ export interface TunnelManagementClient {
 
     /**
      * Checks if the tunnel name is available.
-     * @param tunnelName 
+     * @param tunnelName
      */
     checkNameAvailablility(tunnelName: string): Promise<boolean>;
 }
