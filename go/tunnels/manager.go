@@ -44,6 +44,7 @@ const (
 	tunnelsApiPath             = apiV1Path + "/tunnels"
 	subjectsApiPath            = apiV1Path + "/subjects"
 	clustersApiPath            = apiV1Path + "/clusters"
+	checkNameAvailabilityPath  = "/checkNameAvailability"
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
@@ -476,6 +477,26 @@ func (m *Manager) ListClusters(ctx context.Context) (clusters []*ClusterDetails,
 	return clusters, nil
 }
 
+// Checks if tunnel name is available
+// Returns true if name is available
+func (m *Manager) CheckNameAvailability(
+	ctx context.Context, name string,
+) (res bool, err error) {
+	path := fmt.Sprintf("%s/%s/%s", tunnelsApiPath, name, checkNameAvailabilityPath)
+	url := m.buildUri("", path, nil, "")
+	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
+	if err != nil {
+		return false, fmt.Errorf("error sending list tunnel request: %w", err)
+	}
+
+	err = json.Unmarshal(response, &res)
+	if err != nil {
+		return false, fmt.Errorf("error parsing response json to bool: %w", err)
+	}
+
+	return res, nil
+}
+
 func (m *Manager) sendTunnelRequest(
 	ctx context.Context,
 	tunnel *Tunnel,
@@ -487,7 +508,7 @@ func (m *Manager) sendTunnelRequest(
 	accessTokenScopes []TunnelAccessScope,
 	allowNotFound bool,
 ) ([]byte, error) {
-	authHeaderValue := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes);
+	authHeaderValue := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes)
 	return m.sendRequest(ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound)
 }
 
@@ -506,7 +527,7 @@ func (m *Manager) sendRequest(
 	}
 
 	// Add authorization header
-	if (authHeaderValue != "") {
+	if authHeaderValue != "" {
 		request.Header.Add("Authorization", authHeaderValue)
 	}
 
@@ -559,7 +580,7 @@ func (m *Manager) createRequest(
 	requestObject interface{},
 	partialFields []string,
 ) (*http.Request, error) {
-	if (requestObject == nil) {
+	if requestObject == nil {
 		return http.NewRequest(method, uri.String(), nil)
 	}
 	requestJson, err := partialMarshal(requestObject, partialFields)
@@ -616,7 +637,7 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 	if token == "" && tunnel != nil {
 		for _, scope := range accessTokenScopes {
 			var accessToken string
-			tokensLoop:
+		tokensLoop:
 			for tokenScope, token := range tunnel.AccessTokens {
 				// Each key may be either a single scope or space-delimited list of scopes.
 				if strings.Contains(string(tokenScope), " ") {
