@@ -14,6 +14,7 @@ import com.microsoft.tunnels.contracts.TunnelContracts;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
