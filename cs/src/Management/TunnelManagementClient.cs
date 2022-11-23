@@ -1248,6 +1248,7 @@ namespace Microsoft.DevTunnels.Management
             string name,
             CancellationToken cancellation = default)
         {
+            name = Uri.EscapeDataString(name);
             Requires.NotNull(name, nameof(name));
             return await this.SendRequestAsync<bool>(
                 HttpMethod.Get,
