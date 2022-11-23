@@ -94,12 +94,11 @@ impl TunnelManagementClient {
      pub async fn check_name_availability(
         &self,
         name : &str,
-        options: &TunnelRequestOptions,
     ) -> HttpResult<bool> {
         let path = format!("{}/{}{}", TUNNELS_API_PATH, name, CHECK_TUNNEL_NAME_SUB_PATH);
-        let mut url = self.build_uri(None, TUNNELS_API_PATH);
+        let mut url = self.build_uri(None, path);
 
-        let request = self.make_tunnel_request(Method::GET, url, options).await?;
+        let request = self.make_tunnel_request(Method::GET, url, None).await?;
         self.execute_json("get_name_availability", request).await
     }
 
