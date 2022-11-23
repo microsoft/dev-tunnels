@@ -159,6 +159,12 @@ export interface TunnelManagementClient {
      * Lists details of tunneling service clusters in all supported Azure regions.
      */
     listClusters(): Promise<ClusterDetails[]>;
+
+    /**
+     * Checks if the tunnel name is available.
+     * @param tunnelName
+     */
+    checkNameAvailablility(tunnelName: string): Promise<boolean>;
 }
 
 /**

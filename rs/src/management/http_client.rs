@@ -31,7 +31,7 @@ pub struct TunnelManagementClient {
 const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
-
+const CHECK_TUNNEL_NAME_SUB_PATH: &str = "/checkNameAvailability";
 impl TunnelManagementClient {
     /// Returns a builder that creates a new client, starting with the current
     /// client's options.
@@ -88,6 +88,18 @@ impl TunnelManagementClient {
         let mut request = self.make_tunnel_request(Method::POST, url, options).await?;
         json_body(&mut request, tunnel);
         self.execute_json("create_tunnel", request).await
+    }
+
+     /// Gets if tunnel name is avilable.
+     pub async fn check_name_availability(
+        &self,
+        name : &str,
+    ) -> HttpResult<bool> {
+        let path = format!("{}/{}{}", TUNNELS_API_PATH, name, CHECK_TUNNEL_NAME_SUB_PATH);
+        let mut url = self.build_uri(None, path);
+
+        let request = self.make_tunnel_request(Method::GET, url, NO_REQUEST_OPTIONS).await?;
+        self.execute_json("get_name_availability", request).await
     }
 
     /// Updates an existing tunnel.

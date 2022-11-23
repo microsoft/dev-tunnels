@@ -345,5 +345,15 @@ namespace Microsoft.DevTunnels.Management
         /// <param name="cancellation">Cancellation token.</param>
         /// <returns>Array of <see cref="ClusterDetails"/></returns>
         Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation = default);
+
+        /// <summary>
+        /// Checks for tunnel name availability.
+        /// </summary>
+        /// <param name="name">Tunnel name to check.</param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <returns>True if the name is available; false if it is already in use.</returns>
+        Task<bool> CheckNameAvailabilityAsync(
+            string name,
+            CancellationToken cancellation = default);
     }
 }

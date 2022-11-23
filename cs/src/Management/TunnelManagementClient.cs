@@ -34,6 +34,7 @@ namespace Microsoft.DevTunnels.Management
         private const string ClustersPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
+        private const string CheckAvailableSubPath = "/checkNameAvailability";
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
@@ -79,8 +80,8 @@ namespace Microsoft.DevTunnels.Management
         /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
         /// with an optional client authentication callback.
         /// </summary>
-        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
-        /// case that this SDK is used in a program, such as a CLI, that has users that want 
+        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the
+        /// case that this SDK is used in a program, such as a CLI, that has users that want
         /// to be differentiated. </param>
         /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header, for AAD or GitHub user authentication. This may be null
@@ -122,8 +123,8 @@ namespace Microsoft.DevTunnels.Management
         /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
         /// with a client authentication callback, service URI, and HTTP handler.
         /// </summary>
-        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the 
-        /// case that this SDK is used in a program, such as a CLI, that has users that want 
+        /// <param name="userAgents">User agent. Muiltiple user agents can be supplied in the
+        /// case that this SDK is used in a program, such as a CLI, that has users that want
         /// to be differentiated. </param>
         /// <param name="userTokenCallback">Optional async callback for retrieving a client
         /// authentication header value with access token, for AAD or GitHub user authentication.
@@ -762,7 +763,7 @@ namespace Microsoft.DevTunnels.Management
                             break;
                         }
                     }
-                    
+
                     if (!string.IsNullOrEmpty(accessToken))
                     {
                         TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
@@ -1240,6 +1241,23 @@ namespace Microsoft.DevTunnels.Management
                 body: null,
                 cancellation);
             return clusterDetails!;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> CheckNameAvailabilityAsync(
+            string name,
+            CancellationToken cancellation = default)
+        {
+            name = Uri.EscapeDataString(name);
+            Requires.NotNull(name, nameof(name));
+            return await this.SendRequestAsync<bool>(
+                HttpMethod.Get,
+                clusterId: null,
+                TunnelsApiPath + "/" + name + CheckAvailableSubPath,
+                query: null,
+                options: null,
+                cancellation
+            );
         }
     }
 }

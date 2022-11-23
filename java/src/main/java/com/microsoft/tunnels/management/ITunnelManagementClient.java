@@ -202,6 +202,16 @@ public interface ITunnelManagementClient {
       int portNumber,
       TunnelRequestOptions options);
 
+
+      /**
+   * Checks if a tunnel name is available
+   *
+   * @param name     Name to check.
+   * @return True if the name is available; false if it is taken.
+   */
+  public CompletableFuture<Boolean> checkNameAvailabilityAsync(
+    String name);
+
   /**
    * Lists details of tunneling service clusters in all supported Azure regions.
    * @return Array of {@link ClusterDetails}.

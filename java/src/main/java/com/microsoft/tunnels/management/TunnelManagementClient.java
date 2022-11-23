@@ -14,9 +14,11 @@ import com.microsoft.tunnels.contracts.TunnelContracts;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
 import com.microsoft.tunnels.contracts.TunnelPort;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -54,6 +56,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private static final String portsApiSubPath = "/ports";
   private String clustersApiPath = apiV1Path + "/clusters";
   private static final String tunnelAuthenticationScheme = "Tunnel";
+  private static final String checkTunnelNamePath = "/checkNameAvailability";
 
   // Access Scopes
   private static final String[] ManageAccessTokenScope = {
@@ -726,6 +729,32 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           responseType);
     } catch (URISyntaxException e) {
       throw new Error("Error parsing URI: " + this.baseAddress + this.clustersApiPath);
+    }
+  }
+
+    /**
+   * {@inheritDoc}
+   */
+  public CompletableFuture<Boolean> checkNameAvailabilityAsync(String name) {
+    URI uri;
+    try {
+      uri = new URI(this.baseAddress + this.tunnelsApiPath + name + this.checkTunnelNamePath);
+      final Type responseType = new TypeToken<Boolean>() {
+      }.getType();
+      name = URLEncoder.encode(name, "UTF-8");
+      return requestAsync(
+          null,
+          null,
+          HttpMethod.GET,
+          uri,
+          null,
+          null,
+          responseType);
+    } catch (URISyntaxException e) {
+      throw new Error("Error parsing URI: " + this.baseAddress + this.tunnelsApiPath + name + this.checkTunnelNamePath);
+    }
+    catch (UnsupportedEncodingException e) {
+      throw new Error("Error encoding tunnel name: " + name);
     }
   }
 }

@@ -31,6 +31,7 @@ const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
 const clustersApiPath = apiV1Path + '/clusters';
 const tunnelAuthentication = 'Authorization';
+const checkAvailablePath = '/checkAvailability';
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
@@ -511,6 +512,18 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const config = await this.getAxiosRequestConfig(undefined, options);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
+    }
+
+    public async checkNameAvailablility(tunnelName: string): Promise<boolean> {
+        tunnelName = encodeURI(tunnelName);
+        const uri = this.buildUri(
+            undefined,
+            `${tunnelsApiPath}/${tunnelName}${checkAvailablePath}`,
+        );
+        let config: AxiosRequestConfig = {
+            httpsAgent: this.httpsAgent,
+        };
+        return await this.request<boolean>('GET', uri, undefined, config);
     }
 
     private getResponseErrorMessage(error: AxiosError) {
