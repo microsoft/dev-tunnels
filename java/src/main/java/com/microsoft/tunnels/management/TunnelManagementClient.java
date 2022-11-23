@@ -752,5 +752,8 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     } catch (URISyntaxException e) {
       throw new Error("Error parsing URI: " + this.baseAddress + this.tunnelsApiPath + name + this.checkTunnelNamePath);
     }
+    catch (UnsupportedEncodingException e) {
+      throw new Error("Error encoding tunnel name: " + name);
+    }
   }
 }
