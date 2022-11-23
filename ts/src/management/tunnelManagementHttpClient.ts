@@ -515,6 +515,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     public async checkNameAvailablility(tunnelName: string): Promise<boolean> {
+        tunnelName = encodeURI(tunnelName);
         const uri = this.buildUri(
             undefined,
             `${tunnelsApiPath}/${tunnelName}${checkAvailablePath}`,
