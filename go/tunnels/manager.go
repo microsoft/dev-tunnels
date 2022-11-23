@@ -482,6 +482,7 @@ func (m *Manager) ListClusters(ctx context.Context) (clusters []*ClusterDetails,
 func (m *Manager) CheckNameAvailability(
 	ctx context.Context, name string,
 ) (res bool, err error) {
+	name = url.QueryEscape(name)
 	path := fmt.Sprintf("%s/%s/%s", tunnelsApiPath, name, checkNameAvailabilityPath)
 	url := m.buildUri("", path, nil, "")
 	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
