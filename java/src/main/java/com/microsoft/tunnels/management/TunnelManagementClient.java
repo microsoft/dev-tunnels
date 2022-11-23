@@ -739,7 +739,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       uri = new URI(this.baseAddress + this.tunnelsApiPath + name + this.checkTunnelNamePath);
       final Type responseType = new TypeToken<Boolean>() {
       }.getType();
-      name = URLEncoder.encode(name, StandardCharsets.UTF_8.toString());
+      name = URLEncoder.encode(name, "UTF-8");
       return requestAsync(
           null,
           null,
