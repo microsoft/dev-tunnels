@@ -744,6 +744,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 queryOptions['includePorts'] = ['true'];
             }
 
+            if (options.includeAccessControl) {
+                queryOptions['includeAccessControl'] = ['true'];
+            }
+
             if (options.tokenScopes) {
                 TunnelAccessControl.validateScopes(options.tokenScopes, undefined, true);
                 queryOptions['tokenScopes'] = options.tokenScopes;

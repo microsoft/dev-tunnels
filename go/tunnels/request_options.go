@@ -25,6 +25,9 @@ type TunnelRequestOptions struct {
 	// Flag that requests tunnel ports when retrieving a tunnel object.
 	IncludePorts bool
 
+	// Flag that requests tunnel access control details when listing or searching tunnels.
+	IncludeAccessControl bool
+
 	// Optional list of tags to filter the requested tunnels or ports.
 	// By default, an item is included if ANY tag matches; set `requireAllTags` to match
 	// ALL tags instead.
@@ -48,6 +51,9 @@ func (options *TunnelRequestOptions) queryString() string {
 	queryOptions := url.Values{}
 	if options.IncludePorts {
 		queryOptions.Set("includePorts", "true")
+	}
+	if options.IncludeAccessControl {
+		queryOptions.Set("includeAccessControl", "true")
 	}
 
 	if options.TokenScopes != nil {

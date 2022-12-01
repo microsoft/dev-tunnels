@@ -61,10 +61,22 @@ public class TunnelRequestOptions {
   public boolean followRedirects;
 
   /**
-   * Gets or sets a flag that requests tunnel ports when retrieving a tunnel
-   * object.
+   * Gets or sets a flag that requests tunnel ports when retrieving a tunnel object.
+   *
+   * Ports are excluded by default when retrieving a tunnel or when listing or searching
+   * tunnels. This option enables including ports for all tunnels returned by a list or
+   * search query.
    */
   public boolean includePorts;
+
+  /**
+   * Gets or sets a flag that requests access control details when retrieving tunnels.
+   *
+   * Access control details are always included when retrieving a single tunnel,
+   * but excluded by default when listing or searching tunnels. This option enables
+   * including access controls for all tunnels returned by a list or search query.
+   */
+  public boolean includeAccessControl;
 
   /**
    * Gets or sets an optional list of tags to filter the requested tunnels or ports.
@@ -117,6 +129,10 @@ public class TunnelRequestOptions {
 
     if (this.includePorts) {
       queryOptions.put("includePorts", Arrays.asList("true"));
+    }
+
+    if (this.includeAccessControl) {
+      queryOptions.put("includeAccessControl", Arrays.asList("true"));
     }
 
     if (this.tokenScopes != null) {
