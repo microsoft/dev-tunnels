@@ -17,7 +17,7 @@ namespace Microsoft.DevTunnels.Management
     /// <remarks>
     /// All options are disabled by default. In general, enabling options may result
     /// in slower queries (because the server has more work to do).
-    /// 
+    ///
     /// Certain options may only apply to certain kinds of requests.
     /// </remarks>
     public class TunnelRequestOptions
@@ -49,7 +49,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <summary>
         /// Gets or sets additional http request options
-        /// for <code>HttpRequestMessage.Options</code> (in net6.0) or 
+        /// for <code>HttpRequestMessage.Options</code> (in net6.0) or
         /// <code>HttpRequestMessage.Properties</code> (in netcoreapp3.1).
         /// </summary>
         public IEnumerable<KeyValuePair<string, object?>>? HttpRequestOptions { get; set; }
@@ -71,7 +71,22 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Gets or sets a flag that requests tunnel ports when retrieving tunnels.
         /// </summary>
+        /// <remarks>
+        /// Ports are excluded by default when retrieving a tunnel or when listing or searching
+        /// tunnels. This option enables including ports for all tunnels returned by a list or
+        /// search query.
+        /// </remarks>
         public bool IncludePorts { get; set; }
+
+        /// <summary>
+        /// Gets or sets a flag that requests access control details when retrieving tunnels.
+        /// </summary>
+        /// <remarks>
+        /// Access control details are always included when retrieving a single tunnel,
+        /// but excluded by default when listing or searching tunnels. This option enables
+        /// including access controls for all tunnels returned by a list or search query.
+        /// </remarks>
+        public bool IncludeAccessControl { get; set; }
 
         /// <summary>
         /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
@@ -129,6 +144,11 @@ namespace Microsoft.DevTunnels.Management
             if (IncludePorts)
             {
                 queryOptions["includePorts"] = TrueOption;
+            }
+
+            if (IncludeAccessControl)
+            {
+                queryOptions["includeAccessControl"] = TrueOption;
             }
 
             if (TokenScopes != null)

@@ -15,7 +15,18 @@ pub struct TunnelRequestOptions {
     pub headers: Vec<(HeaderName, HeaderValue)>,
 
     /// Gets or sets a flag that requests tunnel ports when retrieving a tunnel object.
+    ///
+    /// Ports are excluded by default when retrieving a tunnel or when listing or searching
+    /// tunnels. This option enables including ports for all tunnels returned by a list or
+    /// search query.
     pub include_ports: bool,
+
+    /// Gets or sets a flag that requests access control details when retrieving tunnels.
+    ///
+    /// Access control details are always included when retrieving a single tunnel,
+    /// but excluded by default when listing or searching tunnels. This option enables
+    /// including access controls for all tunnels returned by a list or search query.
+    pub include_access_control: bool,
 
     /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
     ///
@@ -45,6 +56,7 @@ pub const NO_REQUEST_OPTIONS: &TunnelRequestOptions = &TunnelRequestOptions {
     authorization: None,
     headers: Vec::new(),
     include_ports: false,
+    include_access_control: false,
     tags: Vec::new(),
     require_all_tags: false,
     token_scopes: Vec::new(),
