@@ -128,6 +128,12 @@ public class Tunnel
     public TunnelPort[]? Ports { get; set; }
 
     /// <summary>
+    /// Gets or sets if inspection is enabled for the tunnel.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? InspectionEnabled { get; set; }
+
+    /// <summary>
     /// Gets or sets the time in UTC of tunnel creation.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
