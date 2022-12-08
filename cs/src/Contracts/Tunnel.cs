@@ -131,7 +131,7 @@ public class Tunnel
     /// Gets or sets if inspection is enabled for the tunnel.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? InspectionEnabled { get; set; }
+    public bool? IsInspectionEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the time in UTC of tunnel creation.

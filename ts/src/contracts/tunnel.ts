@@ -90,7 +90,7 @@ export interface Tunnel {
     /**
      * Gets or sets if inspection is enabled for the tunnel.
      */
-    inspectionEnabled?: boolean;
+    isInspectionEnabled?: boolean;
 
     /**
      * Gets or sets the time in UTC of tunnel creation.
