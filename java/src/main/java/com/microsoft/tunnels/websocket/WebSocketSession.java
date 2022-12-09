@@ -79,4 +79,15 @@ public class WebSocketSession extends NettyIoSession {
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
     super.exceptionCaught(ctx, cause);
   }
+
+  @Override
+  public void suspendRead()  {
+    super.suspendRead();
+  }
+
+  @Override
+  public void resumeRead()  {
+    super.resumeRead();
+  }
+
 }
