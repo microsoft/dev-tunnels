@@ -99,12 +99,6 @@ public class Tunnel {
     public TunnelPort[] ports;
 
     /**
-     * Gets or sets if inspection is enabled for the tunnel.
-     */
-    @Expose
-    public boolean isInspectionEnabled;
-
-    /**
      * Gets or sets the time in UTC of tunnel creation.
      */
     @Expose

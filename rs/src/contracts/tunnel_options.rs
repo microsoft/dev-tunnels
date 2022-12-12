@@ -48,4 +48,8 @@ pub struct TunnelOptions {
     // over this option on the tunnel level.
     #[serde(default)]
     pub is_origin_header_unchanged: bool,
+
+    // Gets or sets if inspection is enabled for the tunnel.
+    #[serde(default)]
+    pub is_inspection_enabled: bool,
 }

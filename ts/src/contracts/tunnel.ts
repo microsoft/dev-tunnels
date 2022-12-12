@@ -88,11 +88,6 @@ export interface Tunnel {
     ports?: TunnelPort[];
 
     /**
-     * Gets or sets if inspection is enabled for the tunnel.
-     */
-    isInspectionEnabled?: boolean;
-
-    /**
      * Gets or sets the time in UTC of tunnel creation.
      */
     created?: Date;

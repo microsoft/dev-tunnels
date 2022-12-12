@@ -40,4 +40,7 @@ type TunnelOptions struct {
 	// https://tunnel-name-8080.devtunnels.ms. Port-level option, if set, takes precedence
 	// over this option on the tunnel level.
 	IsOriginHeaderUnchanged bool `json:"isOriginHeaderUnchanged,omitempty"`
+
+	// Gets or sets if inspection is enabled for the tunnel.
+	IsInspectionEnabled     bool `json:"isInspectionEnabled,omitempty"`
 }

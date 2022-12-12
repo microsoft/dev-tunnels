@@ -67,9 +67,6 @@ pub struct Tunnel {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub ports: Vec<TunnelPort>,
 
-    // Gets or sets if inspection is enabled for the tunnel.
-    pub is_inspection_enabled: Option<bool>,
-
     // Gets or sets the time in UTC of tunnel creation.
     pub created: Option<DateTime<Utc>>,
 
