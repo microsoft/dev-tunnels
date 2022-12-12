@@ -52,4 +52,9 @@ export interface TunnelOptions {
      * over this option on the tunnel level.
      */
     isOriginHeaderUnchanged?: boolean;
+
+    /**
+     * Gets or sets if inspection is enabled for the tunnel.
+     */
+    isInspectionEnabled?: boolean;
 }

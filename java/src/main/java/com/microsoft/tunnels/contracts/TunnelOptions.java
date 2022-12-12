@@ -60,4 +60,10 @@ public class TunnelOptions {
      */
     @Expose
     public boolean isOriginHeaderUnchanged;
+
+    /**
+     * Gets or sets if inspection is enabled for the tunnel.
+     */
+    @Expose
+    public boolean isInspectionEnabled;
 }

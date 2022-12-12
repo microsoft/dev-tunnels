@@ -69,5 +69,11 @@ namespace Microsoft.DevTunnels.Contracts
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool IsOriginHeaderUnchanged { get; set; }        
+
+        /// <summary>
+        /// Gets or sets if inspection is enabled for the tunnel.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool IsInspectionEnabled { get; set; }
     }
 }
