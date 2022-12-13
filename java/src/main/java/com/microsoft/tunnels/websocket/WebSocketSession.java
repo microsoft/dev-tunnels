@@ -21,7 +21,7 @@ import org.apache.sshd.netty.NettyIoSession;
 
 public class WebSocketSession extends NettyIoSession {
   protected WebSocketConnectionHandler webSocketConnectionHandler;
-  protected Semaphore reading;
+  private Semaphore reading;
   /**
    * Creates a modified Netty session to handle websocket messages.
    */
