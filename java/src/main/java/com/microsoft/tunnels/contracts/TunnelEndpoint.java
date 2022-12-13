@@ -90,7 +90,7 @@ public class TunnelEndpoint {
      * TunnelEndpoint#portUriFormat}. No token substitution is needed for the URIs.
      */
     @Expose
-    public Map<int, String[]> portUris;
+    public Map<Integer, String[]> portUris;
 
     /**
      * Token included in {@link TunnelEndpoint#portUriFormat} and {@link
