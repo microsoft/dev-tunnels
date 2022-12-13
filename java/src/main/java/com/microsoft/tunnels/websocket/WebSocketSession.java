@@ -18,7 +18,6 @@ import org.apache.sshd.common.io.IoWriteFuture;
 import org.apache.sshd.common.util.buffer.Buffer;
 import org.apache.sshd.netty.NettyIoService;
 import org.apache.sshd.netty.NettyIoSession;
-import org.apache.sshd.netty.NettySupport;
 
 public class WebSocketSession extends NettyIoSession {
   protected WebSocketConnectionHandler webSocketConnectionHandler;
