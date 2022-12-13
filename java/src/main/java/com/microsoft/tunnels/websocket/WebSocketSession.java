@@ -86,7 +86,11 @@ public class WebSocketSession extends NettyIoSession {
 
   @Override
   public void suspendRead() {
-    this.reading.tryAcquire();
+    try {
+      this.reading.tryAcquire(1, 1, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      return;
+    }
   }
 
   @Override
