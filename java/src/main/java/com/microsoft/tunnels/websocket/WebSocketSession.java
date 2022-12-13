@@ -11,16 +11,18 @@ import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.concurrent.*;
 
 import org.apache.sshd.common.io.IoHandler;
 import org.apache.sshd.common.io.IoWriteFuture;
 import org.apache.sshd.common.util.buffer.Buffer;
 import org.apache.sshd.netty.NettyIoService;
 import org.apache.sshd.netty.NettyIoSession;
+import org.apache.sshd.netty.NettySupport;
 
 public class WebSocketSession extends NettyIoSession {
   protected WebSocketConnectionHandler webSocketConnectionHandler;
-
+  protected Semaphore reading;
   /**
    * Creates a modified Netty session to handle websocket messages.
    */
@@ -35,6 +37,7 @@ public class WebSocketSession extends NettyIoSession {
         this,
         webSocketUri,
         accessToken);
+    this.reading = new Semaphore(1);
   }
 
   @Override
@@ -72,6 +75,8 @@ public class WebSocketSession extends NettyIoSession {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    this.reading.acquire();
+    this.reading.release();
     super.channelRead(ctx, msg);
   }
 
@@ -81,13 +86,13 @@ public class WebSocketSession extends NettyIoSession {
   }
 
   @Override
-  public void suspendRead()  {
-    super.suspendRead();
+  public void suspendRead() {
+    this.reading.tryAcquire();
   }
 
   @Override
   public void resumeRead()  {
-    super.resumeRead();
+    this.reading.release();
   }
 
 }
