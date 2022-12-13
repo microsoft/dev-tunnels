@@ -1,4 +1,4 @@
-﻿// <copyright file="GoContractWriter.cs" company="Microsoft">
+// <copyright file="GoContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -441,6 +441,7 @@ internal class GoContractWriter : ContractWriter
                 "System.Collections.Generic.IDictionary<string, string>"
                     => $"map[{(property.Name == "AccessTokens" ? "TunnelAccessScope" : "string")}]string",
                 "System.Collections.Generic.IDictionary<string, string[]>" => "map[string][]string",
+                "System.Collections.Generic.IDictionary<int, string[]>" => "map[int32][]string",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
 

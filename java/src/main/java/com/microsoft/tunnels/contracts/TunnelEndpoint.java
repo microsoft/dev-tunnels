@@ -6,6 +6,7 @@ package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
 import java.net.URI;
+import java.util.Map;
 
 /**
  * Base class for tunnel connection parameters.
@@ -81,6 +82,15 @@ public class TunnelEndpoint {
      */
     @Expose
     public String sshGatewayPublicKey;
+
+    /**
+     * Gets or sets web forwarding URI map. If set, this maps forwarded ports to a list of
+     * absolute URIs where these ports can be accessed with web forwarding. These URIs are
+     * additional to the port URI from {@link TunnelEndpoint#tunnelUri} and  {@link
+     * TunnelEndpoint#portUriFormat}. No token substitution is needed for the URIs.
+     */
+    @Expose
+    public Map<int, String[]> portUris;
 
     /**
      * Token included in {@link TunnelEndpoint#portUriFormat} and {@link

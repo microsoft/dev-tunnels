@@ -52,6 +52,12 @@ type TunnelEndpoint struct {
 	// file so that tunnel service can connect to the shared ssh server.
 	SshGatewayPublicKey  string `json:"sshGatewayPublicKey,omitempty"`
 
+	// Gets or sets web forwarding URI map. If set, this maps forwarded ports to a list of
+	// absolute URIs where these ports can be accessed with web forwarding. These URIs are
+	// additional to the port URI from `TunnelEndpoint.TunnelUri` and
+	// `TunnelEndpoint.PortUriFormat`. No token substitution is needed for the URIs.
+	PortURIs             map[int32][]string `json:"portUris,omitempty"`
+
 	LocalNetworkTunnelEndpoint
 	TunnelRelayTunnelEndpoint
 }

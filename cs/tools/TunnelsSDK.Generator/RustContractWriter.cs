@@ -1,4 +1,4 @@
-﻿// <copyright file="GoContractWriter.cs" company="Microsoft">
+// <copyright file="GoContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -446,6 +446,8 @@ internal class RustContractWriter : ContractWriter
                     => "HashMap<String, String>",
                 "System.Collections.Generic.IDictionary<string, string[]>"
                     => "HashMap<String, Vec<String>>",
+                "System.Collections.Generic.IDictionary<int, string[]>"
+                    => "HashMap<i32, Vec<String>>",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
         }
