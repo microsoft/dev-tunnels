@@ -75,7 +75,7 @@ export interface TunnelEndpoint {
     /**
      * Gets or sets web forwarding URI map. If set, this maps forwarded ports to a list of
      * absolute URIs where these ports can be accessed with web forwarding. These URIs are
-     * additional to the port URI from {@link TunnelEndpoint.tunnelUri} and  {@link
+     * additional to the port URI from {@link TunnelEndpoint.tunnelUri} and {@link
      * TunnelEndpoint.portUriFormat}. No token substitution is needed for the URIs.
      */
     portUris?: { [key: number]: string[] };
