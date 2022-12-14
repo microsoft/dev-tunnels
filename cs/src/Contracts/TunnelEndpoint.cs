@@ -93,15 +93,6 @@ public abstract class TunnelEndpoint
     public string? SshGatewayPublicKey { get; set; }
 
     /// <summary>
-    /// Gets or sets web forwarding URI map.
-    /// If set, this maps forwarded ports to a list of absolute URIs where these ports can be accessed with web forwarding.
-    /// These URIs are additional to the port URI from <see cref="TunnelUri"/> and <see cref="PortUriFormat"/>.
-    /// No token substitution is needed for the URIs.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IDictionary<int, string[]>? PortUris { get; set; }
-
-    /// <summary>
     /// Token included in <see cref="PortUriFormat"/> and <see cref="PortSshCommandFormat"/>
     ///  that is to be replaced by a specified port number.
     /// </summary>

@@ -407,8 +407,6 @@ internal class TSContractWriter : ContractWriter
                     => $"{{ [{(propertyName == "accessTokens" ? "scope" : "key")}: string]: string }}",
                 "System.Collections.Generic.IDictionary<string, string[]>"
                     => $"{{ [{(propertyName == "errors" ? "property" : "key")}: string]: string[] }}",
-                "System.Collections.Generic.IDictionary<int, string[]>"
-                    => $"{{ [{(propertyName == "errors" ? "property" : "key")}: number]: string[] }}",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),
             };
         }

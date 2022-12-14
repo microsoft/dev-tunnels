@@ -4,7 +4,6 @@
 
 use crate::contracts::TunnelConnectionMode;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 // Base class for tunnel connection parameters.
 //
@@ -57,12 +56,6 @@ pub struct TunnelEndpoint {
     // Gets or sets the Ssh gateway public key which should be added to the
     // authorized_keys file so that tunnel service can connect to the shared ssh server.
     pub ssh_gateway_public_key: Option<String>,
-
-    // Gets or sets web forwarding URI map. If set, this maps forwarded ports to a list of
-    // absolute URIs where these ports can be accessed with web forwarding. These URIs are
-    // additional to the port URI from `TunnelEndpoint.TunnelUri` and
-    // `TunnelEndpoint.PortUriFormat`. No token substitution is needed for the URIs.
-    pub port_uris: Option<HashMap<i32, Vec<String>>>,
 }
 
 // Token included in `TunnelEndpoint.PortUriFormat` and

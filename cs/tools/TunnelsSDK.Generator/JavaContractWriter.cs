@@ -409,8 +409,6 @@ internal class JavaContractWriter : ContractWriter
                     => $"java.util.Map<String, String>",
                 "System.Collections.Generic.IDictionary<string, string[]>"
                     => $"java.util.Map<String, String[]>",
-                "System.Collections.Generic.IDictionary<int, string[]>"
-                    => $"java.util.Map<Integer, String[]>",
                 "System.Uri" => "java.net.URI",
                 "System.Collections.Generic.IEnumerable<string>" => "java.util.Collection<String>",
                 _ => throw new NotSupportedException("Unsupported C# type: " + csType),

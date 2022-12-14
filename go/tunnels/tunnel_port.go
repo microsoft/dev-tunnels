@@ -7,49 +7,53 @@ package tunnels
 // Data contract for tunnel port objects managed through the tunnel service REST API.
 type TunnelPort struct {
 	// Gets or sets the ID of the cluster the tunnel was created in.
-	ClusterID     string `json:"clusterId,omitempty"`
+	ClusterID          string `json:"clusterId,omitempty"`
 
 	// Gets or sets the generated ID of the tunnel, unique within the cluster.
-	TunnelID      string `json:"tunnelId,omitempty"`
+	TunnelID           string `json:"tunnelId,omitempty"`
 
 	// Gets or sets the IP port number of the tunnel port.
-	PortNumber    uint16 `json:"portNumber"`
+	PortNumber         uint16 `json:"portNumber"`
 
 	// Gets or sets the optional short name of the port.
 	//
 	// The name must be unique among named ports of the same tunnel.
-	Name          string `json:"name,omitempty"`
+	Name               string `json:"name,omitempty"`
 
 	// Gets or sets the optional description of the port.
-	Description   string `json:"description,omitempty"`
+	Description        string `json:"description,omitempty"`
 
 	// Gets or sets the tags of the port.
-	Tags          []string `json:"tags,omitempty"`
+	Tags               []string `json:"tags,omitempty"`
 
 	// Gets or sets the protocol of the tunnel port.
 	//
 	// Should be one of the string constants from `TunnelProtocol`.
-	Protocol      string `json:"protocol,omitempty"`
+	Protocol           string `json:"protocol,omitempty"`
 
 	// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
 	//
 	// Unlike the tokens in `Tunnel.AccessTokens`, these tokens are restricted to the
 	// individual port.
-	AccessTokens  map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
+	AccessTokens       map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
 
 	// Gets or sets access control settings for the tunnel port.
 	//
 	// See `TunnelAccessControl` documentation for details about the access control model.
-	AccessControl *TunnelAccessControl `json:"accessControl,omitempty"`
+	AccessControl      *TunnelAccessControl `json:"accessControl,omitempty"`
 
 	// Gets or sets options for the tunnel port.
-	Options       *TunnelOptions `json:"options,omitempty"`
+	Options            *TunnelOptions `json:"options,omitempty"`
 
 	// Gets or sets current connection status of the tunnel port.
-	Status        *TunnelPortStatus `json:"status,omitempty"`
+	Status             *TunnelPortStatus `json:"status,omitempty"`
 
 	// Gets or sets the username for the ssh service user is trying to forward.
 	//
 	// Should be provided if the `TunnelProtocol` is Ssh.
-	SshUser       string `json:"sshUser,omitempty"`
+	SshUser            string `json:"sshUser,omitempty"`
+
+	// Gets or sets web forwarding URIs. If set, it's a list of absolute URIs where the port
+	// can be accessed with web forwarding.
+	PortForwardingURIs []string `json:"portForwardingUris"`
 }

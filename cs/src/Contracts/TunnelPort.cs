@@ -124,4 +124,10 @@ public class TunnelPort
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [StringLength(TunnelNameMaxLength)]
     public string? SshUser { get; set; }
+
+    /// <summary>
+    /// Gets or sets web forwarding URIs.
+    /// If set, it's a list of absolute URIs where the port can be accessed with web forwarding.
+    /// </summary>
+    public string[]? PortForwardingUris { get; set; }
 }
