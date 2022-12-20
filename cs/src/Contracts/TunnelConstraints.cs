@@ -306,7 +306,7 @@ public static class TunnelConstraints
         {
             return false;
         }
-        if (tunnelName.EndsWith("-inspect"))
+        if (tunnelName.EndsWith("-inspect", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
