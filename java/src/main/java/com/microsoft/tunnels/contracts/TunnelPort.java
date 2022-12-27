@@ -94,4 +94,11 @@ public class TunnelPort {
      */
     @Expose
     public String sshUser;
+
+    /**
+     * Gets or sets web forwarding URIs. If set, it's a list of absolute URIs where the
+     * port can be accessed with web forwarding.
+     */
+    @Expose
+    public String[] portForwardingUris;
 }

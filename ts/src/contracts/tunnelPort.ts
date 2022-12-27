@@ -82,4 +82,10 @@ export interface TunnelPort {
      * Should be provided if the {@link TunnelProtocol} is Ssh.
      */
     sshUser?: string;
+
+    /**
+     * Gets or sets web forwarding URIs. If set, it's a list of absolute URIs where the
+     * port can be accessed with web forwarding.
+     */
+    portForwardingUris?: string[];
 }

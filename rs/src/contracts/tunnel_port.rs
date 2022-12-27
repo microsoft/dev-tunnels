@@ -59,4 +59,9 @@ pub struct TunnelPort {
     //
     // Should be provided if the `TunnelProtocol` is Ssh.
     pub ssh_user: Option<String>,
+
+    // Gets or sets web forwarding URIs. If set, it's a list of absolute URIs where the
+    // port can be accessed with web forwarding.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub port_forwarding_uris: Vec<String>,
 }
