@@ -306,6 +306,10 @@ public static class TunnelConstraints
         {
             return false;
         }
+        if (tunnelName.EndsWith("-inspect", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
 
         var m = TunnelNameRegex.Match(tunnelName);
         return m.Index == 0 && m.Length == tunnelName.Length && !IsValidTunnelId(tunnelName);
