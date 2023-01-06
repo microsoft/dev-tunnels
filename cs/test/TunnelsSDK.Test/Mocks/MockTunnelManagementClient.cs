@@ -207,6 +207,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
             ClusterId = tunnel.ClusterId,
             PortNumber = tunnelPort.PortNumber,
             Protocol = tunnelPort.Protocol,
+            IsDefault = tunnelPort.IsDefault,
             AccessControl = tunnelPort.AccessControl,
             Options = tunnelPort.Options,
             SshUser = tunnelPort.SshUser,
@@ -333,7 +334,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     {
         throw new NotImplementedException();
     }
-    
+
     public Task<bool> CheckNameAvailabilityAsync(string name, CancellationToken cancellation = default)
     {
         throw new NotImplementedException();
