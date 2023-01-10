@@ -610,6 +610,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var converted = new TunnelPort();
     converted.portNumber = tunnelPort.portNumber;
     converted.protocol = tunnelPort.protocol;
+    converted.isDefault = tunnelPort.isDefault;
     converted.description = tunnelPort.description;
     converted.tags = tunnelPort.tags;
     converted.sshUser = tunnelPort.sshUser;

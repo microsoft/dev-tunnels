@@ -129,6 +129,7 @@ func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error)
 	convertedPort := &TunnelPort{
 		PortNumber:  tunnelPort.PortNumber,
 		Protocol:    tunnelPort.Protocol,
+		IsDefault:   tunnelPort.IsDefault,
 		Description: tunnelPort.Description,
 		Tags:        tunnelPort.Tags,
 		SshUser:     tunnelPort.SshUser,

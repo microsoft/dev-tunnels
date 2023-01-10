@@ -1169,6 +1169,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 PortNumber = tunnelPort.PortNumber,
                 Protocol = tunnelPort.Protocol,
+                IsDefault = tunnelPort.IsDefault,
                 Description = tunnelPort.Description,
                 Tags = tunnelPort.Tags,
                 Options = tunnelPort.Options,

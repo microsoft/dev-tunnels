@@ -38,6 +38,19 @@ pub struct TunnelPort {
     // Should be one of the string constants from `TunnelProtocol`.
     pub protocol: Option<String>,
 
+    // Gets or sets a value indicating whether this port is a default port for the tunnel.
+    //
+    // A client that connects to a tunnel (by ID or name) without specifying a port number
+    // will connect to the default port for the tunnel, if a default is configured. Or if
+    // the tunnel has only one port then the single port is the implicit default.
+    // 
+    // Selection of a default port for a connection also depends on matching the
+    // connection to the port `TunnelPort.Protocol`, so it is possible to configure
+    // separate defaults for distinct protocols like `TunnelProtocol.Http` and
+    // `TunnelProtocol.Ssh`.
+    #[serde(default)]
+    pub is_default: bool,
+
     // Gets or sets a dictionary mapping from scopes to tunnel access tokens.
     //
     // Unlike the tokens in `Tunnel.AccessTokens`, these tokens are restricted to the
