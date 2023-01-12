@@ -156,7 +156,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             );
             await this.connectAndRunClientSession(stream, cancellation);
         } catch (ex) {
-            this.trace(TraceLevel.Error, 0, `Error running client SSH session: ${ex}`);
+            if (!(ex instanceof CancellationError) || !cancellation.isCancellationRequested) {
+                this.trace(TraceLevel.Error, 0, `Error running client SSH session: ${ex}`);
+            }
         }
     }
 
