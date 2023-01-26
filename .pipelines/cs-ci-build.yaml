@@ -74,11 +74,11 @@ steps:
     artifactName: 'drop'
     publishLocation: 'Container'
 
-# - task: NuGetCommand@2
-#   displayName: "Publish NuGet packages to nuget.org"
-#   inputs:
-#     command: 'push'
-#     nugetFeedType: 'external'
-#     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
-#     publishFeedCredentials: 'dev-tunnels-nuget'
-#     publishPackageMetadata: true
+- task: NuGetCommand@2
+  displayName: "Publish NuGet packages to nuget.org"
+  inputs:
+    command: 'push'
+    nugetFeedType: 'external'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg'
+    publishFeedCredentials: 'dev-tunnels-nuget'
+    publishPackageMetadata: true
