@@ -17,6 +17,7 @@ variables:
   enableSigning: true
   signType: real
   Codeql.Enabled: true
+  Pdb2PdbVersion: '1.1.0-beta2-23052-02'
 
 steps:
 
@@ -25,7 +26,17 @@ steps:
   inputs:
     signType: $(signType)
 
+# To archive our debug symbols with symweb, we need to convert the portable .pdb files that we build to windows .pdb files first
+# https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/672/Archive-Symbols-with-Symweb?anchor=portable-pdbs
+- task: NuGetCommand@2
+  displayName: Install Pdb2Pdb for Symbol Archiving
+  inputs:
+    command: custom
+    arguments: 'install Microsoft.DiaSymReader.Pdb2Pdb -version $(Pdb2PdbVersion) -PackageSaveMode nuspec -OutputDirectory $(Agent.TempDirectory) -Source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json'
+
 - template: cs-build-steps.yaml
+  parameters:
+    Pdb2PdbExe: '$(Agent.TempDirectory)\Microsoft.DiaSymReader.Pdb2Pdb.$(Pdb2PdbVersion)\tools\Pdb2Pdb.exe'
 
 - task: DotNetCoreCLI@2
   displayName: "DotNet Pack"
@@ -46,11 +57,11 @@ steps:
     artifactName: 'drop'
     publishLocation: 'Container'
 
-- task: NuGetCommand@2
-  displayName: "Publish NuGet packages to nuget.org"
-  inputs:
-    command: 'push'
-    nugetFeedType: 'external'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
-    publishFeedCredentials: 'dev-tunnels-nuget'
-    publishPackageMetadata: true
+# - task: NuGetCommand@2
+#   displayName: "Publish NuGet packages to nuget.org"
+#   inputs:
+#     command: 'push'
+#     nugetFeedType: 'external'
+#     packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+#     publishFeedCredentials: 'dev-tunnels-nuget'
+#     publishPackageMetadata: true

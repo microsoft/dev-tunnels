@@ -8,12 +8,12 @@
     <IsPackable>true</IsPackable>
     <UseVsSaaSSdk>false</UseVsSaaSSdk>
     <UseNewtonsoftJson>false</UseNewtonsoftJson>
-    <DebugType>embedded</DebugType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
     <NoWarn>NU1701</NoWarn>
-    <!-- Include PDB files in NuGet package -->
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <!-- Create snupkg for debug symbols: https://learn.microsoft.com/en-us/nuget/create-packages/symbol-packages-snupkg#creating-a-symbol-package -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
