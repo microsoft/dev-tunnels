@@ -8,6 +8,7 @@
     <BaseOutputPath>$(GitRoot)bin\$(Configuration.ToLowerInvariant())\</BaseOutputPath>
     <OutputPath>$(BaseOutputPath)$(MSBuildProjectName)\</OutputPath>
     <PackageOutputPath>$(BaseOutputPath)nupkgs\</PackageOutputPath>
+    <SymbolsOutputPath>$(BaseOutputPath)sym\</SymbolsOutputPath>
     <AppendTargetFrameworkToOutputPath Condition="'$(AppendTargetFrameworkToOutputPath)' == ''">false</AppendTargetFrameworkToOutputPath>
     <BaseIntermediateOutputPath>$(GitRoot)bin\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <IsTraversal Condition="'$(MSBuildProjectFile)'=='dirs.proj'">true</IsTraversal>

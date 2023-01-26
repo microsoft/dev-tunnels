@@ -8,11 +8,8 @@
     <IsPackable>true</IsPackable>
     <UseVsSaaSSdk>false</UseVsSaaSSdk>
     <UseNewtonsoftJson>false</UseNewtonsoftJson>
-    <DebugType>embedded</DebugType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
-    <!-- Include PDB files in NuGet package -->
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
   <ItemGroup>
