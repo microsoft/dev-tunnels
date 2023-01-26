@@ -11,9 +11,6 @@
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
     <NoWarn>NU1701</NoWarn>
-    <!-- Create snupkg for debug symbols: https://learn.microsoft.com/en-us/nuget/create-packages/symbol-packages-snupkg#creating-a-symbol-package -->
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
