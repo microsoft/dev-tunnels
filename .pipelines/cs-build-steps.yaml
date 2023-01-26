@@ -31,7 +31,7 @@ steps:
     command: 'build'
     workingDirectory: 'cs'
     projects: 'cs/TunnelsSDK.sln'
-    arguments: '-v:n --no-restore -c Release -p:EnableSigning="$(enableSigning)" -p:SignType="$(signType)" -p:Pdb2PdbExe="$(Agent.TempDirectory)\Microsoft.DiaSymReader.Pdb2Pdb.${{ parameters.Pdb2PdbVersion }}\tools\Pdb2Pdb.exe"'
+    arguments: '-v:n --no-restore -c Release -p:EnableSigning="$(enableSigning)" -p:SignType="$(signType)" -p:Pdb2PdbExe="${{ parameters.Pdb2PdbExe }}"'
 
 - task: DotNetCoreCLI@2
   displayName: "DotNet Test"
