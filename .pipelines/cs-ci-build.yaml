@@ -50,22 +50,22 @@ steps:
     configuration: 'Release'
     packDirectory: '$(Build.ArtifactStagingDirectory)'
 
-# # docs: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/azure-artifacts/symbol-service
-# - task: PublishSymbols@2
-#   displayName: Publish symbols to Microsoft Server (https://symweb)
-#   inputs:
-#     SymbolsFolder: '$(System.DefaultWorkingDirectory)\cs\bin\release\sym'
-#     SearchPattern: '**\*.pdb'
-#     SymbolServerType: TeamServices
-#     # Expiration parameter: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/azure-artifacts/symbol-service#how-to-change-the-expiration-date-of-a-symbol-request
-#     SymbolExpirationInDays: '1'
-
 - task: PublishBuildArtifacts@1
   displayName: Publish symbols to drop artifacts
   inputs:
     pathtoPublish: '$(System.DefaultWorkingDirectory)\cs\bin\release\sym'
     artifactName: symbols
     publishLocation: 'Container'
+
+# docs: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/azure-artifacts/symbol-service
+- task: PublishSymbols@2
+  displayName: Publish symbols to Microsoft Server (https://symweb)
+  inputs:
+    SymbolsFolder: '$(System.DefaultWorkingDirectory)\cs\bin\release\sym'
+    SearchPattern: '**\*.pdb'
+    SymbolServerType: TeamServices
+    # Expiration parameter: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/azure-artifacts/symbol-service#how-to-change-the-expiration-date-of-a-symbol-request
+    SymbolExpirationInDays: '1'
 
 - task: PublishBuildArtifacts@1
   displayName: Publish Build
