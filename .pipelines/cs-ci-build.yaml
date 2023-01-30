@@ -26,6 +26,10 @@ steps:
   inputs:
     signType: $(signType)
 
+- task: NuGetToolInstaller@1
+  inputs:
+    versionSpec: '6.4.0'
+
 # To archive our debug symbols with symweb, we need to convert the portable .pdb files that we build to windows .pdb files first
 # https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/672/Archive-Symbols-with-Symweb?anchor=portable-pdbs
 - task: NuGetCommand@2
