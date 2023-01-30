@@ -18,16 +18,4 @@ variables:
   enableSigning: false
 
 steps:
-- task: NuGetCommand@2
-  inputs:
-    command: 'help'
-
-- task: NuGetToolInstaller@1
-  inputs:
-    versionSpec: '6.4.0'
-
-- task: NuGetCommand@2
-  inputs:
-    command: 'help'
-
 - template: cs-build-steps.yaml
