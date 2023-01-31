@@ -83,6 +83,6 @@ steps:
   inputs:
     command: 'push'
     nugetFeedType: 'external'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     publishFeedCredentials: 'dev-tunnels-nuget'
     publishPackageMetadata: true
