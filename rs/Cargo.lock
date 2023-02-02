@@ -1739,6 +1739,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "futures",
+ "hyper",
  "log",
  "opentelemetry",
  "rand 0.8.5",

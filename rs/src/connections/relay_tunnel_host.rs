@@ -3,7 +3,7 @@
 
 use std::{
     collections::HashMap,
-    io,
+    env, io,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     pin::Pin,
     sync::Arc,
@@ -26,12 +26,12 @@ use tokio::{
     sync::{mpsc, oneshot, watch},
     task::JoinHandle,
 };
-use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use uuid::Uuid;
 
 use super::{
     errors::TunnelError,
-    ws::{build_websocket_request, AsyncRWWebSocket},
+    ws::{build_websocket_request, connect_directly, connect_via_proxy, AsyncRWWebSocket},
 };
 
 /// Mapping of port numbers to senders to which new port connections should be
@@ -46,6 +46,7 @@ type PortMap = HashMap<u32, mpsc::UnboundedSender<ForwardedPortConnection>>;
 /// tunnels via the appropriate methods on the RelayTunnelHost, no ports will be
 /// hosted until those methods are called.
 pub struct RelayTunnelHost {
+    pub proxy: Option<String>,
     locator: TunnelLocator,
     host_id: Uuid,
     ports_tx: watch::Sender<PortMap>,
@@ -133,6 +134,7 @@ impl RelayTunnelHost {
         let host_id = Uuid::new_v4();
         let (ports_tx, ports_rx) = watch::channel(HashMap::new());
         RelayTunnelHost {
+            proxy: env::var("HTTPS_PROXY").or(env::var("https_proxy")).ok(),
             host_id,
             locator,
             ports_tx,
@@ -429,9 +431,12 @@ impl RelayTunnelHost {
             ],
         )?;
 
-        let (cnx, _) = connect_async(req)
-            .await
-            .map_err(TunnelError::WebSocketError)?;
+        let cnx = if let Some(proxy) = &self.proxy {
+            log::debug!("connecting via http_proxy on {}", proxy);
+            connect_via_proxy(req, proxy).await?
+        } else {
+            connect_directly(req).await?
+        };
 
         Ok((cnx, endpoint))
     }
