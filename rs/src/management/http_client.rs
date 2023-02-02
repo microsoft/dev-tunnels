@@ -17,7 +17,7 @@ use crate::contracts::{
 
 use super::{
     Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError, TunnelLocator,
-    TunnelRequestOptions,
+    TunnelRequestOptions, NO_REQUEST_OPTIONS,
 };
 
 #[derive(Clone)]
@@ -90,15 +90,17 @@ impl TunnelManagementClient {
         self.execute_json("create_tunnel", request).await
     }
 
-     /// Gets if tunnel name is avilable.
-     pub async fn check_name_availability(
-        &self,
-        name : &str,
-    ) -> HttpResult<bool> {
-        let path = format!("{}/{}{}", TUNNELS_API_PATH, name, CHECK_TUNNEL_NAME_SUB_PATH);
-        let mut url = self.build_uri(None, path);
+    /// Gets if tunnel name is avilable.
+    pub async fn check_name_availability(&self, name: &str) -> HttpResult<bool> {
+        let path = format!(
+            "{}/{}{}",
+            TUNNELS_API_PATH, name, CHECK_TUNNEL_NAME_SUB_PATH
+        );
+        let url = self.build_uri(None, &path);
 
-        let request = self.make_tunnel_request(Method::GET, url, NO_REQUEST_OPTIONS).await?;
+        let request = self
+            .make_tunnel_request(Method::GET, url, NO_REQUEST_OPTIONS)
+            .await?;
         self.execute_json("get_name_availability", request).await
     }
 

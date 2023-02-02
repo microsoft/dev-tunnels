@@ -82,19 +82,19 @@ pub struct TunnelAccessControlEntry {
 // Constants for well-known identity providers.
 
 // Microsoft (AAD) identity provider.
-pub const PROVIDERS_MICROSOFT: &str = "microsoft";
+pub const PROVIDERS_MICROSOFT: &str = r#"microsoft"#;
 
 // GitHub identity provider.
-pub const PROVIDERS_GITHUB: &str = "github";
+pub const PROVIDERS_GITHUB: &str = r#"github"#;
 
 // SSH public keys.
-pub const PROVIDERS_SSH: &str = "ssh";
+pub const PROVIDERS_SSH: &str = r#"ssh"#;
 
 // IPv4 addresses.
-pub const PROVIDERS_IPV4: &str = "ipv4";
+pub const PROVIDERS_IPV4: &str = r#"ipv4"#;
 
 // IPv6 addresses.
-pub const PROVIDERS_IPV6: &str = "ipv6";
+pub const PROVIDERS_IPV6: &str = r#"ipv6"#;
 
 // Service tags.
-pub const PROVIDERS_SERVICE_TAG: &str = "service-tag";
+pub const PROVIDERS_SERVICE_TAG: &str = r#"service-tag"#;
