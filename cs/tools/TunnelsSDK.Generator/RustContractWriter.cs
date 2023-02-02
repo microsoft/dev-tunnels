@@ -302,11 +302,11 @@ internal class RustContractWriter : ContractWriter
             string? memberExpression = null;
             if (field.ConstantValue is string stringValue)
             {
-                memberExpression = $"&str = \"{stringValue.Replace("\"", "\\\"")}\"";
+                memberExpression = $"&str = r#\"{stringValue}\"#";
             }
             else if (field.ConstantValue is int)
             {
-                memberExpression = $"&i32 = {field.ConstantValue}";
+                memberExpression = $"i32 = {field.ConstantValue}";
             }
 
             if (memberExpression != null)
