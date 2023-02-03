@@ -14,17 +14,15 @@ import {
     SshClientCredentials,
     SshClientSession,
     SshDisconnectReason,
-    SshProtocolExtensionNames,
     SshRequestEventArgs,
     SshSessionClosedEventArgs,
-    SshSessionConfiguration,
     SshStream,
     Stream,
     Trace,
 } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
-import { isNode } from './sshHelpers';
+import { isNode, SshHelpers } from './sshHelpers';
 import { TunnelClient } from './tunnelClient';
 import { getError, List } from './utils';
 import { Emitter } from 'vscode-jsonrpc';
@@ -175,16 +173,10 @@ export class TunnelClientBase
 
     public startSshSession(stream: Stream, cancellation?: CancellationToken): Promise<void> {
         return this.connectSession(async () => {
-            const clientConfig = new SshSessionConfiguration();
-            if (this.isReconnectable) {
-                clientConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
-                clientConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionLatency);
-            }
-
-            // Enable port-forwarding via the SSH protocol.
-            clientConfig.addService(PortForwardingService);
-
-            this.sshSession = new SshClientSession(clientConfig);
+            this.sshSession = SshHelpers.createSshClientSession((config) => {
+                // Enable port-forwarding via the SSH protocol.
+                config.addService(PortForwardingService);
+            });
             this.sshSession.trace = this.trace;
             this.sshSession.onClosed((e) => this.onSshSessionClosed(e));
             this.sshSession.onAuthenticating((e) => this.onSshServerAuthenticating(e));

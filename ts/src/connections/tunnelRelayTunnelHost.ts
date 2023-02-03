@@ -17,7 +17,6 @@ import {
     SshSessionClosedEventArgs,
     SshDisconnectReason,
     TraceLevel,
-    SshSessionConfiguration,
     SshServerSession,
     SshAuthenticatingEventArgs,
     NodeStream,
@@ -27,7 +26,6 @@ import {
     Trace,
     SshChannel,
     Stream,
-    SshProtocolExtensionNames,
     SessionRequestMessage,
     SshRequestEventArgs,
     SessionRequestSuccessMessage,
@@ -35,10 +33,9 @@ import {
 import {
     PortForwardChannelOpenMessage,
     PortForwardingService,
-    SshServer,
 } from '@microsoft/dev-tunnels-ssh-tcp';
 import { CancellationToken, Disposable } from 'vscode-jsonrpc';
-import { SessionPortKey } from '.';
+import { SshHelpers } from './sshHelpers';
 import { MultiModeTunnelHost } from './multiModeTunnelHost';
 import { TunnelHostBase } from './tunnelHostBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
@@ -171,15 +168,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             throw new CancellationError();
         }
 
-        let serverConfig = new SshSessionConfiguration();
-
-        // Always enable reconnect on client SSH server.
-        // When a client reconnects, relay service just opens another SSH channel of client-ssh-session-stream type for it.
-        serverConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
-        serverConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionLatency);
-
-        serverConfig.addService(PortForwardingService);
-        let session = new SshServerSession(serverConfig, this.reconnectableSessions);
+        let session = SshHelpers.createSshServerSession(this.reconnectableSessions, (config) => {
+            config.addService(PortForwardingService);
+        });
         session.trace = this.trace;
         session.credentials = {
             publicKeys: [this.hostPrivateKey!],
