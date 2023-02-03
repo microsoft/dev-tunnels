@@ -80,24 +80,33 @@ export class SshHelpers {
     }
 
     /**
-     *
-     * @returns Create a Ssh client session.
+     * Creates a client SSH session with standard configuration for tunnels.
+     * @param configure Optional callback for additional session configuration.
+     * @returns The created SSH session.
      */
-    public static createSshClientSession(): ssh.SshClientSession {
-        return SshHelpers.createSshSession((config) => new ssh.SshClientSession(config));
+    public static createSshClientSession(
+        configure?: (config: ssh.SshSessionConfiguration) => void,
+    ): ssh.SshClientSession {
+        return SshHelpers.createSshSession((config) => {
+            if (configure) configure(config);
+            return new ssh.SshClientSession(config);
+        });
     }
 
     /**
-     * Create a Ssh server session.
-     * @param reconnectableSessions
-     * @returns
+     * Creates a SSH server session with standard configuration for tunnels.
+     * @param reconnectableSessions Optional list that tracks reconnectable sessions.
+     * @param configure Optional callback for additional session configuration.
+     * @returns The created SSH session.
      */
     public static createSshServerSession(
         reconnectableSessions?: ssh.SshServerSession[],
+        configure?: (config: ssh.SshSessionConfiguration) => void,
     ): ssh.SshServerSession {
-        return SshHelpers.createSshSession(
-            (config) => new ssh.SshServerSession(config, reconnectableSessions),
-        );
+        return SshHelpers.createSshSession((config) => {
+            if (configure) configure(config);
+            return new ssh.SshServerSession(config, reconnectableSessions);
+        });
     }
 
     /**
@@ -140,12 +149,6 @@ export class SshHelpers {
         config.keyExchangeAlgorithms.push(ssh.SshAlgorithms.keyExchange.dhGroup14Sha256);
         config.protocolExtensions.push(ssh.SshProtocolExtensionNames.sessionReconnect);
         config.protocolExtensions.push(ssh.SshProtocolExtensionNames.sessionLatency);
-
-        // TODO: remove this once we know the ssh server has the > 3.3.10 update
-        const posGcm = config.encryptionAlgorithms.indexOf(ssh.SshAlgorithms.encryption.aes256Gcm);
-        if (posGcm !== -1) {
-            config.encryptionAlgorithms.splice(posGcm, 1);
-        }
 
         return factoryCallback(config);
     }
