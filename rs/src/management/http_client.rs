@@ -649,3 +649,19 @@ mod test_end_to_end {
         c.into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use regex::Regex;
+
+    #[test]
+    fn new_tunnel_management_has_user_agent() {
+        // test
+        let builder = super::new_tunnel_management("test-caller");
+        
+        // verify
+        let re = Regex::new(r"^test-caller Visual-Studio-Tunnel-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
+        let full_agent = builder.user_agent.to_str().unwrap();
+        assert!(re.is_match(full_agent));
+    }
+}
