@@ -474,14 +474,14 @@ pub struct TunnelClientBuilder {
 /// Creates a new tunnel client builder. You can set options, then use `into()`
 /// to get the client instance (or cast automatically).
 pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
-    let pkg_version: &str = PKG_VERSION.unwrap_or("unknown");
-    let fq_user_agent = format!("{}{}{}", user_agent, " Visual-Studio-Tunnel-Service-Rust-SDK/", pkg_version);
+    let pkg_version = PKG_VERSION.unwrap_or("unknown");
+    let full_user_agent = format!("{}{}{}", user_agent, " Visual-Studio-Tunnel-Service-Rust-SDK/", pkg_version);
     TunnelClientBuilder {
         authorization: Arc::new(Box::new(super::StaticAuthorizationProvider(
             Authorization::Anonymous,
         ))),
         client: None,
-        user_agent: HeaderValue::from_str(&fq_user_agent).unwrap(),
+        user_agent: HeaderValue::from_str(&full_user_agent).unwrap(),
         environment: env_production(),
     }
 }
