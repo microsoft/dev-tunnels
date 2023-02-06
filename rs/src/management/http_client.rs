@@ -399,27 +399,26 @@ impl TunnelManagementClient {
         tunnel_opts: &TunnelRequestOptions,
     ) -> HttpResult<Request> {
         {
-            let mut query = url.query_pairs_mut();
             if tunnel_opts.include_ports {
-                query.append_pair("includePorts", "true");
+                url.query_pairs_mut().append_pair("includePorts", "true");
             }
             if tunnel_opts.include_access_control {
-                query.append_pair("includeAccessControl", "true");
+                url.query_pairs_mut().append_pair("includeAccessControl", "true");
             }
             if !tunnel_opts.token_scopes.is_empty() {
-                query.append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
+                url.query_pairs_mut().append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
             }
             if tunnel_opts.force_rename {
-                query.append_pair("forceRename", "true");
+                url.query_pairs_mut().append_pair("forceRename", "true");
             }
             if !tunnel_opts.tags.is_empty() {
-                query.append_pair("tags", &tunnel_opts.tags.join(","));
+                url.query_pairs_mut().append_pair("tags", &tunnel_opts.tags.join(","));
                 if tunnel_opts.require_all_tags {
-                    query.append_pair("allTags", "true");
+                    url.query_pairs_mut().append_pair("allTags", "true");
                 }
             }
             if tunnel_opts.limit > 0 {
-                query.append_pair("limit", &tunnel_opts.limit.to_string());
+                url.query_pairs_mut().append_pair("limit", &tunnel_opts.limit.to_string());
             }
         }
         let mut request = self.make_request(method, url).await?;
@@ -440,7 +439,7 @@ impl TunnelManagementClient {
         Ok(request)
     }
 
-    /// Makes a basic request taht communicates with the service.
+    /// Makes a basic request that communicates with the service.
     async fn make_request(&self, method: Method, url: Url) -> HttpResult<Request> {
         let mut request = Request::new(method, url);
         let headers = request.headers_mut();
