@@ -32,6 +32,8 @@ const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
 const CHECK_TUNNEL_NAME_SUB_PATH: &str = "/checkNameAvailability";
+const PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+
 impl TunnelManagementClient {
     /// Returns a builder that creates a new client, starting with the current
     /// client's options.
@@ -472,12 +474,14 @@ pub struct TunnelClientBuilder {
 /// Creates a new tunnel client builder. You can set options, then use `into()`
 /// to get the client instance (or cast automatically).
 pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
+    let pkg_version: &str = PKG_VERSION.unwrap_or("unknown");
+    let fq_user_agent = format!("{}{}{}", user_agent, " Visual-Studio-Tunnel-Service-Rust-SDK/", pkg_version);
     TunnelClientBuilder {
         authorization: Arc::new(Box::new(super::StaticAuthorizationProvider(
             Authorization::Anonymous,
         ))),
         client: None,
-        user_agent: HeaderValue::from_str(user_agent).unwrap(),
+        user_agent: HeaderValue::from_str(&fq_user_agent).unwrap(),
         environment: env_production(),
     }
 }
