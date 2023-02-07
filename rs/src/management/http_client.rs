@@ -398,29 +398,7 @@ impl TunnelManagementClient {
         mut url: Url,
         tunnel_opts: &TunnelRequestOptions,
     ) -> HttpResult<Request> {
-        {
-            if tunnel_opts.include_ports {
-                url.query_pairs_mut().append_pair("includePorts", "true");
-            }
-            if tunnel_opts.include_access_control {
-                url.query_pairs_mut().append_pair("includeAccessControl", "true");
-            }
-            if !tunnel_opts.token_scopes.is_empty() {
-                url.query_pairs_mut().append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
-            }
-            if tunnel_opts.force_rename {
-                url.query_pairs_mut().append_pair("forceRename", "true");
-            }
-            if !tunnel_opts.tags.is_empty() {
-                url.query_pairs_mut().append_pair("tags", &tunnel_opts.tags.join(","));
-                if tunnel_opts.require_all_tags {
-                    url.query_pairs_mut().append_pair("allTags", "true");
-                }
-            }
-            if tunnel_opts.limit > 0 {
-                url.query_pairs_mut().append_pair("limit", &tunnel_opts.limit.to_string());
-            }
-        }
+        url = add_query(url, tunnel_opts);
         let mut request = self.make_request(method, url).await?;
 
         let headers = request.headers_mut();
@@ -519,6 +497,33 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
             environment: builder.environment,
         }
     }
+}
+
+fn add_query(mut url: Url, tunnel_opts: &TunnelRequestOptions) -> Url
+{
+    if tunnel_opts.include_ports {
+        url.query_pairs_mut().append_pair("includePorts", "true");
+    }
+    if tunnel_opts.include_access_control {
+        url.query_pairs_mut().append_pair("includeAccessControl", "true");
+    }
+    if !tunnel_opts.token_scopes.is_empty() {
+        url.query_pairs_mut().append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
+    }
+    if tunnel_opts.force_rename {
+        url.query_pairs_mut().append_pair("forceRename", "true");
+    }
+    if !tunnel_opts.tags.is_empty() {
+        url.query_pairs_mut().append_pair("tags", &tunnel_opts.tags.join(","));
+        if tunnel_opts.require_all_tags {
+            url.query_pairs_mut().append_pair("allTags", "true");
+        }
+    }
+    if tunnel_opts.limit > 0 {
+        url.query_pairs_mut().append_pair("limit", &tunnel_opts.limit.to_string());
+    }
+
+    url
 }
 
 // End to end tests can be run with `cargo test --features end_to_end -- --nocapture`
@@ -652,6 +657,9 @@ mod test_end_to_end {
 #[cfg(test)]
 mod tests {
     use regex::Regex;
+    use reqwest::Url;
+
+    use crate::management::NO_REQUEST_OPTIONS;
 
     #[test]
     fn new_tunnel_management_has_user_agent() {
@@ -662,5 +670,26 @@ mod tests {
         let re = Regex::new(r"^test-caller Visual-Studio-Tunnel-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
         let full_agent = builder.user_agent.to_str().unwrap();
         assert!(re.is_match(full_agent));
+    }
+
+    #[test]
+    fn add_query_omits_empty_query() {
+        let mut url = Url::parse("https://tunnels.api.visualstudio.com/api/v1/tunnels").unwrap();
+        let options = NO_REQUEST_OPTIONS;
+        
+        url = super::add_query(url, options);
+
+        assert!(!url.to_string().ends_with("?"));
+    }
+
+    #[test]
+    fn add_query_adds_ports() {
+        let mut url = Url::parse("https://tunnels.api.visualstudio.com/api/v1/tunnels").unwrap();
+        let mut options = NO_REQUEST_OPTIONS.clone();
+        options.include_ports = true;
+        
+        url = super::add_query(url, &options);
+        
+        assert!(url.query().unwrap().contains("includePorts=true"));
     }
 }
