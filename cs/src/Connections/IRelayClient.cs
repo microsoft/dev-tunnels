@@ -1,4 +1,4 @@
-﻿// <copyright file="IRelayClient.cs" company="Microsoft">
+// <copyright file="IRelayClient.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -31,6 +31,11 @@ internal interface IRelayClient
     /// Create stream to the tunnel.
     /// </summary>
     Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation);
+
+    /// <summary>
+    /// Gets the connection protocol (websocket subprotocol) that was negotiated between client and server.
+    /// </summary>
+    string? ConnectionProtocol { get; }
 
     /// <summary>
     /// Configures tunnel SSH session with the given stream.
