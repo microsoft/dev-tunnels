@@ -7,3 +7,7 @@ dotnet build --no-incremental
 ```
 
 We then have some end-to-end tests in the management client. These can be executed by first setting a the `TUNNEL_TEST_CLIENT_ID` to some valid AAD app ID, and then running `cargo test --features end_to_end -- --nocapture`. The first time you run the tests, you will be prompted to log in with device code authentication.
+
+## Code Style and Formatting
+
+Before checking in, please run `cargo fmt` to format your changes (or use an IDE with a Rust analyzer to format your files).
