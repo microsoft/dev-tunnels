@@ -27,9 +27,14 @@ namespace Microsoft.DevTunnels.Connections;
 public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 {
     /// <summary>
-    /// Web socket sub-protocol to connect to the tunnel relay endpoint.
+    /// Web socket sub-protocol to connect to the tunnel relay endpoint with v1 host protocol.
     /// </summary>
     public const string WebSocketSubProtocol = "tunnel-relay-host";
+
+    /// <summary>
+    /// Web socket sub-protocol to connect to the tunnel relay endpoint with v2 host protocol.
+    /// </summary>
+    public const string WebSocketSubProtocolV2 = "tunnel-relay-host-v2";
 
     /// <summary>
     /// Ssh channel type in host relay ssh session where client session streams are passed.
@@ -51,6 +56,9 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     {
         this.hostId = MultiModeTunnelHost.HostId;
     }
+
+    /// <inheritdoc/>
+    public string? ConnectionProtocol { get; private set; }
 
     /// <summary>
     /// Gets or sets a factory for creating relay streams.
@@ -142,15 +150,18 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     /// <summary>
     /// Create stream to the tunnel.
     /// </summary>
-    protected virtual Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
+    protected virtual async Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
     {
         ValidateAccessToken();
         Trace.TraceInformation("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
-        return this.StreamFactory.CreateRelayStreamAsync(
+        var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
             this.relayUri!,
             this.accessToken,
-            WebSocketSubProtocol,
+            new[] { WebSocketSubProtocol },
             cancellation);
+        Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
+        ConnectionProtocol = subprotocol;
+        return stream;
     }
 
     /// <inheritdoc />
