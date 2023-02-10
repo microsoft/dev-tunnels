@@ -5,6 +5,8 @@
 	"keywords": [
 		"Tunnels"
 	],
+	"author": "Microsoft",
+	"license": "MIT",
 	"scripts": {
 		"compile": "npm run -C ../../.. compile",
 		"eslint": "npm run -C ../../.. eslint",
