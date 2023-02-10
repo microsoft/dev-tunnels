@@ -5,7 +5,7 @@
 		"Tunnels"
 	],
 	"author": "Microsoft",
-  "license": "MIT",
+	"license": "MIT",
 	"main": "out/lib/tunnels/index.js",
 	"scripts": {
 		"build": "node ./build.js build",
