@@ -6,9 +6,12 @@ use std::{io, pin::Pin, task::Poll, time::Duration};
 use futures::{Future, Sink, Stream};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
+    net::TcpStream,
     time::{sleep, Instant, Sleep},
 };
-use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
+
+use crate::management::{HttpError, ResponseError};
 
 use super::errors::TunnelError;
 
@@ -210,6 +213,66 @@ where
             }
         }
     }
+}
+
+pub(crate) async fn connect_directly(
+    ws_req: tungstenite::handshake::client::Request,
+) -> Result<WebSocketStream<MaybeTlsStream<TcpStream>>, TunnelError> {
+    let (ws, _) = connect_async(ws_req)
+        .await
+        .map_err(TunnelError::WebSocketError)?;
+
+    Ok(ws)
+}
+
+pub(crate) async fn connect_via_proxy(
+    ws_req: tungstenite::handshake::client::Request,
+    proxy_addr: &str,
+) -> Result<WebSocketStream<MaybeTlsStream<TcpStream>>, TunnelError> {
+    // format the remote authority, explicitly adding a port since it's
+    // required (by some proxies) in CONNECT
+    let authority = {
+        let port = ws_req.uri().port_u16().unwrap_or(443);
+        let hostname = ws_req.uri().host().expect("expected to have uri host");
+        format!("{}:{}", hostname, port)
+    };
+
+    let stream = TcpStream::connect(proxy_addr)
+        .await
+        .map_err(TunnelError::ProxyConnectionFailed)?;
+
+    let (mut request_sender, conn) = hyper::client::conn::handshake(stream)
+        .await
+        .map_err(TunnelError::ProxyHandshakeFailed)?;
+
+    let conn = tokio::spawn(conn.without_shutdown());
+    let connect_req = hyper::Request::connect(&authority)
+        .body(hyper::Body::empty())
+        .expect("expected to make connect request");
+
+    let res = request_sender
+        .send_request(connect_req)
+        .await
+        .map_err(TunnelError::ProxyConnectRequestFailed)?;
+
+    if !res.status().is_success() {
+        return Err(TunnelError::HttpError {
+            reason: "error sending tunnel CONNECT request",
+            error: HttpError::ResponseError(ResponseError {
+                url: reqwest::Url::parse(proxy_addr).unwrap(),
+                status_code: res.status(),
+                data: hyper::body::to_bytes(res.into_body())
+                    .await
+                    .map(|b| String::from_utf8_lossy(&b).to_string())
+                    .ok(),
+                request_id: None,
+            }),
+        });
+    }
+
+    let tcp = conn.await.unwrap().unwrap().io;
+    let (ws_stream, _) = tokio_tungstenite::client_async_tls(ws_req, tcp).await?;
+    Ok(ws_stream)
 }
 
 /// Creates a websocket request with additional headers. This is annoyingly
