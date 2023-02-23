@@ -145,4 +145,10 @@ public class TunnelPort
     /// If set, it's a list of absolute URIs where the port can be accessed with web forwarding.
     /// </summary>
     public string[]? PortForwardingUris { get; set; }
+
+    /// <summary>
+    /// Gets or sets inspection URIs.
+    /// If set, it's a list of absolute URIs where the port's traffic can be inspected.
+    /// </summary>
+    public string[]? InspectionUris { get; set; }
 }
