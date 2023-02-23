@@ -102,4 +102,10 @@ export interface TunnelPort {
      * port can be accessed with web forwarding.
      */
     portForwardingUris?: string[];
+
+    /**
+     * Gets or sets inspection URI. If set, it's an absolute URIs where the port's traffic
+     * can be inspected.
+     */
+    inspectionUri?: string;
 }

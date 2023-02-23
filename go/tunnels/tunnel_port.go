@@ -67,4 +67,8 @@ type TunnelPort struct {
 	// Gets or sets web forwarding URIs. If set, it's a list of absolute URIs where the port
 	// can be accessed with web forwarding.
 	PortForwardingURIs []string `json:"portForwardingUris"`
+
+	// Gets or sets inspection URI. If set, it's an absolute URIs where the port's traffic
+	// can be inspected.
+	InspectionURI      string `json:"inspectionUri"`
 }
