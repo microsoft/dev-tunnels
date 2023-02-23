@@ -43,7 +43,7 @@ pub struct TunnelPort {
     // A client that connects to a tunnel (by ID or name) without specifying a port number
     // will connect to the default port for the tunnel, if a default is configured. Or if
     // the tunnel has only one port then the single port is the implicit default.
-    //
+    // 
     // Selection of a default port for a connection also depends on matching the
     // connection to the port `TunnelPort.Protocol`, so it is possible to configure
     // separate defaults for distinct protocols like `TunnelProtocol.Http` and
@@ -77,4 +77,9 @@ pub struct TunnelPort {
     // port can be accessed with web forwarding.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub port_forwarding_uris: Vec<String>,
+
+    // Gets or sets inspection URIs. If set, it's a list of absolute URIs where the port's
+    // traffic can be inspected.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub inspection_uris: Vec<String>,
 }

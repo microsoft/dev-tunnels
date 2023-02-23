@@ -116,4 +116,11 @@ public class TunnelPort {
      */
     @Expose
     public String[] portForwardingUris;
+
+    /**
+     * Gets or sets inspection URIs. If set, it's a list of absolute URIs where the port's
+     * traffic can be inspected.
+     */
+    @Expose
+    public String[] inspectionUris;
 }
