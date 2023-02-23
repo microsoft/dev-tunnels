@@ -78,8 +78,7 @@ pub struct TunnelPort {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub port_forwarding_uris: Vec<String>,
 
-    // Gets or sets inspection URIs. If set, it's a list of absolute URIs where the port's
-    // traffic can be inspected.
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub inspection_uris: Vec<String>,
+    // Gets or sets inspection URI. If set, it's an absolute URIs where the port's traffic
+    // can be inspected.
+    pub inspection_uri: Option<String>,
 }

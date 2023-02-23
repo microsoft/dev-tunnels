@@ -147,8 +147,8 @@ public class TunnelPort
     public string[]? PortForwardingUris { get; set; }
 
     /// <summary>
-    /// Gets or sets inspection URIs.
-    /// If set, it's a list of absolute URIs where the port's traffic can be inspected.
+    /// Gets or sets inspection URI.
+    /// If set, it's an absolute URIs where the port's traffic can be inspected.
     /// </summary>
-    public string[]? InspectionUris { get; set; }
+    public string? InspectionUri { get; set; }
 }
