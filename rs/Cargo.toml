@@ -15,9 +15,9 @@ thiserror = "1.0"
 log = "0.4"
 tokio = { version = "1.20", features = ["macros", "io-util", "time"], optional = true }
 tokio-util = { version = "0.7", optional = true }
-tokio-tungstenite = { version = "0.17", optional = true }
+tokio-tungstenite = { version = "0.17", optional = true, features = ["native-tls"] }
 futures = { version = "0.3", optional = true }
-tungstenite = { version = "0.17", optional = true }
+tungstenite = { version = "0.17", optional = true, features = ["native-tls"] }
 uuid = { version = "0.8.2", features = ["v4"], optional = true }
 russh = { version = "0.34.0-beta.16", default-features = false, features = ["openssl", "flate2"], optional = true }
 russh-keys = { version = "0.22.0-beta.7", default-features = false, features = ["openssl"], optional = true }
