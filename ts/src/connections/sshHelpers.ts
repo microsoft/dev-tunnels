@@ -34,31 +34,6 @@ export class BrowserWebSocketRelayError extends Error {
  */
 export class SshHelpers {
     /**
-     * Get the Azure relay url from the relayUrl and relaySas key.
-     * @param relayUrl
-     * @param relaySas
-     * @param action
-     * @returns
-     */
-    public static getRelayUri(
-        relayUrl: string,
-        relaySas: string | undefined,
-        action: string,
-    ): string {
-        if (!relayUrl) {
-            throw new Error('Does not have a relay endpoint.');
-        }
-
-        // Reference:
-        // https://github.com/Azure/azure-relay-node/blob/7b57225365df3010163bf4b9e640868a02737eb6/hyco-ws/index.js#L107-L137
-        const relayUri =
-            relayUrl.replace('sb:', 'wss:').replace('.net/', '.net:443/$hc/') +
-            `?sb-hc-action=${action}&sb-hc-token=` +
-            encodeURIComponent(relaySas || '');
-        return relayUri;
-    }
-
-    /**
      * Open a connection to the relay uri depending on the running environment.
      * @param relayUri
      * @param protocols
@@ -311,7 +286,7 @@ export enum RelayErrorType {
     ServiceUnavailable = 8,
 }
 /**
- * Error used when a connection to an Azure relay failed.
+ * Error used when a connection to the tunnel relay failed.
  */
 export class RelayConnectionError extends Error {
     public constructor(
