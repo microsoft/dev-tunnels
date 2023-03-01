@@ -7,7 +7,6 @@
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <IsPackable>true</IsPackable>
     <UseVsSaaSSdk>false</UseVsSaaSSdk>
-    <UseNewtonsoftJson>false</UseNewtonsoftJson>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
   </PropertyGroup>

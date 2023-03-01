@@ -7,7 +7,6 @@
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <IsPackable>true</IsPackable>
     <UseVsSaaSSdk>false</UseVsSaaSSdk>
-    <UseNewtonsoftJson>false</UseNewtonsoftJson>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
     <NoWarn>NU1701</NoWarn>
@@ -16,7 +15,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.DevTunnels.Ssh" Version="$(DevTunnelsSshPackageVersion)" />
     <PackageReference Include="Microsoft.DevTunnels.Ssh.Tcp" Version="$(DevTunnelsSshPackageVersion)" />
-    <PackageReference Include="Microsoft.Azure.Relay" Version="$(MicrosoftAzureRelayPackageVersion)" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="$(MicrosoftAspNetCoreWebUtilitiesPackageVersion)" />
     <PackageReference Include="System.Text.Encodings.Web" Version="$(SystemTextEncodingsWebPackageVersion)" />
   </ItemGroup>

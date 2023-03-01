@@ -37,57 +37,18 @@
 
   <!-- NuGet Package Versions -->
   <PropertyGroup>
-    <AcisExtensionSDKVersion>1.0.4.1310</AcisExtensionSDKVersion>
     <AltcoverVersion>7.6.812</AltcoverVersion>
-    <AspNetCoreDllVersions>3.1.19</AspNetCoreDllVersions>
-    <AspNetCoreMvcVersioningVersion>5.0.0</AspNetCoreMvcVersioningVersion>
-    <AspNetWebApiClientPackageVersion>5.2.7</AspNetWebApiClientPackageVersion>
-    <AutoMapperVersion>8.0.0</AutoMapperVersion>
-    <AzureBatchManagementPackageVersion>11.0.0</AzureBatchManagementPackageVersion>
-    <AzureBatchPackageVersion>13.0.0</AzureBatchPackageVersion>
-    <AzureContainersToolsVersion>1.4.10</AzureContainersToolsVersion>
-    <AzureConfigurationSecretsVersion>1.2.1</AzureConfigurationSecretsVersion>
-    <AzureDocumentDBChangeFeedProcessorPackageVersion>2.2.8</AzureDocumentDBChangeFeedProcessorPackageVersion>
-    <AzureDocumentDBCorePackageVersion>2.8.1</AzureDocumentDBCorePackageVersion>
-    <AzureMgmtFluentPackageVersion>1.27.0</AzureMgmtFluentPackageVersion>
-    <AzureStoragePackageVersion>11.0.0</AzureStoragePackageVersion>
-    <AzureServiceBusPackageVersion>5.1.1</AzureServiceBusPackageVersion>
-    <DstsAuthenticationPackageVersion>4.0.2-alpha</DstsAuthenticationPackageVersion>
-    <BouncyCastlePackageVersion>1.9.0</BouncyCastlePackageVersion>
     <FluentAssertionsVersion>5.4.1</FluentAssertionsVersion>
     <FxCopAnalyzersPackageVersion>3.3.0</FxCopAnalyzersPackageVersion>
-    <KubernetesClientPackageVersion>2.0.29</KubernetesClientPackageVersion>
-    <KustoPackageVersion>8.1.2</KustoPackageVersion>
     <MicroBuildCoreVersion>0.3.0</MicroBuildCoreVersion>
-    <MicrosoftAzureRelayPackageVersion>2.0.15596</MicrosoftAzureRelayPackageVersion>
     <MicrosoftAspNetCoreWebUtilitiesPackageVersion>1.0.3</MicrosoftAspNetCoreWebUtilitiesPackageVersion>
-    <MicrosoftGraphPackageVersion>4.0.0</MicrosoftGraphPackageVersion>
-    <MicrosoftIdentityClientPackageVersion>4.34.0</MicrosoftIdentityClientPackageVersion>
-    <MicrosoftIdentityClientExtensionsMsalPackageVersion>2.18.4</MicrosoftIdentityClientExtensionsMsalPackageVersion>
-    <MicrosoftIdentityModelTokensPackageVersion>6.11.1</MicrosoftIdentityModelTokensPackageVersion>
-    <MicrosoftIdentityWebPackageVersion>1.14.1</MicrosoftIdentityWebPackageVersion>
     <MicrosoftNETTestSdkVersion>15.8.0</MicrosoftNETTestSdkVersion>
     <MoqVersion>4.9.0</MoqVersion>
     <NerdBankGitVersioningVersion>3.4.255</NerdBankGitVersioningVersion>
-    <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
-    <NewtonsoftJsonSchemaVersion>2.0.8</NewtonsoftJsonSchemaVersion>
-    <OpenTelemetryVersion>1.0.0-rc1.1</OpenTelemetryVersion>
     <ReportGeneratorVersion>4.8.13</ReportGeneratorVersion>
-    <StyleCopAnalyzersPackageVersion>1.1.118</StyleCopAnalyzersPackageVersion>
-    <SwashbuckleAspNetCorePackageVersion>5.6.3</SwashbuckleAspNetCorePackageVersion>
-    <SystemCommandLinePackageVersion>2.0.0-beta1.21216.1</SystemCommandLinePackageVersion>
-    <SystemCommandLineRenderingPackageVersion>0.3.0-alpha.21216.1</SystemCommandLineRenderingPackageVersion>
-    <SystemDiagnosticsSourcePackageVersion>5.0.0</SystemDiagnosticsSourcePackageVersion>
-    <SystemIdentityModelTokensJwtPackageVersion>6.11.1</SystemIdentityModelTokensJwtPackageVersion>
     <SystemTextEncodingsWebPackageVersion>4.7.2</SystemTextEncodingsWebPackageVersion>
-    <TunnelServicePackageVersion>1.0.7055</TunnelServicePackageVersion>
     <VisualStudioValidationVersion>15.5.31</VisualStudioValidationVersion>
-    <VsSaaSPackageVersion>2.0.39</VsSaaSPackageVersion>
-    <VsSaasTokenServiceClientPackageVersion>1.0.3642</VsSaasTokenServiceClientPackageVersion>
-    <DevTunnelsSshPackageVersion>3.10.21</DevTunnelsSshPackageVersion>
-    <XunitExtensibilityCorePackageVersion>2.4.1</XunitExtensibilityCorePackageVersion>
-    <XunitExtensibilityExecutionPackageVersion>2.4.1</XunitExtensibilityExecutionPackageVersion>
-    <XunitExtensionsAssemblyFixturePackageVersion>2.2.0</XunitExtensionsAssemblyFixturePackageVersion>
+    <DevTunnelsSshPackageVersion>3.10.23</DevTunnelsSshPackageVersion>
     <XunitRunnerVisualStudioVersion>2.4.0</XunitRunnerVisualStudioVersion>
     <XunitVersion>2.4.0</XunitVersion>
   </PropertyGroup>
@@ -100,7 +61,6 @@
         <PackageReference Include="MicroBuild.Core" Version="$(MicroBuildCoreVersion)" PrivateAssets="All" ExcludeAssets="Runtime" />
         <PackageReference Include="Nerdbank.GitVersioning" Version="$(NerdBankGitVersioningVersion)" PrivateAssets="All" />
         <PackageReference Condition="'$(UseVisualStudioValidation)'!='false'" Include="Microsoft.VisualStudio.Validation" Version="$(VisualStudioValidationVersion)" />
-        <PackageReference Condition="'$(UseNewtonsoftJson)'!='false'" Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
       </ItemGroup>
       <ItemGroup Condition="false">
         <!-- All projects need to be rebuilt if the version changes. -->
