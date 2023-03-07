@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Claims;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Algorithms;
@@ -260,7 +258,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         var tunnel = CreateRelayTunnel();
         await Assert.ThrowsAsync<ArgumentNullException>(
-            "foobar", 
+            "foobar",
             () => ConnectRelayClientAsync(relayClient, tunnel, (_) => throw new ArgumentNullException("foobar")));
         Assert.IsType<ArgumentNullException>(await disconnectedException.Task);
 

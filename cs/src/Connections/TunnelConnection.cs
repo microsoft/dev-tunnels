@@ -1,22 +1,26 @@
-﻿// <copyright file="TunnelBase.cs" company="Microsoft">
+// <copyright file="TunnelBase.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
 
 using System;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh.Messages;
+using Microsoft.DevTunnels.Ssh.Tcp;
+using Microsoft.DevTunnels.Ssh.IO;
 
 namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Base class for tunnel client and host.
 /// </summary>
-public abstract class TunnelConnection : IAsyncDisposable
+public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFactory
 {
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
@@ -363,5 +367,76 @@ public abstract class TunnelConnection : IAsyncDisposable
     internal void OnRetrying(RetryingTunnelConnectionEventArgs e)
     {
         RetryingTunnelConnection?.Invoke(this, e);
+    }
+
+    Task<PortForwardRequestMessage> IPortForwardMessageFactory.CreateRequestMessageAsync(int port)
+        => Task.FromResult<PortForwardRequestMessage>(
+            new PortRelayRequestMessage { AccessToken = this.accessToken });
+
+    Task<PortForwardSuccessMessage> IPortForwardMessageFactory.CreateSuccessMessageAsync(int port)
+        => Task.FromResult(new PortForwardSuccessMessage()); // Success messages are not extended.
+
+    Task<PortForwardChannelOpenMessage> IPortForwardMessageFactory.CreateChannelOpenMessageAsync(int port)
+        => Task.FromResult<PortForwardChannelOpenMessage>(
+            new PortRelayConnectRequestMessage { AccessToken = this.accessToken });
+
+    /// <summary>
+    /// Extends port-forward request messagse to include an access token property.
+    /// </summary>
+    private class PortRelayRequestMessage : PortForwardRequestMessage
+    {
+        /// <summary>
+        /// Access token with 'host' scope used to authorize the port-forward request.
+        /// </summary>
+        /// <remarks>
+        /// A long-running host may need to refresh the access token before forwarding additional
+        /// ports.
+        /// </remarks>
+        public string? AccessToken { get; set; }
+
+        protected override void OnWrite(ref SshDataWriter writer)
+        {
+            base.OnWrite(ref writer);
+
+            writer.Write(
+                AccessToken ?? throw new InvalidOperationException("An access token is required."),
+                Encoding.UTF8);
+        }
+
+        protected override void OnRead(ref SshDataReader reader)
+        {
+            // This message is written only by the host and read only by the relay.
+            throw new NotSupportedException();
+        }
+    }
+
+    /// <summary>
+    /// Extends port-forward channel open messages to include an access token property.
+    /// </summary>
+    private class PortRelayConnectRequestMessage : PortForwardChannelOpenMessage
+    {
+        /// <summary>
+        /// Access token with 'connect' scope used to authorize the port connection request.
+        /// </summary>
+        /// <remarks>
+        /// A long-running client may need to refresh the access token before opening additional
+        /// connections (channels) to forwarded ports.
+        /// </remarks>
+        public string? AccessToken { get; set; }
+
+        protected override void OnWrite(ref SshDataWriter writer)
+        {
+            base.OnWrite(ref writer);
+
+            writer.Write(
+                AccessToken ?? throw new InvalidOperationException("An access token is required."),
+                Encoding.UTF8);
+        }
+
+        protected override void OnRead(ref SshDataReader reader)
+        {
+            // This message is written only by the client and read only by the relay.
+            throw new NotSupportedException();
+        }
     }
 }

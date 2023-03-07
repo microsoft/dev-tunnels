@@ -28,8 +28,9 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
 
     /// <summary>
     /// Web socket sub-protocol to connect to the tunnel relay endpoint with v2 client protocol.
+    /// (The "-dev" suffix will be dropped when the v2 protocol is stable.)
     /// </summary>
-    public const string WebSocketSubProtocolV2 = "tunnel-relay-client-v2";
+    public const string WebSocketSubProtocolV2 = "tunnel-relay-client-v2-dev";
 
     private Uri? relayUri;
 
@@ -44,9 +45,6 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// Creates a new instance of a client that connects to a tunnel via a tunnel relay.
     /// </summary>
     public TunnelRelayTunnelClient(ITunnelManagementClient? managementClient, TraceSource trace) : base(managementClient, trace) { }
-
-    /// <inheritdoc/>
-    public string? ConnectionProtocol { get; private set; }
 
     /// <summary>
     /// Gets or sets a factory for creating relay streams.
@@ -127,12 +125,21 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// </summary>
     protected virtual async Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
     {
+        var protocols = Environment.GetEnvironmentVariable("DEVTUNNELS_PROTOCOL_VERSION") switch
+        {
+            "1" => new[] { WebSocketSubProtocol },
+            "2" => new[] { WebSocketSubProtocolV2 },
+
+            // By default, prefer V2 and fall back to V1.
+            _ => new[] { WebSocketSubProtocolV2, WebSocketSubProtocol },
+        };
+
         ValidateAccessToken();
         Trace.TraceInformation("Connecting to client tunnel relay {0}", this.relayUri!.AbsoluteUri);
         var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
             this.relayUri!,
             this.accessToken,
-            new[] { WebSocketSubProtocol },
+            protocols,
             cancellation);
         Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
         ConnectionProtocol = subprotocol;
