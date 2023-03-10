@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Algorithms;
-using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
@@ -26,6 +25,12 @@ namespace Microsoft.DevTunnels.Connections;
 public abstract class TunnelHost : TunnelConnection, ITunnelHost
 {
     internal const string RefreshPortsRequestType = "RefreshPorts";
+    private bool forwardConnectionsToLocalPorts = true;
+
+    /// <summary>
+    /// Port number to connection listener callbacks.
+    /// </summary>
+    private Dictionary<uint, Action<SshStream>> ConnectionListeners { get; } = new Dictionary<uint, Action<SshStream>>();
 
     /// <summary>
     /// Sessions created between this host and clients. Lock on this hash set to be thread-safe.
@@ -65,6 +70,21 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
 
     /// <inheritdoc />
     protected override string TunnelAccessScope => TunnelAccessScopes.Host;
+
+    /// <summary>
+    /// A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+    /// </summary>
+    public bool ForwardConnectionsToLocalPorts
+    {
+        get => this.forwardConnectionsToLocalPorts;
+        set
+        {
+            if (value != this.forwardConnectionsToLocalPorts)
+            {
+                this.forwardConnectionsToLocalPorts = value;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public async Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
@@ -183,6 +203,12 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         await Task.WhenAll(forwardTasks);
     }
 
+    /// <inheritdoc />
+    public void AcceptForwardedPortConnections(uint port, Action<SshStream> connectionListener)
+    {
+        this.ConnectionListeners[port] = connectionListener;
+    }
+
     /// <summary>
     /// Add client SSH session. Duplicates are ignored.
     /// Thread-safe.
@@ -193,6 +219,17 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         lock (this.sshSessions)
         {
             this.sshSessions.Add(session);
+        }
+    }
+
+    /// <summary>
+    /// Invoked when an SSH channel is being opened
+    /// </summary>
+    protected void OnSshChannelOpen(uint port, SshChannel channel)
+    {
+        if (this.ConnectionListeners.TryGetValue(port,out var connectionListener))
+        {
+            connectionListener(new SshStream(channel));
         }
     }
 

@@ -7,7 +7,9 @@ import {
     KeyPair,
     MultiChannelStream,
     SshAlgorithms,
+    SshChannel,
     SshServerSession,
+    SshStream,
     Trace,
 } from '@microsoft/dev-tunnels-ssh';
 import { PortForwardingService, RemotePortForwarder } from '@microsoft/dev-tunnels-ssh-tcp';
@@ -15,6 +17,7 @@ import { SessionPortKey } from './sessionPortKey';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
+import { isNode } from './sshHelpers';
 
 /**
  * Base class for Hosts that host one tunnel and use SSH MultiChannelStream to connect to the tunnel host service.
@@ -50,12 +53,46 @@ export class TunnelHostBase
 
     private loopbackIp = '127.0.0.1';
 
+    private forwardConnectionsToLocalPortsValue: boolean = isNode();
+
+    private readonly connectionListeners: { [port: number]: (stream: SshStream ) => void } = {};
+
     constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(TunnelAccessScopes.Host, trace, managementClient);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
         }
+    }
+
+    /**
+    * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+    * Forwarded connections are not accepted if the host is not NodeJS (e.g. browser).
+    */
+    public get forwardConnectionsToLocalPorts(): boolean {
+        return this.forwardConnectionsToLocalPortsValue;
+    }
+
+    public set forwardConnectionsToLocalPorts(value: boolean) {
+        if (value === this.forwardConnectionsToLocalPortsValue) {
+            return;
+        }
+
+        if (value && !isNode()) {
+            throw new Error(
+                'Cannot forward connections to local TCP sockets on this platform.',
+            );
+        }
+
+        this.forwardConnectionsToLocalPortsValue = value;
+    }
+
+    /**
+    * Provides a stream for an SSH channel that is relayed to the forwarded port when connectToForwardedPort is invoked.
+    * Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the stream.
+    */
+    public acceptForwardedPortConnections(port: number, connectionListener: (stream: SshStream ) => void) {
+        this.connectionListeners[port] = connectionListener;
     }
 
     /**
@@ -96,6 +133,13 @@ export class TunnelHostBase
         }
 
         await Promise.all(forwardPromises);
+    }
+
+    protected onSshChannelOpen(port: number, channel: SshChannel): void {
+        const connectionListener = this.connectionListeners[port];
+        if (connectionListener) {
+            connectionListener(new SshStream(channel));
+        }
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {

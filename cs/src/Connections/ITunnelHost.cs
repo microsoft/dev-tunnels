@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -27,6 +28,11 @@ public interface ITunnelHost : IAsyncDisposable
     /// Null if not yet connected or disconnection was caused by disposing of this object.
     /// </summary>
     Exception? DisconnectException { get; }
+
+    /// <summary>
+    /// A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+    /// </summary>
+    bool ForwardConnectionsToLocalPorts { get; set; }
 
     /// <summary>
     /// Connects to a tunnel as a host and starts accepting incoming connections
@@ -56,6 +62,16 @@ public interface ITunnelHost : IAsyncDisposable
     /// the set of ports forwarded by all connected clients.
     /// </remarks>
     Task RefreshPortsAsync(CancellationToken cancellation);
+
+    /// <summary>
+    /// Provides a stream for an SSH channel that is relayed to the forwarded port when connectToForwardedPort is invoked.
+    /// </summary>
+    /// <remarks>
+    /// Set <see cref="ForwardConnectionsToLocalPorts"/> to <c>false</c> if a local TCP socket should not be created for the stream.
+    /// </remarks>
+    /// <param name="port">Port being connected to.</param>
+    /// <param name="connectionListener">Callback method that provides the stream. Invoked when an SSH Channel is opening.</param>
+    void AcceptForwardedPortConnections(uint port, Action<SshStream> connectionListener);
 
     /// <summary>
     /// Event handler for refreshing the tunnel access token.

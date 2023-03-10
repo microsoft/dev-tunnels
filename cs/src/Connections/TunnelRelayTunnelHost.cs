@@ -418,6 +418,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     {
         var tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
         var pfs = session.ActivateService<PortForwardingService>();
+        pfs.ForwardConnectionsToLocalPorts = this.ForwardConnectionsToLocalPorts;
         foreach (TunnelPort port in tunnelPorts)
         {
             try
@@ -489,6 +490,9 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
                     portForwardRequest.Port);
                 e.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
             }
+        } else if (portForwardRequest.ChannelType == "forwarded-tcpip")
+        {
+            this.OnSshChannelOpen(portForwardRequest.Port, e.Channel);
         }
         // For forwarded-tcpip do not check RemoteForwarders because they may not be updated yet.
         // There is a small time interval in ForwardPortAsync() between the port
@@ -496,7 +500,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         // Setting PFS.AcceptRemoteConnectionsForNonForwardedPorts to false makes PFS reject forwarding requests from the
         // clients for the ports that are not forwarded and are missing in PFS.remoteConnectors.
         // Call to PFS.ForwardFromRemotePortAsync() in ForwardPortAsync() adds the connector to PFS.remoteConnectors.
-        else if (portForwardRequest.ChannelType != "forwarded-tcpip")
+        else
         {
             Trace.Warning("Unrecognized channel type " + portForwardRequest.ChannelType);
             e.FailureReason = SshChannelOpenFailureReason.UnknownChannelType;
