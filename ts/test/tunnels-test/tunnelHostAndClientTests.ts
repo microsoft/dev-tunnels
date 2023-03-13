@@ -14,6 +14,7 @@ import {
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ConnectionStatus,
+    ForwardedPortConnectingEventArgs,
     RelayConnectionError,
     RelayErrorType,
     TunnelConnection,
@@ -326,6 +327,45 @@ export class TunnelHostAndClientTests {
         await relayClient.dispose();
         assert.strictEqual(relayClient.disconnectError, undefined);
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
+    }
+
+    @test
+    public async forwardedPortConnectingRetrieveStream() {
+        const testPort = 9986;
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        relayHost.forwardConnectionsToLocalPorts = false;
+        relayHost.forwardedPortConnecting((e: ForwardedPortConnectingEventArgs) => {
+            if (e.port === testPort) {
+                hostStream = e.stream;
+            }
+        });
+
+        let hostStream = null;
+        const tunnel = this.createRelayTunnel([testPort]);
+        await managementClient.createTunnel(tunnel);
+        const multiChannelStream = await this.startRelayHost(relayHost, tunnel);
+        const clientRelayStream = await multiChannelStream.openStream(
+            TunnelRelayTunnelHost.clientStreamChannelType,
+        );
+
+        const clientSshSession = this.createSshClientSession();
+        const pfs = clientSshSession.activateService(PortForwardingService);
+        pfs.acceptLocalConnectionsForForwardedPorts = false;
+        await clientSshSession.connect(new NodeStream(clientRelayStream));
+
+        const clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+        await clientSshSession.authenticate(clientCredentials);
+
+        await pfs.waitForForwardedPort(testPort);
+        const clientStream =  await pfs.connectToForwardedPort(testPort);
+
+        assert(clientStream);
+        assert(hostStream);
+
+        clientSshSession.dispose();
+        multiChannelStream.dispose();
     }
 
     @test

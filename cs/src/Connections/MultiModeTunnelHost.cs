@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
-using Microsoft.DevTunnels.Ssh;
 
 namespace Microsoft.DevTunnels.Connections
 {
@@ -61,6 +60,11 @@ namespace Microsoft.DevTunnels.Connections
             }
         }
 
+#pragma warning disable 67 // Not used
+        /// <inheritdoc />
+        public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
+#pragma warning restore 67
+
         /// <inheritdoc />
         public async Task StartAsync(
             Tunnel tunnel,
@@ -104,12 +108,6 @@ namespace Microsoft.DevTunnels.Connections
         {
             await Task.WhenAll(
                 Hosts.Select((c) => c.RefreshPortsAsync(cancellation)));
-        }
-
-        /// <inheritdoc />
-        public void AcceptForwardedPortConnections(uint port, Action<SshStream> connectionListener)
-        {
-            throw new NotImplementedException();
         }
     }
 }

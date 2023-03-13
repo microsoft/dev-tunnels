@@ -18,6 +18,8 @@ import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { isNode } from './sshHelpers';
+import { Emitter } from 'vscode-jsonrpc';
+import { ForwardedPortConnectingEventArgs } from './forwardedPortConnectingEventArgs';
 
 /**
  * Base class for Hosts that host one tunnel and use SSH MultiChannelStream to connect to the tunnel host service.
@@ -55,7 +57,9 @@ export class TunnelHostBase
 
     private forwardConnectionsToLocalPortsValue: boolean = isNode();
 
-    private readonly connectionListeners: { [port: number]: (stream: SshStream ) => void } = {};
+    private readonly forwardedPortConnectingEmitter = new Emitter<
+        ForwardedPortConnectingEventArgs
+    >();
 
     constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(TunnelAccessScopes.Host, trace, managementClient);
@@ -66,9 +70,15 @@ export class TunnelHostBase
     }
 
     /**
-    * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
-    * Forwarded connections are not accepted if the host is not NodeJS (e.g. browser).
-    */
+     * An event which fires when a connection is made to the forwarded port.
+     * Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the connection stream.
+     */
+    public readonly forwardedPortConnecting = this.forwardedPortConnectingEmitter.event;
+
+    /**
+     * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+     * Forwarded connections are not accepted if the host is not NodeJS (e.g. browser).
+     */
     public get forwardConnectionsToLocalPorts(): boolean {
         return this.forwardConnectionsToLocalPortsValue;
     }
@@ -79,20 +89,10 @@ export class TunnelHostBase
         }
 
         if (value && !isNode()) {
-            throw new Error(
-                'Cannot forward connections to local TCP sockets on this platform.',
-            );
+            throw new Error('Cannot forward connections to local TCP sockets on this platform.');
         }
 
         this.forwardConnectionsToLocalPortsValue = value;
-    }
-
-    /**
-    * Provides a stream for an SSH channel that is relayed to the forwarded port when connectToForwardedPort is invoked.
-    * Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the stream.
-    */
-    public acceptForwardedPortConnections(port: number, connectionListener: (stream: SshStream ) => void) {
-        this.connectionListeners[port] = connectionListener;
     }
 
     /**
@@ -136,10 +136,8 @@ export class TunnelHostBase
     }
 
     protected onSshChannelOpen(port: number, channel: SshChannel): void {
-        const connectionListener = this.connectionListeners[port];
-        if (connectionListener) {
-            connectionListener(new SshStream(channel));
-        }
+        const eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
+        this.forwardedPortConnectingEmitter.fire(eventArgs);
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {

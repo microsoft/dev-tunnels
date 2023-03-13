@@ -28,14 +28,12 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     private bool forwardConnectionsToLocalPorts = true;
 
     /// <summary>
-    /// Port number to connection listener callbacks.
-    /// </summary>
-    private Dictionary<uint, Action<SshStream>> ConnectionListeners { get; } = new Dictionary<uint, Action<SshStream>>();
-
-    /// <summary>
     /// Sessions created between this host and clients. Lock on this hash set to be thread-safe.
     /// </summary>
     protected HashSet<SshServerSession> sshSessions = new();
+
+    /// <inheritdoc />
+    public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelHost" /> class.
@@ -203,12 +201,6 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         await Task.WhenAll(forwardTasks);
     }
 
-    /// <inheritdoc />
-    public void AcceptForwardedPortConnections(uint port, Action<SshStream> connectionListener)
-    {
-        this.ConnectionListeners[port] = connectionListener;
-    }
-
     /// <summary>
     /// Add client SSH session. Duplicates are ignored.
     /// Thread-safe.
@@ -227,10 +219,9 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     /// </summary>
     protected void OnSshChannelOpen(uint port, SshChannel channel)
     {
-        if (this.ConnectionListeners.TryGetValue(port,out var connectionListener))
-        {
-            connectionListener(new SshStream(channel));
-        }
+        Requires.NotNull(channel, nameof(channel));
+        var eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
+        this.ForwardedPortConnecting?.Invoke(this, eventArgs);
     }
 
     /// <summary>

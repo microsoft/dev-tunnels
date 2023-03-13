@@ -18,6 +18,7 @@ using Microsoft.DevTunnels.Test.Mocks;
 using Nerdbank.Streams;
 using Xunit;
 using Microsoft.DevTunnels.Connections;
+using System.Reflection;
 
 namespace Microsoft.DevTunnels.Test;
 
@@ -352,6 +353,46 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         using var testClient = new TcpClient();
         await testClient.ConnectAsync(IPAddress.Loopback, testPort);
         await streamOpenedCompletion.Task.WithTimeout(Timeout);
+    }
+
+    [Fact]
+    public async Task ForwardedPortConnectingRetrieveStream() {
+        var testPort = GetAvailableTcpPort();
+        var managementClient = new MockTunnelManagementClient();
+        managementClient.HostRelayUri = MockHostRelayUri;
+        SshStream hostStream = null;
+
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        relayHost.ForwardConnectionsToLocalPorts = false;
+        relayHost.ForwardedPortConnecting += (object sender, ForwardedPortConnectingEventArgs e) => {
+            if (e.Port == testPort) {
+                hostStream = e.Stream;
+            }
+        };
+
+        var tunnel = CreateRelayTunnel(new int[] { testPort } );
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
+
+        using var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
+        using var clientRelayStream = await multiChannelStream.OpenStreamAsync(
+            TunnelRelayTunnelHost.ClientStreamChannelType);
+
+
+        using var clientSshSession = CreateSshClientSession();
+        var pfs = clientSshSession.ActivateService<PortForwardingService>();
+        pfs.AcceptLocalConnectionsForForwardedPorts = false;
+
+
+        await clientSshSession.ConnectAsync(clientRelayStream).WithTimeout(Timeout);
+        var clientCredentials = new SshClientCredentials("tunnel", password: null);
+        await clientSshSession.AuthenticateAsync(clientCredentials);
+
+
+        await clientSshSession.WaitForForwardedPortAsync(testPort, TimeoutToken);
+        using var sshStream = await clientSshSession.ConnectToForwardedPortAsync(testPort, TimeoutToken);
+
+        Assert.NotNull(sshStream);
+        Assert.NotNull(hostStream);
     }
 
     [Fact]

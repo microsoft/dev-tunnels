@@ -64,16 +64,6 @@ public interface ITunnelHost : IAsyncDisposable
     Task RefreshPortsAsync(CancellationToken cancellation);
 
     /// <summary>
-    /// Provides a stream for an SSH channel that is relayed to the forwarded port when connectToForwardedPort is invoked.
-    /// </summary>
-    /// <remarks>
-    /// Set <see cref="ForwardConnectionsToLocalPorts"/> to <c>false</c> if a local TCP socket should not be created for the stream.
-    /// </remarks>
-    /// <param name="port">Port being connected to.</param>
-    /// <param name="connectionListener">Callback method that provides the stream. Invoked when an SSH Channel is opening.</param>
-    void AcceptForwardedPortConnections(uint port, Action<SshStream> connectionListener);
-
-    /// <summary>
     /// Event handler for refreshing the tunnel access token.
     /// The tunnel client will fire this event when it is not able to use the access token it got from the tunnel.
     /// </summary>
@@ -83,4 +73,12 @@ public interface ITunnelHost : IAsyncDisposable
     /// Connection status changed event.
     /// </summary>
     event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
+
+    /// <summary>
+    /// An event which fires when a connection is made to the forwarded port.
+    /// </summary>
+    /// <remarks>
+    /// Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the connection stream.
+    /// </remarks>
+    event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 }
