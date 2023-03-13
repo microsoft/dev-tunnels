@@ -492,7 +492,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             }
         } else if (portForwardRequest.ChannelType == "forwarded-tcpip")
         {
-            this.OnSshChannelOpen(portForwardRequest.Port, e.Channel);
+            this.OnForwardedPortConnecting(portForwardRequest.Port, e.Channel);
         }
         // For forwarded-tcpip do not check RemoteForwarders because they may not be updated yet.
         // There is a small time interval in ForwardPortAsync() between the port

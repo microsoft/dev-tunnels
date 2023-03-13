@@ -274,7 +274,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                 e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
             }
         } else if (portForwardRequest.channelType === 'forwarded-tcpip') {
-            this.onSshChannelOpen(portForwardRequest.port, e.channel);
+            this.onForwardedPortConnecting(portForwardRequest.port, e.channel);
         } else {
             // For forwarded-tcpip do not check remoteForwarders because they may not be updated yet.
             // There is a small time interval in forwardPort() between the port

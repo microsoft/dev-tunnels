@@ -215,9 +215,9 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     }
 
     /// <summary>
-    /// Invoked when an SSH channel is being opened
+    /// Invoked when a forwarded port is connecting
     /// </summary>
-    protected void OnSshChannelOpen(uint port, SshChannel channel)
+    protected void OnForwardedPortConnecting(uint port, SshChannel channel)
     {
         Requires.NotNull(channel, nameof(channel));
         var eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));

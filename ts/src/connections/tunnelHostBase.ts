@@ -135,7 +135,7 @@ export class TunnelHostBase
         await Promise.all(forwardPromises);
     }
 
-    protected onSshChannelOpen(port: number, channel: SshChannel): void {
+    protected onForwardedPortConnecting(port: number, channel: SshChannel): void {
         const eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
         this.forwardedPortConnectingEmitter.fire(eventArgs);
     }
