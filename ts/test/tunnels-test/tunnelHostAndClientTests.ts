@@ -559,14 +559,14 @@ export class TunnelHostAndClientTests {
         let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
         await clientSshSession.authenticate(clientCredentials);
 
-        while (Object.keys(relayHost.remoteForwarders).length < 1) {
+        while (relayHost.remoteForwarders.size < 1) {
             await new Promise((r) => setTimeout(r, 2000));
         }
 
         assert.strictEqual(tunnel.ports!.length, 1);
         const forwardedPort = tunnel.ports![0];
 
-        let forwarder = relayHost.remoteForwarders[9984];
+        let forwarder = relayHost.remoteForwarders.get('9984');
         if (forwarder) {
             assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
             assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);
@@ -631,7 +631,7 @@ export class TunnelHostAndClientTests {
         assert.strictEqual(tunnel.ports!.length, 1);
         const forwardedPort = tunnel.ports![0];
 
-        let forwarder = relayHost.remoteForwarders[9985];
+        let forwarder = relayHost.remoteForwarders.get('9985');
         if (forwarder) {
             assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
             assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);

@@ -59,7 +59,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     private readonly clientSessionPromises: Promise<void>[] = [];
     private readonly reconnectableSessions: SshServerSession[] = [];
 
-    constructor(managementClient: TunnelManagementClient, trace?: Trace) {
+    public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(managementClient, trace);
         this.hostId = MultiModeTunnelHost.hostId;
     }
@@ -136,6 +136,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         const promise = this.acceptClientSession(sender, this.disposeToken);
         this.clientSessionPromises.push(promise);
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         promise.then(() => {
             const index = this.clientSessionPromises.indexOf(promise);
             this.clientSessionPromises.splice(index, 1);
@@ -147,7 +148,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         cancellation: CancellationToken,
     ): Promise<void> {
         try {
-            let stream = await hostSession.acceptStream(
+            const stream = await hostSession.acceptStream(
                 TunnelRelayTunnelHost.clientStreamChannelType,
                 cancellation,
             );
@@ -168,7 +169,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             throw new CancellationError();
         }
 
-        let session = SshHelpers.createSshServerSession(this.reconnectableSessions, (config) => {
+        const session = SshHelpers.createSshServerSession(this.reconnectableSessions, (config) => {
             config.addService(PortForwardingService);
         });
         session.trace = this.trace;
@@ -176,7 +177,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             publicKeys: [this.hostPrivateKey!],
         };
 
-        let tcs = new PromiseCompletionSource<void>();
+        const tcs = new PromiseCompletionSource<void>();
         cancellation.onCancellationRequested((e) => {
             tcs.reject(new CancellationError());
         });
@@ -227,10 +228,10 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     }
 
     private onSshClientAuthenticated(session: SshServerSession) {
-        let pfs = session.activateService(PortForwardingService);
+        const pfs = session.activateService(PortForwardingService);
         pfs.forwardConnectionsToLocalPorts = this.forwardConnectionsToLocalPorts;
 
-        let ports = this.tunnel?.ports ?? [];
+        const ports = this.tunnel?.ports ?? [];
         ports.forEach(async (port) => {
             try {
                 await this.forwardPort(pfs, port);
@@ -263,7 +264,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
             return;
         }
-        let portForwardRequest = e.request as PortForwardChannelOpenMessage;
+        const portForwardRequest = e.request as PortForwardChannelOpenMessage;
         if (portForwardRequest.channelType === 'direct-tcpip') {
             if (!this.tunnel!.ports!.some((p) => p.portNumber === portForwardRequest.port)) {
                 this.trace(
@@ -302,15 +303,14 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             this.traceInfo('Client ssh session cancelled.');
         } else {
             this.traceError(
-                `Client ssh session closed unexpectely due to ${e.reason}, \"${e.message}\"\n${e.error}`,
+                `Client ssh session closed unexpectely due to ${e.reason}, "${e.message}"\n${e.error}`,
             );
         }
 
-        for (const key of Object.keys(this.remoteForwarders)) {
-            const forwarder = this.remoteForwarders[key];
+        for (const [key, forwarder] of this.remoteForwarders.entries()) {
             if (forwarder.session === session) {
                 forwarder.dispose();
-                delete this.remoteForwarders[key];
+                this.remoteForwarders.delete(key);
             }
         }
 
@@ -343,7 +343,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     public async dispose(): Promise<void> {
         await super.dispose();
 
-        let promises: Promise<any>[] = Object.assign([], this.clientSessionPromises);
+        const promises: Promise<any>[] = Object.assign([], this.clientSessionPromises);
 
         // No new client session should be added because the channel requests are rejected when the tunnel host is disposed.
         this.clientSessionPromises.length = 0;
@@ -357,8 +357,8 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             promises.push(promise);
         }
 
-        for (const key of Object.keys(this.remoteForwarders)) {
-            this.remoteForwarders[key].dispose();
+        for (const forwarder of this.remoteForwarders.values()) {
+            forwarder.dispose();
         }
 
         // When client session promises finish, they remove the sessions from this.sshSessions

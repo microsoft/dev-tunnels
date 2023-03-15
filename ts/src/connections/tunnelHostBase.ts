@@ -31,12 +31,12 @@ export class TunnelHostBase
      * Sessions created between this host and clients
      * @internal
      */
-    public sshSessions: SshServerSession[] = [];
+    public readonly sshSessions: SshServerSession[] = [];
 
     /**
      * Port Forwarders between host and clients
      */
-    public remoteForwarders: { [sessionPortKey: string]: RemotePortForwarder } = {};
+    public readonly remoteForwarders = new Map<string, RemotePortForwarder>();
 
     /**
      * Private key used for connections.
@@ -61,7 +61,7 @@ export class TunnelHostBase
         ForwardedPortConnectingEventArgs
     >();
 
-    constructor(managementClient: TunnelManagementClient, trace?: Trace) {
+    public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(TunnelAccessScopes.Host, trace, managementClient);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
@@ -116,10 +116,10 @@ export class TunnelHostBase
 
         const forwardPromises: Promise<any>[] = [];
 
-        for (let port of updatedPorts) {
-            for (let session of this.sshSessions.filter((s) => s.isConnected && s.sessionId)) {
+        for (const port of updatedPorts) {
+            for (const session of this.sshSessions.filter((s) => s.isConnected && s.sessionId)) {
                 const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
-                const forwarder = this.remoteForwarders[key.toString()];
+                const forwarder = this.remoteForwarders.get(key.toString());
                 if (!forwarder) {
                     const pfs = session.getService(PortForwardingService)!;
                     forwardPromises.push(this.forwardPort(pfs, port));
@@ -127,9 +127,9 @@ export class TunnelHostBase
             }
         }
 
-        for (let [key, forwarder] of Object.entries(this.remoteForwarders)) {
+        for (const [key, forwarder] of Object.entries(this.remoteForwarders)) {
             if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
-                delete this.remoteForwarders[key];
+                this.remoteForwarders.delete(key);
                 forwarder.dispose();
             }
         }
@@ -143,7 +143,7 @@ export class TunnelHostBase
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
-        let sessionId = pfs.session.sessionId;
+        const sessionId = pfs.session.sessionId;
         if (!sessionId) {
             throw new Error('No session id');
         }
@@ -168,7 +168,7 @@ export class TunnelHostBase
         }
 
         const key = new SessionPortKey(sessionId, Number(forwarder.localPort));
-        this.remoteForwarders[key.toString()] = forwarder;
+        this.remoteForwarders.set(key.toString(), forwarder);
     }
 
     /**

@@ -29,7 +29,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      */
     protected accessToken?: string;
 
-    constructor(
+    public constructor(
         tunnelAccessScope: string,
         trace?: Trace,
         /**

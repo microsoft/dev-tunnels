@@ -18,7 +18,7 @@ export class MultiModeTunnelClient extends TunnelConnectionBase implements Tunne
         ? [...new Set(...this.clients.map((c) => c.connectionModes))]
         : [];
 
-    constructor() {
+    public constructor() {
         super(TunnelAccessScopes.Connect);
     }
 

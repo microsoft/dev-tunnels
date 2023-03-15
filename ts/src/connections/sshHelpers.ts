@@ -10,7 +10,6 @@ import {
 } from 'websocket';
 
 declare module 'websocket' {
-    // eslint-disable-next-line @typescript-eslint/tslint/config
     interface client {
         /**
          * 'httpResponse' event in WebSocketClient is fired when the server responds but the HTTP request doesn't properly upgrade to a web socket,
@@ -25,7 +24,7 @@ declare module 'websocket' {
  * There is no status code or underlying network error info in the browser context.
  */
 export class BrowserWebSocketRelayError extends Error {
-    constructor(message?: string) {
+    public constructor(message?: string) {
         super(message);
     }
 }
@@ -181,9 +180,9 @@ export class SshHelpers {
  * enough so that it can be used as an SSH stream.
  */
 class WebsocketStreamAdapter {
-    constructor(private connection: WebSocketConnection) {}
+    public constructor(private connection: WebSocketConnection) {}
 
-    set onmessage(messageHandler: ((e: { data: ArrayBuffer }) => void) | null) {
+    public set onmessage(messageHandler: ((e: { data: ArrayBuffer }) => void) | null) {
         if (messageHandler) {
             this.connection.on('message', (message: any) => {
                 // This assumes all messages are binary.
@@ -194,7 +193,7 @@ class WebsocketStreamAdapter {
         }
     }
 
-    set onclose(
+    public set onclose(
         closeHandler: ((e: { code?: number; reason?: string; wasClean: boolean }) => void) | null,
     ) {
         if (closeHandler) {

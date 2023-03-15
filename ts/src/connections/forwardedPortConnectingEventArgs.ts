@@ -10,7 +10,7 @@ export class ForwardedPortConnectingEventArgs {
     /**
      * Creates a new instance of ForwardedPortConnectingEventArgs.
      */
-    constructor(
+    public constructor(
         /**
          * Gets the forwarded port
          */

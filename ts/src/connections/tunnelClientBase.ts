@@ -109,11 +109,11 @@ export class TunnelClientBase
     }
 
     public get forwardedPorts(): ForwardedPortsCollection | undefined {
-        let pfs = this.sshSession?.activateService(PortForwardingService);
+        const pfs = this.sshSession?.activateService(PortForwardingService);
         return pfs?.remoteForwardedPorts;
     }
 
-    constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
+    public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
         super(TunnelAccessScopes.Connect, trace, managementClient);
     }
 
@@ -153,7 +153,7 @@ export class TunnelClientBase
             throw new Error('No hosts are currently accepting connections for the tunnel.');
         }
 
-        let endpointGroups = List.groupBy(
+        const endpointGroups = List.groupBy(
             tunnel.endpoints,
             (endpoint: TunnelEndpoint) => endpoint.hostId,
         );
@@ -206,7 +206,7 @@ export class TunnelClientBase
 
                 // For now, the client is allowed to skip SSH authentication;
                 // they must have a valid tunnel access token already to get this far.
-                let clientCredentials: SshClientCredentials = {
+                const clientCredentials: SshClientCredentials = {
                     username: 'tunnel',
                     password: undefined,
                 };

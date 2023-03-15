@@ -8,7 +8,7 @@ import { Stream, TraceLevel } from '@microsoft/dev-tunnels-ssh';
 import { TunnelRelayStreamFactory, DefaultTunnelRelayStreamFactory } from '.';
 import { TunnelSession } from './tunnelSession';
 
-type Constructor<T = {}> = new (...args: any[]) => T;
+type Constructor<T = object> = new (...args: any[]) => T;
 
 /**
  * Tunnel relay mixin class that adds relay connection capability to descendants of TunnelSession.

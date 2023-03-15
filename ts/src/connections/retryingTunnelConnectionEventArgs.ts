@@ -5,7 +5,7 @@
  * Event args for tunnel connection retry event.
  */
 export class RetryingTunnelConnectionEventArgs {
-    constructor(
+    public constructor(
         /**
          * Gets the error that caused the retry.
          */
