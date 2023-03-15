@@ -413,10 +413,10 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             using var remotePortStreamer = await pfs.StreamFromRemotePortAsync(
                 IPAddress.Loopback, testPort, CancellationToken.None);
             Assert.NotNull(remotePortStreamer);
-            Assert.NotEqual(testPort, remotePortStreamer.RemotePort);
 
-            // The next available port number should have been selected.
-            Assert.Equal(testPort + 1, remotePortStreamer.RemotePort);
+            // The port number should be the same because the host does not know
+            // when the client chose a different port number due to the conflict.
+            Assert.Equal(testPort, remotePortStreamer.RemotePort);
         }
         finally
         {
