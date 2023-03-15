@@ -383,8 +383,9 @@ export class TunnelHostAndClientTests {
             assert.notStrictEqual(remotePortStreamer, null);
             assert.notStrictEqual(testPort, remotePortStreamer?.remotePort);
 
-            // The next available port number should have been selected.
-            assert.strictEqual(testPort + 1, remotePortStreamer?.remotePort);
+            // The port number should be the same because the host does not know
+            // when the client chose a different port number due to the conflict.
+            assert.strictEqual(testPort, remotePortStreamer?.remotePort);
         });
         socket.destroy();
     }
