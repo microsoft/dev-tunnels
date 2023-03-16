@@ -77,6 +77,7 @@ class MockTunnelClient extends TunnelConnectionBase implements TunnelClient {
     forwardedPorts: ForwardedPortsCollection | undefined;
     public connectionModes: TunnelConnectionMode[] = [];
     public acceptLocalConnectionsForForwardedPorts = true;
+    public localForwardingHostAddress = '127.0.0.1';
     connect(tunnel: Tunnel, hostId?: string): Promise<any> {
         throw new Error('Method not implemented.');
     }
