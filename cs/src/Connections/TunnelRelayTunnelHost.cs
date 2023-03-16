@@ -490,7 +490,8 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
                     portForwardRequest.Port);
                 e.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
             }
-        } else if (portForwardRequest.ChannelType == "forwarded-tcpip")
+        }
+        else if (portForwardRequest.ChannelType == "forwarded-tcpip")
         {
             this.OnForwardedPortConnecting(portForwardRequest.Port, e.Channel);
         }

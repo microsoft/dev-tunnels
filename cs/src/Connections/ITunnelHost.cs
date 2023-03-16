@@ -32,6 +32,9 @@ public interface ITunnelHost : IAsyncDisposable
     /// <summary>
     /// A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
     /// </summary>
+    /// <remarks>
+    /// The default value is true.
+    /// </remarks>
     bool ForwardConnectionsToLocalPorts { get; set; }
 
     /// <summary>
@@ -78,7 +81,8 @@ public interface ITunnelHost : IAsyncDisposable
     /// An event which fires when a connection is made to the forwarded port.
     /// </summary>
     /// <remarks>
-    /// Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the connection stream.
+    /// Set <see cref="ITunnelHost.ForwardConnectionsToLocalPorts"/> to false if a local TCP socket should not be created for the connection stream.
+    /// When this is set only the ForwardedPortConnecting event will be raised.
     /// </remarks>
     event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 }
