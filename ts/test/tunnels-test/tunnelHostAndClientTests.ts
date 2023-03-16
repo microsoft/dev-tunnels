@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
-import { suite, test, slow, timeout } from '@testdeck/mocha';
+import { suite, test, params, slow, timeout } from '@testdeck/mocha';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
 import { PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import {
@@ -288,9 +288,12 @@ export class TunnelHostAndClientTests {
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
     }
 
-    @test
-    public async connectRelayClientAddPort() {
-        let relayClient = new TestTunnelRelayTunnelClient();
+    @params({ localAddress: '0.0.0.0' })
+    @params({ localAddress: '127.0.0.1' })
+    @params.naming((params) => 'connectRelayClientAddPort: ' + params.localAddress)
+    public async connectRelayClientAddPort({ localAddress }: { localAddress: string }) {
+        const relayClient = new TestTunnelRelayTunnelClient();
+        relayClient.localForwardingHostAddress = localAddress;
         relayClient.acceptLocalConnectionsForForwardedPorts = false;
 
         let tunnel = this.createRelayTunnel();

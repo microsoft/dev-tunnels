@@ -327,10 +327,13 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         await clientConnected.Task;
     }
 
-    [Fact]
-    public async Task ConnectRelayClientAddPort()
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("0.0.0.0")]
+    public async Task ConnectRelayClientAddPort(string localAddress)
     {
         var relayClient = new TunnelRelayTunnelClient(TestTS);
+        relayClient.LocalForwardingHostAddress = IPAddress.Parse(localAddress);
 
         var tunnel = CreateRelayTunnel();
         using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);

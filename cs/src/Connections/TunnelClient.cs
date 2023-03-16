@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -27,6 +28,7 @@ namespace Microsoft.DevTunnels.Connections;
 public abstract class TunnelClient : TunnelConnection, ITunnelClient
 {
     private bool acceptLocalConnectionsForForwardedPorts = true;
+    private IPAddress localForwardingHostAddress = IPAddress.Loopback;
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelClient" /> class.
@@ -77,7 +79,8 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     protected EventHandler? SshSessionClosed { get; set; }
 
     /// <summary>
-    ///  A value indicating whether local connections for forwarded ports are accepted.
+    /// Gets or sets a value indicating whether local connections for forwarded ports are
+    /// accepted.
     /// </summary>
     public bool AcceptLocalConnectionsForForwardedPorts
     {
@@ -91,6 +94,30 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             }
         }
     }
+
+    /// <summary>
+    /// Gets or sets the local network interface address that the tunnel client listens on when
+    /// accepting connections for forwarded ports.
+    /// </summary>
+    /// <remarks>
+    /// The default value is the loopback address (127.0.0.1). Applications may set this to the
+    /// address indicating any interface (0.0.0.0) or to the address of a specific interface.
+    /// The tunnel client supports both IPv4 and IPv6 when listening on either loopback or
+    /// any interface.
+    /// </remarks>
+    public IPAddress LocalForwardingHostAddress
+    {
+        get => this.localForwardingHostAddress;
+        set
+        {
+            if (value != this.localForwardingHostAddress)
+            {
+                this.localForwardingHostAddress = value;
+                ConfigurePortForwardingService();
+            }
+        }
+    }
+
 
     /// <summary>
     /// Get host Id the client is connecting to.
@@ -178,7 +205,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             pfs.AcceptLocalConnectionsForForwardedPorts = this.acceptLocalConnectionsForForwardedPorts;
             if (pfs.AcceptLocalConnectionsForForwardedPorts)
             {
-                pfs.TcpListenerFactory = new RetryTcpListenerFactory();
+                pfs.TcpListenerFactory = new RetryTcpListenerFactory(this.localForwardingHostAddress);
             }
         }
     }

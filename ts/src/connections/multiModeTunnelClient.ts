@@ -34,6 +34,14 @@ export class MultiModeTunnelClient extends TunnelConnectionBase implements Tunne
         this.clients.forEach((c) => (c.acceptLocalConnectionsForForwardedPorts = value));
     }
 
+    public get localForwardingHostAddress(): string {
+        return this.clients[0]?.localForwardingHostAddress;
+    }
+
+    public set localForwardingHostAddress(value: string) {
+        this.clients.forEach((c) => (c.localForwardingHostAddress = value));
+    }
+
     public connect(tunnel: Tunnel, hostId?: string): Promise<void> {
         if (!tunnel) {
             throw new Error('Tunnel cannot be null');

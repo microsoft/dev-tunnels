@@ -39,6 +39,7 @@ export class TunnelClientBase
     implements TunnelClient {
     private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
+    private localForwardingHostAddressValue: string = '127.0.0.1';
 
     public connectionModes: TunnelConnectionMode[] = [];
 
@@ -90,7 +91,22 @@ export class TunnelClientBase
         }
 
         this.acceptLocalConnectionsForForwardedPortsValue = value;
-        this.activatePfsIfNeeded();
+        this.configurePortForwardingService();
+    }
+
+    /**
+     * Gets the local network interface address that the tunnel client listens on when
+     * accepting connections for forwarded ports.
+     */
+    public get localForwardingHostAddress(): string {
+        return this.localForwardingHostAddressValue;
+    }
+
+    public set localForwardingHostAddress(value: string) {
+        if (value !== this.localForwardingHostAddressValue) {
+            this.localForwardingHostAddressValue = value;
+            this.configurePortForwardingService();
+        }
     }
 
     public get forwardedPorts(): ForwardedPortsCollection | undefined {
@@ -183,7 +199,7 @@ export class TunnelClientBase
             this.sshSession.onDisconnected((e) => this.onSshSessionDisconnected());
 
             try {
-                this.activatePfsIfNeeded();
+                this.configurePortForwardingService();
 
                 this.sshSession.onRequest((e) => this.onRequest(e));
 
@@ -205,7 +221,7 @@ export class TunnelClientBase
         });
     }
 
-    private activatePfsIfNeeded() {
+    private configurePortForwardingService() {
         if (!this.sshSession) {
             return;
         }
@@ -213,7 +229,9 @@ export class TunnelClientBase
         const pfs = this.sshSession.activateService(PortForwardingService);
         // Do not start forwarding local connections for browser client connections or if this is not allowed.
         if (this.acceptLocalConnectionsForForwardedPortsValue && isNode()) {
-            pfs.tcpListenerFactory = new RetryTcpListenerFactory();
+            pfs.tcpListenerFactory = new RetryTcpListenerFactory(
+                this.localForwardingHostAddressValue,
+            );
         } else {
             pfs.acceptLocalConnectionsForForwardedPorts = false;
         }

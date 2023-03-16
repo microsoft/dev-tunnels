@@ -23,11 +23,20 @@ export interface TunnelClient extends TunnelConnection {
     readonly forwardedPorts: ForwardedPortsCollection | undefined;
 
     /**
-     * A value indicating whether local connections for forwarded ports are accepted.
+     * Gets a value indicating whether local connections for forwarded ports are accepted.
      * Local connections are not accepted if the host process is not NodeJS (e.g. browser).
      * Default: true for NodeJS, false for browser.
      */
     acceptLocalConnectionsForForwardedPorts: boolean;
+
+    /**
+     * Gets or sets the local network interface address that the tunnel client listens on when
+     * accepting connections for forwarded ports. The default value is the loopback address
+     * (127.0.0.1). Applications may set this to the address indicating any interface (0.0.0.0)
+     * or to the address of a specific interface. The tunnel client supports both IPv4 and IPv6
+     * when listening on either loopback or any interface.
+     */
+    localForwardingHostAddress: string;
 
     /**
      * Connects to a tunnel.
