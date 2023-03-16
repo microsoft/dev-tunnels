@@ -336,13 +336,14 @@ export class TunnelHostAndClientTests {
         managementClient.hostRelayUri = this.mockHostRelayUri;
         const relayHost = new TunnelRelayTunnelHost(managementClient);
         relayHost.forwardConnectionsToLocalPorts = false;
+
+        let hostStream = null;
         relayHost.forwardedPortConnecting((e: ForwardedPortConnectingEventArgs) => {
             if (e.port === testPort) {
                 hostStream = e.stream;
             }
         });
 
-        let hostStream = null;
         const tunnel = this.createRelayTunnel([testPort]);
         await managementClient.createTunnel(tunnel);
         const multiChannelStream = await this.startRelayHost(relayHost, tunnel);
