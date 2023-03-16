@@ -1,11 +1,10 @@
-// <copyright file="TunnelBase.cs" company="Microsoft">
+﻿// <copyright file="TunnelBase.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
 
 using System;
 using System.Diagnostics;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
@@ -13,7 +12,7 @@ using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
-using Microsoft.DevTunnels.Ssh.IO;
+using Microsoft.DevTunnels.Connections.Messages;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -38,7 +37,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// <summary>
     /// Gets the connection status.
     /// </summary>
-    public ConnectionStatus ConnectionStatus 
+    public ConnectionStatus ConnectionStatus
     {
         get => this.connectionStatus;
         protected set
@@ -256,7 +255,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// </summary>
     /// <remarks>
     /// If <see cref="Tunnel"/>, <see cref="ManagementClient"/> are not null and <see cref="RefreshingTunnelAccessToken"/> is null,
-    /// gets the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/> and gets the token 
+    /// gets the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/> and gets the token
     /// off it based on <see cref="TunnelAccessScope"/>.
     /// Otherwise, invokes <see cref="RefreshingTunnelAccessToken"/> event.
     /// </remarks>
@@ -312,8 +311,8 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
         if (handler != null)
         {
             var args = new ConnectionStatusChangedEventArgs(
-                previousConnectionStatus, 
-                connectionStatus, 
+                previousConnectionStatus,
+                connectionStatus,
                 connectionStatus == ConnectionStatus.Disconnected ? DisconnectException : null);
 
             handler(this, args);
@@ -327,7 +326,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     {
         lock (DisposeLock)
         {
-            if (!this.disposeCts.IsCancellationRequested && 
+            if (!this.disposeCts.IsCancellationRequested &&
                 this.reconnectTask == null &&
                 this.connector != null) // The connector may be null if the tunnel client/host was created directly from a stream.
             {
@@ -378,65 +377,5 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
 
     Task<PortForwardChannelOpenMessage> IPortForwardMessageFactory.CreateChannelOpenMessageAsync(int port)
         => Task.FromResult<PortForwardChannelOpenMessage>(
-            new PortRelayConnectRequestMessage { AccessToken = this.accessToken });
-
-    /// <summary>
-    /// Extends port-forward request messagse to include an access token property.
-    /// </summary>
-    private class PortRelayRequestMessage : PortForwardRequestMessage
-    {
-        /// <summary>
-        /// Access token with 'host' scope used to authorize the port-forward request.
-        /// </summary>
-        /// <remarks>
-        /// A long-running host may need to refresh the access token before forwarding additional
-        /// ports.
-        /// </remarks>
-        public string? AccessToken { get; set; }
-
-        protected override void OnWrite(ref SshDataWriter writer)
-        {
-            base.OnWrite(ref writer);
-
-            writer.Write(
-                AccessToken ?? throw new InvalidOperationException("An access token is required."),
-                Encoding.UTF8);
-        }
-
-        protected override void OnRead(ref SshDataReader reader)
-        {
-            // This message is written only by the host and read only by the relay.
-            throw new NotSupportedException();
-        }
-    }
-
-    /// <summary>
-    /// Extends port-forward channel open messages to include an access token property.
-    /// </summary>
-    private class PortRelayConnectRequestMessage : PortForwardChannelOpenMessage
-    {
-        /// <summary>
-        /// Access token with 'connect' scope used to authorize the port connection request.
-        /// </summary>
-        /// <remarks>
-        /// A long-running client may need to refresh the access token before opening additional
-        /// connections (channels) to forwarded ports.
-        /// </remarks>
-        public string? AccessToken { get; set; }
-
-        protected override void OnWrite(ref SshDataWriter writer)
-        {
-            base.OnWrite(ref writer);
-
-            writer.Write(
-                AccessToken ?? throw new InvalidOperationException("An access token is required."),
-                Encoding.UTF8);
-        }
-
-        protected override void OnRead(ref SshDataReader reader)
-        {
-            // This message is written only by the client and read only by the relay.
-            throw new NotSupportedException();
-        }
-    }
+            new PortRelayConnectMessage { AccessToken = this.accessToken });
 }
