@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Algorithms;
-using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
@@ -26,11 +25,15 @@ namespace Microsoft.DevTunnels.Connections;
 public abstract class TunnelHost : TunnelConnection, ITunnelHost
 {
     internal const string RefreshPortsRequestType = "RefreshPorts";
+    private bool forwardConnectionsToLocalPorts = true;
 
     /// <summary>
     /// Sessions created between this host and clients. Lock on this hash set to be thread-safe.
     /// </summary>
     protected HashSet<SshServerSession> sshSessions = new();
+
+    /// <inheritdoc />
+    public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelHost" /> class.
@@ -65,6 +68,21 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
 
     /// <inheritdoc />
     protected override string TunnelAccessScope => TunnelAccessScopes.Host;
+
+    /// <summary>
+    /// A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+    /// </summary>
+    public bool ForwardConnectionsToLocalPorts
+    {
+        get => this.forwardConnectionsToLocalPorts;
+        set
+        {
+            if (value != this.forwardConnectionsToLocalPorts)
+            {
+                this.forwardConnectionsToLocalPorts = value;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public async Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
@@ -194,6 +212,16 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         {
             this.sshSessions.Add(session);
         }
+    }
+
+    /// <summary>
+    /// Invoked when a forwarded port is connecting
+    /// </summary>
+    protected void OnForwardedPortConnecting(uint port, SshChannel channel)
+    {
+        Requires.NotNull(channel, nameof(channel));
+        var eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
+        this.ForwardedPortConnecting?.Invoke(this, eventArgs);
     }
 
     /// <summary>

@@ -14,6 +14,7 @@ import {
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ConnectionStatus,
+    ForwardedPortConnectingEventArgs,
     RelayConnectionError,
     RelayErrorType,
     TunnelConnection,
@@ -332,6 +333,46 @@ export class TunnelHostAndClientTests {
     }
 
     @test
+    public async forwardedPortConnectingRetrieveStream() {
+        const testPort = 9986;
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        relayHost.forwardConnectionsToLocalPorts = false;
+
+        let hostStream = null;
+        relayHost.forwardedPortConnecting((e: ForwardedPortConnectingEventArgs) => {
+            if (e.port === testPort) {
+                hostStream = e.stream;
+            }
+        });
+
+        const tunnel = this.createRelayTunnel([testPort]);
+        await managementClient.createTunnel(tunnel);
+        const multiChannelStream = await this.startRelayHost(relayHost, tunnel);
+        const clientRelayStream = await multiChannelStream.openStream(
+            TunnelRelayTunnelHost.clientStreamChannelType,
+        );
+
+        const clientSshSession = this.createSshClientSession();
+        const pfs = clientSshSession.activateService(PortForwardingService);
+        pfs.acceptLocalConnectionsForForwardedPorts = false;
+        await clientSshSession.connect(new NodeStream(clientRelayStream));
+
+        const clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+        await clientSshSession.authenticate(clientCredentials);
+
+        await pfs.waitForForwardedPort(testPort);
+        const clientStream =  await pfs.connectToForwardedPort(testPort);
+
+        assert(clientStream);
+        assert(hostStream);
+
+        clientSshSession.dispose();
+        multiChannelStream.dispose();
+    }
+
+    @test
     public async connectRelayClientAddPortInUse() {
         let relayClient = new TestTunnelRelayTunnelClient();
 
@@ -346,8 +387,9 @@ export class TunnelHostAndClientTests {
             assert.notStrictEqual(remotePortStreamer, null);
             assert.notStrictEqual(testPort, remotePortStreamer?.remotePort);
 
-            // The next available port number should have been selected.
-            assert.strictEqual(testPort + 1, remotePortStreamer?.remotePort);
+            // The port number should be the same because the host does not know
+            // when the client chose a different port number due to the conflict.
+            assert.strictEqual(testPort, remotePortStreamer?.remotePort);
         });
         socket.destroy();
     }

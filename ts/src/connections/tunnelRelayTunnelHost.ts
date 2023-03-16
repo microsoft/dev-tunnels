@@ -202,6 +202,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             const nodeStream = new NodeStream(stream);
             await session.connect(nodeStream);
             this.sshSessions.push(session);
+
             await tcs.promise;
         } finally {
             authenticatingEventRegistration.dispose();
@@ -227,6 +228,8 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
 
     private onSshClientAuthenticated(session: SshServerSession) {
         let pfs = session.activateService(PortForwardingService);
+        pfs.forwardConnectionsToLocalPorts = this.forwardConnectionsToLocalPorts;
+
         let ports = this.tunnel?.ports ?? [];
         ports.forEach(async (port) => {
             try {
@@ -270,7 +273,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                 );
                 e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
             }
-        } else if (portForwardRequest.channelType !== 'forwarded-tcpip') {
+        } else if (portForwardRequest.channelType === 'forwarded-tcpip') {
+            this.onForwardedPortConnecting(portForwardRequest.port, e.channel);
+        } else {
             // For forwarded-tcpip do not check remoteForwarders because they may not be updated yet.
             // There is a small time interval in forwardPort() between the port
             // being forwarded with forwardFromRemotePort and remoteForwarders updated.

@@ -22,6 +22,7 @@ export * from './tunnelConnection';
 export * from './tunnelConnectionBase';
 export * from './connectionStatus';
 export * from './connectionStatusChangedEventArgs';
+export * from './forwardedPortConnectingEventArgs';
 export * from './refreshingTunnelAccessTokenEventArgs';
 export * from './retryingTunnelConnectionEventArgs';
 export * from './tunnelConnector';

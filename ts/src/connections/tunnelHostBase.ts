@@ -7,7 +7,9 @@ import {
     KeyPair,
     MultiChannelStream,
     SshAlgorithms,
+    SshChannel,
     SshServerSession,
+    SshStream,
     Trace,
 } from '@microsoft/dev-tunnels-ssh';
 import { PortForwardingService, RemotePortForwarder } from '@microsoft/dev-tunnels-ssh-tcp';
@@ -15,6 +17,9 @@ import { SessionPortKey } from './sessionPortKey';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
+import { isNode } from './sshHelpers';
+import { Emitter } from 'vscode-jsonrpc';
+import { ForwardedPortConnectingEventArgs } from './forwardedPortConnectingEventArgs';
 
 /**
  * Base class for Hosts that host one tunnel and use SSH MultiChannelStream to connect to the tunnel host service.
@@ -50,12 +55,46 @@ export class TunnelHostBase
 
     private loopbackIp = '127.0.0.1';
 
+    private forwardConnectionsToLocalPortsValue: boolean = isNode();
+
+    private readonly forwardedPortConnectingEmitter = new Emitter<
+        ForwardedPortConnectingEventArgs
+    >();
+
     constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(TunnelAccessScopes.Host, trace, managementClient);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
         }
+    }
+
+    /**
+     * An event which fires when a connection is made to the forwarded port.
+     * Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the connection stream.
+     * When this is set only the forwardedPortConnecting event will be raised.
+     */
+    public readonly forwardedPortConnecting = this.forwardedPortConnectingEmitter.event;
+
+    /**
+     * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+     * Forwarded connections are not possible if the host is not NodeJS (e.g. browser).
+     * The default value for NodeJS hosts is true.
+     */
+    public get forwardConnectionsToLocalPorts(): boolean {
+        return this.forwardConnectionsToLocalPortsValue;
+    }
+
+    public set forwardConnectionsToLocalPorts(value: boolean) {
+        if (value === this.forwardConnectionsToLocalPortsValue) {
+            return;
+        }
+
+        if (value && !isNode()) {
+            throw new Error('Cannot forward connections to local TCP sockets on this platform.');
+        }
+
+        this.forwardConnectionsToLocalPortsValue = value;
     }
 
     /**
@@ -96,6 +135,11 @@ export class TunnelHostBase
         }
 
         await Promise.all(forwardPromises);
+    }
+
+    protected onForwardedPortConnecting(port: number, channel: SshChannel): void {
+        const eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
+        this.forwardedPortConnectingEmitter.fire(eventArgs);
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {

@@ -48,6 +48,24 @@ namespace Microsoft.DevTunnels.Connections
         protected override string TunnelAccessScope => TunnelAccessScopes.Host;
 
         /// <inheritdoc />
+        public bool ForwardConnectionsToLocalPorts
+        {
+            get => Hosts.Any(c => c.ForwardConnectionsToLocalPorts);
+            set
+            {
+                foreach (var host in Hosts)
+                {
+                    host.ForwardConnectionsToLocalPorts = value;
+                }
+            }
+        }
+
+#pragma warning disable 67 // Not used
+        /// <inheritdoc />
+        public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
+#pragma warning restore 67
+
+        /// <inheritdoc />
         public async Task StartAsync(
             Tunnel tunnel,
             CancellationToken cancellation)
