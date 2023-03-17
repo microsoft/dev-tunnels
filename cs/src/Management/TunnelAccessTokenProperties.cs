@@ -1,4 +1,4 @@
-﻿// <copyright file="TunnelAccessTokenProperties.cs" company="Microsoft">
+// <copyright file="TunnelAccessTokenProperties.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
@@ -18,7 +18,7 @@ namespace Microsoft.DevTunnels.Management;
 /// other than <see cref="TunnelAccessTokenProperties.Expiration" />, because the service
 /// may change or omit those claims in the future. Other claims are exposed here only for
 /// diagnostic purposes.
-/// </remarks> 
+/// </remarks>
 public class TunnelAccessTokenProperties
 {
     private const string ClusterIdClaimName = "clusterId";
@@ -29,74 +29,35 @@ public class TunnelAccessTokenProperties
     private const string ExpirationClaimName = "exp";
 
     /// <summary>
-    /// Gets or sets the token cluster ID claim.
+    /// Gets the token cluster ID claim.
     /// </summary>
-    [JsonPropertyName(ClusterIdClaimName)]
-    public string? ClusterId { get; set; }
+    public string? ClusterId { get; private set; }
 
     /// <summary>
-    /// Gets or sets the token tunnel ID claim.
+    /// Gets the token tunnel ID claim.
     /// </summary>
-    [JsonPropertyName(TunnelIdClaimName)]
-    public string? TunnelId { get; set; }
+    public string? TunnelId { get; private set; }
 
     /// <summary>
-    /// Gets or sets the token tunnel port claim.
+    /// Gets the token tunnel ports claim.
     /// </summary>
-    [JsonPropertyName(TunnelPortClaimName)]
-    public int? TunnelPort { get; set; }
+    public ushort[]? TunnelPorts { get; private set; }
 
     /// <summary>
-    /// Gets or sets the token scope claim, as a space-separated list of scope names.
+    /// Gets the token scopes claim.
     /// </summary>
-    [JsonPropertyName(ScopeClaimName)]
-    public string Scope { get; set; } = null!;
+    public string[]? Scopes { get; private set; }
 
     /// <summary>
-    /// Gets the token scopes as a string array.
+    /// Gets the token issuer URI.
+    /// </summary>
+    public string? Issuer { get; private set; }
+
+    /// <summary>
+    /// Gets the token expiration.
     /// </summary>
     [JsonIgnore]
-    public string[]? Scopes
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(Scope))
-            {
-                return null;
-            }
-
-            return Scope.Split(' ');
-        }
-    }
-
-    /// <summary>
-    /// Gets or sets the token issuer URI.
-    /// </summary>
-    [JsonPropertyName(IssuerClaimName)]
-    public string? Issuer { get; set; }
-
-    /// <summary>
-    /// Gets or sets the token expiration timestamp.
-    /// </summary>
-    [JsonPropertyName(ExpirationClaimName)]
-    public int ExpirationTimestamp { get; set; }
-
-    /// <summary>
-    /// Gets the token expiration as a <see cref="System.DateTime" />.
-    /// </summary>
-    [JsonIgnore]
-    public DateTime? Expiration
-    {
-        get
-        {
-            if (ExpirationTimestamp == 0)
-            {
-                return null;
-            }
-
-            return DateTimeOffset.FromUnixTimeSeconds(ExpirationTimestamp).UtcDateTime;
-        }
-    }
+    public DateTime? Expiration { get; private set; }
 
     /// <inheritdoc/>
     public override string ToString()
@@ -115,11 +76,18 @@ public class TunnelAccessTokenProperties
             }
         }
 
-        if (TunnelPort != null)
+        if (TunnelPorts != null)
         {
             if (s.Length > 0) s.Append(", ");
-            s.Append("port=");
-            s.Append(TunnelPort);
+            if (TunnelPorts.Length == 1)
+            {
+                s.Append("port=");
+                s.Append(TunnelPorts[0]);
+            }
+            else
+            {
+                s.AppendFormat("ports=[{0}]", string.Join(", ", TunnelPorts));
+            }
         }
 
         var scopes = Scopes;
@@ -215,7 +183,57 @@ public class TunnelAccessTokenProperties
 
         try
         {
-            var tokenProperties = JsonSerializer.Deserialize<TunnelAccessTokenProperties>(tokenBodyJson)!;
+            var tokenElement = JsonSerializer.Deserialize<JsonElement>(tokenBodyJson)!;
+            var tokenProperties = new TunnelAccessTokenProperties();
+
+            if (tokenElement.TryGetProperty(ClusterIdClaimName, out var clusterIdElement))
+            {
+                tokenProperties.ClusterId = clusterIdElement.GetString();
+            }
+
+            if (tokenElement.TryGetProperty(TunnelIdClaimName, out var tunnelIdElement))
+            {
+                tokenProperties.TunnelId = tunnelIdElement.GetString();
+            }
+
+            if (tokenElement.TryGetProperty(TunnelPortClaimName, out var tunnelPortElement))
+            {
+                // The port claim value may be a single port number or an array of ports.
+                if (tunnelPortElement.ValueKind == JsonValueKind.Array)
+                {
+                    var array = new ushort[tunnelPortElement.GetArrayLength()];
+
+                    for (int i = 0; i < array.Length; i++)
+                    {
+                        array[i] = tunnelPortElement[i].GetUInt16();
+                    }
+
+                    tokenProperties.TunnelPorts = array;
+                }
+                else if (tunnelPortElement.ValueKind == JsonValueKind.Number)
+                {
+                    tokenProperties.TunnelPorts = new[] { tunnelPortElement.GetUInt16() };
+                }
+            }
+
+            if (tokenElement.TryGetProperty(ScopeClaimName, out var scopeElement))
+            {
+                var scopes = scopeElement.GetString();
+                tokenProperties.Scopes = string.IsNullOrEmpty(scopes) ? null : scopes.Split(' ');
+            }
+
+            if (tokenElement.TryGetProperty(IssuerClaimName, out var issuerElement))
+            {
+                tokenProperties.Issuer = issuerElement.GetString();
+            }
+
+            if (tokenElement.TryGetProperty(ExpirationClaimName, out var expirationElement) &&
+                expirationElement.ValueKind == JsonValueKind.Number)
+            {
+                var exp = expirationElement.GetInt64();
+                tokenProperties.Expiration = DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
+            }
+
             return tokenProperties;
         }
         catch (JsonException)

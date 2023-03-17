@@ -12,12 +12,14 @@ import { Tunnel } from '@microsoft/dev-tunnels-contracts';
  * Other claims are exposed here only for diagnostic purposes.
  */
 export class TunnelAccessTokenProperties {
-    public clusterId?: string;
-    public tunnelId?: string;
-    public tunnelPort?: number;
-    public scp?: string;
-    public iss?: string;
-    public exp?: number;
+    private constructor(
+        public readonly clusterId?: string,
+        public readonly tunnelId?: string,
+        public readonly tunnelPorts?: number[],
+        public readonly scopes?: string[],
+        public readonly issuer?: string,
+        public readonly expiration?: Date,
+    ) {}
 
     public toString(): string {
         let s = '';
@@ -32,29 +34,29 @@ export class TunnelAccessTokenProperties {
             }
         }
 
-        if (typeof this.tunnelPort === 'number') {
+        if (this.tunnelPorts && this.tunnelPorts.length > 0) {
             if (s.length > 0) s += ', ';
-            s += 'port=';
-            s += this.tunnelPort;
+            if (this.tunnelPorts.length === 1) {
+                s += `port=${this.tunnelPorts[0]}`;
+            } else {
+                s += `ports=[${this.tunnelPorts.join(', ')}]`;
+            }
         }
 
-        if (this.scp) {
+        if (this.scopes) {
             if (s.length > 0) s += ', ';
-            const scopes = this.scp.split(' ');
-            s += `scopes=[${scopes.join(', ')}]`;
+            s += `scopes=[${this.scopes.join(', ')}]`;
         }
 
-        if (this.iss) {
+        if (this.issuer) {
             if (s.length > 0) s += ', ';
             s += 'issuer=';
-            s += this.iss;
+            s += this.issuer;
         }
 
-        if (this.exp) {
+        if (this.expiration) {
             if (s.length > 0) s += ', ';
-            const expiration = new Date(this.exp * 1000);
-            s += 'expiration=';
-            s += expiration.toString().replace('.000Z', 'Z');
+            s += `expiration=${this.expiration.toString().replace('.000Z', 'Z')}`;
         }
 
         return s;
@@ -67,9 +69,8 @@ export class TunnelAccessTokenProperties {
      */
     public static validateTokenExpiration(token: string): void {
         const t = TunnelAccessTokenProperties.tryParse(token);
-        if (typeof t?.exp === 'number') {
-            const expiration = new Date(t.exp * 1000);
-            if (expiration < new Date()) {
+        if (t?.expiration) {
+            if (t.expiration < new Date()) {
                 throw new Error('The access token is expired: ' + t);
             }
         }
@@ -94,9 +95,22 @@ export class TunnelAccessTokenProperties {
         }
 
         try {
-            const result = new TunnelAccessTokenProperties();
-            Object.assign(result, JSON.parse(tokenBodyJson));
-            return result;
+            const tokenJson = JSON.parse(tokenBodyJson);
+            const clusterId: string | undefined = tokenJson.clusterId;
+            const tunnelId: string | undefined = tokenJson.tunnelId;
+            const ports: number | number[] | undefined = tokenJson.tunnelPorts;
+            const scp: string | undefined = tokenJson.scp;
+            const iss: string | undefined = tokenJson.iss;
+            const exp: number | undefined = tokenJson.exp;
+
+            return new TunnelAccessTokenProperties(
+                clusterId,
+                tunnelId,
+                typeof ports === 'number' ? [ports] : ports,
+                scp?.split(' '),
+                iss,
+                typeof exp === 'number' ? new Date(exp * 1000) : undefined,
+            );
         } catch {
             return null;
         }

@@ -10,13 +10,16 @@ using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh.Messages;
+using Microsoft.DevTunnels.Ssh.Tcp;
+using Microsoft.DevTunnels.Connections.Messages;
 
 namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Base class for tunnel client and host.
 /// </summary>
-public abstract class TunnelConnection : IAsyncDisposable
+public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFactory
 {
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
@@ -34,7 +37,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// <summary>
     /// Gets the connection status.
     /// </summary>
-    public ConnectionStatus ConnectionStatus 
+    public ConnectionStatus ConnectionStatus
     {
         get => this.connectionStatus;
         protected set
@@ -252,7 +255,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// If <see cref="Tunnel"/>, <see cref="ManagementClient"/> are not null and <see cref="RefreshingTunnelAccessToken"/> is null,
-    /// gets the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/> and gets the token 
+    /// gets the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/> and gets the token
     /// off it based on <see cref="TunnelAccessScope"/>.
     /// Otherwise, invokes <see cref="RefreshingTunnelAccessToken"/> event.
     /// </remarks>
@@ -308,8 +311,8 @@ public abstract class TunnelConnection : IAsyncDisposable
         if (handler != null)
         {
             var args = new ConnectionStatusChangedEventArgs(
-                previousConnectionStatus, 
-                connectionStatus, 
+                previousConnectionStatus,
+                connectionStatus,
                 connectionStatus == ConnectionStatus.Disconnected ? DisconnectException : null);
 
             handler(this, args);
@@ -323,7 +326,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     {
         lock (DisposeLock)
         {
-            if (!this.disposeCts.IsCancellationRequested && 
+            if (!this.disposeCts.IsCancellationRequested &&
                 this.reconnectTask == null &&
                 this.connector != null) // The connector may be null if the tunnel client/host was created directly from a stream.
             {
@@ -364,4 +367,15 @@ public abstract class TunnelConnection : IAsyncDisposable
     {
         RetryingTunnelConnection?.Invoke(this, e);
     }
+
+    Task<PortForwardRequestMessage> IPortForwardMessageFactory.CreateRequestMessageAsync(int port)
+        => Task.FromResult<PortForwardRequestMessage>(
+            new PortRelayRequestMessage { AccessToken = this.accessToken });
+
+    Task<PortForwardSuccessMessage> IPortForwardMessageFactory.CreateSuccessMessageAsync(int port)
+        => Task.FromResult(new PortForwardSuccessMessage()); // Success messages are not extended.
+
+    Task<PortForwardChannelOpenMessage> IPortForwardMessageFactory.CreateChannelOpenMessageAsync(int port)
+        => Task.FromResult<PortForwardChannelOpenMessage>(
+            new PortRelayConnectMessage { AccessToken = this.accessToken });
 }

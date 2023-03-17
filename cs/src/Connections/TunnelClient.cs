@@ -44,6 +44,9 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     public ForwardedPortsCollection? ForwardedPorts =>
         SshPortForwardingService?.RemoteForwardedPorts;
 
+    /// <inheritdoc/>
+    public string? ConnectionProtocol { get; protected set; }
+
     /// <summary>
     /// Session used to connect to host
     /// </summary>
@@ -174,6 +177,18 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         // Enable reconnect only if connector is set as reconnect depends on it.
         var clientConfig = new SshSessionConfiguration(enableReconnect: this.connector != null);
 
+        if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
+        {
+            // Configure optional encryption, including "none" as an enabled and preferred kex algorithm,
+            // because encryption of the outer SSH session is optional since it is already over a TLS websocket.
+            clientConfig.KeyExchangeAlgorithms.Clear();
+            clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.None);
+            clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp384);
+            clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp256);
+            clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup16Sha512);
+            clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup14Sha256);
+        }
+
         // Enable port-forwarding via the SSH protocol.
         clientConfig.AddService(typeof(PortForwardingService));
 
@@ -188,10 +203,16 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         SshSessionCreated();
         await this.SshSession.ConnectAsync(stream, cancellation);
 
-        // For now, the client is allowed to skip SSH authentication;
-        // they must have a valid tunnel access token already to get this far.
-        var clientCredentials = new SshClientCredentials("tunnel", password: null);
-        await this.SshSession.AuthenticateAsync(clientCredentials);
+        // SSH authentication is required in V1 protocol, optional in V2 depending on whether the
+        // session enabled key exchange (as indicated by having a session ID or not). In either case
+        // a password is not required. Strong authentication was already handled by the relay
+        // service via the tunnel access token used for the websocket connection.
+        if (this.SshSession.SessionId != null)
+        {
+            var clientCredentials = new SshClientCredentials("tunnel", password: null);
+            await this.SshSession.AuthenticateAsync(clientCredentials);
+        }
+
         ConnectionStatus = ConnectionStatus.Connected;
     }
 
@@ -206,6 +227,11 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             if (pfs.AcceptLocalConnectionsForForwardedPorts)
             {
                 pfs.TcpListenerFactory = new RetryTcpListenerFactory(this.localForwardingHostAddress);
+            }
+
+            if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
+            {
+                pfs.MessageFactory = this;
             }
         }
     }
@@ -255,9 +281,8 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
     private void OnSshServerAuthenticating(object? sender, SshAuthenticatingEventArgs e)
     {
-        // TODO: Validate host public keys match those published to the service?
-        // For now, the assumption is only a host with access to the tunnel can get a token
-        // that enables listening for tunnel connections.
+        // Relay server authentication is done via the websocket TLS host certificate.
+        // If SSH encryption/authentication is used anyway, just accept any SSH host key.
         e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
     }
 
