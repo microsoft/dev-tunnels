@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
+import { until } from './promiseUtils';
 import { suite, test, params, slow, timeout } from '@testdeck/mocha';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
 import { PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
@@ -555,25 +556,26 @@ export class TunnelHostAndClientTests {
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
         let clientSshSession = this.createSshClientSession();
-        await clientSshSession.connect(new NodeStream(clientRelayStream));
-        let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
-        await clientSshSession.authenticate(clientCredentials);
+        try {
+            await clientSshSession.connect(new NodeStream(clientRelayStream));
+            let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+            await clientSshSession.authenticate(clientCredentials);
 
-        while (relayHost.remoteForwarders.size < 1) {
-            await new Promise((r) => setTimeout(r, 2000));
+            await until(() => relayHost.remoteForwarders.size === 1, 5000);
+
+            assert.strictEqual(tunnel.ports!.length, 1);
+            const forwardedPort = tunnel.ports![0];
+
+            let forwarder = relayHost.remoteForwarders.get('9984');
+            if (forwarder) {
+                assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
+                assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);
+            }
+        } finally {
+            clientRelayStream.destroy();
+            clientSshSession.dispose();
+            await relayHost.dispose();
         }
-
-        assert.strictEqual(tunnel.ports!.length, 1);
-        const forwardedPort = tunnel.ports![0];
-
-        let forwarder = relayHost.remoteForwarders.get('9984');
-        if (forwarder) {
-            assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
-            assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);
-        }
-        clientRelayStream.destroy();
-        clientSshSession.dispose();
-        await relayHost.dispose();
         assert.strictEqual(relayHost.disconnectError, undefined);
         assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
     }
@@ -653,20 +655,21 @@ export class TunnelHostAndClientTests {
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
         let clientSshSession = this.createSshClientSession();
-        await clientSshSession.connect(new NodeStream(clientRelayStream));
-        let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
-        await clientSshSession.authenticate(clientCredentials);
+        try {
+            await clientSshSession.connect(new NodeStream(clientRelayStream));
+            let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+            await clientSshSession.authenticate(clientCredentials);
 
-        while (Object.keys(relayHost.remoteForwarders).length < 1) {
-            await new Promise((r) => setTimeout(r, 2000));
+            await until(() => relayHost.remoteForwarders.size === 1, 5000);
+            await managementClient.deleteTunnelPort(tunnel, 9986);
+            await relayHost.refreshPorts();
+
+            assert.strictEqual(tunnel.ports!.length, 0);
+            assert.strictEqual(relayHost.remoteForwarders.size, 1);
+        } finally {
+            clientSshSession.dispose();
+            await relayHost.dispose();
         }
-        await managementClient.deleteTunnelPort(tunnel, 9986);
-        await relayHost.refreshPorts();
-
-        assert.strictEqual(tunnel.ports!.length, 0);
-
-        assert.notStrictEqual(relayHost.remoteForwarders, {});
-        clientSshSession.dispose();
     }
 
     @test
