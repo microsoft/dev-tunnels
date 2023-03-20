@@ -76,9 +76,7 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     /// <inheritdoc />
     protected override string TunnelAccessScope => TunnelAccessScopes.Host;
 
-    /// <summary>
-    /// A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
-    /// </summary>
+    /// <inheritdoc />
     public bool ForwardConnectionsToLocalPorts
     {
         get => this.forwardConnectionsToLocalPorts;
