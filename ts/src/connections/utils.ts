@@ -29,7 +29,7 @@ export class List {
 export function delay(milliseconds: number, cancellation?: CancellationToken): Promise<void> {
     return new Promise<void>((resolve, reject) => {
         let cancellationDisposable: Disposable | undefined;
-        let timeout: NodeJS.Timeout | undefined;
+        let timeout: NodeJS.Timeout | undefined = undefined;
 
         if (cancellation) {
             if (cancellation.isCancellationRequested) {

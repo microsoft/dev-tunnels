@@ -23,7 +23,7 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 ) {
     public connectionModes: TunnelConnectionMode[] = [];
 
-    constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
+    public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
         super(trace, managementClient);
     }
 

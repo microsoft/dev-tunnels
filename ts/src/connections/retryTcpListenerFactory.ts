@@ -11,7 +11,7 @@ import * as net from 'net';
  * We make the assumption that the remote port that is being connected to and localPort numbers are the same.
  */
 export class RetryTcpListenerFactory implements TcpListenerFactory {
-    public constructor(readonly localAddress: string) {}
+    public constructor(public readonly localAddress: string) {}
 
     public async createTcpListener(
         localIPAddress: string,
@@ -34,11 +34,11 @@ export class RetryTcpListenerFactory implements TcpListenerFactory {
         }
 
         const maxOffet = 10;
-        let listener = net.createServer();
+        const listener = net.createServer();
 
         for (let offset = 0; ; offset++) {
             // After reaching the max offset, pass 0 to pick a random available port.
-            let localPortNumber = offset === maxOffet ? 0 : localPort + offset;
+            const localPortNumber = offset === maxOffet ? 0 : localPort + offset;
 
             try {
                 return await new Promise<Server>((resolve, reject) => {

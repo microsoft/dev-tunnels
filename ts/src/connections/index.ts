@@ -8,7 +8,6 @@ export * from './multiModeTunnelClient';
 export * from './multiModeTunnelHost';
 export * from './retryTcpListenerFactory';
 export * from './sessionPortKey';
-export * from './sshChannelForwarder';
 export * from './sshHelpers';
 export * from './tunnelClient';
 export * from './tunnelClientBase';

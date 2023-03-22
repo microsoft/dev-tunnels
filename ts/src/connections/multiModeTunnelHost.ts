@@ -13,13 +13,13 @@ export class MultiModeTunnelHost extends TunnelConnectionBase implements TunnelH
     public static hostId: string = uuidv4();
     public hosts: TunnelHost[];
 
-    constructor() {
+    public constructor() {
         super(TunnelAccessScopes.Host);
         this.hosts = [];
     }
 
     public async start(tunnel: Tunnel): Promise<void> {
-        let startTasks: Promise<void>[] = [];
+        const startTasks: Promise<void>[] = [];
 
         this.hosts.forEach((host) => {
             startTasks.push(host.start(tunnel));
@@ -29,7 +29,7 @@ export class MultiModeTunnelHost extends TunnelConnectionBase implements TunnelH
     }
 
     public async refreshPorts(): Promise<void> {
-        let refreshTasks: Promise<void>[] = [];
+        const refreshTasks: Promise<void>[] = [];
 
         this.hosts.forEach((host) => {
             refreshTasks.push(host.refreshPorts());

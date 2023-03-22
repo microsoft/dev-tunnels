@@ -31,7 +31,7 @@ export class TunnelConnectionBase implements TunnelConnection {
         RetryingTunnelConnectionEventArgs
     >();
 
-    constructor(
+    protected constructor(
         /**
          * Gets tunnel access scope for this tunnel session.
          */

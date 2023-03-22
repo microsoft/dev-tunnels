@@ -143,8 +143,8 @@ export class TunnelAccessTokenProperties {
             accessTokenScopes = [accessTokenScopes];
         }
 
-        for (let scope of accessTokenScopes) {
-            for (let [key, accessToken] of Object.entries(tunnel.accessTokens)) {
+        for (const scope of accessTokenScopes) {
+            for (const [key, accessToken] of Object.entries(tunnel.accessTokens)) {
                 // Each key may be either a single scope or space-delimited list of scopes.
                 if (accessToken && key.split(' ').includes(scope)) {
                     TunnelAccessTokenProperties.validateTokenExpiration(accessToken);

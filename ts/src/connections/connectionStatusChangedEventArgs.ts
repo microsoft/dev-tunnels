@@ -10,7 +10,7 @@ export class ConnectionStatusChangedEventArgs {
     /**
      * Creates a new instance of ConnectionStatusChangedEventArgs.
      */
-    constructor(
+    public constructor(
         /**
          * Gets the previous connection status.
          */

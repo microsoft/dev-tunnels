@@ -15,7 +15,7 @@ export class SessionPortKey {
      */
     public port?: number;
 
-    constructor(sessionId: Buffer, port: number) {
+    public constructor(sessionId: Buffer, port: number) {
         this.sessionId = sessionId;
         this.port = port;
     }
