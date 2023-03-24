@@ -186,7 +186,8 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             this.onSshClientAuthenticating(e);
         });
         session.onClientAuthenticated(() => {
-            this.onSshClientAuthenticated(session);
+            // This call is async and will catch and log any async errors.
+            void this.onSshClientAuthenticated(session);
         });
         const requestRegistration = session.onRequest((e) => {
             this.onSshSessionRequest(e, session);
@@ -227,18 +228,19 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
     }
 
-    private onSshClientAuthenticated(session: SshServerSession) {
+    private async onSshClientAuthenticated(session: SshServerSession) {
         const pfs = session.activateService(PortForwardingService);
         pfs.forwardConnectionsToLocalPorts = this.forwardConnectionsToLocalPorts;
 
-        const ports = this.tunnel?.ports ?? [];
-        ports.forEach(async (port) => {
+        // Ports must be forwarded sequentially because the TS SSH lib
+        // does not yet support concurrent requests.
+        for (const port of this.tunnel?.ports ?? []) {
             try {
                 await this.forwardPort(pfs, port);
             } catch (ex) {
                 this.traceError(`Error forwarding port ${port.portNumber}: ${ex}`);
             }
-        });
+        }
     }
 
     private onSshSessionRequest(e: SshRequestEventArgs<SessionRequestMessage>, session: any) {
