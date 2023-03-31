@@ -178,9 +178,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         };
 
         const tcs = new PromiseCompletionSource<void>();
-        cancellation.onCancellationRequested((e) => {
-            tcs.reject(new CancellationError());
-        });
+        
 
         const authenticatingEventRegistration = session.onAuthenticating((e) => {
             this.onSshClientAuthenticating(e);
@@ -204,7 +202,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             const nodeStream = new NodeStream(stream);
             await session.connect(nodeStream);
             this.sshSessions.push(session);
-
+            cancellation.onCancellationRequested((e) => {
+                tcs.reject(new CancellationError());
+            });
             await tcs.promise;
         } finally {
             authenticatingEventRegistration.dispose();
