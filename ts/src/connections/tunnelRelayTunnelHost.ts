@@ -179,7 +179,6 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
 
         const tcs = new PromiseCompletionSource<void>();
         
-
         const authenticatingEventRegistration = session.onAuthenticating((e) => {
             this.onSshClientAuthenticating(e);
         });
