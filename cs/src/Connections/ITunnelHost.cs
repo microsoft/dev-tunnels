@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
 using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -81,8 +82,9 @@ public interface ITunnelHost : IAsyncDisposable
     /// An event which fires when a connection is made to the forwarded port.
     /// </summary>
     /// <remarks>
-    /// Set <see cref="ITunnelHost.ForwardConnectionsToLocalPorts"/> to false if a local TCP socket should not be created for the connection stream.
-    /// When this is set only the ForwardedPortConnecting event will be raised.
+    /// Set <see cref="ITunnelHost.ForwardConnectionsToLocalPorts"/> to false if a local TCP socket
+    /// should not be created for the connection stream. When this is set only the
+    /// ForwardedPortConnecting event will be raised.
     /// </remarks>
     event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 }

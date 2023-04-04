@@ -1,4 +1,4 @@
-﻿// <copyright file="TunnelBase.cs" company="Microsoft">
+// <copyright file="TunnelBase.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -112,6 +112,16 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// Tunnel access token.
     /// </summary>
     protected string? accessToken;
+
+    /// <summary>
+    /// Determines whether E2E encryption is requested when opening connections through the tunnel
+    /// (V2 protocol only).
+    /// </summary>
+    /// <remarks>
+    /// The default value is true, but applications may set this to false (for slightly faster
+    /// connections).
+    /// </remarks>
+    public bool EnableE2EEncryption { get; set; } = true;
 
     /// <summary>
     /// Validate <see cref="accessToken"/> if it is not null or empty.
@@ -377,5 +387,9 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
 
     Task<PortForwardChannelOpenMessage> IPortForwardMessageFactory.CreateChannelOpenMessageAsync(int port)
         => Task.FromResult<PortForwardChannelOpenMessage>(
-            new PortRelayConnectMessage { AccessToken = this.accessToken });
+            new PortRelayConnectRequestMessage
+            {
+                AccessToken = this.accessToken,
+                IsE2EEncryptionRequested = this.EnableE2EEncryption,
+            });
 }

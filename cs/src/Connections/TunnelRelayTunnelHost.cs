@@ -11,12 +11,14 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DevTunnels.Connections.Messages;
+using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
-using Microsoft.DevTunnels.Contracts;
-using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -229,6 +231,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
             var hostPfs = session.ActivateService<PortForwardingService>();
             hostPfs.MessageFactory = this;
+            hostPfs.ForwardedPortConnecting += OnForwardedPortConnecting;
         }
 
         this.hostSession = session;
@@ -295,16 +298,19 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             e.Channel.ChannelType == "forwarded-tcpip")
         {
             // V2 protocol.
+            var relayRequestMessage = e.Channel.OpenMessage
+                .ConvertTo<PortRelayConnectRequestMessage>();
+            var responseMessage = new PortRelayConnectResponseMessage();
 
-            // Increase the max window size so that it is at least larer than the window size
-            // of one client channel.
-            e.Channel.MaxWindowSize = SshChannel.DefaultMaxWindowSize * 2;
+            // The host can enable encryption for the channel if the client requested it.
+            responseMessage.IsE2EEncryptionEnabled = this.EnableE2EEncryption &&
+                relayRequestMessage.IsE2EEncryptionRequested;
 
-            // In the future the relay might send additional information in an extended
-            // channel request message, for example a user identifier that would enable the
-            // host to group channels by user.
+            // In the future the relay might send additional information in the connect
+            // request message, for example a user identifier that would enable the host to
+            // group channels by user.
 
-            // Allow the channel to open; the SSH PortForwardingService will forward the connection.
+            e.OpeningTask = Task.FromResult<ChannelMessage>(responseMessage);
             return;
         }
         else if (e.Channel.ChannelType != ClientStreamChannelType)
@@ -343,6 +349,61 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
                 this.clientSessionTasks.Remove(t);
             }
         }
+    }
+
+    /// <summary>
+    /// Encrypts the channel if necessary when a port connection is established (v2 only).
+    /// </summary>
+    protected override void OnForwardedPortConnecting(
+        object? sender, ForwardedPortConnectingEventArgs e)
+    {
+        var channel = e.Stream.Channel;
+        var relayRequestMessage = channel.OpenMessage
+            .ConvertTo<PortRelayConnectRequestMessage>();
+
+        bool isE2EEncryptionEnabled = this.EnableE2EEncryption &&
+            relayRequestMessage.IsE2EEncryptionRequested;
+        if (isE2EEncryptionEnabled)
+        {
+            // Increase the max window size so that it is at least larger than the window
+            // size of one client channel.
+            channel.MaxWindowSize = SshChannel.DefaultMaxWindowSize * 2;
+
+            // TODO: Publish the host public key to the relay so that the client can verify.
+
+            SshServerCredentials serverCredentials =
+                new SshServerCredentials(HostPrivateKey);
+            var secureStream = new SecureStream(
+                e.Stream,
+                serverCredentials,
+                channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId));
+
+            // The client was already authenticated by the relay.
+            secureStream.Authenticating += (_, e) =>
+                e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(
+                    new ClaimsPrincipal());
+
+            e.TransformTask = Task.FromResult<Stream?>(secureStream);
+
+            // The client will connect to the secure stream after the channel is opened.
+            ConnectEncryptedChannel();
+            async void ConnectEncryptedChannel()
+            {
+                try
+                {
+                    // Do not pass the cancellation token from the connecting event,
+                    // because the connection will outlive the event.
+                    await secureStream.ConnectAsync();
+                }
+                catch (Exception ex)
+                {
+                    channel.Trace.Error(
+                        "Error connecting encrypted channel: " + ex.Message);
+                }
+            }
+        }
+
+        base.OnForwardedPortConnecting(sender, e);
     }
 
     private async Task AcceptClientSessionAsync(SshChannel clientSessionChannel, CancellationToken cancellation)
@@ -568,7 +629,9 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         }
         else if (portForwardRequest.ChannelType == "forwarded-tcpip")
         {
-            this.OnForwardedPortConnecting(portForwardRequest.Port, e.Channel);
+            var eventArgs = new ForwardedPortConnectingEventArgs(
+                (int)portForwardRequest.Port, false, new SshStream(e.Channel), CancellationToken.None);
+            base.OnForwardedPortConnecting(this, eventArgs);
         }
         // For forwarded-tcpip do not check RemoteForwarders because they may not be updated yet.
         // There is a small time interval in ForwardPortAsync() between the port

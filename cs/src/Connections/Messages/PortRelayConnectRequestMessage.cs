@@ -1,4 +1,4 @@
-// <copyright file="PortRelayConnectMessage.cs" company="Microsoft">
+// <copyright file="PortRelayConnectRequestMessage.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -14,7 +14,7 @@ namespace Microsoft.DevTunnels.Connections.Messages;
 /// Extends port-forward channel open messages to include additional properties required
 /// by the tunnel relay.
 /// </summary>
-public class PortRelayConnectMessage : PortForwardChannelOpenMessage
+public class PortRelayConnectRequestMessage : PortForwardChannelOpenMessage
 {
     /// <summary>
     /// Access token with 'connect' scope used to authorize the port connection request.
@@ -26,14 +26,24 @@ public class PortRelayConnectMessage : PortForwardChannelOpenMessage
     /// </remarks>
     public string? AccessToken { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether end-to-end encryption is requested for the
+    /// connection.
+    /// </summary>
+    /// <remarks>
+    /// The tunnel relay or tunnel host may enable E2E encryption or not depending on capabilities
+    /// and policies. The channel open response will indicate whether E2E encryption is actually
+    /// enabled for the connection.
+    /// </remarks>
+    public bool IsE2EEncryptionRequested { get; set; }
+
     /// <inheritdoc/>
     protected override void OnWrite(ref SshDataWriter writer)
     {
         base.OnWrite(ref writer);
 
-        writer.Write(
-            AccessToken ?? throw new InvalidOperationException("An access token is required."),
-            Encoding.UTF8);
+        writer.Write(AccessToken ?? string.Empty, Encoding.UTF8);
+        writer.Write(IsE2EEncryptionRequested);
     }
 
     /// <inheritdoc/>
@@ -42,5 +52,6 @@ public class PortRelayConnectMessage : PortForwardChannelOpenMessage
         base.OnRead(ref reader);
 
         AccessToken = reader.ReadString(Encoding.UTF8);
+        IsE2EEncryptionRequested = reader.ReadBoolean();
     }
 }

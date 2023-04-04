@@ -33,6 +33,11 @@ public interface ITunnelClient : IAsyncDisposable
     ForwardedPortsCollection? ForwardedPorts { get; }
 
     /// <summary>
+    /// An event which fires when a connection is made to the forwarded port.
+    /// </summary>
+    event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
+
+    /// <summary>
     /// Gets or sets a value indicating whether local connections for forwarded ports are
     /// accepted.
     /// </summary>
