@@ -7,16 +7,16 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.DevTunnels.Connections;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Algorithms;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Tcp;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Test.Mocks;
 using Nerdbank.Streams;
 using Xunit;
-using Microsoft.DevTunnels.Connections;
-using System.Reflection;
 
 namespace Microsoft.DevTunnels.Test;
 

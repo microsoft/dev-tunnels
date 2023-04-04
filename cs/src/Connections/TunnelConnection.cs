@@ -1,4 +1,4 @@
-// <copyright file="TunnelBase.cs" company="Microsoft">
+// <copyright file="TunnelConnection.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -120,6 +120,13 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// <remarks>
     /// The default value is true, but applications may set this to false (for slightly faster
     /// connections).
+    /// <para/>
+    /// Note when this is true, E2E encryption is not strictly required. The tunnel relay and
+    /// tunnel host can decide whether or not to enable E2E encryption on a per-connection basis,
+    /// depending on policies and capabilities. Applications can verify the status of E2EE by
+    /// handling the <see cref="ITunnelClient.ForwardedPortConnecting" /> or
+    /// <see cref="ITunnelHost.ForwardedPortConnecting" /> event and checking the related property
+    /// on the channel request or response message.
     /// </remarks>
     public bool EnableE2EEncryption { get; set; } = true;
 

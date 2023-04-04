@@ -297,7 +297,9 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         if (ConnectionProtocol == WebSocketSubProtocolV2 &&
             e.Channel.ChannelType == "forwarded-tcpip")
         {
-            // V2 protocol.
+            // With V2 protocol, the relay server always sends an extended channel open message
+            // with a property indicating whether E2E encryption is requested for the connection.
+            // The host returns an extended response message indicating if E2EE is enabled.
             var relayRequestMessage = e.Channel.OpenMessage
                 .ConvertTo<PortRelayConnectRequestMessage>();
             var responseMessage = new PortRelayConnectResponseMessage();
@@ -397,8 +399,14 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
                 }
                 catch (Exception ex)
                 {
-                    channel.Trace.Error(
-                        "Error connecting encrypted channel: " + ex.Message);
+                    // Catch all exceptions in this async void method.
+                    try
+                    {
+                        channel.Trace.Error("Error connecting encrypted channel: " + ex.Message);
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
             }
         }

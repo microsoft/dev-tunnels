@@ -245,11 +245,13 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     }
 
     /// <summary>
-    /// Invoked when a forwarded port is connecting.
+    /// Invoked when a forwarded port is connecting. (Only for V2 protocol.)
     /// </summary>
     protected virtual void OnForwardedPortConnecting(
         object? sender, ForwardedPortConnectingEventArgs e)
     {
+        // With V2 protocol, the relay server always sends an extended response message
+        // with a property indicating whether E2E encryption is enabled for the connection.
         var channel = e.Stream.Channel;
         var relayResponseMessage = channel.OpenConfirmationMessage
             .ConvertTo<PortRelayConnectResponseMessage>();
