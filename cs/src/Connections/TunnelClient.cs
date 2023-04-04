@@ -19,6 +19,7 @@ using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Ssh.Tcp.Events;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Connections.Messages;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -64,6 +65,9 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
     /// <inheritdoc />
     protected override string TunnelAccessScope => TunnelAccessScopes.Connect;
+
+    /// <inheritdoc />
+    public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 
     /// <summary>
     /// Get a value indicating if remote <paramref name="port"/> is forwarded and has any channels open on the client,
@@ -221,19 +225,64 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
     private void ConfigurePortForwardingService()
     {
-        if (SshPortForwardingService is PortForwardingService pfs)
+        var pfs = SshPortForwardingService;
+        if (pfs == null)
         {
-            pfs.AcceptLocalConnectionsForForwardedPorts = this.acceptLocalConnectionsForForwardedPorts;
-            if (pfs.AcceptLocalConnectionsForForwardedPorts)
-            {
-                pfs.TcpListenerFactory = new RetryTcpListenerFactory(this.localForwardingHostAddress);
-            }
+            return;
+        }
 
-            if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
+        pfs.AcceptLocalConnectionsForForwardedPorts = this.acceptLocalConnectionsForForwardedPorts;
+        if (pfs.AcceptLocalConnectionsForForwardedPorts)
+        {
+            pfs.TcpListenerFactory = new RetryTcpListenerFactory(this.localForwardingHostAddress);
+        }
+
+        if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
+        {
+            pfs.MessageFactory = this;
+            pfs.ForwardedPortConnecting += OnForwardedPortConnecting;
+        }
+    }
+
+    /// <summary>
+    /// Invoked when a forwarded port is connecting. (Only for V2 protocol.)
+    /// </summary>
+    protected virtual void OnForwardedPortConnecting(
+        object? sender, ForwardedPortConnectingEventArgs e)
+    {
+        // With V2 protocol, the relay server always sends an extended response message
+        // with a property indicating whether E2E encryption is enabled for the connection.
+        var channel = e.Stream.Channel;
+        var relayResponseMessage = channel.OpenConfirmationMessage
+            .ConvertTo<PortRelayConnectResponseMessage>();
+
+        if (relayResponseMessage.IsE2EEncryptionEnabled)
+        {
+            // The host trusts the relay to authenticate the client, so it doesn't require
+            // any additional password/token for client authentication.
+            var clientCredentials = new SshClientCredentials("tunnel");
+
+            e.TransformTask = EncryptChannelAsync(e.Stream);
+            async Task<Stream?> EncryptChannelAsync(SshStream channelStream)
             {
-                pfs.MessageFactory = this;
+                var secureStream = new SecureStream(
+                    e.Stream,
+                    clientCredentials,
+                    channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId));
+
+                // TODO: Verify the host public key shared via the tunnel service?
+                secureStream.Authenticating += (_, e) =>
+                    e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(
+                        new ClaimsPrincipal());
+
+                // Do not pass the cancellation token from the connecting event,
+                // because the connection will outlive the event.
+                await secureStream.ConnectAsync();
+                return secureStream;
             }
         }
+
+        this.ForwardedPortConnecting?.Invoke(this, e);
     }
 
     /// <summary>

@@ -49,6 +49,11 @@ public class MultiModeTunnelClient : TunnelConnection, ITunnelClient
     /// <inheritdoc />
     public ForwardedPortsCollection? ForwardedPorts => throw new NotImplementedException();
 
+#pragma warning disable CS0067 // Not used
+    /// <inheritdoc />
+    public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
+#pragma warning restore CS0067
+
     /// <inheritdoc />
     public bool AcceptLocalConnectionsForForwardedPorts
     {

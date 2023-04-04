@@ -16,6 +16,7 @@ using Microsoft.DevTunnels.Ssh.Algorithms;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -177,11 +178,10 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     /// <summary>
     /// Invoked when a forwarded port is connecting
     /// </summary>
-    protected void OnForwardedPortConnecting(uint port, SshChannel channel)
+    protected virtual void OnForwardedPortConnecting(
+        object? sender, ForwardedPortConnectingEventArgs e)
     {
-        Requires.NotNull(channel, nameof(channel));
-        var eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
-        this.ForwardedPortConnecting?.Invoke(this, eventArgs);
+        this.ForwardedPortConnecting?.Invoke(this, e);
     }
 
     /// <summary>
