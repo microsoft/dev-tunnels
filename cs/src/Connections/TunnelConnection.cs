@@ -1,4 +1,4 @@
-﻿// <copyright file="TunnelConnection.cs" company="Microsoft">
+// <copyright file="TunnelConnection.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -13,6 +13,7 @@ using Microsoft.DevTunnels.Management;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Connections.Messages;
+using System.Collections.Generic;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -287,8 +288,26 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
                 TokenScopes = new[] { TunnelAccessScope },
             };
 
-            Tunnel = await ManagementClient.GetTunnelAsync(Tunnel!, options, cancellation);
-            return Tunnel!.AccessTokens?.TryGetValue(TunnelAccessScope, out var result) == true ? result : null;
+            var tunnel = await ManagementClient.GetTunnelAsync(Tunnel, options, cancellation);
+            if (tunnel == null)
+            {
+                // Tunnel doesn't exist
+                return null;
+            }
+
+            // Get the tunnel access token from the fetched tunnel, or the original Tunnal object if the fetched tunnel doesn't have the token,
+            // which may happen when the tunnel was authenticated with a tunnel acccess token from Tunnel.AccessTokens.
+            // Add the tunnel access token to the fetched tunnel's AccessTokens if it is not there.
+            string? result;
+            if (!tunnel.TryGetAccessToken(TunnelAccessScope, out result) &&
+                Tunnel.TryGetAccessToken(TunnelAccessScope, out result))
+            {
+                tunnel.AccessTokens ??= new Dictionary<string, string>();
+                tunnel.AccessTokens[TunnelAccessScope] = result;
+            }
+
+            Tunnel = tunnel;
+            return result;
         }
 
         if (RefreshingTunnelAccessToken == null)

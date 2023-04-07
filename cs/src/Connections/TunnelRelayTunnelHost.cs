@@ -109,7 +109,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         Requires.NotNull(Tunnel!, nameof(Tunnel));
 
         this.accessToken = null!;
-        Tunnel.AccessTokens?.TryGetValue(TunnelAccessScope, out this.accessToken!);
+        Tunnel.TryGetAccessToken(TunnelAccessScope, out this.accessToken!);
         Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
 
         var hostPublicKeys = new[]
