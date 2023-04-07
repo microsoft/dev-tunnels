@@ -4,16 +4,16 @@
 // </copyright>
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Connections.Messages;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
-using Microsoft.DevTunnels.Connections.Messages;
-using System.Collections.Generic;
 
 namespace Microsoft.DevTunnels.Connections;
 
