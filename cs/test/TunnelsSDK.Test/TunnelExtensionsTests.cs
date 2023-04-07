@@ -120,7 +120,7 @@ public class TunnelExtensionsTests
         Assert.Null(accessToken);
     }
 
-    private string GetToken(bool isExpired)
+    private static string GetToken(bool isExpired)
     {
         var exp = DateTimeOffset.UtcNow + (isExpired ? -TimeSpan.FromHours(1) : TimeSpan.FromHours(1));
         var claims = $"{{ \"exp\": {exp.ToUnixTimeSeconds():D} }}";
@@ -130,5 +130,4 @@ public class TunnelExtensionsTests
             .Replace('+', '-');
         return $"header.{payload}.signature";
     }
-
 }

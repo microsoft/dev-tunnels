@@ -16,7 +16,6 @@ public static class TunnelExtensions
 {
     /// <summary>
     /// Try to get an access token from <paramref name="tunnel"/> for <paramref name="accessTokenScope"/>.
-    /// If the token is found, it's validated for expiration.
     /// </summary>
     /// <remarks>
     /// The tokens are searched in <c>Tunnel.AccessTokens</c> dictionary where each
