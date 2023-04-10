@@ -69,7 +69,7 @@ steps:
     SearchPattern: '**\*.pdb'
     SymbolServerType: TeamServices
     # Expiration parameter: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/azure-artifacts/symbol-service#how-to-change-the-expiration-date-of-a-symbol-request
-    SymbolExpirationInDays: '30'
+    SymbolExpirationInDays: '1095'
 
 - task: PublishBuildArtifacts@1
   displayName: Publish Build
