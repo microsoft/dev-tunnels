@@ -96,7 +96,7 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
             $"The tunnel client relay endpoint URI is missing.");
 
         // The access token might be null if connecting to a tunnel that allows anonymous access.
-        Tunnel.AccessTokens?.TryGetValue(TunnelAccessScope, out this.accessToken);
+        Tunnel.TryGetAccessToken(TunnelAccessScope, out this.accessToken);
         this.relayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
 
         ITunnelConnector result = new RelayTunnelConnector(this);

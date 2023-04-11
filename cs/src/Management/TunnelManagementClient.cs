@@ -744,29 +744,8 @@ namespace Microsoft.DevTunnels.Management
             {
                 foreach (var scope in accessTokenScopes)
                 {
-                    string? accessToken = null;
-                    foreach (var scopeAndToken in tunnel.AccessTokens)
+                    if (tunnel.TryGetValidAccessToken(scope, out string? accessToken))
                     {
-                        // Each key may be either a single scope or space-delimited list of scopes.
-                        if (scopeAndToken.Key.IndexOf(' ') > 0)
-                        {
-                            var scopes = scopeAndToken.Key.Split(' ');
-                            if (scopes.Contains(scope))
-                            {
-                                accessToken = scopeAndToken.Value;
-                                break;
-                            }
-                        }
-                        else if (scopeAndToken.Key == scope)
-                        {
-                            accessToken = scopeAndToken.Value;
-                            break;
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(accessToken))
-                    {
-                        TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
                         authHeader = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);
                         break;
