@@ -138,17 +138,39 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             const options: TunnelRequestOptions = {
                 tokenScopes: [this.tunnelAccessScope],
             };
-            this.tunnel = await withCancellation(
+
+            const tunnel = await withCancellation(
                 this.managementClient.getTunnel(this.tunnel, options),
                 cancellation,
             );
-            if (!this.tunnel?.accessTokens) {
+
+            if (!tunnel) {
+                // Tunnel doesn't exist
                 return;
             }
-            return TunnelAccessTokenProperties.getTunnelAccessToken(
-                this.tunnel,
+
+            // Get the tunnel access token from the fetched tunnel, or the original this.tunnel object if the fetched tunnel doesn't have the token,
+            // which may happen when the tunnel was authenticated with a tunnel acccess token from this.tunnel.accessTokens.
+            // Add the tunnel access token to the fetched tunnel's accessTokens if it is not there.
+            let accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                tunnel,
                 this.tunnelAccessScope,
             );
+
+            if (!accessToken) {
+                accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                    this.tunnel,
+                    this.tunnelAccessScope,
+                );
+
+                if (accessToken) {
+                    tunnel.accessTokens ??= {};
+                    tunnel.accessTokens[this.tunnelAccessScope] = accessToken;
+                }
+            }
+
+            this.tunnel = tunnel;
+            return accessToken;
         }
 
         return await super.getFreshTunnelAccessToken(cancellation);
