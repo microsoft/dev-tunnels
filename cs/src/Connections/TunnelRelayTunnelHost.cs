@@ -558,25 +558,20 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     private async Task StartForwardingExistingPortsAsync(
         SshSession session, bool removeUnusedPorts = false)
     {
+        // Send port-forward request messages concurrently. The client may still handle the
+        // requests sequentially but at least there is no network round-trip between them.
+        var forwardTasks = new List<Task>();
+
         var tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
         var pfs = session.ActivateService<PortForwardingService>();
         pfs.ForwardConnectionsToLocalPorts = this.ForwardConnectionsToLocalPorts;
         foreach (TunnelPort port in tunnelPorts)
         {
-            try
-            {
-                await ForwardPortAsync(pfs, port, CancellationToken.None);
-            }
-            catch (Exception exception)
-            {
-                Trace.TraceEvent(
-                    TraceEventType.Error,
-                    0,
-                    "Error forwarding port {0} to client: {1}",
-                    port.PortNumber,
-                    exception.Message);
-            }
+            // ForwardPortAsync() catches and logs most exceptions that might normally occur.
+            forwardTasks.Add(ForwardPortAsync(pfs, port, CancellationToken.None));
         }
+
+        await Task.WhenAll(forwardTasks);
 
         // If a tunnel client reconnects, its SSH session Port Forwarding service may
         // have remote port forwarders for the ports no longer forwarded.
