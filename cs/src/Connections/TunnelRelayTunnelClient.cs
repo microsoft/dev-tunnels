@@ -98,6 +98,7 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
         // The access token might be null if connecting to a tunnel that allows anonymous access.
         Tunnel.TryGetAccessToken(TunnelAccessScope, out this.accessToken);
         this.relayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
+        this.HostPublicKeys = endpoint.HostPublicKeys;
 
         ITunnelConnector result = new RelayTunnelConnector(this);
         return Task.FromResult(result);
@@ -106,7 +107,11 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// <summary>
     /// Connect to the clientRelayUri using accessToken.
     /// </summary>
-    protected Task ConnectAsync(string clientRelayUri, string? accessToken, CancellationToken cancellation)
+    protected Task ConnectAsync(
+        string clientRelayUri,
+        string? accessToken,
+        string[]? hostPublicKeys,
+        CancellationToken cancellation)
     {
         Requires.NotNull(clientRelayUri, nameof(clientRelayUri));
         return ConnectTunnelSessionAsync(
@@ -114,6 +119,7 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
             {
                 this.relayUri = new Uri(clientRelayUri, UriKind.Absolute);
                 this.accessToken = accessToken;
+                this.HostPublicKeys = hostPublicKeys;
                 this.connector = new RelayTunnelConnector(this);
                 return this.connector.ConnectSessionAsync(isReconnect: false, cancellation);
             },
