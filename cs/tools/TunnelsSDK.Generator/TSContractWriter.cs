@@ -155,7 +155,7 @@ internal class TSContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent, GetJsdoc(field)));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent, GetJsDoc(field)));
             s.AppendLine($"{indent}export const {ToCamelCase(field.Name)} = '{field.ConstantValue}';");
         }
 
@@ -180,7 +180,7 @@ internal class TSContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    ", GetJsdoc(field)));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    ", GetJsDoc(field)));
 
             var value = type.BaseType?.Name == "Enum" ? field.Name : field.ConstantValue;
             s.AppendLine($"{indent}    {field.Name} = '{value}',");
@@ -226,7 +226,7 @@ internal class TSContractWriter : ContractWriter
             if (value != null)
             {
                 s.AppendLine();
-                s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    ", GetJsdoc(field)));
+                s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    ", GetJsDoc(member)));
                 s.AppendLine($"{indent}    " +
                     $"export const {tsName}: {tsType}{(isNullable ? " | null" : "")} = {value};");
             }
@@ -423,19 +423,14 @@ internal class TSContractWriter : ContractWriter
         return tsType;
     }
 
-    private static List<string> GetJsdoc(IFieldSymbol? fieldSymbol)
+    private static List<string> GetJsDoc(ISymbol symbol)
     {
         var doc = new List<string>();
-        if (fieldSymbol != null)
+        var obsoleteAttribute = GetObsoleteAttribute(symbol);
+        if (obsoleteAttribute != null)
         {
-            var obsoleteAttribute = GetObsoleteAttribute(fieldSymbol);
-            if (obsoleteAttribute != null)
-            {
-                var message = obsoleteAttribute.ConstructorArguments.Length > 0
-                        ? obsoleteAttribute.ConstructorArguments[0].Value?.ToString()
-                        : null;
-                doc.Add($"@deprecated {message}");
-            }
+            var message = GetObsoleteMessage(obsoleteAttribute);
+            doc.Add($"@deprecated {message}");
         }
 
         return doc;

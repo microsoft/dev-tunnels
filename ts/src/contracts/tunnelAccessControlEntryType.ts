@@ -19,6 +19,7 @@ export enum TunnelAccessControlEntryType {
 
     /**
      * The access control entry is a list of user IDs that are allowed (or denied) access.
+     * @deprecated Adding individual users to an access control entry is currently deprecated
      */
     Users = 'Users',
 
