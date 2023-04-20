@@ -25,7 +25,6 @@ namespace Microsoft.DevTunnels.Contracts
         /// <summary>
         /// The access control entry is a list of user IDs that are allowed (or denied) access.
         /// </summary>
-        [Obsolete("Adding individual users to an access control entry is currently deprecated")]
         Users,
 
         /// <summary>

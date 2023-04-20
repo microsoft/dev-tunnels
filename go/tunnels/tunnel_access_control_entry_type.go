@@ -15,7 +15,6 @@ const (
 	TunnelAccessControlEntryTypeAnonymous       TunnelAccessControlEntryType = "Anonymous"
 
 	// The access control entry is a list of user IDs that are allowed (or denied) access.
-	// Deprecated: Adding individual users to an access control entry is currently deprecated
 	TunnelAccessControlEntryTypeUsers           TunnelAccessControlEntryType = "Users"
 
 	// The access control entry is a list of groups IDs that are allowed (or denied) access.

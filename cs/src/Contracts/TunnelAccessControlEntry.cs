@@ -200,7 +200,7 @@ public class TunnelAccessControlEntry
         {
             TunnelAccessControlEntryType.Anonymous =>
                 isInverse ? "Authenticated Users" : "Anonymous",
-            // TunnelAccessControlEntryType.Users => "User",
+            TunnelAccessControlEntryType.Users => "User",
             TunnelAccessControlEntryType.Groups =>
                 provider == Providers.GitHub ? "Team" : "Group",
             TunnelAccessControlEntryType.Organizations =>
