@@ -3,8 +3,6 @@
 // Licensed under the MIT license.
 // </copyright>
 
-using System;
-
 namespace Microsoft.DevTunnels.Contracts
 {
     /// <summary>
