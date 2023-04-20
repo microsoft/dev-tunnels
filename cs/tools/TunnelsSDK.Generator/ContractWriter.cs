@@ -103,14 +103,14 @@ internal abstract class ContractWriter
         }
     }
 
-    protected static AttributeData? GetFieldAttribute(ISymbol symbol, string attributeName)
+    protected static AttributeData? GetAttribute(ISymbol symbol, string attributeName)
     {
         return symbol.GetAttributes().FirstOrDefault((a) => a.AttributeClass?.Name == attributeName);
     }
 
     protected static AttributeData? GetObsoleteAttribute(ISymbol symbol)
     {
-        return GetFieldAttribute(symbol, nameof(ObsoleteAttribute));
+        return GetAttribute(symbol, nameof(ObsoleteAttribute));
     }
 
     protected static string? GetObsoleteMessage(AttributeData? obsoleteAttribute)
