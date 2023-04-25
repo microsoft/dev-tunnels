@@ -37,9 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Check Go SDK package version updated
       with:
         fetch-depth: 0
+    - name: Check Go SDK package version updated
       run: |
         SDK_DIR=go/
         FILE_WITH_PKG_VER=go/tunnels/tunnels.go
