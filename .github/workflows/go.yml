@@ -39,8 +39,11 @@ jobs:
     - uses: actions/checkout@v2
     - name: Check Go SDK package version updated
       run: |
+        SDK_DIR=go/
+        FILE_WITH_PKG_VER=go/tunnels/tunnels.go
+        test -d $SDK_DIR && test -f $FILE_WITH_PKG_VER
         BASE_SHA=$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")
-        if git diff --name-only $BASE_SHA HEAD | grep '^go/' && ! git diff --name-only $BASE_SHA HEAD | grep '^go/tunnels/tunnels.go'; then
-          echo "Error: Go SDK directory was changed without updating tunnels.go. PackageVersion in tunnels.go needs to be manually updated."
+        if git diff --name-only $BASE_SHA HEAD | grep '^$SDK_DIR' && ! git diff --name-only $BASE_SHA HEAD | grep '^$FILE_WITH_PKG_VER'; then
+          echo "Error: Go SDK directory was changed without updating $FILE_WITH_PKG_VER. The PackageVersion needs to be manually updated."
           exit 1
         fi
