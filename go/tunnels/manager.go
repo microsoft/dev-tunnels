@@ -48,7 +48,7 @@ const (
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
-	goUserAgent                = "TEST_CHANGE_TO_REVERT/" + PackageVersion
+	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK/" + PackageVersion
 )
 
 var (
