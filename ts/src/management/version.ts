@@ -8,4 +8,4 @@ const packageVersion = packageJson.version;
 /**
  * Tunnel SDK user agent
  */
-export const tunnelSdkUserAgent = `Visual-Studio-Tunnel-Service-SDK/${packageVersion}`;
+export const tunnelSdkUserAgent = `Dev-Tunnels-Service-SDK/${packageVersion}`;
