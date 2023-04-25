@@ -55,7 +55,7 @@ namespace Microsoft.DevTunnels.Management
         };
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
-            TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Visual-Studio-Tunnel-Service-SDK")!;
+            TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
 
         private readonly HttpClient httpClient;
         private readonly Func<Task<AuthenticationHeaderValue?>> userTokenCallback;
