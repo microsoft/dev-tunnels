@@ -33,7 +33,7 @@ jobs:
     - name: Test
       run: cd go/tunnels && go test -short -v ./...
 
-  check_package_version:
+  check-package-version-update:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
