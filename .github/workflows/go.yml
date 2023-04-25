@@ -55,4 +55,6 @@ jobs:
             echo "Error: An error occurred. Has "PackageVersion" in $FILE_WITH_PKG_VER been updated?"
             exit 1
           fi
+        else
+          echo "No Go SDK changes detected."
         fi
