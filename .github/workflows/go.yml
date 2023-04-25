@@ -33,7 +33,7 @@ jobs:
     - name: Test
       run: cd go/tunnels && go test -short -v ./...
 
-  check-package-version-update:
+  check-version-update:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -51,5 +51,7 @@ jobs:
           exit 0
         else
           echo "Error: An error occurred. Has "PackageVersion" in $FILE_WITH_PKG_VER been updated?"
+          git diff --name-only $BASE_SHA HEAD
+          git diff $BASE_SHA HEAD -- $FILE_WITH_PKG_VER
           exit 1
         fi
