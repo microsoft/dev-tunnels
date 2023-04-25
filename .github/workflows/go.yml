@@ -51,7 +51,7 @@ jobs:
             echo "Success: Package version was updated."
             exit 0
           else
-            echo "Error: An error occurred. Has "PackageVersion" in $FILE_WITH_PKG_VER been updated?"
+            echo "Error: An error occurred. Has "PackageVersion" in $FILE_WITH_PKG_VER been updated?" >&2
             exit 1
           fi
         else
