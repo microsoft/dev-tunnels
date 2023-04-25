@@ -52,8 +52,6 @@ jobs:
             exit 0
           else
             echo "Error: An error occurred. Has "PackageVersion" in $FILE_WITH_PKG_VER been updated?"
-            git diff --name-only $BASE_SHA HEAD
-            git diff $BASE_SHA HEAD -- $FILE_WITH_PKG_VER
             exit 1
           fi
         fi
