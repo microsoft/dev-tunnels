@@ -46,9 +46,8 @@ jobs:
         test -d $SDK_DIR && test -f $FILE_WITH_PKG_VER
         BASE_SHA=$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")
         # If go sdk dir updated, package version file updated and "PackageVersion" line updated, success; else error.
-        git diff --name-only $BASE_SHA HEAD
-        if git diff --name-only $BASE_SHA HEAD | grep '^$SDK_DIR'; then
-          if git diff --name-only $BASE_SHA HEAD | grep '^$FILE_WITH_PKG_VER' && git diff $BASE_SHA HEAD -- $FILE_WITH_PKG_VER | grep -q "PackageVersion"; then
+        if git diff --name-only $BASE_SHA HEAD | grep -q "^$SDK_DIR"; then
+          if git diff --name-only $BASE_SHA HEAD | grep -q "^$FILE_WITH_PKG_VER" && git diff $BASE_SHA HEAD -- $FILE_WITH_PKG_VER | grep -q "PackageVersion"; then
             echo "Success: Package version was updated."
             exit 0
           else
