@@ -38,6 +38,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Check Go SDK package version updated
+      with:
+        fetch-depth: 0
       run: |
         SDK_DIR=go/
         FILE_WITH_PKG_VER=go/tunnels/tunnels.go
@@ -48,6 +50,6 @@ jobs:
           echo "Success: Package version was updated."
           exit 0
         else
-          echo "Error: Go SDK directory was changed without updating $FILE_WITH_PKG_VER. The PackageVersion needs to be manually updated."
+          echo "Error: An error occurred. Has "PackageVersion" in $FILE_WITH_PKG_VER been updated?"
           exit 1
         fi
