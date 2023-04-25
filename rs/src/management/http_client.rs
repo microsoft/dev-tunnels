@@ -454,7 +454,7 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
     let pkg_version = PKG_VERSION.unwrap_or("unknown");
     let full_user_agent = format!(
         "{}{}{}",
-        user_agent, " Visual-Studio-Tunnel-Service-Rust-SDK/", pkg_version
+        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version
     );
     TunnelClientBuilder {
         authorization: Arc::new(Box::new(super::StaticAuthorizationProvider(
@@ -672,7 +672,7 @@ mod tests {
 
         // verify
         let re = Regex::new(
-            r"^test-caller Visual-Studio-Tunnel-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$",
+            r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$",
         )
         .unwrap();
         let full_agent = builder.user_agent.to_str().unwrap();
