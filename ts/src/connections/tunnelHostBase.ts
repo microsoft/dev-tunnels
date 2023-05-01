@@ -5,9 +5,9 @@ import { TunnelPort, Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-c
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
     KeyPair,
-    MultiChannelStream,
     SshAlgorithms,
     SshChannel,
+    SshClientSession,
     SshServerSession,
     SshStream,
     Trace,
@@ -22,11 +22,14 @@ import { Emitter } from 'vscode-jsonrpc';
 import { ForwardedPortConnectingEventArgs } from './forwardedPortConnectingEventArgs';
 
 /**
- * Base class for Hosts that host one tunnel and use SSH MultiChannelStream to connect to the tunnel host service.
+ * Base class for Hosts that host one tunnel and use SSH to connect to the tunnel host service.
  */
 export class TunnelHostBase
-    extends tunnelSshSessionClass<MultiChannelStream>(TunnelConnectionSession)
+    extends tunnelSshSessionClass<SshClientSession>(TunnelConnectionSession)
     implements TunnelHost {
+
+    private connectionProtocolValue?: string;
+
     /**
      * Sessions created between this host and clients
      * @internal
@@ -52,6 +55,16 @@ export class TunnelHostBase
      * Promise task to get private key used for connections.
      */
     public hostPrivateKeyPromise?: Promise<KeyPair>;
+
+    /**
+     * Connection protocol used to connect to the host.
+     */
+    public get connectionProtocol(): string | undefined {
+        return this.connectionProtocolValue;
+    }
+    protected set connectionProtocol(value: string | undefined) {
+        this.connectionProtocolValue = value;
+    }
 
     private loopbackIp = '127.0.0.1';
 
@@ -105,36 +118,8 @@ export class TunnelHostBase
         await this.connectTunnelSession(tunnel);
     }
 
-    public async refreshPorts(): Promise<void> {
-        if (!this.tunnel || !this.managementClient) {
-            return;
-        }
-
-        const updatedTunnel = await this.managementClient.getTunnel(this.tunnel, undefined);
-        const updatedPorts = updatedTunnel?.ports ?? [];
-        this.tunnel.ports = updatedPorts;
-
-        const forwardPromises: Promise<any>[] = [];
-
-        for (const port of updatedPorts) {
-            for (const session of this.sshSessions.filter((s) => s.isConnected && s.sessionId)) {
-                const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
-                const forwarder = this.remoteForwarders.get(key.toString());
-                if (!forwarder) {
-                    const pfs = session.getService(PortForwardingService)!;
-                    forwardPromises.push(this.forwardPort(pfs, port));
-                }
-            }
-        }
-
-        for (const [key, forwarder] of Object.entries(this.remoteForwarders)) {
-            if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
-                this.remoteForwarders.delete(key);
-                forwarder.dispose();
-            }
-        }
-
-        await Promise.all(forwardPromises);
+    public refreshPorts(): Promise<void> {
+        return Promise.resolve();
     }
 
     protected onForwardedPortConnecting(port: number, channel: SshChannel): void {

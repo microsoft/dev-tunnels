@@ -15,11 +15,20 @@ import { TunnelConnector } from './tunnelConnector';
 import { TunnelSession } from './tunnelSession';
 import { withCancellation } from './utils';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
+import {
+    PortForwardChannelOpenMessage,
+    PortForwardMessageFactory,
+    PortForwardRequestMessage,
+    PortForwardSuccessMessage,
+} from '@microsoft/dev-tunnels-ssh-tcp';
+import { PortRelayRequestMessage } from './messages/portRelayRequestMessage';
+import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 
 /**
  * Tunnel connection session.
  */
-export class TunnelConnectionSession extends TunnelConnectionBase implements TunnelSession {
+export class TunnelConnectionSession extends TunnelConnectionBase
+        implements TunnelSession, PortForwardMessageFactory {
     private connectedTunnel: Tunnel | null = null;
     private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;
@@ -297,5 +306,22 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             TunnelAccessTokenProperties.validateTokenExpiration(this.accessToken);
             return this.accessToken;
         }
+    }
+
+    public createRequestMessageAsync(port: number): Promise<PortForwardRequestMessage> {
+        const message = new PortRelayRequestMessage();
+        message.accessToken = this.accessToken;
+        return Promise.resolve(message);
+    }
+
+    public createSuccessMessageAsync(port: number): Promise<PortForwardSuccessMessage> {
+        const message = new PortForwardSuccessMessage();
+        return Promise.resolve(message);
+    }
+
+    public createChannelOpenMessageAsync(port: number): Promise<PortForwardChannelOpenMessage> {
+        const message = new PortRelayConnectRequestMessage();
+        message.accessToken = this.accessToken;
+        return Promise.resolve(message);
     }
 }

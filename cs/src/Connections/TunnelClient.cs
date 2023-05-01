@@ -45,7 +45,9 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     public ForwardedPortsCollection? ForwardedPorts =>
         SshPortForwardingService?.RemoteForwardedPorts;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Connection protocol used to connect to host.
+    /// </summary>
     public string? ConnectionProtocol { get; protected set; }
 
     /// <summary>

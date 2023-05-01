@@ -11,13 +11,13 @@ export interface TunnelRelayStreamFactory {
     /**
      * Creates a stream connected to a tunnel relay URI.
      * @param relayUri URI of the tunnel relay to connect to.
-     * @param connectionType Type of stream connection to create, aka websocket sub-protocol.
+     * @param protocols Array of supported connection protocols (websocket sub-protocols).
      * @param accessToken Tunnel host access token, or null if anonymous.
      * @param clientConfig Client config for websocket.
      */
     createRelayStream(
         relayUri: string,
-        connectionType: string,
+        protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
     ): Promise<Stream>;

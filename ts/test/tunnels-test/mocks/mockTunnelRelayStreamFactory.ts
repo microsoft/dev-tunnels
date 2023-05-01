@@ -29,11 +29,11 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
 
     public createRelayStream = (
         relayUri: string,
-        connectionType: string,
+        protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
     ) => {
-        if (!relayUri || !accessToken || this.connectionType !== connectionType) {
+        if (!relayUri || !accessToken || !protocols.includes(this.connectionType)) {
             throw new Error('Invalid params');
         }
         return Promise.resolve(this.stream);

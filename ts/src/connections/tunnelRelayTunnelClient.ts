@@ -13,14 +13,26 @@ import { TunnelClientBase } from './tunnelClientBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
 
 const webSocketSubProtocol = 'tunnel-relay-client';
+const webSocketSubProtocolv2 = 'tunnel-relay-client-v2-dev';
+
+// Check for an environment variable to determine which protocol version to use.
+// By default, prefer V2 and fall back to V1.
+const protocolVersion = process?.env && process.env.DEVTUNNELS_PROTOCOL_VERSION;
+const connectionProtocols =
+    protocolVersion === '1' ? [webSocketSubProtocol] :
+    protocolVersion === '2' ? [webSocketSubProtocolv2] :
+    [webSocketSubProtocolv2, webSocketSubProtocol];
 
 /**
  * Tunnel client implementation that connects via a tunnel relay.
  */
 export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
     TunnelClientBase,
-    webSocketSubProtocol,
+    connectionProtocols,
 ) {
+    public static readonly webSocketSubProtocol = webSocketSubProtocol;
+    public static readonly webSocketSubProtocolv2 = webSocketSubProtocolv2;
+
     public connectionModes: TunnelConnectionMode[] = [];
 
     public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {

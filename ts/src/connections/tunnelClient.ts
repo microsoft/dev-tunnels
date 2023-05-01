@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { Duplex } from 'stream';
 import { TunnelConnectionMode, Tunnel } from '@microsoft/dev-tunnels-contracts';
 import { SshStream, CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
@@ -58,7 +59,7 @@ export interface TunnelClient extends TunnelConnection {
     connectToForwardedPort(
         fowardedPort: number,
         cancellation?: CancellationToken,
-    ): Promise<SshStream>;
+    ): Promise<Duplex>;
 
     /**
      * Waits for the specified port to be forwarded by the remote host.

@@ -18,14 +18,9 @@ type Constructor<T = object> = new (...args: any[]) => T;
  */
 export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>>(
     base: TBase,
-    webSocketSubProtocol: string,
+    protocols: string[],
 ) {
     return class TunnelRelaySession extends base {
-        /**
-         * Web socket sub-protocol to connect to the tunnel relay endpoint.
-         */
-        public static readonly webSocketSubProtocol = webSocketSubProtocol;
-
         /**
          * Tunnel relay URI.
          * @internal
@@ -51,7 +46,6 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
             const name = this.tunnelAccessScope === TunnelAccessScopes.Connect ? 'client' : 'host';
             const accessToken = this.validateAccessToken();
             this.trace(TraceLevel.Info, 0, `Connecting to ${name} tunnel relay ${this.relayUri}`);
-            this.trace(TraceLevel.Verbose, 0, `Sec-WebSocket-Protocol: ${webSocketSubProtocol}`);
             if (accessToken) {
                 const tokenTrace = TunnelAccessTokenProperties.getTokenTrace(accessToken);
                 this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${tokenTrace}>`);
@@ -59,7 +53,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
 
             return await this.streamFactory.createRelayStream(
                 this.relayUri,
-                webSocketSubProtocol,
+                protocols,
                 accessToken,
             );
         }

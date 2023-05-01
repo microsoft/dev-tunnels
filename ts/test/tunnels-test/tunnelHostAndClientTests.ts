@@ -166,7 +166,7 @@ export class TunnelHostAndClientTests {
         let serverConnectPromise = multiChannelStream.connect();
 
         relayHost.streamFactory = new MockTunnelRelayStreamFactory(
-            TunnelRelayTunnelHost.webSocketSubProtocol,
+            TunnelRelayTunnelHost.webSocketSubProtocol, 
             clientStream,
             clientStreamFactory,
         );
