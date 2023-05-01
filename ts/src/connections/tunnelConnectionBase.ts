@@ -9,6 +9,7 @@ import { TunnelConnection } from './tunnelConnection';
 import { RefreshingTunnelAccessTokenEventArgs } from './refreshingTunnelAccessTokenEventArgs';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
+import { ForwardedPortConnectingEventArgs } from '@microsoft/dev-tunnels-ssh-tcp';
 
 /**
  * Tunnel connection base class.
@@ -24,12 +25,12 @@ export class TunnelConnectionBase implements TunnelConnection {
         onFirstListenerAdd: () => (this.isRefreshingTunnelAccessTokenEventHandled = true),
         onLastListenerRemove: () => (this.isRefreshingTunnelAccessTokenEventHandled = false),
     });
-    private readonly connectionStatusChangedEmitter = new Emitter<
-        ConnectionStatusChangedEventArgs
-    >();
-    private readonly retryingTunnelConnectionEmitter = new Emitter<
-        RetryingTunnelConnectionEventArgs
-    >();
+    private readonly connectionStatusChangedEmitter =
+        new Emitter<ConnectionStatusChangedEventArgs>();
+    private readonly retryingTunnelConnectionEmitter =
+        new Emitter<RetryingTunnelConnectionEventArgs>();
+    private readonly forwardedPortConnectingEmitter =
+        new Emitter<ForwardedPortConnectingEventArgs>();
 
     protected constructor(
         /**
@@ -109,6 +110,15 @@ export class TunnelConnectionBase implements TunnelConnection {
      *  An event handler can cancel the retry by setting {@link RetryingTunnelConnectionEventArgs.retry} to false.
      */
     public readonly retryingTunnelConnection = this.retryingTunnelConnectionEmitter.event;
+
+    /**
+     * An event which fires when a connection is made to the forwarded port.
+     */
+    public readonly forwardedPortConnecting = this.forwardedPortConnectingEmitter.event;
+
+    protected onForwardedPortConnecting(e: ForwardedPortConnectingEventArgs) {
+        this.forwardedPortConnectingEmitter.fire(e);
+    }
 
     /**
      * Closes and disposes the tunnel session.

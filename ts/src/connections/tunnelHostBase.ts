@@ -5,9 +5,9 @@ import { TunnelPort, Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-c
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
     KeyPair,
-    MultiChannelStream,
     SshAlgorithms,
     SshChannel,
+    SshClientSession,
     SshServerSession,
     SshStream,
     Trace,
@@ -19,14 +19,16 @@ import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { isNode } from './sshHelpers';
 import { Emitter } from 'vscode-jsonrpc';
-import { ForwardedPortConnectingEventArgs } from './forwardedPortConnectingEventArgs';
 
 /**
- * Base class for Hosts that host one tunnel and use SSH MultiChannelStream to connect to the tunnel host service.
+ * Base class for Hosts that host one tunnel and use SSH to connect to the tunnel host service.
  */
 export class TunnelHostBase
-    extends tunnelSshSessionClass<MultiChannelStream>(TunnelConnectionSession)
+    extends tunnelSshSessionClass<SshClientSession>(TunnelConnectionSession)
     implements TunnelHost {
+
+    private connectionProtocolValue?: string;
+
     /**
      * Sessions created between this host and clients
      * @internal
@@ -53,13 +55,19 @@ export class TunnelHostBase
      */
     public hostPrivateKeyPromise?: Promise<KeyPair>;
 
+    /**
+     * Connection protocol used to connect to the host.
+     */
+    public get connectionProtocol(): string | undefined {
+        return this.connectionProtocolValue;
+    }
+    protected set connectionProtocol(value: string | undefined) {
+        this.connectionProtocolValue = value;
+    }
+
     private loopbackIp = '127.0.0.1';
 
     private forwardConnectionsToLocalPortsValue: boolean = isNode();
-
-    private readonly forwardedPortConnectingEmitter = new Emitter<
-        ForwardedPortConnectingEventArgs
-    >();
 
     public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(TunnelAccessScopes.Host, trace, managementClient);
@@ -68,13 +76,6 @@ export class TunnelHostBase
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
         }
     }
-
-    /**
-     * An event which fires when a connection is made to the forwarded port.
-     * Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the connection stream.
-     * When this is set only the forwardedPortConnecting event will be raised.
-     */
-    public readonly forwardedPortConnecting = this.forwardedPortConnectingEmitter.event;
 
     /**
      * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
@@ -105,49 +106,12 @@ export class TunnelHostBase
         await this.connectTunnelSession(tunnel);
     }
 
-    public async refreshPorts(): Promise<void> {
-        if (!this.tunnel || !this.managementClient) {
-            return;
-        }
-
-        const updatedTunnel = await this.managementClient.getTunnel(this.tunnel, undefined);
-        const updatedPorts = updatedTunnel?.ports ?? [];
-        this.tunnel.ports = updatedPorts;
-
-        const forwardPromises: Promise<any>[] = [];
-
-        for (const port of updatedPorts) {
-            for (const session of this.sshSessions.filter((s) => s.isConnected && s.sessionId)) {
-                const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
-                const forwarder = this.remoteForwarders.get(key.toString());
-                if (!forwarder) {
-                    const pfs = session.getService(PortForwardingService)!;
-                    forwardPromises.push(this.forwardPort(pfs, port));
-                }
-            }
-        }
-
-        for (const [key, forwarder] of Object.entries(this.remoteForwarders)) {
-            if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
-                this.remoteForwarders.delete(key);
-                forwarder.dispose();
-            }
-        }
-
-        await Promise.all(forwardPromises);
-    }
-
-    protected onForwardedPortConnecting(port: number, channel: SshChannel): void {
-        const eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
-        this.forwardedPortConnectingEmitter.fire(eventArgs);
+    public refreshPorts(): Promise<void> {
+        // This is implemented by the derived class.
+        return Promise.resolve();
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
-        const sessionId = pfs.session.sessionId;
-        if (!sessionId) {
-            throw new Error('No session id');
-        }
-
         const portNumber = Number(port.portNumber);
         if (pfs.localForwardedPorts.find((p) => p.localPort === portNumber)) {
             // The port is already forwarded. This may happen if we try to add the same port twice after reconnection.
@@ -167,7 +131,7 @@ export class TunnelHostBase
             return;
         }
 
-        const key = new SessionPortKey(sessionId, Number(forwarder.localPort));
+        const key = new SessionPortKey(pfs.session.sessionId, Number(forwarder.localPort));
         this.remoteForwarders.set(key.toString(), forwarder);
     }
 

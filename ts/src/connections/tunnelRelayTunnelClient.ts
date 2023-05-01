@@ -9,18 +9,27 @@ import {
 import { CancellationToken } from 'vscode-jsonrpc';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
-import { TunnelClientBase } from './tunnelClientBase';
+import { TunnelClientBase, webSocketSubProtocol, webSocketSubProtocolv2 } from './tunnelClientBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
 
-const webSocketSubProtocol = 'tunnel-relay-client';
+// Check for an environment variable to determine which protocol version to use.
+// By default, prefer V2 and fall back to V1.
+const protocolVersion = process?.env && process.env.DEVTUNNELS_PROTOCOL_VERSION;
+const connectionProtocols =
+    protocolVersion === '1' ? [webSocketSubProtocol] :
+    protocolVersion === '2' ? [webSocketSubProtocolv2] :
+    [webSocketSubProtocolv2, webSocketSubProtocol];
 
 /**
  * Tunnel client implementation that connects via a tunnel relay.
  */
 export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
     TunnelClientBase,
-    webSocketSubProtocol,
+    connectionProtocols,
 ) {
+    public static readonly webSocketSubProtocol = webSocketSubProtocol;
+    public static readonly webSocketSubProtocolv2 = webSocketSubProtocolv2;
+
     public connectionModes: TunnelConnectionMode[] = [];
 
     public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
@@ -36,7 +45,7 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
             throw new Error('No hosts are currently accepting connections for the tunnel.');
         }
         const tunnelEndpoints: TunnelRelayTunnelEndpoint[] = this.endpoints.filter(
-            (endpoint) => endpoint.connectionMode === TunnelConnectionMode.TunnelRelay,
+            (ep) => ep.connectionMode === TunnelConnectionMode.TunnelRelay,
         );
 
         if (tunnelEndpoints.length === 0) {
@@ -45,7 +54,9 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 
         // TODO: What if there are multiple relay endpoints, which one should the tunnel client pick, or is this an error?
         // For now, just chose the first one.
-        return tunnelEndpoints[0].clientRelayUri!;
+        const endpoint = tunnelEndpoints[0];
+        this.hostPublicKeys = endpoint.hostPublicKeys;
+        return endpoint.clientRelayUri!;
     }
 
     /**
@@ -70,9 +81,11 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
      */
     public async configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void> {
+        this.connectionProtocol = protocol;
         if (isReconnect && this.sshSession && !this.sshSession.isClosed) {
             await this.sshSession.reconnect(stream, cancellation);
         } else {

@@ -5,7 +5,10 @@ import * as assert from 'assert';
 import { until } from './promiseUtils';
 import { suite, test, params, slow, timeout } from '@testdeck/mocha';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
-import { PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
+import {
+    ForwardedPortConnectingEventArgs,
+    PortForwardingService,
+} from '@microsoft/dev-tunnels-ssh-tcp';
 import {
     Tunnel,
     TunnelPort,
@@ -15,7 +18,6 @@ import {
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ConnectionStatus,
-    ForwardedPortConnectingEventArgs,
     RelayConnectionError,
     RelayErrorType,
     TunnelConnection,
@@ -132,7 +134,7 @@ export class TunnelHostAndClientTests {
     private async connectRelayClient(
         relayClient: TestTunnelRelayTunnelClient,
         tunnel: Tunnel,
-        clientStreamFactory?: (stream: Stream) => Promise<Stream>,
+        clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
     ): Promise<SshServerSession> {
         const [serverStream, clientStream] = await DuplexStream.createStreams();
         const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
@@ -158,7 +160,7 @@ export class TunnelHostAndClientTests {
     private async startRelayHost(
         relayHost: TunnelRelayTunnelHost,
         tunnel: Tunnel,
-        clientStreamFactory?: (stream: Stream) => Promise<Stream>,
+        clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
     ): Promise<TestMultiChannelStream> {
         const [serverStream, clientStream] = await DuplexStream.createStreams();
 
@@ -166,7 +168,7 @@ export class TunnelHostAndClientTests {
         let serverConnectPromise = multiChannelStream.connect();
 
         relayHost.streamFactory = new MockTunnelRelayStreamFactory(
-            TunnelRelayTunnelHost.webSocketSubProtocol,
+            TunnelRelayTunnelHost.webSocketSubProtocol, 
             clientStream,
             clientStreamFactory,
         );
@@ -219,7 +221,7 @@ export class TunnelHostAndClientTests {
                 });
             }
 
-            return stream;
+            return { stream, protocol: TunnelRelayTunnelClient.webSocketSubProtocol };
         });
 
         assert.strictEqual(await connected, undefined);
@@ -468,7 +470,7 @@ export class TunnelHostAndClientTests {
                 });
             }
 
-            return stream;
+            return { stream, protocol: TunnelRelayTunnelHost.webSocketSubProtocol };
         });
 
         assert.strictEqual(await connected, undefined);
@@ -679,13 +681,16 @@ export class TunnelHostAndClientTests {
 
         // Reconnect the tunnel host
         const reconnectedHostStream = new PromiseCompletionSource<Stream>();
-        relayHost.streamFactory = MockTunnelRelayStreamFactory.from(reconnectedHostStream);
+        relayHost.streamFactory = MockTunnelRelayStreamFactory.from(
+            reconnectedHostStream,
+            TunnelRelayTunnelHost.webSocketSubProtocol);
 
         const reconnectedClientMultiChannelStream = new PromiseCompletionSource<
             TestMultiChannelStream
         >();
         relayClient.streamFactory = MockTunnelRelayStreamFactory.fromMultiChannelStream(
             reconnectedClientMultiChannelStream,
+            TunnelRelayTunnelClient.webSocketSubProtocol,
         );
 
         clientMultiChannelStream.dropConnection();
@@ -771,6 +776,7 @@ export class TunnelHostAndClientTests {
         const relayClient = new TestTunnelRelayTunnelClient();
         relayClient.streamFactory = MockTunnelRelayStreamFactory.fromMultiChannelStream(
             clientMultiChannelStream,
+            TunnelRelayTunnelClient.webSocketSubProtocol,
             (s) => {
                 clientStream = s;
             },

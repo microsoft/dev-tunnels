@@ -371,8 +371,6 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             // size of one client channel.
             channel.MaxWindowSize = SshChannel.DefaultMaxWindowSize * 2;
 
-            // TODO: Publish the host public key to the relay so that the client can verify.
-
             SshServerCredentials serverCredentials =
                 new SshServerCredentials(HostPrivateKey);
             var secureStream = new SecureStream(
