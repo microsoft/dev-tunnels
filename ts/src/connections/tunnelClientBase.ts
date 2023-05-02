@@ -366,7 +366,10 @@ export class TunnelClientBase
                 'Port forwarding has not been started. Ensure that the client has connected by calling connectClient.',
             );
         }
-        return pfs.waitForForwardedPort(forwardedPort, cancellation);
+        
+        this.trace(TraceLevel.Verbose, 0, 'Waiting for forwarded port ' + forwardedPort);
+        await pfs.waitForForwardedPort(forwardedPort, cancellation);
+        this.trace(TraceLevel.Verbose, 0, 'Forwarded port ' + forwardedPort + ' is ready.');
     }
 
     private getSshSessionPfs() {

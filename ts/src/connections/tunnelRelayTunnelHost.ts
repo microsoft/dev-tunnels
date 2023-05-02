@@ -358,6 +358,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         // Ports must be forwarded sequentially because the TS SSH lib
         // does not yet support concurrent requests.
         for (const port of this.tunnel?.ports ?? []) {
+            this.trace(TraceLevel.Verbose, 0, `Forwarding port ${port.portNumber}`);
             try {
                 await this.forwardPort(pfs, port);
             } catch (ex) {

@@ -111,11 +111,6 @@ export class TunnelHostBase
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
-        const sessionId = pfs.session.sessionId;
-        if (!sessionId) {
-            throw new Error('No session id');
-        }
-
         const portNumber = Number(port.portNumber);
         if (pfs.localForwardedPorts.find((p) => p.localPort === portNumber)) {
             // The port is already forwarded. This may happen if we try to add the same port twice after reconnection.
@@ -135,7 +130,7 @@ export class TunnelHostBase
             return;
         }
 
-        const key = new SessionPortKey(sessionId, Number(forwarder.localPort));
+        const key = new SessionPortKey(pfs.session.sessionId, Number(forwarder.localPort));
         this.remoteForwarders.set(key.toString(), forwarder);
     }
 
