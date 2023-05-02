@@ -45,7 +45,7 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
             throw new Error('No hosts are currently accepting connections for the tunnel.');
         }
         const tunnelEndpoints: TunnelRelayTunnelEndpoint[] = this.endpoints.filter(
-            (endpoint) => endpoint.connectionMode === TunnelConnectionMode.TunnelRelay,
+            (ep) => ep.connectionMode === TunnelConnectionMode.TunnelRelay,
         );
 
         if (tunnelEndpoints.length === 0) {
@@ -54,7 +54,9 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 
         // TODO: What if there are multiple relay endpoints, which one should the tunnel client pick, or is this an error?
         // For now, just chose the first one.
-        return tunnelEndpoints[0].clientRelayUri!;
+        const endpoint = tunnelEndpoints[0];
+        this.hostPublicKeys = endpoint.hostPublicKeys;
+        return endpoint.clientRelayUri!;
     }
 
     /**

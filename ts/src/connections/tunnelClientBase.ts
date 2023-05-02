@@ -13,6 +13,7 @@ import {
     SecureStream,
     SessionRequestMessage,
     SshAuthenticatingEventArgs,
+    SshAuthenticationType,
     SshClientCredentials,
     SshClientSession,
     SshDisconnectReason,
@@ -21,6 +22,7 @@ import {
     SshStream,
     Stream,
     Trace,
+    TraceLevel,
 } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortConnectingEventArgs, ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
@@ -54,6 +56,11 @@ export class TunnelClientBase
      * Depending on implementation, the client may connect to one or more endpoints.
      */
     public endpoints?: TunnelEndpoint[];
+
+    /**
+     * One or more SSH public keys published by the host with the tunnel endpoint.
+     */
+    protected hostPublicKeys?: string[];
 
     protected get isSshSessionActive(): boolean {
         return !!this.sshSession?.isConnected;
@@ -221,14 +228,19 @@ export class TunnelClientBase
 
                 await this.sshSession.connect(stream, cancellation);
 
-                // For now, the client is allowed to skip SSH authentication;
-                // they must have a valid tunnel access token already to get this far.
-                const clientCredentials: SshClientCredentials = {
-                    username: 'tunnel',
-                    password: undefined,
-                };
-
-                await this.sshSession.authenticate(clientCredentials, cancellation);
+                // SSH authentication is required in V1 protocol, optional in V2 depending on
+                // whether the session enabled key exchange (as indicated by having a session ID
+                // or not).In either case a password is not required. Strong authentication was
+                // already handled by the relay service via the tunnel access token used for the
+                // websocket connection.
+                if (this.sshSession.sessionId) {
+                    const clientCredentials: SshClientCredentials = { username: 'tunnel' };
+                    if (!(await this.sshSession.authenticate(clientCredentials, cancellation))) {
+                        throw new Error(this.sshSession.principal ?
+                            'SSH client authentication failed.' :
+                            'SSH server authentication failed.');
+                    }
+                }
             } catch (e) {
                 const error = getError(e, 'Error starting tunnel client SSH session: ');
                 await this.closeSession(error);
@@ -278,10 +290,8 @@ export class TunnelClientBase
                     e.stream,
                     clientCredentials);
                 secureStream.trace = this.trace;
-
-                // TODO: Verify the host public key shared via the tunnel service?
                 secureStream.onAuthenticating((authEvent) =>
-                    authEvent.authenticationPromise = Promise.resolve({}));
+                    authEvent.authenticationPromise = this.onHostAuthenticating(authEvent).catch());
 
                 // Do not pass the cancellation token from the connecting event,
                 // because the connection will outlive the event.
@@ -290,6 +300,47 @@ export class TunnelClientBase
         }
 
         super.onForwardedPortConnecting(e);
+    }
+
+    private async onHostAuthenticating(e: SshAuthenticatingEventArgs): Promise<object | null> {
+        if (e.authenticationType !== SshAuthenticationType.serverPublicKey || !e.publicKey) {
+            this.trace(TraceLevel.Warning, 0, 'Invalid host authenticating event.');
+            return null;
+        }
+
+        // The public key property on this event comes from SSH key-exchange; at this point the
+        // SSH server has cryptographically proven that it holds the corresponding private key.
+        // Convert host key bytes to base64 to match the format in which the keys are published.
+        const hostKey = (await e.publicKey.getPublicKeyBytes(e.publicKey.keyAlgorithmName))
+            ?.toString('base64') ?? '';
+
+        // Host public keys are obtained from the tunnel endpoint record published by the host.
+        if (!this.hostPublicKeys) {
+            this.trace(TraceLevel.Warning, 0, 'Host identity could not be verified because ' +
+                'no public keys were provided.');
+            this.trace(TraceLevel.Verbose, 0, 'Host key: ' + hostKey);
+            return {};
+        } else if (this.hostPublicKeys.includes(hostKey)) {
+            this.trace(TraceLevel.Verbose, 0, 'Verified host identity with public key ' + hostKey);
+            return {};
+        } else {
+            this.trace(TraceLevel.Error, 0, "Host public key verificiation failed.");
+            this.trace(TraceLevel.Verbose, 0, "Host key: " + hostKey);
+            this.trace(TraceLevel.Verbose, 0, "Expected key(s): " + this.hostPublicKeys.join(', '));
+            return null;
+        }
+    }
+
+    private onSshServerAuthenticating(e: SshAuthenticatingEventArgs): void {
+        if (this.connectionProtocol === webSocketSubProtocol) {
+            // For V1 protocol the SSH server is the host; it should be authenticated with public key.
+            e.authenticationPromise = this.onHostAuthenticating(e);
+        } else {
+            // For V2 protocol the SSH server is the relay.
+            // Relay server authentication is done via the websocket TLS host certificate.
+            // If SSH encryption/authentication is used anyway, just accept any SSH host key.
+            e.authenticationPromise = Promise.resolve({});
+        }
     }
 
     public async connectToForwardedPort(
@@ -320,13 +371,6 @@ export class TunnelClientBase
 
     private getSshSessionPfs() {
         return this.sshSession?.getService(PortForwardingService) ?? undefined;
-    }
-
-    private onSshServerAuthenticating(e: SshAuthenticatingEventArgs): void {
-        // TODO: Validate host public keys match those published to the service?
-        // For now, the assumption is only a host with access to the tunnel can get a token
-        // that enables listening for tunnel connections.
-        e.authenticationPromise = Promise.resolve({});
     }
 
     public async refreshPorts(): Promise<void> {
