@@ -10,6 +10,7 @@ import {
 } from '@microsoft/dev-tunnels-contracts';
 import {
     CancellationToken,
+    SecureStream,
     SessionRequestMessage,
     SshAuthenticatingEventArgs,
     SshClientCredentials,
@@ -21,7 +22,7 @@ import {
     Stream,
     Trace,
 } from '@microsoft/dev-tunnels-ssh';
-import { ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
+import { ForwardedPortConnectingEventArgs, ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
 import { isNode, SshHelpers } from './sshHelpers';
 import { TunnelClient } from './tunnelClient';
@@ -30,6 +31,10 @@ import { Emitter } from 'vscode-jsonrpc';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
+import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
+
+export const webSocketSubProtocol = 'tunnel-relay-client';
+export const webSocketSubProtocolv2 = 'tunnel-relay-client-v2-dev';
 
 /**
  * Base class for clients that connect to a single host
@@ -246,6 +251,45 @@ export class TunnelClientBase
         } else {
             pfs.acceptLocalConnectionsForForwardedPorts = false;
         }
+
+        if (this.connectionProtocol === webSocketSubProtocolv2) {
+            pfs.messageFactory = this;
+            pfs.onForwardedPortConnecting((e) => this.onForwardedPortConnecting(e));
+        }
+    }
+
+    /**
+     * Invoked when a forwarded port is connecting. (Only for V2 protocol.)
+     */
+    protected onForwardedPortConnecting(e: ForwardedPortConnectingEventArgs) {
+        // With V2 protocol, the relay server always sends an extended response message
+        // with a property indicating whether E2E encryption is enabled for the connection.
+        const channel = e.stream.channel;
+        const relayResponseMessage = channel.openConfirmationMessage
+            .convertTo(new PortRelayConnectResponseMessage());
+
+        if (relayResponseMessage.isE2EEncryptionEnabled) {
+            // The host trusts the relay to authenticate the client, so it doesn't require
+            // any additional password/token for client authentication.
+            const clientCredentials: SshClientCredentials = { username: "tunnel" };
+
+            e.transformPromise = new Promise((resolve, reject) => {
+                const secureStream = new SecureStream(
+                    e.stream,
+                    clientCredentials);
+                secureStream.trace = this.trace;
+
+                // TODO: Verify the host public key shared via the tunnel service?
+                secureStream.onAuthenticating((authEvent) =>
+                    authEvent.authenticationPromise = Promise.resolve({}));
+
+                // Do not pass the cancellation token from the connecting event,
+                // because the connection will outlive the event.
+                secureStream.connect().then(() => resolve(secureStream)).catch(reject);
+            });
+        }
+
+        super.onForwardedPortConnecting(e);
     }
 
     public async connectToForwardedPort(

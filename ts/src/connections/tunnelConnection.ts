@@ -6,6 +6,7 @@ import { ConnectionStatus } from './connectionStatus';
 import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEventArgs';
 import { RefreshingTunnelAccessTokenEventArgs } from './refreshingTunnelAccessTokenEventArgs';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
+import { ForwardedPortConnectingEventArgs } from '@microsoft/dev-tunnels-ssh-tcp';
 
 /**
  * Tunnel connection.
@@ -40,6 +41,11 @@ export interface TunnelConnection {
     readonly retryingTunnelConnection: Event<RetryingTunnelConnectionEventArgs>;
 
     /**
+     * An event which fires when a connection is made to the forwarded port.
+     */
+    readonly forwardedPortConnecting: Event<ForwardedPortConnectingEventArgs>;
+
+     /**
      * Disposes this tunnel session.
      */
     dispose(): Promise<void>;

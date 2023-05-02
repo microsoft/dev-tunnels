@@ -19,7 +19,6 @@ import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { isNode } from './sshHelpers';
 import { Emitter } from 'vscode-jsonrpc';
-import { ForwardedPortConnectingEventArgs } from './forwardedPortConnectingEventArgs';
 
 /**
  * Base class for Hosts that host one tunnel and use SSH to connect to the tunnel host service.
@@ -70,10 +69,6 @@ export class TunnelHostBase
 
     private forwardConnectionsToLocalPortsValue: boolean = isNode();
 
-    private readonly forwardedPortConnectingEmitter = new Emitter<
-        ForwardedPortConnectingEventArgs
-    >();
-
     public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(TunnelAccessScopes.Host, trace, managementClient);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
@@ -81,13 +76,6 @@ export class TunnelHostBase
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
         }
     }
-
-    /**
-     * An event which fires when a connection is made to the forwarded port.
-     * Set forwardConnectionsToLocalPorts to false if a local TCP socket should not be created for the connection stream.
-     * When this is set only the forwardedPortConnecting event will be raised.
-     */
-    public readonly forwardedPortConnecting = this.forwardedPortConnectingEmitter.event;
 
     /**
      * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
@@ -120,11 +108,6 @@ export class TunnelHostBase
 
     public refreshPorts(): Promise<void> {
         return Promise.resolve();
-    }
-
-    protected onForwardedPortConnecting(port: number, channel: SshChannel): void {
-        const eventArgs = new ForwardedPortConnectingEventArgs(port, new SshStream(channel));
-        this.forwardedPortConnectingEmitter.fire(eventArgs);
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {

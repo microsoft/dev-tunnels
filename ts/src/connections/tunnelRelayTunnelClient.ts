@@ -9,11 +9,8 @@ import {
 import { CancellationToken } from 'vscode-jsonrpc';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
-import { TunnelClientBase } from './tunnelClientBase';
+import { TunnelClientBase, webSocketSubProtocol, webSocketSubProtocolv2 } from './tunnelClientBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
-
-const webSocketSubProtocol = 'tunnel-relay-client';
-const webSocketSubProtocolv2 = 'tunnel-relay-client-v2-dev';
 
 // Check for an environment variable to determine which protocol version to use.
 // By default, prefer V2 and fall back to V1.

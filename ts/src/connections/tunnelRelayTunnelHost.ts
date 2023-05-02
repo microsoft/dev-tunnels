@@ -33,8 +33,11 @@ import {
     SshSessionConfiguration,
     SshAlgorithms,
     SshSession,
+    SshServerCredentials,
+    SecureStream,
 } from '@microsoft/dev-tunnels-ssh';
 import {
+    ForwardedPortConnectingEventArgs,
     PortForwardChannelOpenMessage,
     PortForwardingService,
 } from '@microsoft/dev-tunnels-ssh-tcp';
@@ -44,6 +47,8 @@ import { MultiModeTunnelHost } from './multiModeTunnelHost';
 import { TunnelHostBase } from './tunnelHostBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
 import { SessionPortKey } from './sessionPortKey';
+import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
+import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
 
 const webSocketSubProtocol = 'tunnel-relay-host';
 const webSocketSubProtocolv2 = 'tunnel-relay-host-v2-dev';
@@ -115,6 +120,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
 
             const hostPfs = this.sshSession.activateService(PortForwardingService);
             hostPfs.messageFactory = this;
+            hostPfs.onForwardedPortConnecting((e) => this.onForwardedPortConnecting(e));
         }
 
         const channelOpenEventRegistration = this.sshSession.onChannelOpening((e) => {
@@ -175,17 +181,22 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         if (this.connectionProtocol === webSocketSubProtocolv2 &&
             e.channel.channelType === 'forwarded-tcpip'
         ) {
-            // V2 protocol.
+            // With V2 protocol, the relay server always sends an extended channel open message
+            // with a property indicating whether E2E encryption is requested for the connection.
+            // The host returns an extended response message indicating if E2EE is enabled.
+            const relayRequestMessage = e.channel.openMessage
+                .convertTo(new PortRelayConnectRequestMessage());
+            const responseMessage = new PortRelayConnectResponseMessage();
 
-            // Increase the max window size so that it is at least larer than the window size
-            // of one client channel.
-            e.channel.maxWindowSize = SshChannel.defaultMaxWindowSize * 2;
+            // The host can enable encryption for the channel if the client requested it.
+            responseMessage.isE2EEncryptionEnabled = this.enableE2EEncryption &&
+                relayRequestMessage.isE2EEncryptionRequested;
 
-            // In the future the relay might send additional information in an extended
-            // channel request message, for example a user identifier that would enable the
-            // host to group channels by user.
+            // In the future the relay might send additional information in the connect
+            // request message, for example a user identifier that would enable the host to
+            // group channels by user.
 
-            // Allow the channel to open; the SSH PortForwardingService will forward the connection.
+            e.openingPromise = Promise.resolve(responseMessage);
             return;
         } else if (e.channel.channelType !== TunnelRelayTunnelHost.clientStreamChannelType) {
             e.failureDescription = `Unknown channel type: ${e.channel.channelType}`;
@@ -213,6 +224,43 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             const index = this.clientSessionPromises.indexOf(promise);
             this.clientSessionPromises.splice(index, 1);
         });
+    }
+
+    protected onForwardedPortConnecting(e: ForwardedPortConnectingEventArgs): void {
+        const channel = e.stream.channel;
+        const relayRequestMessage = channel.openMessage.convertTo(
+            new PortRelayConnectRequestMessage());
+
+        const isE2EEncryptionEnabled = this.enableE2EEncryption &&
+            relayRequestMessage.isE2EEncryptionRequested;
+        if (isE2EEncryptionEnabled) {
+            // Increase the max window size so that it is at least larger than the window
+            // size of one client channel.
+            channel.maxWindowSize = SshChannel.defaultMaxWindowSize * 2;
+
+            // TODO: Publish the host public key to the relay so that the client can verify.
+
+            const serverCredentials: SshServerCredentials = {
+                publicKeys: [this.hostPrivateKey!]
+            };
+            const secureStream = new SecureStream(
+                e.stream,
+                serverCredentials);
+            secureStream.trace = this.trace;
+
+            // The client was already authenticated by the relay.
+            secureStream.onAuthenticating((authEvent) =>
+                authEvent.authenticationPromise = Promise.resolve({}));
+
+            // The client will connect to the secure stream after the channel is opened.
+            secureStream.connect().catch((err) => {
+                this.trace(TraceLevel.Error, 0, `Error connecting encrypted channel: ${err}`);
+            });
+
+            e.transformPromise = Promise.resolve(secureStream);
+        }
+
+        super.onForwardedPortConnecting(e);
     }
 
     private async acceptClientSession(
@@ -349,7 +397,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                 e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
             }
         } else if (portForwardRequest.channelType === 'forwarded-tcpip') {
-            this.onForwardedPortConnecting(portForwardRequest.port, e.channel);
+            const eventArgs = new ForwardedPortConnectingEventArgs(
+                portForwardRequest.port, false, new SshStream(e.channel));
+            super.onForwardedPortConnecting(eventArgs);
         } else {
             // For forwarded-tcpip do not check remoteForwarders because they may not be updated yet.
             // There is a small time interval in forwardPort() between the port

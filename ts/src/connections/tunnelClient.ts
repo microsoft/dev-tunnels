@@ -3,7 +3,7 @@
 
 import { Duplex } from 'stream';
 import { TunnelConnectionMode, Tunnel } from '@microsoft/dev-tunnels-contracts';
-import { SshStream, CancellationToken } from '@microsoft/dev-tunnels-ssh';
+import { CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TunnelConnection } from './tunnelConnection';
 

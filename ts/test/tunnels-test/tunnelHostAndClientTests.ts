@@ -5,7 +5,10 @@ import * as assert from 'assert';
 import { until } from './promiseUtils';
 import { suite, test, params, slow, timeout } from '@testdeck/mocha';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
-import { PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
+import {
+    ForwardedPortConnectingEventArgs,
+    PortForwardingService,
+} from '@microsoft/dev-tunnels-ssh-tcp';
 import {
     Tunnel,
     TunnelPort,
@@ -15,7 +18,6 @@ import {
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ConnectionStatus,
-    ForwardedPortConnectingEventArgs,
     RelayConnectionError,
     RelayErrorType,
     TunnelConnection,

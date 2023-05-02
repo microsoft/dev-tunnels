@@ -8,7 +8,7 @@ import {
     TunnelRequestOptions,
 } from '@microsoft/dev-tunnels-management';
 import { CancellationError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
-import { CancellationToken } from 'vscode-jsonrpc';
+import { CancellationToken, Emitter } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';
 import { TunnelConnector } from './tunnelConnector';
@@ -16,6 +16,7 @@ import { TunnelSession } from './tunnelSession';
 import { withCancellation } from './utils';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
 import {
+    ForwardedPortConnectingEventArgs,
     PortForwardChannelOpenMessage,
     PortForwardMessageFactory,
     PortForwardRequestMessage,
@@ -65,6 +66,21 @@ export class TunnelConnectionSession extends TunnelConnectionBase
     private set tunnel(value: Tunnel | null) {
         this.connectedTunnel = value;
     }
+
+    /**
+     * Determines whether E2E encryption is requested when opening connections through the tunnel
+     * (V2 protocol only).
+     *
+     * The default value is true, but applications may set this to false (for slightly faster
+     * connections).
+     *
+     * Note when this is true, E2E encryption is not strictly required. The tunnel relay and
+     * tunnel host can decide whether or not to enable E2E encryption for each connection,
+     * depending on policies and capabilities. Applications can verify the status of E2EE by
+     * handling the `forwardedPortConnecting` event and checking the related property on the
+     * channel request or response message.
+     */
+    public enableE2EEncryption: boolean = true;
 
     /**
      * Gets a value indicating that this connection has already created its connector
@@ -322,6 +338,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase
     public createChannelOpenMessageAsync(port: number): Promise<PortForwardChannelOpenMessage> {
         const message = new PortRelayConnectRequestMessage();
         message.accessToken = this.accessToken;
+        message.isE2EEncryptionRequested = this.enableE2EEncryption;
         return Promise.resolve(message);
     }
 }
