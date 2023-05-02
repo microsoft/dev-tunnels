@@ -20,5 +20,5 @@ export interface TunnelRelayStreamFactory {
         protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
-    ): Promise<Stream>;
+    ): Promise<{ stream: Stream, protocol: string }>;
 }

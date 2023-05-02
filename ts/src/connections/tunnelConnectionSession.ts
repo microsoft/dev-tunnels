@@ -93,7 +93,9 @@ export class TunnelConnectionSession extends TunnelConnectionBase
     /**
      * Creates a stream to the tunnel.
      */
-    public createSessionStream(cancellation: CancellationToken): Promise<Stream> {
+    public createSessionStream(
+        cancellation: CancellationToken,
+    ): Promise<{ stream: Stream, protocol: string }> {
         throw new Error('Not implemented');
     }
 
@@ -102,6 +104,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase
      */
     public configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void> {

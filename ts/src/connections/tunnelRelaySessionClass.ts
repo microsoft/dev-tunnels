@@ -36,7 +36,9 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          * Creates a stream to the tunnel.
          * @internal
          */
-        public async createSessionStream(cancellation: CancellationToken): Promise<Stream> {
+        public async createSessionStream(
+            cancellation: CancellationToken,
+        ): Promise<{ stream: Stream, protocol: string }> {
             if (!this.relayUri) {
                 throw new Error(
                     'Cannot create tunnel session stream. Tunnel relay endpoint URI is missing',
@@ -46,16 +48,23 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
             const name = this.tunnelAccessScope === TunnelAccessScopes.Connect ? 'client' : 'host';
             const accessToken = this.validateAccessToken();
             this.trace(TraceLevel.Info, 0, `Connecting to ${name} tunnel relay ${this.relayUri}`);
+            this.trace(TraceLevel.Verbose, 0, `Requesting subprotocol(s): ${protocols.join(', ')}`);
             if (accessToken) {
                 const tokenTrace = TunnelAccessTokenProperties.getTokenTrace(accessToken);
                 this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${tokenTrace}>`);
             }
 
-            return await this.streamFactory.createRelayStream(
+            const streamAndProtocol = await this.streamFactory.createRelayStream(
                 this.relayUri,
                 protocols,
                 accessToken,
             );
+
+            this.trace(
+                TraceLevel.Verbose,
+                0,
+                `Connected with subprotocol '${streamAndProtocol.protocol}'`);
+            return streamAndProtocol;
         }
 
         /**

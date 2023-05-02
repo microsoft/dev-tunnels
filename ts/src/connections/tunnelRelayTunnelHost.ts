@@ -92,9 +92,11 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
      */
     public async configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void> {
+        this.connectionProtocol = protocol;
         if (this.connectionProtocol === webSocketSubProtocol) {
             // The V1 protocol always configures no security, equivalent to SSH MultiChannelStream.
             // The websocket transport is still encrypted and authenticated.
@@ -130,6 +132,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             this.hostSession_Closed(e, channelOpenEventRegistration, closeEventRegistration);
         });
 
+        this.sshSession.trace = this.trace;
         await this.sshSession.connect(stream, cancellation);
 
         // SSH authentication is skipped in V1 protocol, optional in V2 depending on whether the

@@ -81,9 +81,11 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
      */
     public async configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void> {
+        this.connectionProtocol = protocol;
         if (isReconnect && this.sshSession && !this.sshSession.isClosed) {
             await this.sshSession.reconnect(stream, cancellation);
         } else {

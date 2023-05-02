@@ -18,7 +18,7 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
     constructor(
         connectionType: string,
         stream: Stream,
-        clientStreamFactory?: (stream: Stream) => Promise<Stream>,
+        clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
     ) {
         this.connectionType = connectionType;
         this.stream = stream;
@@ -36,17 +36,21 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
         if (!relayUri || !accessToken || !protocols.includes(this.connectionType)) {
             throw new Error('Invalid params');
         }
-        return Promise.resolve(this.stream);
+        return Promise.resolve({ stream: this.stream, protocol: protocols[0] });
     };
 
     public static from(
         source: Stream | PromiseLike<Stream> | PromiseCompletionSource<Stream>,
+        protocol: string,
     ): TunnelRelayStreamFactory {
         return {
             createRelayStream: async () => {
-                return await (source instanceof PromiseCompletionSource
-                    ? (<PromiseCompletionSource<Stream>>source).promise
-                    : Promise.resolve(source));
+                return {
+                    stream: await (source instanceof PromiseCompletionSource
+                        ? (<PromiseCompletionSource<Stream>>source).promise
+                        : Promise.resolve(source)),
+                    protocol,
+                };
             },
         };
     }
@@ -56,6 +60,7 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
             | MultiChannelStream
             | PromiseLike<MultiChannelStream>
             | PromiseCompletionSource<MultiChannelStream>,
+        protocol: string,
         onClientChannelOpened?: (sshChannelStream: SshStream) => void,
         channelType?: string,
     ): TunnelRelayStreamFactory {
@@ -68,7 +73,10 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
                     channelType ?? TunnelRelayTunnelHost.clientStreamChannelType,
                 );
                 onClientChannelOpened?.(sshChannelStream);
-                return new NodeStream(sshChannelStream);
+                return {
+                    stream: new NodeStream(sshChannelStream),
+                    protocol,
+                };
             },
         };
     }

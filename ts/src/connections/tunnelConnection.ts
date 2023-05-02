@@ -46,7 +46,7 @@ export interface TunnelConnection {
     readonly forwardedPortConnecting: Event<ForwardedPortConnectingEventArgs>;
 
      /**
-     * Disposes this tunnel session.
-     */
+      * Disposes this tunnel session.
+      */
     dispose(): Promise<void>;
 }

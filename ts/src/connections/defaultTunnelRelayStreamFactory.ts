@@ -15,7 +15,7 @@ export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory
         protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
-    ): Promise<Stream> {
+    ): Promise<{ stream: Stream, protocol: string }> {
         if (isNode()) {
             const stream = await SshHelpers.openConnection(
                 relayUri,
@@ -25,14 +25,14 @@ export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory
                 },
                 clientConfig,
             );
-            return stream;
+            return { stream, protocol: stream.protocol! };
         } else {
             // Web sockets don't support auth. Authenticate TunnelRelay by sending accessToken as a subprotocol.
             if (accessToken) {
                 protocols = [...protocols, accessToken];
             }
             const stream = await SshHelpers.openConnection(relayUri, protocols);
-            return stream;
+            return { stream, protocol: stream.protocol! };
         }
     }
 }
