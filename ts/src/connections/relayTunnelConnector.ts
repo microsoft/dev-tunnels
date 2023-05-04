@@ -123,8 +123,12 @@ export class RelayTunnelConnector implements TunnelConnector {
             disconnectReason = SshDisconnectReason.connectionLost;
             error = undefined;
             try {
-                stream = await this.tunnelSession.createSessionStream(cancellation);
-                await this.tunnelSession.configureSession(stream, isReconnect, cancellation);
+                const streamAndProtocol = await this.tunnelSession.createSessionStream(
+                    cancellation);
+                stream = streamAndProtocol.stream;
+
+                await this.tunnelSession.configureSession(
+                    stream, streamAndProtocol.protocol, isReconnect, cancellation);
 
                 stream = undefined;
                 disconnectReason = undefined;

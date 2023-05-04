@@ -12,28 +12,27 @@ import { IClientConfig } from 'websocket';
 export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
     public async createRelayStream(
         relayUri: string,
-        connectionType: string,
+        protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
-    ): Promise<Stream> {
+    ): Promise<{ stream: Stream, protocol: string }> {
         if (isNode()) {
             const stream = await SshHelpers.openConnection(
                 relayUri,
-                [connectionType],
+                protocols,
                 {
                     ...(accessToken && { Authorization: `tunnel ${accessToken}` }),
                 },
                 clientConfig,
             );
-            return stream;
+            return { stream, protocol: stream.protocol! };
         } else {
-            const protocols = [connectionType];
             // Web sockets don't support auth. Authenticate TunnelRelay by sending accessToken as a subprotocol.
             if (accessToken) {
-                protocols.push(accessToken);
+                protocols = [...protocols, accessToken];
             }
             const stream = await SshHelpers.openConnection(relayUri, protocols);
-            return stream;
+            return { stream, protocol: stream.protocol! };
         }
     }
 }
