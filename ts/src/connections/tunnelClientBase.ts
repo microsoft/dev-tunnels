@@ -47,7 +47,6 @@ export class TunnelClientBase
     private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
     private localForwardingHostAddressValue: string = '127.0.0.1';
-    private connectionProtocolValue?: string;
 
     public connectionModes: TunnelConnectionMode[] = [];
 
@@ -129,16 +128,6 @@ export class TunnelClientBase
 
     public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
         super(TunnelAccessScopes.Connect, trace, managementClient);
-    }
-
-    /**
-     * Connection protocol used to connect to the host.
-     */
-    public get connectionProtocol(): string | undefined {
-        return this.connectionProtocolValue;
-    }
-    protected set connectionProtocol(value: string | undefined) {
-        this.connectionProtocolValue = value;
     }
 
     public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[]): Promise<void> {

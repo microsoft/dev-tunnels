@@ -6,10 +6,8 @@ import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
     KeyPair,
     SshAlgorithms,
-    SshChannel,
     SshClientSession,
     SshServerSession,
-    SshStream,
     Trace,
 } from '@microsoft/dev-tunnels-ssh';
 import { PortForwardingService, RemotePortForwarder } from '@microsoft/dev-tunnels-ssh-tcp';
@@ -18,7 +16,6 @@ import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { isNode } from './sshHelpers';
-import { Emitter } from 'vscode-jsonrpc';
 
 /**
  * Base class for Hosts that host one tunnel and use SSH to connect to the tunnel host service.
@@ -26,8 +23,6 @@ import { Emitter } from 'vscode-jsonrpc';
 export class TunnelHostBase
     extends tunnelSshSessionClass<SshClientSession>(TunnelConnectionSession)
     implements TunnelHost {
-
-    private connectionProtocolValue?: string;
 
     /**
      * Sessions created between this host and clients
@@ -54,16 +49,6 @@ export class TunnelHostBase
      * Promise task to get private key used for connections.
      */
     public hostPrivateKeyPromise?: Promise<KeyPair>;
-
-    /**
-     * Connection protocol used to connect to the host.
-     */
-    public get connectionProtocol(): string | undefined {
-        return this.connectionProtocolValue;
-    }
-    protected set connectionProtocol(value: string | undefined) {
-        this.connectionProtocolValue = value;
-    }
 
     private loopbackIp = '127.0.0.1';
 

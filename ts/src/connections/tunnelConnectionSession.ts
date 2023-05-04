@@ -30,6 +30,17 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private connectedTunnel: Tunnel | null = null;
     private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;
+    private connectionProtocolValue?: string;
+
+    /**
+     * Name of the protocol used to connect to the tunnel.
+     */
+    public get connectionProtocol(): string | undefined {
+        return this.connectionProtocolValue;
+    }
+    protected set connectionProtocol(value: string | undefined) {
+        this.connectionProtocolValue = value;
+    }
 
     /**
      * Tunnel access token.
