@@ -4,6 +4,7 @@
 
 mod cluster_details;
 mod local_network_tunnel_endpoint;
+mod named_rate_status;
 mod problem_details;
 mod rate_status;
 mod resource_status;
@@ -30,6 +31,7 @@ mod tunnel_status;
 
 pub use cluster_details::*;
 pub use local_network_tunnel_endpoint::*;
+pub use named_rate_status::*;
 pub use problem_details::*;
 pub use rate_status::*;
 pub use resource_status::*;

@@ -20,6 +20,6 @@ pub struct RateStatus {
     // an estimate, since the actual duration may vary by the calendar.
     pub period_seconds: Option<u32>,
 
-    // Gets or sets the unix time when this status will be reset.
+    // Gets or sets the unix time in seconds when this status will be reset.
     pub reset_time: Option<i64>,
 }
