@@ -28,6 +28,14 @@ type RateStatus struct {
 	// estimate, since the actual duration may vary by the calendar.
 	PeriodSeconds uint32 `json:"periodSeconds,omitempty"`
 
-	// Gets or sets the unix time when this status will be reset.
+	// Gets or sets the unix time in seconds when this status will be reset.
 	ResetTime     int64 `json:"resetTime,omitempty"`
+
+	NamedRateStatus
+}
+
+// A named `RateStatus`.
+type NamedRateStatus struct {
+	// The name of the rate status.
+	Name string `json:"name"`
 }
