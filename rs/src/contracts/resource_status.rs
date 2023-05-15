@@ -31,4 +31,8 @@ pub struct DetailedResourceStatus {
     // service. For HTTP requests, the response is generally a 403 Forbidden status, with
     // details about the limit in the response body.
     pub limit: Option<u64>,
+
+    // Gets or sets an optional source of the `ResourceStatus.Limit`, or null if there is
+    // no limit.
+    pub limit_source: Option<String>,
 }
