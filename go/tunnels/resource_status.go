@@ -7,14 +7,18 @@ package tunnels
 // Current value and limit for a limited resource related to a tunnel or tunnel port.
 type ResourceStatus struct {
 	// Gets or sets the current value.
-	Current uint64 `json:"current"`
+	Current     uint64 `json:"current"`
 
 	// Gets or sets the limit enforced by the service, or null if there is no limit.
 	//
 	// Any requests that would cause the limit to be exceeded may be denied by the service.
 	// For HTTP requests, the response is generally a 403 Forbidden status, with details
 	// about the limit in the response body.
-	Limit   uint64 `json:"limit,omitempty"`
+	Limit       uint64 `json:"limit,omitempty"`
+
+	// Gets or sets an optional source of the `ResourceStatus.Limit`, or null if there is no
+	// limit.
+	LimitSource string `json:"limitSource,omitempty"`
 
 	RateStatus
 }
