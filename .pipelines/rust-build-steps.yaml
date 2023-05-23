@@ -1,0 +1,8 @@
+steps:
+- task: UseRust@0
+  inputs:
+    version: 'stable'
+
+- script: |
+    cargo build --verbose
+  displayName: 'Build Rust project'

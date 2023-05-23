@@ -1,0 +1,21 @@
+pool:
+  name: Azure Pipelines
+
+# Do not trigger on non-PR pushes.
+trigger: none
+
+# Trigger on PRs to `main` branch when there are changes in the `rs` folder.
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - rs
+  autoCancel: true
+
+steps:
+- template: rust-build-steps.yaml
+
+- task: ComponentGovernanceComponentDetection@0
+  displayName: Component Governance
