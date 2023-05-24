@@ -32,7 +32,7 @@ pub struct Tunnel {
 
     // Gets or sets the tags of the tunnel.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub tags: Vec<String>,
+    pub!!! tags: Vec<String>,
 
     // Gets or sets the optional parent domain of the tunnel, if it is not using the
     // default parent domain.
