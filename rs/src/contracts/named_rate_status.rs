@@ -13,5 +13,5 @@ pub struct NamedRateStatus {
     pub base: RateStatus,
 
     // The name of the rate status.
-    pubERROR!!! name: Option<String>,
+    pub name: Option<String>,
 }
