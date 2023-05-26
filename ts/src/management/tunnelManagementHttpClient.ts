@@ -11,6 +11,7 @@ import {
     ProblemDetails,
     TunnelServiceProperties,
     ClusterDetails,
+    NamedRateStatus,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -27,6 +28,7 @@ type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
 const apiV1Path = `/api/v1`;
 const tunnelsApiPath = apiV1Path + '/tunnels';
+const limitsApiPath = apiV1Path + '/userlimits';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
 const clustersApiPath = apiV1Path + '/clusters';
@@ -311,6 +313,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         return result;
+    }
+
+    public listUserLimits(): Promise<NamedRateStatus[]> {
+        return this.sendRequest<NamedRateStatus[]>(
+            'GET',
+            undefined,
+            limitsApiPath,
+            undefined,
+            undefined,
+        ).then(r => r || []);
     }
 
     public async listTunnelPorts(

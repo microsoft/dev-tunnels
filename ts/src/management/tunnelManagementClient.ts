@@ -3,6 +3,7 @@
 
 import {
     ClusterDetails,
+    NamedRateStatus,
     Tunnel,
     TunnelConnectionMode,
     TunnelEndpoint,
@@ -154,6 +155,11 @@ export interface TunnelManagementClient {
         portNumber: number,
         options?: TunnelRequestOptions,
     ): Promise<boolean>;
+
+    /**
+     * Lists details of tunneling service clusters in all supported Azure regions.
+     */
+    listUserLimits(): Promise<NamedRateStatus[]>;
 
     /**
      * Lists details of tunneling service clusters in all supported Azure regions.
