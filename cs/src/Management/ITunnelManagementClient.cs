@@ -340,6 +340,13 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation = default);
 
         /// <summary>
+        /// Lists current consumption status and limits applied to the calling user.
+        /// </summary>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <returns>Array of <see cref="NamedRateStatus"/>.</returns>
+        Task<NamedRateStatus[]> ListUserLimitsAsync(CancellationToken cancellation = default);
+
+        /// <summary>
         /// Lists details of tunneling service clusters in all supported Azure regions.
         /// </summary>
         /// <param name="cancellation">Cancellation token.</param>
