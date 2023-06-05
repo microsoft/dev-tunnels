@@ -72,7 +72,7 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 
         this.relayUri = clientRelayUri;
         this.accessToken = accessToken;
-        await this.connectTunnelSession();
+        await this.connectTunnelSession(undefined, this.managementClient?.httpsAgent);
     }
 
     /**

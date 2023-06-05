@@ -214,7 +214,8 @@ export class TunnelClientBase
                 this.configurePortForwardingService();
 
                 this.sshSession.onRequest((e) => this.onRequest(e));
-
+                
+                // this is one spot where we are calling connect - need to figure out if a web socket is involved
                 await this.sshSession.connect(stream, cancellation);
 
                 // SSH authentication is required in V1 protocol, optional in V2 depending on

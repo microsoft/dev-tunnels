@@ -133,6 +133,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         });
 
         this.sshSession.trace = this.trace;
+        // this seems to be the primary spot that this gets hit
         await this.sshSession.connect(stream, cancellation);
 
         // SSH authentication is skipped in V1 protocol, optional in V2 depending on whether the

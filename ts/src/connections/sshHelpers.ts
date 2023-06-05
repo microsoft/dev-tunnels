@@ -3,6 +3,7 @@
 
 import * as ssh from '@microsoft/dev-tunnels-ssh';
 import { IncomingMessage } from 'http';
+import * as http from 'http';
 import {
     client as WebSocketClient,
     connection as WebSocketConnection,
@@ -40,6 +41,7 @@ export class SshHelpers {
      * @param clientConfig
      * @returns
      */
+    // this has a variable for client config that we can set if we go backwards 
     public static openConnection(
         relayUri: string,
         protocols?: string[],
@@ -134,6 +136,9 @@ export class SshHelpers {
         clientConfig?: IClientConfig,
     ): Promise<ssh.WebSocketStream> {
         const client = new WebSocketClient(clientConfig);
+        
+        // testing purposes to see if this prints
+        console.log(clientConfig?.tlsOptions?.agent);
         return new Promise<ssh.WebSocketStream>((resolve, reject) => {
             client.on('connect', (connection: any) => {
                 resolve(new ssh.WebSocketStream(new WebsocketStreamAdapter(connection)));
@@ -170,6 +175,15 @@ export class SshHelpers {
 
                 reject(new RelayConnectionError(`error.${errorContext.error}`, errorContext));
             });
+
+            if (clientConfig?.tlsOptions?.agent != null)
+            {
+                  var requestOptions = {
+                      agent: clientConfig?.tlsOptions?.agent
+                  };
+                  client.connect(relayUri, protocols, undefined, headers, requestOptions);
+            }
+
             client.connect(relayUri, protocols, undefined, headers);
         });
     }

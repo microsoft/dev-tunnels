@@ -7,6 +7,8 @@ import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
 import { Stream, TraceLevel } from '@microsoft/dev-tunnels-ssh';
 import { TunnelRelayStreamFactory, DefaultTunnelRelayStreamFactory } from '.';
 import { TunnelSession } from './tunnelSession';
+import { Agent } from 'https';
+import { IClientConfig } from 'websocket';
 
 type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -38,6 +40,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          */
         public async createSessionStream(
             cancellation: CancellationToken,
+            httpsAgent? : Agent,
         ): Promise<{ stream: Stream, protocol: string }> {
             if (!this.relayUri) {
                 throw new Error(
@@ -54,6 +57,22 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
                 this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${tokenTrace}>`);
             }
 
+            const clientConfig: IClientConfig = {
+                tlsOptions: {
+                    agent: httpsAgent,
+                },
+            };
+
+            // not passing this anywhere because it has never not been null
+            if(clientConfig != null){
+                const streamAndProtocol2 = await this.streamFactory.createRelayStream(
+                    this.relayUri,
+                    protocols,
+                    accessToken,
+                    clientConfig,
+                );
+            }
+            
             const streamAndProtocol = await this.streamFactory.createRelayStream(
                 this.relayUri,
                 protocols,
