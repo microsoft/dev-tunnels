@@ -101,7 +101,7 @@ namespace TunnelConstraints {
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
-    export const clusterIdPattern: string = '^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use|localhost1|localhost2)$';
+    export const clusterIdPattern: string = '^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$';
 
     /**
      * Regular expression that can match or validate tunnel cluster ID strings.
