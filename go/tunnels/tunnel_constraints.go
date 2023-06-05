@@ -67,7 +67,7 @@ const (
 	// Regular expression that can match or validate tunnel cluster ID strings.
 	//
 	// Cluster IDs are alphanumeric; hyphens are not permitted.
-	TunnelConstraintsClusterIDPattern = "[a-z][a-z0-9]{2,11}"
+	TunnelConstraintsClusterIDPattern = "^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use|localhost1|localhost2)$"
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
