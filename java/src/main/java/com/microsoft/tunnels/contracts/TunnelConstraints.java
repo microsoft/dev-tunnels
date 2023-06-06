@@ -104,7 +104,7 @@ public class TunnelConstraints {
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
-    public static final String clusterIdPattern = "[a-z][a-z0-9]{2,11}";
+    public static final String clusterIdPattern = "^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$";
 
     /**
      * Regular expression that can match or validate tunnel cluster ID strings.
