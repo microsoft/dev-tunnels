@@ -1287,7 +1287,7 @@ namespace Microsoft.DevTunnels.Management
             return await this.SendRequestAsync<bool>(
                 HttpMethod.Get,
                 clusterId: null,
-                string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath + "/" + name + CheckAvailableSubPath,
+                (string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath) + "/" + name + CheckAvailableSubPath,
                 query: null,
                 options: null,
                 cancellation
