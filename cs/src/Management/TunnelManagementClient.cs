@@ -1216,7 +1216,7 @@ namespace Microsoft.DevTunnels.Management
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(
                 HttpMethod.Post,
                 clusterId: null,
-                string.IsNullOrEmpty(ApiVersion) ? SubjectsV1ApiPath : SubjectsApiPath + "/format",
+                (string.IsNullOrEmpty(ApiVersion) ? SubjectsV1ApiPath : SubjectsApiPath) + "/format",
                 query: GetApiVersionQuery(),
                 options,
                 subjects,
@@ -1241,7 +1241,7 @@ namespace Microsoft.DevTunnels.Management
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(
                 HttpMethod.Post,
                 clusterId: null,
-                string.IsNullOrEmpty(ApiVersion) ? SubjectsV1ApiPath : SubjectsApiPath + "/resolve",
+                (string.IsNullOrEmpty(ApiVersion) ? SubjectsV1ApiPath : SubjectsApiPath) + "/resolve",
                 query: GetApiVersionQuery(),
                 options,
                 subjects,
