@@ -174,7 +174,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
-            if (!TunnelsApiVersions.Contains(apiVersion))
+            if (!TunnelsApiVersions.Contains(apiVersion) && !string.IsNullOrEmpty(apiVersion))
             {
                 throw new ArgumentException(
                     $"Invalid apiVersion, accpeted values are {string.Join(", ", TunnelsApiVersions)} ");
