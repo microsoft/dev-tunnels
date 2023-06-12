@@ -17,15 +17,18 @@ namespace Microsoft.DevTunnels.Connections
     public class TunnelRelayStreamFactory : ITunnelRelayStreamFactory
     {
         /// <inheritdoc/>
-        public virtual async Task<Stream> CreateRelayStreamAsync(
+        public virtual async Task<(Stream Stream, string SubProtocol)> CreateRelayStreamAsync(
             Uri relayUri,
             string? accessToken,
-            string connectionType,
+            string[] subprotocols,
             CancellationToken cancellation)
         {
             void ConfigureWebSocketOptions(ClientWebSocketOptions options)
             {
-                options.AddSubProtocol(connectionType);
+                foreach (var subprotocol in subprotocols)
+                {
+                    options.AddSubProtocol(subprotocol);
+                }
                 options.UseDefaultCredentials = false;
                 if (!string.IsNullOrEmpty(accessToken))
                 {
@@ -35,7 +38,7 @@ namespace Microsoft.DevTunnels.Connections
 
             var stream = await WebSocketStream.ConnectToWebSocketAsync(
                 relayUri, ConfigureWebSocketOptions, cancellation);
-            return stream;
+            return (stream, stream.SubProtocol);
         }
     }
 }

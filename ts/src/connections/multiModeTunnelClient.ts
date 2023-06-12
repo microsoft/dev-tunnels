@@ -18,7 +18,7 @@ export class MultiModeTunnelClient extends TunnelConnectionBase implements Tunne
         ? [...new Set(...this.clients.map((c) => c.connectionModes))]
         : [];
 
-    constructor() {
+    public constructor() {
         super(TunnelAccessScopes.Connect);
     }
 
@@ -32,6 +32,14 @@ export class MultiModeTunnelClient extends TunnelConnectionBase implements Tunne
 
     public set acceptLocalConnectionsForForwardedPorts(value: boolean) {
         this.clients.forEach((c) => (c.acceptLocalConnectionsForForwardedPorts = value));
+    }
+
+    public get localForwardingHostAddress(): string {
+        return this.clients[0]?.localForwardingHostAddress;
+    }
+
+    public set localForwardingHostAddress(value: string) {
+        this.clients.forEach((c) => (c.localForwardingHostAddress = value));
     }
 
     public connect(tunnel: Tunnel, hostId?: string): Promise<void> {

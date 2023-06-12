@@ -1,3 +1,8 @@
+parameters:
+- name: Pdb2PdbExe
+  type: string
+  default: ''
+
 steps:
 - task: UseDotNet@2
   displayName: "Install DotNet SDK"
@@ -7,7 +12,7 @@ steps:
     performMultiLevelLookup: true
     useGlobalJson: true
 
-- task: NuGetAuthenticate@0
+- task: NuGetAuthenticate@1
   displayName: 'NuGet Authenticate'
 
 - task: DotNetCoreCLI@2
@@ -26,7 +31,7 @@ steps:
     command: 'build'
     workingDirectory: 'cs'
     projects: 'cs/TunnelsSDK.sln'
-    arguments: '-v:n --no-restore -c Release -p:EnableSigning="$(enableSigning)" -p:SignType="$(signType)"'
+    arguments: '-v:n --no-restore -c Release -p:EnableSigning="$(enableSigning)" -p:SignType="$(signType)" -p:Pdb2PdbExe="${{ parameters.Pdb2PdbExe }}"'
 
 - task: DotNetCoreCLI@2
   displayName: "DotNet Test"

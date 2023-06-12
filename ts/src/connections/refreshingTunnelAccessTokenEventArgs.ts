@@ -10,7 +10,7 @@ export class RefreshingTunnelAccessTokenEventArgs {
     /**
      * Creates a new instance of RefreshingTunnelAccessTokenEventArgs class.
      */
-    constructor(
+    public constructor(
         /**
          * Tunnel access scope to get the token for.
          */

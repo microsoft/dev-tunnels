@@ -10,7 +10,6 @@ import {
 } from 'websocket';
 
 declare module 'websocket' {
-    // eslint-disable-next-line @typescript-eslint/tslint/config
     interface client {
         /**
          * 'httpResponse' event in WebSocketClient is fired when the server responds but the HTTP request doesn't properly upgrade to a web socket,
@@ -25,7 +24,7 @@ declare module 'websocket' {
  * There is no status code or underlying network error info in the browser context.
  */
 export class BrowserWebSocketRelayError extends Error {
-    constructor(message?: string) {
+    public constructor(message?: string) {
         super(message);
     }
 }
@@ -33,31 +32,6 @@ export class BrowserWebSocketRelayError extends Error {
  * Ssh connection helper
  */
 export class SshHelpers {
-    /**
-     * Get the Azure relay url from the relayUrl and relaySas key.
-     * @param relayUrl
-     * @param relaySas
-     * @param action
-     * @returns
-     */
-    public static getRelayUri(
-        relayUrl: string,
-        relaySas: string | undefined,
-        action: string,
-    ): string {
-        if (!relayUrl) {
-            throw new Error('Does not have a relay endpoint.');
-        }
-
-        // Reference:
-        // https://github.com/Azure/azure-relay-node/blob/7b57225365df3010163bf4b9e640868a02737eb6/hyco-ws/index.js#L107-L137
-        const relayUri =
-            relayUrl.replace('sb:', 'wss:').replace('.net/', '.net:443/$hc/') +
-            `?sb-hc-action=${action}&sb-hc-token=` +
-            encodeURIComponent(relaySas || '');
-        return relayUri;
-    }
-
     /**
      * Open a connection to the relay uri depending on the running environment.
      * @param relayUri
@@ -71,7 +45,7 @@ export class SshHelpers {
         protocols?: string[],
         headers?: object,
         clientConfig?: IClientConfig,
-    ): Promise<ssh.Stream> {
+    ): Promise<ssh.WebSocketStream> {
         if (isNode()) {
             return SshHelpers.nodeSshStreamFactory(relayUri, protocols, headers, clientConfig);
         }
@@ -80,24 +54,33 @@ export class SshHelpers {
     }
 
     /**
-     *
-     * @returns Create a Ssh client session.
+     * Creates a client SSH session with standard configuration for tunnels.
+     * @param configure Optional callback for additional session configuration.
+     * @returns The created SSH session.
      */
-    public static createSshClientSession(): ssh.SshClientSession {
-        return SshHelpers.createSshSession((config) => new ssh.SshClientSession(config));
+    public static createSshClientSession(
+        configure?: (config: ssh.SshSessionConfiguration) => void,
+    ): ssh.SshClientSession {
+        return SshHelpers.createSshSession((config) => {
+            if (configure) configure(config);
+            return new ssh.SshClientSession(config);
+        });
     }
 
     /**
-     * Create a Ssh server session.
-     * @param reconnectableSessions
-     * @returns
+     * Creates a SSH server session with standard configuration for tunnels.
+     * @param reconnectableSessions Optional list that tracks reconnectable sessions.
+     * @param configure Optional callback for additional session configuration.
+     * @returns The created SSH session.
      */
     public static createSshServerSession(
         reconnectableSessions?: ssh.SshServerSession[],
+        configure?: (config: ssh.SshSessionConfiguration) => void,
     ): ssh.SshServerSession {
-        return SshHelpers.createSshSession(
-            (config) => new ssh.SshServerSession(config, reconnectableSessions),
-        );
+        return SshHelpers.createSshSession((config) => {
+            if (configure) configure(config);
+            return new ssh.SshServerSession(config, reconnectableSessions);
+        });
     }
 
     /**
@@ -114,9 +97,9 @@ export class SshHelpers {
      * @param socket
      * @returns
      */
-    public static webSshStreamFactory(socket: WebSocket): Promise<ssh.Stream> {
+    public static webSshStreamFactory(socket: WebSocket): Promise<ssh.WebSocketStream> {
         socket.binaryType = 'arraybuffer';
-        return new Promise<ssh.Stream>((resolve, reject) => {
+        return new Promise<ssh.WebSocketStream>((resolve, reject) => {
             socket.onopen = () => {
                 resolve(new ssh.WebSocketStream(socket));
             };
@@ -141,12 +124,6 @@ export class SshHelpers {
         config.protocolExtensions.push(ssh.SshProtocolExtensionNames.sessionReconnect);
         config.protocolExtensions.push(ssh.SshProtocolExtensionNames.sessionLatency);
 
-        // TODO: remove this once we know the ssh server has the > 3.3.10 update
-        const posGcm = config.encryptionAlgorithms.indexOf(ssh.SshAlgorithms.encryption.aes256Gcm);
-        if (posGcm !== -1) {
-            config.encryptionAlgorithms.splice(posGcm, 1);
-        }
-
         return factoryCallback(config);
     }
 
@@ -155,9 +132,9 @@ export class SshHelpers {
         protocols?: string[],
         headers?: object,
         clientConfig?: IClientConfig,
-    ): Promise<ssh.Stream> {
+    ): Promise<ssh.WebSocketStream> {
         const client = new WebSocketClient(clientConfig);
-        return new Promise<ssh.Stream>((resolve, reject) => {
+        return new Promise<ssh.WebSocketStream>((resolve, reject) => {
             client.on('connect', (connection: any) => {
                 resolve(new ssh.WebSocketStream(new WebsocketStreamAdapter(connection)));
             });
@@ -203,9 +180,13 @@ export class SshHelpers {
  * enough so that it can be used as an SSH stream.
  */
 class WebsocketStreamAdapter {
-    constructor(private connection: WebSocketConnection) {}
+    public constructor(private connection: WebSocketConnection) {}
 
-    set onmessage(messageHandler: ((e: { data: ArrayBuffer }) => void) | null) {
+    public get protocol(): string | undefined {
+        return this.connection.protocol;
+    }
+
+    public set onmessage(messageHandler: ((e: { data: ArrayBuffer }) => void) | null) {
         if (messageHandler) {
             this.connection.on('message', (message: any) => {
                 // This assumes all messages are binary.
@@ -216,7 +197,7 @@ class WebsocketStreamAdapter {
         }
     }
 
-    set onclose(
+    public set onclose(
         closeHandler: ((e: { code?: number; reason?: string; wasClean: boolean }) => void) | null,
     ) {
         if (closeHandler) {
@@ -308,7 +289,7 @@ export enum RelayErrorType {
     ServiceUnavailable = 8,
 }
 /**
- * Error used when a connection to an Azure relay failed.
+ * Error used when a connection to the tunnel relay failed.
  */
 export class RelayConnectionError extends Error {
     public constructor(

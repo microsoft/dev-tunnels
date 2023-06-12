@@ -1,22 +1,26 @@
-﻿// <copyright file="TunnelBase.cs" company="Microsoft">
+// <copyright file="TunnelConnection.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Connections.Messages;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Messages;
+using Microsoft.DevTunnels.Ssh.Tcp;
 
 namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Base class for tunnel client and host.
 /// </summary>
-public abstract class TunnelConnection : IAsyncDisposable
+public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFactory
 {
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
@@ -34,7 +38,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// <summary>
     /// Gets the connection status.
     /// </summary>
-    public ConnectionStatus ConnectionStatus 
+    public ConnectionStatus ConnectionStatus
     {
         get => this.connectionStatus;
         protected set
@@ -109,6 +113,23 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// Tunnel access token.
     /// </summary>
     protected string? accessToken;
+
+    /// <summary>
+    /// Determines whether E2E encryption is requested when opening connections through the tunnel
+    /// (V2 protocol only).
+    /// </summary>
+    /// <remarks>
+    /// The default value is true, but applications may set this to false (for slightly faster
+    /// connections).
+    /// <para/>
+    /// Note when this is true, E2E encryption is not strictly required. The tunnel relay and
+    /// tunnel host can decide whether or not to enable E2E encryption for each connection,
+    /// depending on policies and capabilities. Applications can verify the status of E2EE by
+    /// handling the <see cref="ITunnelClient.ForwardedPortConnecting" /> or
+    /// <see cref="ITunnelHost.ForwardedPortConnecting" /> event and checking the related property
+    /// on the channel request or response message.
+    /// </remarks>
+    public bool EnableE2EEncryption { get; set; } = true;
 
     /// <summary>
     /// Validate <see cref="accessToken"/> if it is not null or empty.
@@ -252,7 +273,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// If <see cref="Tunnel"/>, <see cref="ManagementClient"/> are not null and <see cref="RefreshingTunnelAccessToken"/> is null,
-    /// gets the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/> and gets the token 
+    /// gets the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/> and gets the token
     /// off it based on <see cref="TunnelAccessScope"/>.
     /// Otherwise, invokes <see cref="RefreshingTunnelAccessToken"/> event.
     /// </remarks>
@@ -267,8 +288,26 @@ public abstract class TunnelConnection : IAsyncDisposable
                 TokenScopes = new[] { TunnelAccessScope },
             };
 
-            Tunnel = await ManagementClient.GetTunnelAsync(Tunnel!, options, cancellation);
-            return Tunnel!.AccessTokens?.TryGetValue(TunnelAccessScope, out var result) == true ? result : null;
+            var tunnel = await ManagementClient.GetTunnelAsync(Tunnel, options, cancellation);
+            if (tunnel == null)
+            {
+                // Tunnel doesn't exist
+                return null;
+            }
+
+            // Get the tunnel access token from the fetched tunnel, or the original Tunnal object if the fetched tunnel doesn't have the token,
+            // which may happen when the tunnel was authenticated with a tunnel acccess token from Tunnel.AccessTokens.
+            // Add the tunnel access token to the fetched tunnel's AccessTokens if it is not there.
+            string? result;
+            if (!tunnel.TryGetAccessToken(TunnelAccessScope, out result) &&
+                Tunnel.TryGetAccessToken(TunnelAccessScope, out result))
+            {
+                tunnel.AccessTokens ??= new Dictionary<string, string>();
+                tunnel.AccessTokens[TunnelAccessScope] = result;
+            }
+
+            Tunnel = tunnel;
+            return result;
         }
 
         if (RefreshingTunnelAccessToken == null)
@@ -308,8 +347,8 @@ public abstract class TunnelConnection : IAsyncDisposable
         if (handler != null)
         {
             var args = new ConnectionStatusChangedEventArgs(
-                previousConnectionStatus, 
-                connectionStatus, 
+                previousConnectionStatus,
+                connectionStatus,
                 connectionStatus == ConnectionStatus.Disconnected ? DisconnectException : null);
 
             handler(this, args);
@@ -323,7 +362,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     {
         lock (DisposeLock)
         {
-            if (!this.disposeCts.IsCancellationRequested && 
+            if (!this.disposeCts.IsCancellationRequested &&
                 this.reconnectTask == null &&
                 this.connector != null) // The connector may be null if the tunnel client/host was created directly from a stream.
             {
@@ -364,4 +403,19 @@ public abstract class TunnelConnection : IAsyncDisposable
     {
         RetryingTunnelConnection?.Invoke(this, e);
     }
+
+    Task<PortForwardRequestMessage> IPortForwardMessageFactory.CreateRequestMessageAsync(int port)
+        => Task.FromResult<PortForwardRequestMessage>(
+            new PortRelayRequestMessage { AccessToken = this.accessToken });
+
+    Task<PortForwardSuccessMessage> IPortForwardMessageFactory.CreateSuccessMessageAsync(int port)
+        => Task.FromResult(new PortForwardSuccessMessage()); // Success messages are not extended.
+
+    Task<PortForwardChannelOpenMessage> IPortForwardMessageFactory.CreateChannelOpenMessageAsync(int port)
+        => Task.FromResult<PortForwardChannelOpenMessage>(
+            new PortRelayConnectRequestMessage
+            {
+                AccessToken = this.accessToken,
+                IsE2EEncryptionRequested = this.EnableE2EEncryption,
+            });
 }

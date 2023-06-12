@@ -1,4 +1,4 @@
-﻿// <copyright file="RateStatus.cs" company="Microsoft">
+// <copyright file="RateStatus.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -23,7 +23,7 @@ public class RateStatus : ResourceStatus
     public uint? PeriodSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the unix time when this status will be reset.
+    /// Gets or sets the unix time in seconds when this status will be reset.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public long? ResetTime { get; set; }

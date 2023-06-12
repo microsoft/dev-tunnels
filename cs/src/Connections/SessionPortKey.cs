@@ -8,47 +8,47 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Microsoft.DevTunnels.Connections
+namespace Microsoft.DevTunnels.Connections;
+
+/// <summary>
+/// Class for comparing equality in SSH session ID port pairs.
+/// </summary>
+/// <remarks>
+/// This class is public for testing purposes, and may be removed in the future.
+/// </remarks>
+public class SessionPortKey
 {
     /// <summary>
-    /// Class for comparing equality in sessionId port pairs
+    /// Session ID of the client SSH session, or null if the session does not have an ID
+    /// (because it is not encrypted and not client-specific).
     /// </summary>
-    public class SessionPortKey
+    public byte[]? SessionId { get; }
+
+    /// <summary>
+    /// Forwarded port number.
+    /// </summary>
+    public ushort Port { get; }
+
+    /// <summary>
+    /// Creates a new instance of the SessionPortKey class.
+    /// </summary>
+    public SessionPortKey(byte[]? sessionId, ushort port)
     {
-        /// <summary>
-        /// Session Id from host
-        /// </summary>
-        public byte[] SessionId { get; }
-
-        /// <summary>
-        /// Port that is hosted client side
-        /// </summary>
-        public ushort Port { get; }
-
-        /// <summary>
-        /// Creates a new instance of the SessionPortKey class.
-        /// </summary>
-        public SessionPortKey(byte[] sessionId, ushort port)
-        {
-            if (sessionId == null)
-            {
-                throw new ArgumentNullException("SessionId cannot be null");
-            }
-
-            this.SessionId = sessionId;
-            this.Port = port;
-        }
-
-        /// <inheritdoc />
-        public override bool Equals(object? obj) =>
-            obj is SessionPortKey other &&
-            other.Port == this.Port &&
-            Enumerable.SequenceEqual(other.SessionId, this.SessionId);
-
-        /// <inheritdoc />
-        public override int GetHashCode() =>
-            HashCode.Combine(
-                this.Port,
-                ((IStructuralEquatable)this.SessionId).GetHashCode(EqualityComparer<byte>.Default));
+        this.SessionId = sessionId;
+        this.Port = port;
     }
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj) =>
+        obj is SessionPortKey other &&
+        other.Port == this.Port &&
+        ((this.SessionId == null && other.SessionId == null) ||
+        ((this.SessionId != null && other.SessionId != null) &&
+        Enumerable.SequenceEqual(other.SessionId, this.SessionId)));
+
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(
+        this.Port,
+        this.SessionId == null ? 0 :
+            ((IStructuralEquatable)this.SessionId).GetHashCode(EqualityComparer<byte>.Default));
 }

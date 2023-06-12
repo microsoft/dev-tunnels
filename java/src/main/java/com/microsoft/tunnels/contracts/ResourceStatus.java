@@ -25,4 +25,11 @@ public class ResourceStatus {
      */
     @Expose
     public long limit;
+
+    /**
+     * Gets or sets an optional source of the {@link ResourceStatus#limit}, or null if
+     * there is no limit.
+     */
+    @Expose
+    public String limitSource;
 }

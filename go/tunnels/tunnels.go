@@ -10,7 +10,7 @@ import (
 	"github.com/rodaine/table"
 )
 
-const PackageVersion = "0.0.7"
+const PackageVersion = "0.0.13"
 
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	convertedTunnel := &Tunnel{
@@ -129,6 +129,7 @@ func (tunnelPort *TunnelPort) requestObject(tunnel *Tunnel) (*TunnelPort, error)
 	convertedPort := &TunnelPort{
 		PortNumber:  tunnelPort.PortNumber,
 		Protocol:    tunnelPort.Protocol,
+		IsDefault:   tunnelPort.IsDefault,
 		Description: tunnelPort.Description,
 		Tags:        tunnelPort.Tags,
 		SshUser:     tunnelPort.SshUser,

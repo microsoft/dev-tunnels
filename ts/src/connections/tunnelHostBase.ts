@@ -5,8 +5,8 @@ import { TunnelPort, Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-c
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
     KeyPair,
-    MultiChannelStream,
     SshAlgorithms,
+    SshClientSession,
     SshServerSession,
     Trace,
 } from '@microsoft/dev-tunnels-ssh';
@@ -15,23 +15,25 @@ import { SessionPortKey } from './sessionPortKey';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
+import { isNode } from './sshHelpers';
 
 /**
- * Base class for Hosts that host one tunnel and use SSH MultiChannelStream to connect to the tunnel host service.
+ * Base class for Hosts that host one tunnel and use SSH to connect to the tunnel host service.
  */
 export class TunnelHostBase
-    extends tunnelSshSessionClass<MultiChannelStream>(TunnelConnectionSession)
+    extends tunnelSshSessionClass<SshClientSession>(TunnelConnectionSession)
     implements TunnelHost {
+
     /**
      * Sessions created between this host and clients
      * @internal
      */
-    public sshSessions: SshServerSession[] = [];
+    public readonly sshSessions: SshServerSession[] = [];
 
     /**
      * Port Forwarders between host and clients
      */
-    public remoteForwarders: { [sessionPortKey: string]: RemotePortForwarder } = {};
+    public readonly remoteForwarders = new Map<string, RemotePortForwarder>();
 
     /**
      * Private key used for connections.
@@ -50,12 +52,35 @@ export class TunnelHostBase
 
     private loopbackIp = '127.0.0.1';
 
-    constructor(managementClient: TunnelManagementClient, trace?: Trace) {
+    private forwardConnectionsToLocalPortsValue: boolean = isNode();
+
+    public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(TunnelAccessScopes.Host, trace, managementClient);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
         }
+    }
+
+    /**
+     * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+     * Forwarded connections are not possible if the host is not NodeJS (e.g. browser).
+     * The default value for NodeJS hosts is true.
+     */
+    public get forwardConnectionsToLocalPorts(): boolean {
+        return this.forwardConnectionsToLocalPortsValue;
+    }
+
+    public set forwardConnectionsToLocalPorts(value: boolean) {
+        if (value === this.forwardConnectionsToLocalPortsValue) {
+            return;
+        }
+
+        if (value && !isNode()) {
+            throw new Error('Cannot forward connections to local TCP sockets on this platform.');
+        }
+
+        this.forwardConnectionsToLocalPortsValue = value;
     }
 
     /**
@@ -66,44 +91,12 @@ export class TunnelHostBase
         await this.connectTunnelSession(tunnel);
     }
 
-    public async refreshPorts(): Promise<void> {
-        if (!this.tunnel || !this.managementClient) {
-            return;
-        }
-
-        const updatedTunnel = await this.managementClient.getTunnel(this.tunnel, undefined);
-        const updatedPorts = updatedTunnel?.ports ?? [];
-        this.tunnel.ports = updatedPorts;
-
-        const forwardPromises: Promise<any>[] = [];
-
-        for (let port of updatedPorts) {
-            for (let session of this.sshSessions.filter((s) => s.isConnected && s.sessionId)) {
-                const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
-                const forwarder = this.remoteForwarders[key.toString()];
-                if (!forwarder) {
-                    const pfs = session.getService(PortForwardingService)!;
-                    forwardPromises.push(this.forwardPort(pfs, port));
-                }
-            }
-        }
-
-        for (let [key, forwarder] of Object.entries(this.remoteForwarders)) {
-            if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
-                delete this.remoteForwarders[key];
-                forwarder.dispose();
-            }
-        }
-
-        await Promise.all(forwardPromises);
+    public refreshPorts(): Promise<void> {
+        // This is implemented by the derived class.
+        return Promise.resolve();
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
-        let sessionId = pfs.session.sessionId;
-        if (!sessionId) {
-            throw new Error('No session id');
-        }
-
         const portNumber = Number(port.portNumber);
         if (pfs.localForwardedPorts.find((p) => p.localPort === portNumber)) {
             // The port is already forwarded. This may happen if we try to add the same port twice after reconnection.
@@ -123,8 +116,8 @@ export class TunnelHostBase
             return;
         }
 
-        const key = new SessionPortKey(sessionId, Number(forwarder.localPort));
-        this.remoteForwarders[key.toString()] = forwarder;
+        const key = new SessionPortKey(pfs.session.sessionId, Number(forwarder.localPort));
+        this.remoteForwarders.set(key.toString(), forwarder);
     }
 
     /**

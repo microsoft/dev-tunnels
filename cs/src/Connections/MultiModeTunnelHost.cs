@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 
 namespace Microsoft.DevTunnels.Connections
 {
@@ -46,6 +47,24 @@ namespace Microsoft.DevTunnels.Connections
 
         /// <inheritdoc />
         protected override string TunnelAccessScope => TunnelAccessScopes.Host;
+
+        /// <inheritdoc />
+        public bool ForwardConnectionsToLocalPorts
+        {
+            get => Hosts.Any(c => c.ForwardConnectionsToLocalPorts);
+            set
+            {
+                foreach (var host in Hosts)
+                {
+                    host.ForwardConnectionsToLocalPorts = value;
+                }
+            }
+        }
+
+#pragma warning disable CS0067 // Not used
+        /// <inheritdoc />
+        public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
+#pragma warning restore CS0067
 
         /// <inheritdoc />
         public async Task StartAsync(

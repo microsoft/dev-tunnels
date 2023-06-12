@@ -8,13 +8,20 @@ import {
     TunnelRequestOptions,
 } from '@microsoft/dev-tunnels-management';
 import { CancellationError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
-import { CancellationToken } from 'vscode-jsonrpc';
+import { CancellationToken, Emitter } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';
 import { TunnelConnector } from './tunnelConnector';
 import { TunnelSession } from './tunnelSession';
 import { withCancellation } from './utils';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
+import {
+    PortForwardChannelOpenMessage,
+    PortForwardRequestMessage,
+    PortForwardSuccessMessage,
+} from '@microsoft/dev-tunnels-ssh-tcp';
+import { PortRelayRequestMessage } from './messages/portRelayRequestMessage';
+import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 
 /**
  * Tunnel connection session.
@@ -23,13 +30,24 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private connectedTunnel: Tunnel | null = null;
     private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;
+    private connectionProtocolValue?: string;
+
+    /**
+     * Name of the protocol used to connect to the tunnel.
+     */
+    public get connectionProtocol(): string | undefined {
+        return this.connectionProtocolValue;
+    }
+    protected set connectionProtocol(value: string | undefined) {
+        this.connectionProtocolValue = value;
+    }
 
     /**
      * Tunnel access token.
      */
     protected accessToken?: string;
 
-    constructor(
+    public constructor(
         tunnelAccessScope: string,
         trace?: Trace,
         /**
@@ -58,6 +76,21 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
+     * Determines whether E2E encryption is requested when opening connections through the tunnel
+     * (V2 protocol only).
+     *
+     * The default value is true, but applications may set this to false (for slightly faster
+     * connections).
+     *
+     * Note when this is true, E2E encryption is not strictly required. The tunnel relay and
+     * tunnel host can decide whether or not to enable E2E encryption for each connection,
+     * depending on policies and capabilities. Applications can verify the status of E2EE by
+     * handling the `forwardedPortConnecting` event and checking the related property on the
+     * channel request or response message.
+     */
+    public enableE2EEncryption: boolean = true;
+
+    /**
      * Gets a value indicating that this connection has already created its connector
      * and so can be reconnected if needed.
      */
@@ -68,7 +101,9 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     /**
      * Creates a stream to the tunnel.
      */
-    public createSessionStream(cancellation: CancellationToken): Promise<Stream> {
+    public createSessionStream(
+        cancellation: CancellationToken,
+    ): Promise<{ stream: Stream, protocol: string }> {
         throw new Error('Not implemented');
     }
 
@@ -77,6 +112,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      */
     public configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void> {
@@ -138,17 +174,39 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             const options: TunnelRequestOptions = {
                 tokenScopes: [this.tunnelAccessScope],
             };
-            this.tunnel = await withCancellation(
+
+            const tunnel = await withCancellation(
                 this.managementClient.getTunnel(this.tunnel, options),
                 cancellation,
             );
-            if (!this.tunnel?.accessTokens) {
+
+            if (!tunnel) {
+                // Tunnel doesn't exist
                 return;
             }
-            return TunnelAccessTokenProperties.getTunnelAccessToken(
-                this.tunnel,
+
+            // Get the tunnel access token from the fetched tunnel, or the original this.tunnel object if the fetched tunnel doesn't have the token,
+            // which may happen when the tunnel was authenticated with a tunnel acccess token from this.tunnel.accessTokens.
+            // Add the tunnel access token to the fetched tunnel's accessTokens if it is not there.
+            let accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                tunnel,
                 this.tunnelAccessScope,
             );
+
+            if (!accessToken) {
+                accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                    this.tunnel,
+                    this.tunnelAccessScope,
+                );
+
+                if (accessToken) {
+                    tunnel.accessTokens ??= {};
+                    tunnel.accessTokens[this.tunnelAccessScope] = accessToken;
+                }
+            }
+
+            this.tunnel = tunnel;
+            return accessToken;
         }
 
         return await super.getFreshTunnelAccessToken(cancellation);
@@ -275,5 +333,26 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             TunnelAccessTokenProperties.validateTokenExpiration(this.accessToken);
             return this.accessToken;
         }
+    }
+
+    /** @internal */
+    public createRequestMessageAsync(port: number): Promise<PortForwardRequestMessage> {
+        const message = new PortRelayRequestMessage();
+        message.accessToken = this.accessToken;
+        return Promise.resolve(message);
+    }
+
+    /** @internal */
+    public createSuccessMessageAsync(port: number): Promise<PortForwardSuccessMessage> {
+        const message = new PortForwardSuccessMessage();
+        return Promise.resolve(message);
+    }
+
+    /** @internal */
+    public createChannelOpenMessageAsync(port: number): Promise<PortForwardChannelOpenMessage> {
+        const message = new PortRelayConnectRequestMessage();
+        message.accessToken = this.accessToken;
+        message.isE2EEncryptionRequested = this.enableE2EEncryption;
+        return Promise.resolve(message);
     }
 }

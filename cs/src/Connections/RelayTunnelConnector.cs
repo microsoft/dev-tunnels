@@ -1,4 +1,4 @@
-﻿// <copyright file="RelayTunnelConnector.cs" company="Microsoft">
+// <copyright file="RelayTunnelConnector.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -163,6 +163,8 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 // These exceptions are not recoverable
                 if (ex is InvalidOperationException ||
                     ex is ObjectDisposedException ||
+                    ex is NotSupportedException ||
+                    ex is NotImplementedException ||
                     ex is NullReferenceException ||
                     ex is ArgumentNullException ||
                     ex is ArgumentException)

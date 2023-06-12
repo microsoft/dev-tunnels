@@ -284,13 +284,13 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       throw new Error("Error parsing URI: " + this.baseAddress);
     }
     String host = null;
-    int port = -1;
+    int port = baseAddress.getPort();
 
     if (StringUtils.isNotBlank(clusterId)) {
-      if (baseAddress.getHost() != "localhost"
+      if (!baseAddress.getHost().equals("localhost")
           && !baseAddress.getHost().startsWith(clusterId + ".")) {
         host = (clusterId + "." + baseAddress.getHost()).replace("global.", "");
-      } else if (baseAddress.getScheme() == "https"
+      } else if (baseAddress.getScheme().equals("https")
           && clusterId.startsWith("localhost")
           && baseAddress.getPort() % 10 > 0) {
         var clusterNumber = Integer.parseInt(clusterId.substring("localhost".length()));
@@ -610,6 +610,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var converted = new TunnelPort();
     converted.portNumber = tunnelPort.portNumber;
     converted.protocol = tunnelPort.protocol;
+    converted.isDefault = tunnelPort.isDefault;
     converted.description = tunnelPort.description;
     converted.tags = tunnelPort.tags;
     converted.sshUser = tunnelPort.sshUser;

@@ -20,7 +20,7 @@ export interface RateStatus extends ResourceStatus {
     periodSeconds?: number;
 
     /**
-     * Gets or sets the unix time when this status will be reset.
+     * Gets or sets the unix time in seconds when this status will be reset.
      */
     resetTime?: number;
 }

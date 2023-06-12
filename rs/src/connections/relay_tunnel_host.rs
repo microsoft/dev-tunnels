@@ -3,7 +3,7 @@
 
 use std::{
     collections::HashMap,
-    io,
+    env, io,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     pin::Pin,
     sync::Arc,
@@ -18,7 +18,8 @@ use crate::{
         NO_REQUEST_OPTIONS,
     },
 };
-use futures::{FutureExt, TryFutureExt};
+use async_trait::async_trait;
+use futures::TryFutureExt;
 use russh::{server::Server as ServerTrait, CryptoVec};
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
@@ -26,12 +27,12 @@ use tokio::{
     sync::{mpsc, oneshot, watch},
     task::JoinHandle,
 };
-use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use uuid::Uuid;
 
 use super::{
     errors::TunnelError,
-    ws::{build_websocket_request, AsyncRWWebSocket},
+    ws::{build_websocket_request, connect_directly, connect_via_proxy, AsyncRWWebSocket},
 };
 
 /// Mapping of port numbers to senders to which new port connections should be
@@ -46,6 +47,7 @@ type PortMap = HashMap<u32, mpsc::UnboundedSender<ForwardedPortConnection>>;
 /// tunnels via the appropriate methods on the RelayTunnelHost, no ports will be
 /// hosted until those methods are called.
 pub struct RelayTunnelHost {
+    pub proxy: Option<String>,
     locator: TunnelLocator,
     host_id: Uuid,
     ports_tx: watch::Sender<PortMap>,
@@ -133,6 +135,7 @@ impl RelayTunnelHost {
         let host_id = Uuid::new_v4();
         let (ports_tx, ports_rx) = watch::channel(HashMap::new());
         RelayTunnelHost {
+            proxy: env::var("HTTPS_PROXY").or(env::var("https_proxy")).ok(),
             host_id,
             locator,
             ports_tx,
@@ -429,9 +432,12 @@ impl RelayTunnelHost {
             ],
         )?;
 
-        let (cnx, _) = connect_async(req)
-            .await
-            .map_err(TunnelError::WebSocketError)?;
+        let cnx = if let Some(proxy) = &self.proxy {
+            log::debug!("connecting via http_proxy on {}", proxy);
+            connect_via_proxy(req, proxy).await?
+        } else {
+            connect_directly(req).await?
+        };
 
         Ok((cnx, endpoint))
     }
@@ -777,91 +783,61 @@ impl ServerHandle {
     }
 }
 
+#[async_trait]
 impl russh::server::Handler for ServerHandle {
     type Error = russh::Error;
-    type FutureAuth = Pin<
-        Box<
-            dyn core::future::Future<Output = Result<(Self, russh::server::Auth), Self::Error>>
-                + Send,
-        >,
-    >;
-    type FutureUnit = Pin<
-        Box<
-            dyn core::future::Future<Output = Result<(Self, russh::server::Session), Self::Error>>
-                + Send,
-        >,
-    >;
-    type FutureBool = Pin<
-        Box<
-            dyn core::future::Future<
-                    Output = Result<(Self, russh::server::Session, bool), Self::Error>,
-                > + Send,
-        >,
-    >;
 
-    fn finished_auth(self, auth: russh::server::Auth) -> Self::FutureAuth {
-        async { Ok((self, auth)) }.boxed()
-    }
-
-    fn finished_bool(self, b: bool, s: russh::server::Session) -> Self::FutureBool {
-        async move { Ok((self, s, b)) }.boxed()
-    }
-
-    fn finished(self, s: russh::server::Session) -> Self::FutureUnit {
-        async { Ok((self, s)) }.boxed()
-    }
-
-    fn auth_succeeded(mut self, session: russh::server::Session) -> Self::FutureUnit {
+    async fn auth_succeeded(
+        mut self,
+        session: russh::server::Session,
+    ) -> Result<(Self, russh::server::Session), Self::Error> {
         if let Some(tx) = self.authed_tx.take() {
             tx.send(()).ok();
         }
-
-        self.finished(session)
+        Ok((self, session))
     }
 
     /// Connecting clients will use "none" auth on their channels.
-    fn auth_none(self, _: &str) -> Self::FutureAuth {
-        self.finished_auth(russh::server::Auth::Accept)
+    async fn auth_none(self, _: &str) -> Result<(Self, russh::server::Auth), Self::Error> {
+        Ok((self, russh::server::Auth::Accept))
     }
 
-    fn channel_open_forwarded_tcpip(
+    async fn channel_open_forwarded_tcpip(
         mut self,
-        channel: russh::ChannelId,
+        channel: russh::Channel<russh::server::Msg>,
         _host_to_connect: &str,
         port_to_connect: u32,
         _originator_address: &str,
         _originator_port: u32,
         session: russh::server::Session,
-    ) -> Self::FutureBool {
+    ) -> Result<(Self, bool, russh::server::Session), Self::Error> {
         let (sender, receiver) = mpsc::channel(10);
         let txd = self.cnx_tx.send(ForwardedPortConnection {
             port: port_to_connect,
-            channel,
+            channel: channel.id(),
             handle: session.handle(),
             receiver,
         });
         if txd.is_ok() {
-            self.channel_senders.insert(channel, sender);
+            self.channel_senders.insert(channel.id(), sender);
         }
-        self.finished_bool(true, session)
+
+        Ok((self, true, session))
     }
 
-    fn data(
+    async fn data(
         mut self,
         channel: russh::ChannelId,
         data: &[u8],
         session: russh::server::Session,
-    ) -> Self::FutureUnit {
+    ) -> Result<(Self, russh::server::Session), Self::Error> {
         let data_vec = data.to_vec();
-        async move {
-            if let Some(sender) = self.channel_senders.get(&channel) {
-                if sender.send(data_vec).await.is_err() {
-                    self.channel_senders.remove(&channel);
-                }
+        if let Some(sender) = self.channel_senders.get(&channel) {
+            if sender.send(data_vec).await.is_err() {
+                self.channel_senders.remove(&channel);
             }
-            Ok((self, session))
         }
-        .boxed()
+        Ok((self, session))
     }
 }
 
@@ -887,20 +863,15 @@ impl Client {
     }
 }
 
+#[async_trait]
 impl russh::client::Handler for Client {
     type Error = russh::Error;
-    type FutureUnit = futures::future::Ready<Result<(Self, russh::client::Session), russh::Error>>;
-    type FutureBool = futures::future::Ready<Result<(Self, bool), russh::Error>>;
 
-    fn finished_bool(self, b: bool) -> Self::FutureBool {
-        futures::future::ready(Ok((self, b)))
-    }
-    fn finished(self, session: russh::client::Session) -> Self::FutureUnit {
-        futures::future::ready(Ok((self, session)))
-    }
-
-    fn check_server_key(self, _server_public_key: &russh_keys::key::PublicKey) -> Self::FutureBool {
-        self.finished_bool(true)
+    async fn check_server_key(
+        self,
+        _server_public_key: &russh_keys::key::PublicKey,
+    ) -> Result<(Self, bool), Self::Error> {
+        Ok((self, true))
     }
 
     fn server_channel_handle_unknown(
@@ -916,25 +887,25 @@ impl russh::client::Handler for Client {
         }
     }
 
-    fn channel_close(
+    async fn channel_close(
         self,
         channel: russh::ChannelId,
         session: russh::client::Session,
-    ) -> Self::FutureUnit {
+    ) -> Result<(Self, russh::client::Session), Self::Error> {
         self.sender.send(ChannelOp::Close(channel)).ok();
-        self.finished(session)
+        Ok((self, session))
     }
 
-    fn data(
+    async fn data(
         self,
         channel: russh::ChannelId,
         data: &[u8],
         session: russh::client::Session,
-    ) -> Self::FutureUnit {
+    ) -> Result<(Self, russh::client::Session), Self::Error> {
         self.sender
             .send(ChannelOp::Data(channel, data.to_vec()))
             .ok();
-        self.finished(session)
+        Ok((self, session))
     }
 }
 

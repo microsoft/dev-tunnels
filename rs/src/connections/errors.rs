@@ -26,4 +26,13 @@ pub enum TunnelError {
 
     #[error("port {0} already exists in the relay")]
     PortAlreadyExists(u32),
+
+    #[error("proxy connection failed: {0}")]
+    ProxyConnectionFailed(std::io::Error),
+
+    #[error("proxy handshake failed: {0}")]
+    ProxyHandshakeFailed(hyper::Error),
+
+    #[error("proxy connect request failed: {0}")]
+    ProxyConnectRequestFailed(hyper::Error)
 }

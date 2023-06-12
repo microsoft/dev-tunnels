@@ -1,10 +1,9 @@
-﻿// <copyright file="GoContractWriter.cs" company="Microsoft">
+// <copyright file="GoContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
 
 using Microsoft.CodeAnalysis;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -269,6 +268,12 @@ internal class RustContractWriter : ContractWriter
         {
             s.AppendLine();
             s.Append(FormatDocComment(field.GetDocumentationCommentXml(), "    "));
+
+            if (GetObsoleteAttribute(field) != null)
+            {
+                s.AppendLine($"    {GetRustDeprecatedAttribute(field)}");
+            }
+
             var alignment = new string(' ', maxFieldNameLength - field.Name.Length);
             var value = type.BaseType?.Name == "Enum" ? field.Name : field.ConstantValue;
             s.AppendLine($"    {field.Name},");
@@ -302,11 +307,11 @@ internal class RustContractWriter : ContractWriter
             string? memberExpression = null;
             if (field.ConstantValue is string stringValue)
             {
-                memberExpression = $"&str = \"{stringValue.Replace("\"", "\\\"")}\"";
+                memberExpression = $"&str = r#\"{stringValue}\"#";
             }
             else if (field.ConstantValue is int)
             {
-                memberExpression = $"&i32 = {field.ConstantValue}";
+                memberExpression = $"i32 = {field.ConstantValue}";
             }
 
             if (memberExpression != null)
@@ -321,6 +326,12 @@ internal class RustContractWriter : ContractWriter
 
                 s.AppendLine();
                 s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
+
+                if (GetObsoleteAttribute(field) != null)
+                {
+                    s.AppendLine(GetRustDeprecatedAttribute(field));
+                }
+
                 var rsName = ToSnakeCase($"{prefix}{field.Name}").ToUpperInvariant();
                 s.AppendLine($"pub const {rsName}: {memberExpression};");
             }
@@ -478,5 +489,17 @@ internal class RustContractWriter : ContractWriter
         }
 
         s.AppendLine($"    pub {propertyName}: {rsType},");
+    }
+
+    private static string? GetRustDeprecatedAttribute(ISymbol symbol)
+    {
+        var obsoleteAttribute = GetObsoleteAttribute(symbol);
+        if (obsoleteAttribute != null)
+        {
+            var message = GetObsoleteMessage(obsoleteAttribute);
+            return $"[deprecated({message})]";
+        }
+
+        return null;
     }
 }

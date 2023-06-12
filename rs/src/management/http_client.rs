@@ -17,7 +17,7 @@ use crate::contracts::{
 
 use super::{
     Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError, TunnelLocator,
-    TunnelRequestOptions,
+    TunnelRequestOptions, NO_REQUEST_OPTIONS,
 };
 
 #[derive(Clone)]
@@ -32,6 +32,8 @@ const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
 const CHECK_TUNNEL_NAME_SUB_PATH: &str = "/checkNameAvailability";
+const PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+
 impl TunnelManagementClient {
     /// Returns a builder that creates a new client, starting with the current
     /// client's options.
@@ -90,15 +92,17 @@ impl TunnelManagementClient {
         self.execute_json("create_tunnel", request).await
     }
 
-     /// Gets if tunnel name is avilable.
-     pub async fn check_name_availability(
-        &self,
-        name : &str,
-    ) -> HttpResult<bool> {
-        let path = format!("{}/{}{}", TUNNELS_API_PATH, name, CHECK_TUNNEL_NAME_SUB_PATH);
-        let mut url = self.build_uri(None, path);
+    /// Gets if tunnel name is avilable.
+    pub async fn check_name_availability(&self, name: &str) -> HttpResult<bool> {
+        let path = format!(
+            "{}/{}{}",
+            TUNNELS_API_PATH, name, CHECK_TUNNEL_NAME_SUB_PATH
+        );
+        let url = self.build_uri(None, &path);
 
-        let request = self.make_tunnel_request(Method::GET, url, NO_REQUEST_OPTIONS).await?;
+        let request = self
+            .make_tunnel_request(Method::GET, url, NO_REQUEST_OPTIONS)
+            .await?;
         self.execute_json("get_name_availability", request).await
     }
 
@@ -394,30 +398,7 @@ impl TunnelManagementClient {
         mut url: Url,
         tunnel_opts: &TunnelRequestOptions,
     ) -> HttpResult<Request> {
-        {
-            let mut query = url.query_pairs_mut();
-            if tunnel_opts.include_ports {
-                query.append_pair("includePorts", "true");
-            }
-            if tunnel_opts.include_access_control {
-                query.append_pair("includeAccessControl", "true");
-            }
-            if !tunnel_opts.token_scopes.is_empty() {
-                query.append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
-            }
-            if tunnel_opts.force_rename {
-                query.append_pair("forceRename", "true");
-            }
-            if !tunnel_opts.tags.is_empty() {
-                query.append_pair("tags", &tunnel_opts.tags.join(","));
-                if tunnel_opts.require_all_tags {
-                    query.append_pair("allTags", "true");
-                }
-            }
-            if tunnel_opts.limit > 0 {
-                query.append_pair("limit", &tunnel_opts.limit.to_string());
-            }
-        }
+        add_query(&mut url, tunnel_opts);
         let mut request = self.make_request(method, url).await?;
 
         let headers = request.headers_mut();
@@ -436,7 +417,7 @@ impl TunnelManagementClient {
         Ok(request)
     }
 
-    /// Makes a basic request taht communicates with the service.
+    /// Makes a basic request that communicates with the service.
     async fn make_request(&self, method: Method, url: Url) -> HttpResult<Request> {
         let mut request = Request::new(method, url);
         let headers = request.headers_mut();
@@ -470,12 +451,17 @@ pub struct TunnelClientBuilder {
 /// Creates a new tunnel client builder. You can set options, then use `into()`
 /// to get the client instance (or cast automatically).
 pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
+    let pkg_version = PKG_VERSION.unwrap_or("unknown");
+    let full_user_agent = format!(
+        "{}{}{}",
+        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version
+    );
     TunnelClientBuilder {
         authorization: Arc::new(Box::new(super::StaticAuthorizationProvider(
             Authorization::Anonymous,
         ))),
         client: None,
-        user_agent: HeaderValue::from_str(user_agent).unwrap(),
+        user_agent: HeaderValue::from_str(&full_user_agent).unwrap(),
         environment: env_production(),
     }
 }
@@ -513,6 +499,34 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
             user_agent: builder.user_agent,
             environment: builder.environment,
         }
+    }
+}
+
+fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions) {
+    if tunnel_opts.include_ports {
+        url.query_pairs_mut().append_pair("includePorts", "true");
+    }
+    if tunnel_opts.include_access_control {
+        url.query_pairs_mut()
+            .append_pair("includeAccessControl", "true");
+    }
+    if !tunnel_opts.token_scopes.is_empty() {
+        url.query_pairs_mut()
+            .append_pair("tokenScopes", &tunnel_opts.token_scopes.join(","));
+    }
+    if tunnel_opts.force_rename {
+        url.query_pairs_mut().append_pair("forceRename", "true");
+    }
+    if !tunnel_opts.tags.is_empty() {
+        url.query_pairs_mut()
+            .append_pair("tags", &tunnel_opts.tags.join(","));
+        if tunnel_opts.require_all_tags {
+            url.query_pairs_mut().append_pair("allTags", "true");
+        }
+    }
+    if tunnel_opts.limit > 0 {
+        url.query_pairs_mut()
+            .append_pair("limit", &tunnel_opts.limit.to_string());
     }
 }
 
@@ -641,5 +655,48 @@ mod test_end_to_end {
         let mut c = new_tunnel_management("rs-sdk-tests");
         c.authorization_provider(AuthCodeProvider());
         c.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use regex::Regex;
+    use reqwest::Url;
+
+    use crate::management::NO_REQUEST_OPTIONS;
+
+    #[test]
+    fn new_tunnel_management_has_user_agent() {
+        // test
+        let builder = super::new_tunnel_management("test-caller");
+
+        // verify
+        let re = Regex::new(
+            r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$",
+        )
+        .unwrap();
+        let full_agent = builder.user_agent.to_str().unwrap();
+        assert!(re.is_match(full_agent));
+    }
+
+    #[test]
+    fn add_query_omits_empty_query() {
+        let mut url = Url::parse("https://tunnels.api.visualstudio.com/api/v1/tunnels").unwrap();
+        let options = NO_REQUEST_OPTIONS;
+
+        super::add_query(&mut url, options);
+
+        assert!(!url.to_string().ends_with("?"));
+    }
+
+    #[test]
+    fn add_query_adds_ports() {
+        let mut url = Url::parse("https://tunnels.api.visualstudio.com/api/v1/tunnels").unwrap();
+        let mut options = NO_REQUEST_OPTIONS.clone();
+        options.include_ports = true;
+
+        super::add_query(&mut url, &options);
+
+        assert!(url.query().unwrap().contains("includePorts=true"));
     }
 }

@@ -17,7 +17,6 @@ import {
     SshSessionClosedEventArgs,
     SshDisconnectReason,
     TraceLevel,
-    SshSessionConfiguration,
     SshServerSession,
     SshAuthenticatingEventArgs,
     NodeStream,
@@ -27,23 +26,40 @@ import {
     Trace,
     SshChannel,
     Stream,
-    SshProtocolExtensionNames,
     SessionRequestMessage,
     SshRequestEventArgs,
     SessionRequestSuccessMessage,
+    SshClientSession,
+    SshSessionConfiguration,
+    SshAlgorithms,
+    SshSession,
+    SshServerCredentials,
+    SecureStream,
 } from '@microsoft/dev-tunnels-ssh';
 import {
+    ForwardedPortConnectingEventArgs,
     PortForwardChannelOpenMessage,
     PortForwardingService,
-    SshServer,
 } from '@microsoft/dev-tunnels-ssh-tcp';
 import { CancellationToken, Disposable } from 'vscode-jsonrpc';
-import { SessionPortKey } from '.';
+import { SshHelpers } from './sshHelpers';
 import { MultiModeTunnelHost } from './multiModeTunnelHost';
 import { TunnelHostBase } from './tunnelHostBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
+import { SessionPortKey } from './sessionPortKey';
+import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
+import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
 
 const webSocketSubProtocol = 'tunnel-relay-host';
+const webSocketSubProtocolv2 = 'tunnel-relay-host-v2-dev';
+
+// Check for an environment variable to determine which protocol version to use.
+// By default, prefer V2 and fall back to V1.
+const protocolVersion = process?.env && process.env.DEVTUNNELS_PROTOCOL_VERSION;
+const connectionProtocols =
+    protocolVersion === '1' ? [webSocketSubProtocol] :
+    protocolVersion === '2' ? [webSocketSubProtocolv2] :
+    [webSocketSubProtocolv2, webSocketSubProtocol];
 
 /**
  * Tunnel host implementation that uses data-plane relay
@@ -51,8 +67,11 @@ const webSocketSubProtocol = 'tunnel-relay-host';
  */
 export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     TunnelHostBase,
-    webSocketSubProtocol,
+    connectionProtocols,
 ) {
+    public static readonly webSocketSubProtocol = webSocketSubProtocol;
+    public static readonly webSocketSubProtocolv2 = webSocketSubProtocolv2;
+
     /**
      * Ssh channel type in host relay ssh session where client session streams are passed.
      */
@@ -62,7 +81,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     private readonly clientSessionPromises: Promise<void>[] = [];
     private readonly reconnectableSessions: SshServerSession[] = [];
 
-    constructor(managementClient: TunnelManagementClient, trace?: Trace) {
+    public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(managementClient, trace);
         this.hostId = MultiModeTunnelHost.hostId;
     }
@@ -73,15 +92,38 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
      */
     public async configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void> {
-        this.sshSession = new MultiChannelStream(stream);
+        this.connectionProtocol = protocol;
+        if (this.connectionProtocol === webSocketSubProtocol) {
+            // The V1 protocol always configures no security, equivalent to SSH MultiChannelStream.
+            // The websocket transport is still encrypted and authenticated.
+            this.sshSession = new SshClientSession(
+                new SshSessionConfiguration(false)); // no encryption
+        } else {
+            // The V2 protocol configures optional encryption, including "none" as an enabled and
+            // preferred key-exchange algorithm, because encryption of the outer SSH session is
+            // optional since it is already over a TLS websocket.
+            const config = new SshSessionConfiguration();
+            config.keyExchangeAlgorithms.splice(
+                0,
+                config.keyExchangeAlgorithms.length,
+                SshAlgorithms.keyExchange.none,
+                SshAlgorithms.keyExchange.ecdhNistp384Sha384,
+                SshAlgorithms.keyExchange.ecdhNistp256Sha256,
+                SshAlgorithms.keyExchange.dhGroup16Sha512,
+                SshAlgorithms.keyExchange.dhGroup14Sha256,
+            );
 
-        // Increase max window size to work around channel congestion bug.
-        // This does not entirely eliminate the problem, but reduces the chance.
-        // TODO: Change the protocol to avoid layering SSH sessions, which will resolve the issue.
-        this.sshSession.channelMaxWindowSize = SshChannel.defaultMaxWindowSize * 5;
+            config.addService(PortForwardingService);
+            this.sshSession = new SshClientSession(config);
+
+            const hostPfs = this.sshSession.activateService(PortForwardingService);
+            hostPfs.messageFactory = this;
+            hostPfs.onForwardedPortConnecting((e) => this.onForwardedPortConnecting(e));
+        }
 
         const channelOpenEventRegistration = this.sshSession.onChannelOpening((e) => {
             this.hostSession_ChannelOpening(this.sshSession!, e);
@@ -90,7 +132,22 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             this.hostSession_Closed(e, channelOpenEventRegistration, closeEventRegistration);
         });
 
-        await this.sshSession.connect();
+        this.sshSession.trace = this.trace;
+        await this.sshSession.connect(stream, cancellation);
+
+        // SSH authentication is skipped in V1 protocol, optional in V2 depending on whether the
+        // session performed a key exchange (as indicated by having a session ID or not). In the
+        // latter case a password is not required. Strong authentication was already handled by
+        // the relay service via the tunnel access token used for the websocket connection.
+        if (this.sshSession.sessionId) {
+            await this.sshSession.authenticate({ username: 'tunnel' });
+        }
+
+        if (this.connectionProtocol === webSocketSubProtocolv2) {
+            // In the v2 protocol, the host starts "forwarding" the ports as soon as it connects.
+            // Then the relay will forward the forwarded ports to clients as they connect.
+            await this.startForwardingExistingPorts(this.sshSession);
+        }
     }
 
     /**
@@ -118,17 +175,43 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         return endpoint.hostRelayUri!;
     }
 
-    private hostSession_ChannelOpening(sender: MultiChannelStream, e: SshChannelOpeningEventArgs) {
+    private hostSession_ChannelOpening(sender: SshClientSession, e: SshChannelOpeningEventArgs) {
         if (!e.isRemoteRequest) {
             // Auto approve all local requests (not that there are any for the time being).
             return;
         }
 
-        if (e.channel.channelType !== TunnelRelayTunnelHost.clientStreamChannelType) {
-            e.failureDescription = `Unexpected channel type. Only ${TunnelRelayTunnelHost.clientStreamChannelType} is supported.`;
+        if (this.connectionProtocol === webSocketSubProtocolv2 &&
+            e.channel.channelType === 'forwarded-tcpip'
+        ) {
+            // With V2 protocol, the relay server always sends an extended channel open message
+            // with a property indicating whether E2E encryption is requested for the connection.
+            // The host returns an extended response message indicating if E2EE is enabled.
+            const relayRequestMessage = e.channel.openMessage
+                .convertTo(new PortRelayConnectRequestMessage());
+            const responseMessage = new PortRelayConnectResponseMessage();
+
+            // The host can enable encryption for the channel if the client requested it.
+            responseMessage.isE2EEncryptionEnabled = this.enableE2EEncryption &&
+                relayRequestMessage.isE2EEncryptionRequested;
+
+            // In the future the relay might send additional information in the connect
+            // request message, for example a user identifier that would enable the host to
+            // group channels by user.
+
+            e.openingPromise = Promise.resolve(responseMessage);
+            return;
+        } else if (e.channel.channelType !== TunnelRelayTunnelHost.clientStreamChannelType) {
+            e.failureDescription = `Unknown channel type: ${e.channel.channelType}`;
             e.failureReason = SshChannelOpenFailureReason.unknownChannelType;
             return;
         }
+
+        // V1 protocol.
+
+        // Increase max window size to work around channel congestion bug.
+        // This does not entirely eliminate the problem, but reduces the chance.
+        e.channel.maxWindowSize = SshChannel.defaultMaxWindowSize * 5;
 
         if (this.isDisposed) {
             e.failureDescription = 'The host is disconnecting.';
@@ -136,27 +219,62 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             return;
         }
 
-        const promise = this.acceptClientSession(sender, this.disposeToken);
+        const promise = this.acceptClientSession(e.channel, this.disposeToken);
         this.clientSessionPromises.push(promise);
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         promise.then(() => {
             const index = this.clientSessionPromises.indexOf(promise);
             this.clientSessionPromises.splice(index, 1);
         });
     }
 
+    protected onForwardedPortConnecting(e: ForwardedPortConnectingEventArgs): void {
+        const channel = e.stream.channel;
+        const relayRequestMessage = channel.openMessage.convertTo(
+            new PortRelayConnectRequestMessage());
+
+        const isE2EEncryptionEnabled = this.enableE2EEncryption &&
+            relayRequestMessage.isE2EEncryptionRequested;
+        if (isE2EEncryptionEnabled) {
+            // Increase the max window size so that it is at least larger than the window
+            // size of one client channel.
+            channel.maxWindowSize = SshChannel.defaultMaxWindowSize * 2;
+
+            const serverCredentials: SshServerCredentials = {
+                publicKeys: [this.hostPrivateKey!]
+            };
+            const secureStream = new SecureStream(
+                e.stream,
+                serverCredentials);
+            secureStream.trace = this.trace;
+
+            // The client was already authenticated by the relay.
+            secureStream.onAuthenticating((authEvent) =>
+                authEvent.authenticationPromise = Promise.resolve({}));
+
+            // The client will connect to the secure stream after the channel is opened.
+            secureStream.connect().catch((err) => {
+                this.trace(TraceLevel.Error, 0, `Error connecting encrypted channel: ${err}`);
+            });
+
+            e.transformPromise = Promise.resolve(secureStream);
+        }
+
+        super.onForwardedPortConnecting(e);
+    }
+
     private async acceptClientSession(
-        hostSession: MultiChannelStream,
+        clientSessionChannel: SshChannel,
         cancellation: CancellationToken,
     ): Promise<void> {
         try {
-            let stream = await hostSession.acceptStream(
-                TunnelRelayTunnelHost.clientStreamChannelType,
-                cancellation,
-            );
+            const stream = new SshStream(clientSessionChannel);
             await this.connectAndRunClientSession(stream, cancellation);
         } catch (ex) {
-            this.trace(TraceLevel.Error, 0, `Error running client SSH session: ${ex}`);
+            if (!(ex instanceof CancellationError) || !cancellation.isCancellationRequested) {
+                this.trace(TraceLevel.Error, 0, `Error running client SSH session: ${ex}`);
+            }
         }
     }
 
@@ -169,30 +287,22 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             throw new CancellationError();
         }
 
-        let serverConfig = new SshSessionConfiguration();
-
-        // Always enable reconnect on client SSH server.
-        // When a client reconnects, relay service just opens another SSH channel of client-ssh-session-stream type for it.
-        serverConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
-        serverConfig.protocolExtensions.push(SshProtocolExtensionNames.sessionLatency);
-
-        serverConfig.addService(PortForwardingService);
-        let session = new SshServerSession(serverConfig, this.reconnectableSessions);
+        const session = SshHelpers.createSshServerSession(this.reconnectableSessions, (config) => {
+            config.addService(PortForwardingService);
+        });
         session.trace = this.trace;
         session.credentials = {
             publicKeys: [this.hostPrivateKey!],
         };
 
-        let tcs = new PromiseCompletionSource<void>();
-        cancellation.onCancellationRequested((e) => {
-            tcs.reject(new CancellationError());
-        });
-
+        const tcs = new PromiseCompletionSource<void>();
+        
         const authenticatingEventRegistration = session.onAuthenticating((e) => {
             this.onSshClientAuthenticating(e);
         });
         session.onClientAuthenticated(() => {
-            this.onSshClientAuthenticated(session);
+            // This call is async and will catch and log any async errors.
+            void this.onSshClientAuthenticated(session);
         });
         const requestRegistration = session.onRequest((e) => {
             this.onSshSessionRequest(e, session);
@@ -209,6 +319,9 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             const nodeStream = new NodeStream(stream);
             await session.connect(nodeStream);
             this.sshSessions.push(session);
+            cancellation.onCancellationRequested((e) => {
+                tcs.reject(new CancellationError());
+            });
             await tcs.promise;
         } finally {
             authenticatingEventRegistration.dispose();
@@ -232,16 +345,24 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
     }
 
-    private onSshClientAuthenticated(session: SshServerSession) {
-        let pfs = session.activateService(PortForwardingService);
-        let ports = this.tunnel?.ports ?? [];
-        ports.forEach(async (port) => {
+    private async onSshClientAuthenticated(session: SshServerSession) {
+        void this.startForwardingExistingPorts(session);
+    }
+
+    private async startForwardingExistingPorts(session: SshSession): Promise<void> {
+        const pfs = session.activateService(PortForwardingService);
+        pfs.forwardConnectionsToLocalPorts = this.forwardConnectionsToLocalPorts;
+
+        // Ports must be forwarded sequentially because the TS SSH lib
+        // does not yet support concurrent requests.
+        for (const port of this.tunnel?.ports ?? []) {
+            this.trace(TraceLevel.Verbose, 0, `Forwarding port ${port.portNumber}`);
             try {
                 await this.forwardPort(pfs, port);
             } catch (ex) {
                 this.traceError(`Error forwarding port ${port.portNumber}: ${ex}`);
             }
-        });
+        }
     }
 
     private onSshSessionRequest(e: SshRequestEventArgs<SessionRequestMessage>, session: any) {
@@ -267,7 +388,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
             return;
         }
-        let portForwardRequest = e.request as PortForwardChannelOpenMessage;
+        const portForwardRequest = e.request as PortForwardChannelOpenMessage;
         if (portForwardRequest.channelType === 'direct-tcpip') {
             if (!this.tunnel!.ports!.some((p) => p.portNumber === portForwardRequest.port)) {
                 this.trace(
@@ -277,7 +398,11 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                 );
                 e.failureReason = SshChannelOpenFailureReason.administrativelyProhibited;
             }
-        } else if (portForwardRequest.channelType !== 'forwarded-tcpip') {
+        } else if (portForwardRequest.channelType === 'forwarded-tcpip') {
+            const eventArgs = new ForwardedPortConnectingEventArgs(
+                portForwardRequest.port, false, new SshStream(e.channel));
+            super.onForwardedPortConnecting(eventArgs);
+        } else {
             // For forwarded-tcpip do not check remoteForwarders because they may not be updated yet.
             // There is a small time interval in forwardPort() between the port
             // being forwarded with forwardFromRemotePort and remoteForwarders updated.
@@ -304,15 +429,14 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             this.traceInfo('Client ssh session cancelled.');
         } else {
             this.traceError(
-                `Client ssh session closed unexpectely due to ${e.reason}, \"${e.message}\"\n${e.error}`,
+                `Client ssh session closed unexpectely due to ${e.reason}, "${e.message}"\n${e.error}`,
             );
         }
 
-        for (const key of Object.keys(this.remoteForwarders)) {
-            const forwarder = this.remoteForwarders[key];
+        for (const [key, forwarder] of this.remoteForwarders.entries()) {
             if (forwarder.session === session) {
                 forwarder.dispose();
-                delete this.remoteForwarders[key];
+                this.remoteForwarders.delete(key);
             }
         }
 
@@ -339,13 +463,52 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
     }
 
+    public async refreshPorts(): Promise<void> {
+        if (!this.tunnel || !this.managementClient) {
+            return;
+        }
+
+        const updatedTunnel = await this.managementClient.getTunnel(this.tunnel, undefined);
+        const updatedPorts = updatedTunnel?.ports ?? [];
+        this.tunnel.ports = updatedPorts;
+
+        let sessions: SshSession[] = this.sshSessions;
+        if (this.connectionProtocol === webSocketSubProtocolv2 && this.sshSession) {
+            // In the V2 protocol, ports are forwarded directly on the host session.
+            // (But even when the host is V2, some clients may still connect with V1.)
+            sessions = [...sessions, this.sshSession ];
+        }
+
+        const forwardPromises: Promise<any>[] = [];
+
+        for (const port of updatedPorts) {
+            for (const session of sessions.filter((s) => s.isConnected && s.sessionId)) {
+                const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
+                const forwarder = this.remoteForwarders.get(key.toString());
+                if (!forwarder) {
+                    const pfs = session.getService(PortForwardingService)!;
+                    forwardPromises.push(this.forwardPort(pfs, port));
+                }
+            }
+        }
+
+        for (const [key, forwarder] of Object.entries(this.remoteForwarders)) {
+            if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
+                this.remoteForwarders.delete(key);
+                forwarder.dispose();
+            }
+        }
+
+        await Promise.all(forwardPromises);
+    }
+
     /**
      * Disposes this tunnel session, closing all client connections, the host SSH session, and deleting the endpoint.
      */
     public async dispose(): Promise<void> {
         await super.dispose();
 
-        let promises: Promise<any>[] = Object.assign([], this.clientSessionPromises);
+        const promises: Promise<any>[] = Object.assign([], this.clientSessionPromises);
 
         // No new client session should be added because the channel requests are rejected when the tunnel host is disposed.
         this.clientSessionPromises.length = 0;
@@ -359,8 +522,8 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             promises.push(promise);
         }
 
-        for (const key of Object.keys(this.remoteForwarders)) {
-            this.remoteForwarders[key].dispose();
+        for (const forwarder of this.remoteForwarders.values()) {
+            forwarder.dispose();
         }
 
         // When client session promises finish, they remove the sessions from this.sshSessions

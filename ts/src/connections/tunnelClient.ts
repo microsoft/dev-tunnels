@@ -1,8 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { Duplex } from 'stream';
 import { TunnelConnectionMode, Tunnel } from '@microsoft/dev-tunnels-contracts';
-import { SshStream, CancellationToken } from '@microsoft/dev-tunnels-ssh';
+import { CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TunnelConnection } from './tunnelConnection';
 
@@ -23,11 +24,20 @@ export interface TunnelClient extends TunnelConnection {
     readonly forwardedPorts: ForwardedPortsCollection | undefined;
 
     /**
-     * A value indicating whether local connections for forwarded ports are accepted.
+     * Gets a value indicating whether local connections for forwarded ports are accepted.
      * Local connections are not accepted if the host process is not NodeJS (e.g. browser).
      * Default: true for NodeJS, false for browser.
      */
     acceptLocalConnectionsForForwardedPorts: boolean;
+
+    /**
+     * Gets or sets the local network interface address that the tunnel client listens on when
+     * accepting connections for forwarded ports. The default value is the loopback address
+     * (127.0.0.1). Applications may set this to the address indicating any interface (0.0.0.0)
+     * or to the address of a specific interface. The tunnel client supports both IPv4 and IPv6
+     * when listening on either loopback or any interface.
+     */
+    localForwardingHostAddress: string;
 
     /**
      * Connects to a tunnel.
@@ -49,7 +59,7 @@ export interface TunnelClient extends TunnelConnection {
     connectToForwardedPort(
         fowardedPort: number,
         cancellation?: CancellationToken,
-    ): Promise<SshStream>;
+    ): Promise<Duplex>;
 
     /**
      * Waits for the specified port to be forwarded by the remote host.

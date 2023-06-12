@@ -1,4 +1,4 @@
-﻿// <copyright file="ResourceStatus.cs" company="Microsoft">
+// <copyright file="ResourceStatus.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -30,6 +30,12 @@ public class ResourceStatus
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ulong? Limit { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional source of the <see cref="Limit"/>, or null if there is no limit.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LimitSource { get; set; }
 
     /// <summary>
     /// Implicitly converts a number value to a resource status (with unspecified limit).

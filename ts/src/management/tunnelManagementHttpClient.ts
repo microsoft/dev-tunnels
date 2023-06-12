@@ -100,7 +100,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * @param httpsAgent Optional agent that will be invoked for HTTPS requests to the tunnel
      * service.
      */
-    constructor(
+    public constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
         userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
@@ -200,7 +200,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
-        let tunnelId = tunnel.tunnelId;
+        const tunnelId = tunnel.tunnelId;
         if (tunnelId) {
             throw new Error('An ID may not be specified when creating a tunnel.');
         }
@@ -520,7 +520,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             `${tunnelsApiPath}/${tunnelName}${checkAvailablePath}`,
         );
-        let config: AxiosRequestConfig = {
+        const config: AxiosRequestConfig = {
             httpsAgent: this.httpsAgent,
         };
         return await this.request<boolean>('GET', uri, undefined, config);
@@ -529,7 +529,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private getResponseErrorMessage(error: AxiosError) {
         let errorMessage = '';
         if (error.response?.data) {
-            let problemDetails: ProblemDetails = error.response.data;
+            const problemDetails: ProblemDetails = error.response.data;
             if (problemDetails.title || problemDetails.detail) {
                 errorMessage = `Tunnel service error: ${problemDetails.title}`;
                 if (problemDetails.detail) {
@@ -593,7 +593,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         baseAddress = `${baseAddress.replace(/\/$/, '')}${path}`;
 
-        let optionsQuery = this.tunnelRequestOptionsToQueryString(options, query);
+        const optionsQuery = this.tunnelRequestOptionsToQueryString(options, query);
         if (optionsQuery) {
             baseAddress += `?${optionsQuery}`;
         }
@@ -620,7 +620,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         if (options?.additionalQueryParameters) {
-            for (let [paramName, paramValue] of Object.entries(options.additionalQueryParameters)) {
+            for (const [paramName, paramValue] of Object.entries(options.additionalQueryParameters)) {
                 if (query) {
                     query += `&${paramName}=${paramValue}`;
                 } else {
@@ -638,7 +638,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         accessTokenScopes?: string[],
     ): Promise<AxiosRequestConfig> {
         // Get access token header
-        let headers: { [name: string]: string } = {};
+        const headers: { [name: string]: string } = {};
 
         if (options && options.accessToken) {
             TunnelAccessTokenProperties.validateTokenExpiration(options.accessToken);
@@ -648,7 +648,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         if (!(tunnelAuthentication in headers) && this.userTokenCallback) {
-            let token = await this.userTokenCallback();
+            const token = await this.userTokenCallback();
             if (token) {
                 headers[tunnelAuthentication] = token;
             }
@@ -668,7 +668,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         const copyAdditionalHeaders = (additionalHeaders?: { [name: string]: string }) => {
             if (additionalHeaders) {
-                for (let [headerName, headerValue] of Object.entries(additionalHeaders)) {
+                for (const [headerName, headerValue] of Object.entries(additionalHeaders)) {
                     headers[headerName] = headerValue;
                 }
             }
@@ -681,7 +681,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         headers['User-Agent'] = `${userAgentPrefix}${this.userAgents} ${tunnelSdkUserAgent}`;
 
         // Get axios config
-        let config: AxiosRequestConfig = {
+        const config: AxiosRequestConfig = {
             headers,
             ...(this.httpsAgent && { httpsAgent: this.httpsAgent }),
         };
@@ -722,6 +722,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return {
             portNumber: tunnelPort.portNumber,
             protocol: tunnelPort.protocol,
+            isDefault: tunnelPort.isDefault,
             description: tunnelPort.description,
             tags: tunnelPort.tags,
             sshUser: tunnelPort.sshUser,
@@ -736,36 +737,36 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
         additionalQuery?: string,
     ) {
-        let queryOptions: { [name: string]: string[] } = {};
+        const queryOptions: { [name: string]: string[] } = {};
         const queryItems = [];
 
         if (options) {
             if (options.includePorts) {
-                queryOptions['includePorts'] = ['true'];
+                queryOptions.includePorts = ['true'];
             }
 
             if (options.includeAccessControl) {
-                queryOptions['includeAccessControl'] = ['true'];
+                queryOptions.includeAccessControl = ['true'];
             }
 
             if (options.tokenScopes) {
                 TunnelAccessControl.validateScopes(options.tokenScopes, undefined, true);
-                queryOptions['tokenScopes'] = options.tokenScopes;
+                queryOptions.tokenScopes = options.tokenScopes;
             }
 
             if (options.forceRename) {
-                queryOptions['forceRename'] = ['true'];
+                queryOptions.forceRename = ['true'];
             }
 
             if (options.tags) {
-                queryOptions['tags'] = options.tags;
+                queryOptions.tags = options.tags;
                 if (options.requireAllTags) {
-                    queryOptions['allTags'] = ['true'];
+                    queryOptions.allTags = ['true'];
                 }
             }
 
             if (options.limit) {
-                queryOptions['limit'] = [options.limit.toString()];
+                queryOptions.limit = [options.limit.toString()];
             }
 
             queryItems.push(
@@ -809,7 +810,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             config.method = method;
             config.data = data;
 
-            let response = await axios.request<TResult>(config);
+            const response = await axios.request<TResult>(config);
             traceResponse(response);
 
             // This assumes that TResult is always boolean for DELETE requests.
@@ -840,7 +841,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     private traceHeaders(headers: { [key: string]: unknown }): void {
-        for (let [headerName, headerValue] of Object.entries(headers)) {
+        for (const [headerName, headerValue] of Object.entries(headers)) {
             if (headerName === 'Authorization') {
                 this.traceAuthorizationHeader(headerName, headerValue as string);
                 return;

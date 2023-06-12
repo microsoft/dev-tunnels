@@ -1,5 +1,6 @@
 {
     "eslint.workingDirectories": [
         "ts"
-    ]
+    ],
+    "rust-analyzer.cargo.features": ["connections", "vendored-openssl"],
 }

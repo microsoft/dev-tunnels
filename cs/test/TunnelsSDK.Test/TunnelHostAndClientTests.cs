@@ -1,23 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Claims;
-using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DevTunnels.Connections;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Algorithms;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Tcp;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Test.Mocks;
 using Nerdbank.Streams;
 using Xunit;
-using Microsoft.DevTunnels.Connections;
 
 namespace Microsoft.DevTunnels.Test;
 
@@ -259,7 +258,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         var tunnel = CreateRelayTunnel();
         await Assert.ThrowsAsync<ArgumentNullException>(
-            "foobar", 
+            "foobar",
             () => ConnectRelayClientAsync(relayClient, tunnel, (_) => throw new ArgumentNullException("foobar")));
         Assert.IsType<ArgumentNullException>(await disconnectedException.Task);
 
@@ -327,10 +326,13 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         await clientConnected.Task;
     }
 
-    [Fact]
-    public async Task ConnectRelayClientAddPort()
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("0.0.0.0")]
+    public async Task ConnectRelayClientAddPort(string localAddress)
     {
         var relayClient = new TunnelRelayTunnelClient(TestTS);
+        relayClient.LocalForwardingHostAddress = IPAddress.Parse(localAddress);
 
         var tunnel = CreateRelayTunnel();
         using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);
@@ -355,6 +357,46 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     }
 
     [Fact]
+    public async Task ForwardedPortConnectingRetrieveStream() {
+        var testPort = GetAvailableTcpPort();
+        var managementClient = new MockTunnelManagementClient();
+        managementClient.HostRelayUri = MockHostRelayUri;
+        SshStream hostStream = null;
+
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        relayHost.ForwardConnectionsToLocalPorts = false;
+        relayHost.ForwardedPortConnecting += (object sender, ForwardedPortConnectingEventArgs e) => {
+            if (e.Port == testPort) {
+                hostStream = e.Stream;
+            }
+        };
+
+        var tunnel = CreateRelayTunnel(new int[] { testPort } );
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
+
+        using var multiChannelStream = await StartRelayHostAsync(relayHost, tunnel);
+        using var clientRelayStream = await multiChannelStream.OpenStreamAsync(
+            TunnelRelayTunnelHost.ClientStreamChannelType);
+
+
+        using var clientSshSession = CreateSshClientSession();
+        var pfs = clientSshSession.ActivateService<PortForwardingService>();
+        pfs.AcceptLocalConnectionsForForwardedPorts = false;
+
+
+        await clientSshSession.ConnectAsync(clientRelayStream).WithTimeout(Timeout);
+        var clientCredentials = new SshClientCredentials("tunnel", password: null);
+        await clientSshSession.AuthenticateAsync(clientCredentials);
+
+
+        await clientSshSession.WaitForForwardedPortAsync(testPort, TimeoutToken);
+        using var sshStream = await clientSshSession.ConnectToForwardedPortAsync(testPort, TimeoutToken);
+
+        Assert.NotNull(sshStream);
+        Assert.NotNull(hostStream);
+    }
+
+    [Fact]
     public async Task ConnectRelayClientAddPortInUse()
     {
         var relayClient = new TunnelRelayTunnelClient(TestTS);
@@ -372,10 +414,10 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             using var remotePortStreamer = await pfs.StreamFromRemotePortAsync(
                 IPAddress.Loopback, testPort, CancellationToken.None);
             Assert.NotNull(remotePortStreamer);
-            Assert.NotEqual(testPort, remotePortStreamer.RemotePort);
 
-            // The next available port number should have been selected.
-            Assert.Equal(testPort + 1, remotePortStreamer.RemotePort);
+            // The port number should be the same because the host does not know
+            // when the client chose a different port number due to the conflict.
+            Assert.Equal(testPort, remotePortStreamer.RemotePort);
         }
         finally
         {

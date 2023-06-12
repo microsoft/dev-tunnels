@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -27,6 +29,14 @@ public interface ITunnelHost : IAsyncDisposable
     /// Null if not yet connected or disconnection was caused by disposing of this object.
     /// </summary>
     Exception? DisconnectException { get; }
+
+    /// <summary>
+    /// A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+    /// </summary>
+    /// <remarks>
+    /// The default value is true.
+    /// </remarks>
+    bool ForwardConnectionsToLocalPorts { get; set; }
 
     /// <summary>
     /// Connects to a tunnel as a host and starts accepting incoming connections
@@ -67,4 +77,14 @@ public interface ITunnelHost : IAsyncDisposable
     /// Connection status changed event.
     /// </summary>
     event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
+
+    /// <summary>
+    /// An event which fires when a connection is made to the forwarded port.
+    /// </summary>
+    /// <remarks>
+    /// Set <see cref="ITunnelHost.ForwardConnectionsToLocalPorts"/> to false if a local TCP socket
+    /// should not be created for the connection stream. When this is set only the
+    /// ForwardedPortConnecting event will be raised.
+    /// </remarks>
+    event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 }

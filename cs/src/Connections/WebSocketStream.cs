@@ -66,6 +66,11 @@ namespace Microsoft.DevTunnels.Connections
         }
 
         /// <summary>
+        /// Gets the websocket sub-protocol.
+        /// </summary>
+        public string SubProtocol => this.socket.SubProtocol!;
+
+        /// <summary>
         /// Current web socket close status or null if not closed.
         /// </summary>
         public WebSocketCloseStatus? CloseStatus

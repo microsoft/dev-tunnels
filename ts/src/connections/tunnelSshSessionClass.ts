@@ -13,7 +13,7 @@ import { TunnelConnection } from './tunnelConnection';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 
-type Constructor<T = {}> = new (...args: any[]) => T;
+type Constructor<T = object> = new (...args: any[]) => T;
 type CloseableSshSession = {
     readonly isClosed: boolean;
     close(reason?: SshDisconnectReason, message?: string, error?: Error): Promise<void>;

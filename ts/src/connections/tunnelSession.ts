@@ -55,13 +55,16 @@ export interface TunnelSession {
     /**
      * Creates a stream to the tunnel for the tunnel session.
      */
-    createSessionStream(cancellation: CancellationToken): Promise<Stream>;
+    createSessionStream(
+        cancellation: CancellationToken,
+    ): Promise<{ stream: Stream, protocol: string }>;
 
     /**
      * Configures the tunnel session with the given stream.
      */
     configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void>;

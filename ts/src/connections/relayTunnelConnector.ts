@@ -31,7 +31,7 @@ const maxBrowserReconnectAttempts = 5;
  * Tunnel connector that connects a tunnel session to a web socket stream in the tunnel Relay service.
  */
 export class RelayTunnelConnector implements TunnelConnector {
-    constructor(private readonly tunnelSession: TunnelSession) {}
+    public constructor(private readonly tunnelSession: TunnelSession) {}
 
     private get trace(): Trace {
         return this.tunnelSession.trace;
@@ -68,13 +68,12 @@ export class RelayTunnelConnector implements TunnelConnector {
             throw error;
         }
 
-        let attempt = 0;
         let browserReconnectAttempt = 0;
         let attemptDelayMs: number = reconnectInitialDelayMs;
         let isTunnelAccessTokenRefreshed = false;
         let isDelayNeeded = true;
         let errorDescription: string | undefined;
-        while (true) {
+        for (let attempt = 0; ; attempt++) {
             if (cancellation.isCancellationRequested) {
                 throw new CancellationError();
             }
@@ -118,15 +117,18 @@ export class RelayTunnelConnector implements TunnelConnector {
                 }
             }
 
-            attempt++;
             isDelayNeeded = true;
             let stream: Stream | undefined = undefined;
             errorDescription = undefined;
             disconnectReason = SshDisconnectReason.connectionLost;
             error = undefined;
             try {
-                stream = await this.tunnelSession.createSessionStream(cancellation);
-                await this.tunnelSession.configureSession(stream, isReconnect, cancellation);
+                const streamAndProtocol = await this.tunnelSession.createSessionStream(
+                    cancellation);
+                stream = streamAndProtocol.stream;
+
+                await this.tunnelSession.configureSession(
+                    stream, streamAndProtocol.protocol, isReconnect, cancellation);
 
                 stream = undefined;
                 disconnectReason = undefined;
@@ -174,7 +176,7 @@ export class RelayTunnelConnector implements TunnelConnector {
                     const statusCode = (e as RelayConnectionError).errorContext?.statusCode;
                     const statusCodeText = statusCode ? ` (${statusCode})` : '';
                     switch (errorDescription) {
-                        case 'error.relayClientUnauthorized':
+                        case 'error.relayClientUnauthorized': {
                             const notAuthorizedText = 'Not authorized' + statusCodeText;
                             if (isTunnelAccessTokenRefreshed) {
                                 // We've already refreshed the tunnel access token once.
@@ -205,7 +207,7 @@ export class RelayTunnelConnector implements TunnelConnector {
                             errorDescription =
                                 'The tunnel access token was no longer valid and had just been refreshed.';
                             continue;
-
+                        }
                         case 'error.relayClientForbidden':
                             throwError(
                                 `Forbidden${statusCodeText}. Provide a fresh tunnel access token with '${this.tunnelSession.tunnelAccessScope}' scope.`,
@@ -226,14 +228,14 @@ export class RelayTunnelConnector implements TunnelConnector {
 
                         case 'error.tooManyRequests':
                             errorDescription = `Rate limit exceeded${statusCodeText}. Too many requests in a given amount of time.`;
-                            if (attempt > 4) {
+                            if (attempt > 3) {
                                 throwError(errorDescription);
                             }
 
                             if (attemptDelayMs < maxReconnectDelayMs) {
                                 attemptDelayMs = attemptDelayMs << 1;
                             }
-                            break;
+                            continue;
 
                         default:
                             if (errorDescription?.startsWith('error.relayConnectionError ')) {

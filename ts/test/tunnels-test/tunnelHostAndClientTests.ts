@@ -2,9 +2,13 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
-import { suite, test, slow, timeout } from '@testdeck/mocha';
+import { until } from './promiseUtils';
+import { suite, test, params, slow, timeout } from '@testdeck/mocha';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
-import { PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
+import {
+    ForwardedPortConnectingEventArgs,
+    PortForwardingService,
+} from '@microsoft/dev-tunnels-ssh-tcp';
 import {
     Tunnel,
     TunnelPort,
@@ -130,7 +134,7 @@ export class TunnelHostAndClientTests {
     private async connectRelayClient(
         relayClient: TestTunnelRelayTunnelClient,
         tunnel: Tunnel,
-        clientStreamFactory?: (stream: Stream) => Promise<Stream>,
+        clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
     ): Promise<SshServerSession> {
         const [serverStream, clientStream] = await DuplexStream.createStreams();
         const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
@@ -156,7 +160,7 @@ export class TunnelHostAndClientTests {
     private async startRelayHost(
         relayHost: TunnelRelayTunnelHost,
         tunnel: Tunnel,
-        clientStreamFactory?: (stream: Stream) => Promise<Stream>,
+        clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
     ): Promise<TestMultiChannelStream> {
         const [serverStream, clientStream] = await DuplexStream.createStreams();
 
@@ -164,7 +168,7 @@ export class TunnelHostAndClientTests {
         let serverConnectPromise = multiChannelStream.connect();
 
         relayHost.streamFactory = new MockTunnelRelayStreamFactory(
-            TunnelRelayTunnelHost.webSocketSubProtocol,
+            TunnelRelayTunnelHost.webSocketSubProtocol, 
             clientStream,
             clientStreamFactory,
         );
@@ -217,7 +221,7 @@ export class TunnelHostAndClientTests {
                 });
             }
 
-            return stream;
+            return { stream, protocol: TunnelRelayTunnelClient.webSocketSubProtocol };
         });
 
         assert.strictEqual(await connected, undefined);
@@ -288,9 +292,12 @@ export class TunnelHostAndClientTests {
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
     }
 
-    @test
-    public async connectRelayClientAddPort() {
-        let relayClient = new TestTunnelRelayTunnelClient();
+    @params({ localAddress: '0.0.0.0' })
+    @params({ localAddress: '127.0.0.1' })
+    @params.naming((params) => 'connectRelayClientAddPort: ' + params.localAddress)
+    public async connectRelayClientAddPort({ localAddress }: { localAddress: string }) {
+        const relayClient = new TestTunnelRelayTunnelClient();
+        relayClient.localForwardingHostAddress = localAddress;
         relayClient.acceptLocalConnectionsForForwardedPorts = false;
 
         let tunnel = this.createRelayTunnel();
@@ -329,6 +336,46 @@ export class TunnelHostAndClientTests {
     }
 
     @test
+    public async forwardedPortConnectingRetrieveStream() {
+        const testPort = 9986;
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        relayHost.forwardConnectionsToLocalPorts = false;
+
+        let hostStream = null;
+        relayHost.forwardedPortConnecting((e: ForwardedPortConnectingEventArgs) => {
+            if (e.port === testPort) {
+                hostStream = e.stream;
+            }
+        });
+
+        const tunnel = this.createRelayTunnel([testPort]);
+        await managementClient.createTunnel(tunnel);
+        const multiChannelStream = await this.startRelayHost(relayHost, tunnel);
+        const clientRelayStream = await multiChannelStream.openStream(
+            TunnelRelayTunnelHost.clientStreamChannelType,
+        );
+
+        const clientSshSession = this.createSshClientSession();
+        const pfs = clientSshSession.activateService(PortForwardingService);
+        pfs.acceptLocalConnectionsForForwardedPorts = false;
+        await clientSshSession.connect(new NodeStream(clientRelayStream));
+
+        const clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+        await clientSshSession.authenticate(clientCredentials);
+
+        await pfs.waitForForwardedPort(testPort);
+        const clientStream =  await pfs.connectToForwardedPort(testPort);
+
+        assert(clientStream);
+        assert(hostStream);
+
+        clientSshSession.dispose();
+        multiChannelStream.dispose();
+    }
+
+    @test
     public async connectRelayClientAddPortInUse() {
         let relayClient = new TestTunnelRelayTunnelClient();
 
@@ -343,8 +390,9 @@ export class TunnelHostAndClientTests {
             assert.notStrictEqual(remotePortStreamer, null);
             assert.notStrictEqual(testPort, remotePortStreamer?.remotePort);
 
-            // The next available port number should have been selected.
-            assert.strictEqual(testPort + 1, remotePortStreamer?.remotePort);
+            // The port number should be the same because the host does not know
+            // when the client chose a different port number due to the conflict.
+            assert.strictEqual(testPort, remotePortStreamer?.remotePort);
         });
         socket.destroy();
     }
@@ -422,7 +470,7 @@ export class TunnelHostAndClientTests {
                 });
             }
 
-            return stream;
+            return { stream, protocol: TunnelRelayTunnelHost.webSocketSubProtocol };
         });
 
         assert.strictEqual(await connected, undefined);
@@ -510,25 +558,26 @@ export class TunnelHostAndClientTests {
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
         let clientSshSession = this.createSshClientSession();
-        await clientSshSession.connect(new NodeStream(clientRelayStream));
-        let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
-        await clientSshSession.authenticate(clientCredentials);
+        try {
+            await clientSshSession.connect(new NodeStream(clientRelayStream));
+            let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+            await clientSshSession.authenticate(clientCredentials);
 
-        while (Object.keys(relayHost.remoteForwarders).length < 1) {
-            await new Promise((r) => setTimeout(r, 2000));
+            await until(() => relayHost.remoteForwarders.size === 1, 5000);
+
+            assert.strictEqual(tunnel.ports!.length, 1);
+            const forwardedPort = tunnel.ports![0];
+
+            let forwarder = relayHost.remoteForwarders.get('9984');
+            if (forwarder) {
+                assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
+                assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);
+            }
+        } finally {
+            clientRelayStream.destroy();
+            clientSshSession.dispose();
+            await relayHost.dispose();
         }
-
-        assert.strictEqual(tunnel.ports!.length, 1);
-        const forwardedPort = tunnel.ports![0];
-
-        let forwarder = relayHost.remoteForwarders[9984];
-        if (forwarder) {
-            assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
-            assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);
-        }
-        clientRelayStream.destroy();
-        clientSshSession.dispose();
-        await relayHost.dispose();
         assert.strictEqual(relayHost.disconnectError, undefined);
         assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
     }
@@ -586,7 +635,7 @@ export class TunnelHostAndClientTests {
         assert.strictEqual(tunnel.ports!.length, 1);
         const forwardedPort = tunnel.ports![0];
 
-        let forwarder = relayHost.remoteForwarders[9985];
+        let forwarder = relayHost.remoteForwarders.get('9985');
         if (forwarder) {
             assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
             assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);
@@ -608,20 +657,21 @@ export class TunnelHostAndClientTests {
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
         let clientSshSession = this.createSshClientSession();
-        await clientSshSession.connect(new NodeStream(clientRelayStream));
-        let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
-        await clientSshSession.authenticate(clientCredentials);
+        try {
+            await clientSshSession.connect(new NodeStream(clientRelayStream));
+            let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+            await clientSshSession.authenticate(clientCredentials);
 
-        while (Object.keys(relayHost.remoteForwarders).length < 1) {
-            await new Promise((r) => setTimeout(r, 2000));
+            await until(() => relayHost.remoteForwarders.size === 1, 5000);
+            await managementClient.deleteTunnelPort(tunnel, 9986);
+            await relayHost.refreshPorts();
+
+            assert.strictEqual(tunnel.ports!.length, 0);
+            assert.strictEqual(relayHost.remoteForwarders.size, 1);
+        } finally {
+            clientSshSession.dispose();
+            await relayHost.dispose();
         }
-        await managementClient.deleteTunnelPort(tunnel, 9986);
-        await relayHost.refreshPorts();
-
-        assert.strictEqual(tunnel.ports!.length, 0);
-
-        assert.notStrictEqual(relayHost.remoteForwarders, {});
-        clientSshSession.dispose();
     }
 
     @test
@@ -631,13 +681,16 @@ export class TunnelHostAndClientTests {
 
         // Reconnect the tunnel host
         const reconnectedHostStream = new PromiseCompletionSource<Stream>();
-        relayHost.streamFactory = MockTunnelRelayStreamFactory.from(reconnectedHostStream);
+        relayHost.streamFactory = MockTunnelRelayStreamFactory.from(
+            reconnectedHostStream,
+            TunnelRelayTunnelHost.webSocketSubProtocol);
 
         const reconnectedClientMultiChannelStream = new PromiseCompletionSource<
             TestMultiChannelStream
         >();
         relayClient.streamFactory = MockTunnelRelayStreamFactory.fromMultiChannelStream(
             reconnectedClientMultiChannelStream,
+            TunnelRelayTunnelClient.webSocketSubProtocol,
         );
 
         clientMultiChannelStream.dropConnection();
@@ -723,6 +776,7 @@ export class TunnelHostAndClientTests {
         const relayClient = new TestTunnelRelayTunnelClient();
         relayClient.streamFactory = MockTunnelRelayStreamFactory.fromMultiChannelStream(
             clientMultiChannelStream,
+            TunnelRelayTunnelClient.webSocketSubProtocol,
             (s) => {
                 clientStream = s;
             },

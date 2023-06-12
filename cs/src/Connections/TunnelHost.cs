@@ -13,10 +13,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Algorithms;
-using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -26,11 +26,15 @@ namespace Microsoft.DevTunnels.Connections;
 public abstract class TunnelHost : TunnelConnection, ITunnelHost
 {
     internal const string RefreshPortsRequestType = "RefreshPorts";
+    private bool forwardConnectionsToLocalPorts = true;
 
     /// <summary>
     /// Sessions created between this host and clients. Lock on this hash set to be thread-safe.
     /// </summary>
     protected HashSet<SshServerSession> sshSessions = new();
+
+    /// <inheritdoc />
+    public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelHost" /> class.
@@ -42,9 +46,9 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     /// <summary>
     /// Enumeration of sessions created between this host and clients. Thread safe.
     /// </summary>
-    protected IEnumerable<SshServerSession> SshSessions 
-    { 
-        get 
+    protected IEnumerable<SshServerSession> SshSessions
+    {
+        get
         {
             lock (this.sshSessions)
             {
@@ -53,10 +57,17 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         }
     }
 
+    /// <inheritdoc/>
+    public string? ConnectionProtocol { get; protected set; }
+
     /// <summary>
     /// Port Forwarders between host and clients
     /// </summary>
-    public ConcurrentDictionary<SessionPortKey, RemotePortForwarder> RemoteForwarders { get; } = new ConcurrentDictionary<SessionPortKey, RemotePortForwarder>();
+    /// <remarks>
+    /// This property is public for testing purposes, and may be removed in the future.
+    /// </remarks>
+    public ConcurrentDictionary<SessionPortKey, RemotePortForwarder> RemoteForwarders { get; }
+        = new ConcurrentDictionary<SessionPortKey, RemotePortForwarder>();
 
     /// <summary>
     /// Private key used for connections.
@@ -65,6 +76,19 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
 
     /// <inheritdoc />
     protected override string TunnelAccessScope => TunnelAccessScopes.Host;
+
+    /// <inheritdoc />
+    public bool ForwardConnectionsToLocalPorts
+    {
+        get => this.forwardConnectionsToLocalPorts;
+        set
+        {
+            if (value != this.forwardConnectionsToLocalPorts)
+            {
+                this.forwardConnectionsToLocalPorts = value;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public async Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
@@ -86,8 +110,6 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         TunnelPort port,
         CancellationToken cancellation)
     {
-        var sessionId = Requires.NotNull(pfs.Session.SessionId!, nameof(pfs.Session.SessionId));
-
         var portNumber = (int)port.PortNumber;
 
         if (pfs.LocalForwardedPorts.Any((p) => p.LocalPort == portNumber))
@@ -118,7 +140,7 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
 
         if (forwarder == null)
         {
-            // The forwarding request was rejected by the client.
+            // The forwarding request was rejected by the relay (V2) or client (V1).
             return;
         }
 
@@ -128,60 +150,17 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         // its remoteConnectors whether the port is being forwarded.
         // Disposing of the RemotePortForwarder stops the forwarding and removes the remote connector
         // from PFS.remoteConnectors.
+        //
+        // Note the session ID may be null here in V2 protocol, when one (possibly unencrypted)
+        // session is shared by all clients.
         RemoteForwarders.TryAdd(
-            new SessionPortKey(sessionId, (ushort)forwarder.LocalPort),
+            new SessionPortKey(pfs.Session.SessionId, (ushort)forwarder.LocalPort),
             forwarder);
         return;
     }
 
-
     /// <inheritdoc />
-    public async Task RefreshPortsAsync(CancellationToken cancellation)
-    {
-        if (Tunnel == null || ManagementClient == null)
-        {
-            return;
-        }
-
-        var updatedTunnel = await ManagementClient.GetTunnelAsync(
-            Tunnel, new TunnelRequestOptions { IncludePorts = true });
-
-        var updatedPorts = updatedTunnel?.Ports ?? Array.Empty<TunnelPort>();
-        Tunnel.Ports = updatedPorts;
-
-        var forwardTasks = new List<Task>();
-
-        foreach (var port in updatedPorts)
-        {
-            foreach (var session in SshSessions
-                .Where((s) => s.IsConnected && s.SessionId != null))
-            {
-                var key = new SessionPortKey(session.SessionId!, port.PortNumber);
-                if (!RemoteForwarders.ContainsKey(key))
-                {
-                    // Overlapping refresh operations could cause duplicate forward requests to be
-                    // sent to clients, but clients should ignore the duplicate requests.
-                    var pfs = session.GetService<PortForwardingService>() !;
-                    forwardTasks.Add(ForwardPortAsync(pfs, port, cancellation));
-                }
-            }
-        }
-
-        foreach (var forwarder in RemoteForwarders)
-        {
-            if (!updatedPorts.Any((p) => p.PortNumber == forwarder.Value.LocalPort))
-            {
-                // Since RemoteForwarders is a concurrent dictionary, overlapping refresh
-                // operations will only be able to remove and dispose a forwarder once.
-                if (RemoteForwarders.TryRemove(forwarder.Key, out _))
-                {
-                    forwarder.Value.Dispose();
-                }
-            }
-        }
-
-        await Task.WhenAll(forwardTasks);
-    }
+    public abstract Task RefreshPortsAsync(CancellationToken cancellation);
 
     /// <summary>
     /// Add client SSH session. Duplicates are ignored.
@@ -194,6 +173,15 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
         {
             this.sshSessions.Add(session);
         }
+    }
+
+    /// <summary>
+    /// Invoked when a forwarded port is connecting
+    /// </summary>
+    protected virtual void OnForwardedPortConnecting(
+        object? sender, ForwardedPortConnectingEventArgs e)
+    {
+        this.ForwardedPortConnecting?.Invoke(this, e);
     }
 
     /// <summary>

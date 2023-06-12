@@ -5,7 +5,9 @@ These instructions assume you are using vscode for development as SDK is configu
 1. Clone this repo and open the `java` folder in vscode.
 2. Install the recommended extension pack "Extension Pack for Java"
 3. The extension will prompt you to install a JDK. Choose JDK version 11 (LTS).
-4. Once you have the extension and JDK installed, run `mvn test` (see next section for test setup).
+4. Download and [install Maven](https://maven.apache.org/install.html).
+   - 👉 You may need to set up [M2_HOME and/or additional environment variables](https://www.tutorialspoint.com/maven/maven_environment_setup.htm) manually.
+5. Once you have the extension and JDK installed, run `mvn test` (see next section for test setup).
 
 ### Testing
 1. Get a user token using the CLI command: `user show --verbose`

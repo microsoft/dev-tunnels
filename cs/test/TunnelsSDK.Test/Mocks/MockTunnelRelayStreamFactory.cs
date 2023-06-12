@@ -17,16 +17,17 @@ public class MockTunnelRelayStreamFactory : ITunnelRelayStreamFactory
 
     public Func<string, Task<Stream>> StreamFactory { get; set; }
 
-    public Task<Stream> CreateRelayStreamAsync(
+    public async Task<(Stream, string)> CreateRelayStreamAsync(
         Uri relayUri,
         string accessToken,
-        string connectionType,
+        string[] subprotocols,
         CancellationToken cancellation)
     {
         Assert.NotNull(relayUri);
         Assert.NotNull(accessToken);
-        Assert.Equal(this.connectionType, connectionType);
+        Assert.Contains(this.connectionType, subprotocols);
 
-        return StreamFactory(accessToken);
+        var stream = await StreamFactory(accessToken);
+        return (stream, this.connectionType);
     }
 }

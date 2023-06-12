@@ -4,7 +4,9 @@
 // </copyright>
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -29,6 +31,7 @@ namespace Microsoft.DevTunnels.Management
         private const string ApiV1Path = "/api/v1";
         private const string TunnelsApiPath = ApiV1Path + "/tunnels";
         private const string SubjectsApiPath = ApiV1Path + "/subjects";
+        private const string UserLimitsApiPath = ApiV1Path + "/userlimits";
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
         private const string ClustersPath = ApiV1Path + "/clusters";
@@ -55,7 +58,7 @@ namespace Microsoft.DevTunnels.Management
         };
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
-            TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Visual-Studio-Tunnel-Service-SDK")!;
+            TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
 
         private readonly HttpClient httpClient;
         private readonly Func<Task<AuthenticationHeaderValue?>> userTokenCallback;
@@ -744,29 +747,8 @@ namespace Microsoft.DevTunnels.Management
             {
                 foreach (var scope in accessTokenScopes)
                 {
-                    string? accessToken = null;
-                    foreach (var scopeAndToken in tunnel.AccessTokens)
+                    if (tunnel.TryGetValidAccessToken(scope, out string? accessToken))
                     {
-                        // Each key may be either a single scope or space-delimited list of scopes.
-                        if (scopeAndToken.Key.IndexOf(' ') > 0)
-                        {
-                            var scopes = scopeAndToken.Key.Split(' ');
-                            if (scopes.Contains(scope))
-                            {
-                                accessToken = scopeAndToken.Value;
-                                break;
-                            }
-                        }
-                        else if (scopeAndToken.Key == scope)
-                        {
-                            accessToken = scopeAndToken.Value;
-                            break;
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(accessToken))
-                    {
-                        TunnelAccessTokenProperties.ValidateTokenExpiration(accessToken);
                         authHeader = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);
                         break;
@@ -1169,6 +1151,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 PortNumber = tunnelPort.PortNumber,
                 Protocol = tunnelPort.Protocol,
+                IsDefault = tunnelPort.IsDefault,
                 Description = tunnelPort.Description,
                 Tags = tunnelPort.Tags,
                 Options = tunnelPort.Options,
@@ -1226,6 +1209,19 @@ namespace Microsoft.DevTunnels.Management
                 subjects,
                 cancellation);
             return resolvedSubjects!;
+        }
+
+        /// <inheritdoc/>
+        public async Task<NamedRateStatus[]> ListUserLimitsAsync(CancellationToken cancellation = default)
+        {
+            var userLimits = await SendRequestAsync<NamedRateStatus[]>(
+                HttpMethod.Get,
+                clusterId: null,
+                UserLimitsApiPath,
+                query: null,
+                options: null,
+                cancellation);
+            return userLimits!;
         }
 
         /// <inheritdoc/>

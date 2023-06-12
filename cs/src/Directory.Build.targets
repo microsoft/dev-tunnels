@@ -22,4 +22,19 @@
         <Exec Command="xmldocmd $(TargetPath) docs $(DocumentationReferenceAssemblies) --skip-unbrowsable" WorkingDirectory="$(MSBuildThisFileDirectory)" />
     </Target>
 
+    <Target 
+		Name="CollectSymbols" 
+		AfterTargets="SignFiles"
+		Condition=" $(TargetPath) != '' AND $(SymbolsOutputPath) != '' AND $(Pdb2PdbExe) != '' "
+	>
+		<PropertyGroup>
+			<_PdbOutputDir>$(SymbolsOutputPath)$(TargetFramework)</_PdbOutputDir>
+			<_PdbOutputPath>$(_PdbOutputDir)\$(TargetName).pdb</_PdbOutputPath>			
+		</PropertyGroup>
+
+		<MakeDir Directories="$(_PdbOutputDir)" />
+		<Exec Command='"$(Pdb2PdbExe)" "$(TargetPath)" /out "$(_PdbOutputPath)"' IgnoreExitCode="false" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(_PdbOutputDir)" UseHardlinksIfPossible="true" />
+	</Target>
+
 </Project>

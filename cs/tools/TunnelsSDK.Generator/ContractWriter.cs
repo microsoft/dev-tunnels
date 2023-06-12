@@ -1,17 +1,21 @@
-﻿// <copyright file="ContractWriter.cs" company="Microsoft">
+// <copyright file="ContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
 
-using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
 
 namespace Microsoft.DevTunnels.Generator;
 
 internal abstract class ContractWriter
 {
+    private static readonly Regex paragraphBreakRegex = new Regex(@" *\<para */\> *");
+
     protected readonly string repoRoot;
     protected readonly string csNamespace;
 
@@ -64,23 +68,53 @@ internal abstract class ContractWriter
 
     protected static IEnumerable<string> WrapComment(string comment, int wrapColumn)
     {
-        while (comment.Length > wrapColumn)
+        var isFirst = true;
+        foreach (var paragraph in paragraphBreakRegex.Split(comment))
         {
-            var i = wrapColumn;
-            while (i > 0 && comment[i] != ' ')
+            if (isFirst)
             {
-                i--;
+                isFirst = false;
+            }
+            else
+            {
+                // Insert a blank line between paragraphs.
+                yield return string.Empty;
             }
 
-            if (i == 0)
+            comment = paragraph;
+            while (comment.Length > wrapColumn)
             {
-                i = comment.IndexOf(' ');
+                var i = wrapColumn;
+                while (i > 0 && comment[i] != ' ')
+                {
+                    i--;
+                }
+
+                if (i == 0)
+                {
+                    i = comment.IndexOf(' ');
+                }
+
+                yield return comment.Substring(0, i).TrimEnd();
+                comment = comment.Substring(i + 1);
             }
 
-            yield return comment.Substring(0, i).TrimEnd();
-            comment = comment.Substring(i + 1);
+            yield return comment.TrimEnd();
         }
+    }
 
-        yield return comment.TrimEnd();
+    protected static AttributeData? GetAttribute(ISymbol symbol, string attributeName)
+    {
+        return symbol.GetAttributes().FirstOrDefault((a) => a.AttributeClass?.Name == attributeName);
+    }
+
+    protected static AttributeData? GetObsoleteAttribute(ISymbol symbol)
+    {
+        return GetAttribute(symbol, nameof(ObsoleteAttribute));
+    }
+
+    protected static string? GetObsoleteMessage(AttributeData? obsoleteAttribute)
+    {
+        return obsoleteAttribute?.ConstructorArguments.FirstOrDefault().Value?.ToString();
     }
 }

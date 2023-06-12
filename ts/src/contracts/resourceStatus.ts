@@ -20,4 +20,10 @@ export interface ResourceStatus {
      * details about the limit in the response body.
      */
     limit?: number;
+
+    /**
+     * Gets or sets an optional source of the {@link ResourceStatus.limit}, or null if
+     * there is no limit.
+     */
+    limitSource?: string;
 }

@@ -11,12 +11,14 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DevTunnels.Connections.Messages;
+using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
-using Microsoft.DevTunnels.Contracts;
-using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh.Tcp.Events;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -27,9 +29,15 @@ namespace Microsoft.DevTunnels.Connections;
 public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 {
     /// <summary>
-    /// Web socket sub-protocol to connect to the tunnel relay endpoint.
+    /// Web socket sub-protocol to connect to the tunnel relay endpoint with v1 host protocol.
     /// </summary>
     public const string WebSocketSubProtocol = "tunnel-relay-host";
+
+    /// <summary>
+    /// Web socket sub-protocol to connect to the tunnel relay endpoint with v2 host protocol.
+    /// (The "-dev" suffix will be dropped when the v2 protocol is stable.)
+    /// </summary>
+    public const string WebSocketSubProtocolV2 = "tunnel-relay-host-v2-dev";
 
     /// <summary>
     /// Ssh channel type in host relay ssh session where client session streams are passed.
@@ -40,7 +48,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     private readonly string hostId;
     private readonly ICollection<SshServerSession> reconnectableSessions = new List<SshServerSession>();
 
-    private MultiChannelStream? hostSession;
+    private SshClientSession? hostSession;
     private Uri? relayUri;
 
     /// <summary>
@@ -71,7 +79,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         if (hostSession != null)
         {
             this.hostSession = null;
-            await hostSession.CloseAsync();
+            await hostSession.CloseAsync(SshDisconnectReason.None);
             hostSession.Dispose();
         }
 
@@ -101,7 +109,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         Requires.NotNull(Tunnel!, nameof(Tunnel));
 
         this.accessToken = null!;
-        Tunnel.AccessTokens?.TryGetValue(TunnelAccessScope, out this.accessToken!);
+        Tunnel.TryGetAccessToken(TunnelAccessScope, out this.accessToken!);
         Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
 
         var hostPublicKeys = new[]
@@ -142,15 +150,27 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     /// <summary>
     /// Create stream to the tunnel.
     /// </summary>
-    protected virtual Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
+    protected virtual async Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
     {
+        var protocols = Environment.GetEnvironmentVariable("DEVTUNNELS_PROTOCOL_VERSION") switch
+        {
+            "1" => new[] { WebSocketSubProtocol },
+            "2" => new[] { WebSocketSubProtocolV2 },
+
+            // By default, prefer V2 and fall back to V1.
+            _ => new[] { WebSocketSubProtocolV2, WebSocketSubProtocol },
+        };
+
         ValidateAccessToken();
         Trace.TraceInformation("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
-        return this.StreamFactory.CreateRelayStreamAsync(
+        var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
             this.relayUri!,
             this.accessToken,
-            WebSocketSubProtocol,
+            protocols,
             cancellation);
+        Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
+        ConnectionProtocol = subprotocol;
+        return stream;
     }
 
     /// <inheritdoc />
@@ -160,7 +180,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         var hostSession = this.hostSession;
         if (hostSession != null)
         {
-            await hostSession.CloseAsync();
+            await hostSession.CloseAsync(disconnectReason);
             hostSession.Dispose();
         }
     }
@@ -180,16 +200,61 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     /// <inheritdoc />
     async Task IRelayClient.ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
     {
-        this.hostSession = new MultiChannelStream(stream, Trace.WithName("HostSSH"));
+        SshClientSession session;
+        if (ConnectionProtocol == WebSocketSubProtocol)
+        {
+            // The V1 protocol always configures no security, equivalent to SSH MultiChannelStream.
+            // The websocket transport is still encrypted and authenticated.
+            session = new SshClientSession(
+                SshSessionConfiguration.NoSecurity, Trace.WithName("HostSSH"));
+        }
+        else
+        {
+            // The V2 protocol configures optional encryption, including "none" as an enabled and
+            // preferred key-exchange algorithm, because encryption of the outer SSH session is
+            // optional since it is already over a TLS websocket.
+            var config = new SshSessionConfiguration();
+            config.KeyExchangeAlgorithms.Clear();
+            config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.None);
+            config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp384);
+            config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp256);
+            config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup16Sha512);
+            config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup14Sha256);
 
-        // Increase max window size to work around channel congestion bug.
-        // This does not entirely eliminate the problem, but reduces the chance.
-        // TODO: Change the protocol to avoid layering SSH sessions, which will resolve the issue.
-        this.hostSession.ChannelMaxWindowSize = SshChannel.DefaultMaxWindowSize * 5;
+            config.AddService(typeof(PortForwardingService));
+            session = new SshClientSession(config, Trace.WithName("HostSSH"));
 
-        this.hostSession.ChannelOpening += HostSession_ChannelOpening;
-        this.hostSession.Closed += HostSession_Closed;
-        await this.hostSession.ConnectAsync(cancellation);
+            // Relay server authentication is done via the websocket TLS host certificate.
+            // If SSH encryption/authentication is used anyway, just accept any SSH host key.
+            session.Authenticating += (_, e) =>
+                e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
+
+            var hostPfs = session.ActivateService<PortForwardingService>();
+            hostPfs.MessageFactory = this;
+            hostPfs.ForwardedPortConnecting += OnForwardedPortConnecting;
+        }
+
+        this.hostSession = session;
+        session.ChannelOpening += HostSession_ChannelOpening;
+        session.Closed += HostSession_Closed;
+        await session.ConnectAsync(stream, cancellation);
+
+        // SSH authentication is skipped in V1 protocol, optional in V2 depending on whether the
+        // session performed a key exchange (as indicated by having a session ID or not). In the
+        // latter case a password is not required. Strong authentication was already handled by
+        // the relay service via the tunnel access token used for the websocket connection.
+        if (session.SessionId != null)
+        {
+            var clientCredentials = new SshClientCredentials("tunnel", password: null);
+            await session.AuthenticateAsync(clientCredentials);
+        }
+
+        if (ConnectionProtocol == WebSocketSubProtocolV2)
+        {
+            // In the v2 protocol, the host starts "forwarding" the ports as soon as it connects.
+            // Then the relay will forward the forwarded ports to clients as they connect.
+            await StartForwardingExistingPortsAsync(session);
+        }
     }
 
     /// <inheritdoc />
@@ -207,7 +272,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
     private void HostSession_Closed(object? sender, SshSessionClosedEventArgs e)
     {
-        var session = (MultiChannelStream)sender!;
+        var session = (SshClientSession)sender!;
         session.Closed -= HostSession_Closed;
         session.ChannelOpening -= HostSession_ChannelOpening;
         this.hostSession = null;
@@ -229,12 +294,39 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             return;
         }
 
-        if (e.Channel.ChannelType != ClientStreamChannelType)
+        if (ConnectionProtocol == WebSocketSubProtocolV2 &&
+            e.Channel.ChannelType == "forwarded-tcpip")
         {
-            e.FailureDescription = $"Unexpected channel type. Only {ClientStreamChannelType} is supported.";
+            // With V2 protocol, the relay server always sends an extended channel open message
+            // with a property indicating whether E2E encryption is requested for the connection.
+            // The host returns an extended response message indicating if E2EE is enabled.
+            var relayRequestMessage = e.Channel.OpenMessage
+                .ConvertTo<PortRelayConnectRequestMessage>();
+            var responseMessage = new PortRelayConnectResponseMessage();
+
+            // The host can enable encryption for the channel if the client requested it.
+            responseMessage.IsE2EEncryptionEnabled = this.EnableE2EEncryption &&
+                relayRequestMessage.IsE2EEncryptionRequested;
+
+            // In the future the relay might send additional information in the connect
+            // request message, for example a user identifier that would enable the host to
+            // group channels by user.
+
+            e.OpeningTask = Task.FromResult<ChannelMessage>(responseMessage);
+            return;
+        }
+        else if (e.Channel.ChannelType != ClientStreamChannelType)
+        {
+            e.FailureDescription = $"Unknown channel type: {e.Channel.ChannelType}.";
             e.FailureReason = SshChannelOpenFailureReason.UnknownChannelType;
             return;
         }
+
+        // V1 protocol.
+
+        // Increase max window size to work around channel congestion bug.
+        // This does not entirely eliminate the problem, but reduces the chance.
+        e.Channel.MaxWindowSize = SshChannel.DefaultMaxWindowSize * 5;
 
         Task task;
         lock (DisposeLock)
@@ -246,7 +338,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
                 return;
             }
 
-            task = AcceptClientSessionAsync((MultiChannelStream)sender!, DisposeToken);
+            task = AcceptClientSessionAsync(e.Channel, DisposeToken);
             this.clientSessionTasks.Add(task);
         }
 
@@ -261,11 +353,70 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         }
     }
 
-    private async Task AcceptClientSessionAsync(MultiChannelStream hostSession, CancellationToken cancellation)
+    /// <summary>
+    /// Encrypts the channel if necessary when a port connection is established (v2 only).
+    /// </summary>
+    protected override void OnForwardedPortConnecting(
+        object? sender, ForwardedPortConnectingEventArgs e)
+    {
+        var channel = e.Stream.Channel;
+        var relayRequestMessage = channel.OpenMessage
+            .ConvertTo<PortRelayConnectRequestMessage>();
+
+        bool isE2EEncryptionEnabled = this.EnableE2EEncryption &&
+            relayRequestMessage.IsE2EEncryptionRequested;
+        if (isE2EEncryptionEnabled)
+        {
+            // Increase the max window size so that it is at least larger than the window
+            // size of one client channel.
+            channel.MaxWindowSize = SshChannel.DefaultMaxWindowSize * 2;
+
+            SshServerCredentials serverCredentials =
+                new SshServerCredentials(HostPrivateKey);
+            var secureStream = new SecureStream(
+                e.Stream,
+                serverCredentials,
+                channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId));
+
+            // The client was already authenticated by the relay.
+            secureStream.Authenticating += (_, e) =>
+                e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(
+                    new ClaimsPrincipal());
+
+            e.TransformTask = Task.FromResult<Stream?>(secureStream);
+
+            // The client will connect to the secure stream after the channel is opened.
+            ConnectEncryptedChannel();
+            async void ConnectEncryptedChannel()
+            {
+                try
+                {
+                    // Do not pass the cancellation token from the connecting event,
+                    // because the connection will outlive the event.
+                    await secureStream.ConnectAsync();
+                }
+                catch (Exception ex)
+                {
+                    // Catch all exceptions in this async void method.
+                    try
+                    {
+                        channel.Trace.Error("Error connecting encrypted channel: " + ex.Message);
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            }
+        }
+
+        base.OnForwardedPortConnecting(sender, e);
+    }
+
+    private async Task AcceptClientSessionAsync(SshChannel clientSessionChannel, CancellationToken cancellation)
     {
         try
         {
-            var stream = await hostSession.AcceptStreamAsync(ClientStreamChannelType, cancellation);
+            var stream = new SshStream(clientSessionChannel);
             await ConnectAndRunClientSessionAsync(stream, cancellation);
         }
         catch (OperationCanceledException)
@@ -403,26 +554,22 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         await StartForwardingExistingPortsAsync((SshServerSession)sender!, removeUnusedPorts: true);
 
     private async Task StartForwardingExistingPortsAsync(
-        SshServerSession session, bool removeUnusedPorts = false)
+        SshSession session, bool removeUnusedPorts = false)
     {
+        // Send port-forward request messages concurrently. The client may still handle the
+        // requests sequentially but at least there is no network round-trip between them.
+        var forwardTasks = new List<Task>();
+
         var tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
         var pfs = session.ActivateService<PortForwardingService>();
+        pfs.ForwardConnectionsToLocalPorts = this.ForwardConnectionsToLocalPorts;
         foreach (TunnelPort port in tunnelPorts)
         {
-            try
-            {
-                await ForwardPortAsync(pfs, port, CancellationToken.None);
-            }
-            catch (Exception exception)
-            {
-                Trace.TraceEvent(
-                    TraceEventType.Error,
-                    0,
-                    "Error forwarding port {0} to client: {1}",
-                    port.PortNumber,
-                    exception.Message);
-            }
+            // ForwardPortAsync() catches and logs most exceptions that might normally occur.
+            forwardTasks.Add(ForwardPortAsync(pfs, port, CancellationToken.None));
         }
+
+        await Task.WhenAll(forwardTasks);
 
         // If a tunnel client reconnects, its SSH session Port Forwarding service may
         // have remote port forwarders for the ports no longer forwarded.
@@ -438,7 +585,9 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
             var remoteForwardersToDispose = RemoteForwarders
                 .Where((kvp) =>
-                    Enumerable.SequenceEqual(kvp.Key.SessionId, session.SessionId) &&
+                    ((kvp.Key.SessionId == null && session.SessionId == null) ||
+                        ((kvp.Key.SessionId != null && session.SessionId != null) &&
+                        Enumerable.SequenceEqual(kvp.Key.SessionId, session.SessionId))) &&
                     unusedlocalPorts.Contains(kvp.Value.LocalPort))
                 .Select(kvp => kvp.Key);
 
@@ -479,16 +628,77 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
                 e.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
             }
         }
+        else if (portForwardRequest.ChannelType == "forwarded-tcpip")
+        {
+            var eventArgs = new ForwardedPortConnectingEventArgs(
+                (int)portForwardRequest.Port, false, new SshStream(e.Channel), CancellationToken.None);
+            base.OnForwardedPortConnecting(this, eventArgs);
+        }
         // For forwarded-tcpip do not check RemoteForwarders because they may not be updated yet.
         // There is a small time interval in ForwardPortAsync() between the port
         // being forwarded with ForwardFromRemotePortAsync() and RemoteForwarders updated.
         // Setting PFS.AcceptRemoteConnectionsForNonForwardedPorts to false makes PFS reject forwarding requests from the
         // clients for the ports that are not forwarded and are missing in PFS.remoteConnectors.
         // Call to PFS.ForwardFromRemotePortAsync() in ForwardPortAsync() adds the connector to PFS.remoteConnectors.
-        else if (portForwardRequest.ChannelType != "forwarded-tcpip")
+        else
         {
             Trace.Warning("Unrecognized channel type " + portForwardRequest.ChannelType);
             e.FailureReason = SshChannelOpenFailureReason.UnknownChannelType;
         }
+    }
+
+    /// <inheritdoc />
+    public override async Task RefreshPortsAsync(CancellationToken cancellation)
+    {
+        if (Tunnel == null || ManagementClient == null)
+        {
+            return;
+        }
+
+        var updatedTunnel = await ManagementClient.GetTunnelAsync(
+            Tunnel, new TunnelRequestOptions { IncludePorts = true });
+
+        var updatedPorts = updatedTunnel?.Ports ?? Array.Empty<TunnelPort>();
+        Tunnel.Ports = updatedPorts;
+
+        var forwardTasks = new List<Task>();
+
+        var sessions = SshSessions.Cast<SshSession?>();
+        if (ConnectionProtocol == WebSocketSubProtocolV2)
+        {
+            // In the V2 protocol, ports are forwarded direclty on the host session.
+            // (But even when the host is V2, some clients may still connect with V1.)
+            sessions = sessions.Append(this.hostSession);
+        }
+
+        foreach (var port in updatedPorts)
+        {
+            foreach (var session in sessions.Where((s) => s?.IsConnected == true))
+            {
+                var key = new SessionPortKey(session!.SessionId!, port.PortNumber);
+                if (!RemoteForwarders.ContainsKey(key))
+                {
+                    // Overlapping refresh operations could cause duplicate forward requests to be
+                    // sent to clients, but clients should ignore the duplicate requests.
+                    var pfs = session.GetService<PortForwardingService>()!;
+                    forwardTasks.Add(ForwardPortAsync(pfs, port, cancellation));
+                }
+            }
+        }
+
+        foreach (var forwarder in RemoteForwarders)
+        {
+            if (!updatedPorts.Any((p) => p.PortNumber == forwarder.Value.RemotePort))
+            {
+                // Since RemoteForwarders is a concurrent dictionary, overlapping refresh
+                // operations will only be able to remove and dispose a forwarder once.
+                if (RemoteForwarders.TryRemove(forwarder.Key, out _))
+                {
+                    forwarder.Value.Dispose();
+                }
+            }
+        }
+
+        await Task.WhenAll(forwardTasks);
     }
 }
