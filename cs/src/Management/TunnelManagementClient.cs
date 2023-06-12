@@ -749,7 +749,7 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(tunnel, nameof(tunnel));
 
             string tunnelPath;
-            var pathBase = string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath;
+            var pathBase = TunnelsPath;
             if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
             {
                 tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
@@ -826,13 +826,13 @@ namespace Microsoft.DevTunnels.Management
             {
                 string.IsNullOrEmpty(clusterId) ? "global=true" : null,
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
-                !string.IsNullOrEmpty(ApiVersion) ? GetApiVersionQuery() : null,
+                !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
             var result = await this.SendRequestAsync<Tunnel[]>(
                 HttpMethod.Get,
                 clusterId,
-                string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath,
+                TunnelsPath,
                 query,
                 options,
                 cancellation);
@@ -855,13 +855,13 @@ namespace Microsoft.DevTunnels.Management
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
                 $"tags={string.Join(",", tags.Select(HttpUtility.UrlEncode))}",
                 $"allTags={requireAllTags}",
-                !string.IsNullOrEmpty(ApiVersion) ? GetApiVersionQuery() : null,
+                !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
             var result = await this.SendRequestAsync<Tunnel[]>(
                 HttpMethod.Get,
                 clusterId,
-                string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath,
+                TunnelsPath,
                 query,
                 options,
                 cancellation);
@@ -879,7 +879,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ReadAccessTokenScopes,
                 path: null,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result;
@@ -904,7 +904,7 @@ namespace Microsoft.DevTunnels.Management
                 HttpMethod.Post,
                 tunnel.ClusterId,
                 string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelForRequest(tunnel),
                 cancellation);
@@ -922,7 +922,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManageAccessTokenScope,
                 path: null,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelForRequest(tunnel),
                 cancellation);
@@ -948,7 +948,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManageAccessTokenScope,
                 path: null,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result;
@@ -970,7 +970,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 HostAccessTokenScope,
                 path,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 endpoint,
                 cancellation))!;
@@ -1005,7 +1005,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 HostAccessTokenScope,
                 path,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 cancellation);
 
@@ -1031,7 +1031,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ReadAccessTokenScopes,
                 PortsApiSubPath,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result!;
@@ -1050,7 +1050,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ReadAccessTokenScopes,
                 path,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result;
@@ -1070,7 +1070,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 PortsApiSubPath,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
@@ -1111,7 +1111,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 path,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
@@ -1149,7 +1149,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 path,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 cancellation);
 
@@ -1237,7 +1237,7 @@ namespace Microsoft.DevTunnels.Management
                 HttpMethod.Post,
                 clusterId: null,
                 SubjectsPath + "/format",
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 subjects,
                 cancellation);
@@ -1262,7 +1262,7 @@ namespace Microsoft.DevTunnels.Management
                 HttpMethod.Post,
                 clusterId: null,
                 SubjectsPath + "/resolve",
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options,
                 subjects,
                 cancellation);
@@ -1276,7 +1276,7 @@ namespace Microsoft.DevTunnels.Management
                 HttpMethod.Get,
                 clusterId: null,
                 UserLimitsPath,
-                query: GetApiVersionQuery(),
+                query: GetApiQuery(),
                 options: null,
                 cancellation);
             return userLimits!;
@@ -1314,7 +1314,11 @@ namespace Microsoft.DevTunnels.Management
             );
         }
 
-        private string? GetApiVersionQuery()
+        /// <summary>
+        /// Gets required query string parmeters
+        /// </summary>
+        /// <returns>Query string</returns>
+        protected virtual string? GetApiQuery()
         {
             return string.IsNullOrEmpty(ApiVersion) ? null : $"api-version={ApiVersion}";
         }
