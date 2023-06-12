@@ -174,7 +174,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
-            if (!TunnelsApiVersions.Contains(apiVersion) && !string.IsNullOrEmpty(apiVersion))
+            if (!string.IsNullOrEmpty(apiVersion) && !TunnelsApiVersions.Contains(apiVersion))
             {
                 throw new ArgumentException(
                     $"Invalid apiVersion, accpeted values are {string.Join(", ", TunnelsApiVersions)} ");
@@ -729,10 +729,10 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(tunnel, nameof(tunnel));
 
             string tunnelPath;
-            var tunnelPathVersion = string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath;
+            var pathBase = string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath;
             if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
             {
-                tunnelPath = $"{tunnelPathVersion}/{tunnel.TunnelId}";
+                tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
             }
             else
             {
@@ -744,12 +744,12 @@ namespace Microsoft.DevTunnels.Management
                 if (string.IsNullOrEmpty(tunnel.Domain))
                 {
 
-                    tunnelPath = $"{tunnelPathVersion}/{tunnel.Name}";
+                    tunnelPath = $"{pathBase}/{tunnel.Name}";
                 }
                 else
                 {
                     // Append the domain to the tunnel name.
-                    tunnelPath = $"{tunnelPathVersion}/{tunnel.Name}.{tunnel.Domain}";
+                    tunnelPath = $"{pathBase}/{tunnel.Name}.{tunnel.Domain}";
                 }
             }
 
