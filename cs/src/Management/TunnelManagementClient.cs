@@ -903,7 +903,7 @@ namespace Microsoft.DevTunnels.Management
             var result = await this.SendRequestAsync<Tunnel, Tunnel>(
                 HttpMethod.Post,
                 tunnel.ClusterId,
-                string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath,
+                TunnelsPath,
                 query: GetApiQuery(),
                 options,
                 ConvertTunnelForRequest(tunnel),
