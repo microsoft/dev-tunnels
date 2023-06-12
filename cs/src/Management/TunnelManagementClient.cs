@@ -29,12 +29,16 @@ namespace Microsoft.DevTunnels.Management
     public class TunnelManagementClient : ITunnelManagementClient
     {
         private const string ApiV1Path = "/api/v1";
-        private const string TunnelsApiPath = ApiV1Path + "/tunnels";
-        private const string SubjectsApiPath = ApiV1Path + "/subjects";
-        private const string UserLimitsApiPath = ApiV1Path + "/userlimits";
+        private const string TunnelsV1ApiPath = ApiV1Path + "/tunnels";
+        private const string SubjectsV1ApiPath = ApiV1Path + "/subjects";
+        private const string UserLimitsV1ApiPath = ApiV1Path + "/userlimits";
+        private const string TunnelsApiPath = "/tunnels";
+        private const string SubjectsApiPath = "/subjects";
+        private const string UserLimitsApiPath = "/userlimits";
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
-        private const string ClustersPath = ApiV1Path + "/clusters";
+        private const string ClustersApiPath = "/clusters";
+        private const string ClustersV1ApiPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
         private const string CheckAvailableSubPath = "/checkNameAvailability";
@@ -57,6 +61,16 @@ namespace Microsoft.DevTunnels.Management
             TunnelAccessScopes.Connect,
         };
 
+        /// <summary>
+        /// Accepted management client api versions
+        /// </summary>
+        public string[] TunnelsApiVersions =
+        {
+            "2023-05-23-preview"
+        };
+
+
+
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
             TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
 
@@ -72,10 +86,13 @@ namespace Microsoft.DevTunnels.Management
         /// authentication header, for AAD or GitHub user authentication. This may be null
         /// for anonymous tunnel clients, or if tunnel access tokens will be specified via
         /// <see cref="TunnelRequestOptions.AccessToken"/>.</param>
+        /// <param name="apiVersion"> Api version to use for tunnels requests, accepted
+        /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
-            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null)
-            : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null)
+            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
+            string? apiVersion = null)
+            : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
 
@@ -90,10 +107,13 @@ namespace Microsoft.DevTunnels.Management
         /// authentication header, for AAD or GitHub user authentication. This may be null
         /// for anonymous tunnel clients, or if tunnel access tokens will be specified via
         /// <see cref="TunnelRequestOptions.AccessToken"/>.</param>
+        /// <param name="apiVersion"> Api version to use for tunnels requests, accepted
+        /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
-            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null)
-            : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null)
+            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
+            string? apiVersion = null)
+            : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
 
@@ -113,12 +133,15 @@ namespace Microsoft.DevTunnels.Management
         /// <see cref="HttpClientHandler"/> specified (or at the end of the chain) must have
         /// automatic redirection disabled. The provided HTTP handler will not be disposed
         /// by <see cref="Dispose"/>.</param>
+        /// <param name="apiVersion"> Api version to use for tunnels requests, accepted
+        /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
-            HttpMessageHandler? httpHandler = null)
-            : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler)
+            HttpMessageHandler? httpHandler = null,
+            string? apiVersion = null)
+            : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler, apiVersion)
         {
         }
 
@@ -140,14 +163,23 @@ namespace Microsoft.DevTunnels.Management
         /// <see cref="HttpClientHandler"/> specified (or at the end of the chain) must have
         /// automatic redirection disabled. The provided HTTP handler will not be disposed
         /// by <see cref="Dispose"/>.</param>
+        /// <param name="apiVersion"> Api version to use for tunnels requests, accepted
+        /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
-            HttpMessageHandler? httpHandler = null)
+            HttpMessageHandler? httpHandler = null,
+            string? apiVersion = null)
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
+            if (!string.IsNullOrEmpty(apiVersion) && !TunnelsApiVersions.Contains(apiVersion))
+            {
+                throw new ArgumentException(
+                    $"Invalid apiVersion, accpeted values are {string.Join(", ", TunnelsApiVersions)} ");
+            }
+            ApiVersion = apiVersion;
 
             this.userTokenCallback = userTokenCallback ??
                 (() => Task.FromResult<AuthenticationHeaderValue?>(null));
@@ -223,6 +255,28 @@ namespace Microsoft.DevTunnels.Management
         public IEnumerable<KeyValuePair<string, string>>? AdditionalRequestHeaders { get; set; }
 
         private ProductInfoHeaderValue[] UserAgents { get; }
+
+        private string? ApiVersion { get; }
+
+        private string TunnelsPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath; }
+        }
+
+        private string ClustersPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? ClustersV1ApiPath : ClustersApiPath; }
+        }
+
+        private string SubjectsPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? SubjectsV1ApiPath : SubjectsApiPath; }
+        }
+
+        private string UserLimitsPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? UserLimitsV1ApiPath : UserLimitsApiPath; }
+        }
 
         /// <summary>
         /// Sends an HTTP request to the tunnel management API, targeting a specific tunnel.
@@ -695,9 +749,10 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(tunnel, nameof(tunnel));
 
             string tunnelPath;
+            var pathBase = TunnelsPath;
             if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
             {
-                tunnelPath = $"{TunnelsApiPath}/{tunnel.TunnelId}";
+                tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
             }
             else
             {
@@ -708,12 +763,13 @@ namespace Microsoft.DevTunnels.Management
 
                 if (string.IsNullOrEmpty(tunnel.Domain))
                 {
-                    tunnelPath = $"{TunnelsApiPath}/{tunnel.Name}";
+
+                    tunnelPath = $"{pathBase}/{tunnel.Name}";
                 }
                 else
                 {
                     // Append the domain to the tunnel name.
-                    tunnelPath = $"{TunnelsApiPath}/{tunnel.Name}.{tunnel.Domain}";
+                    tunnelPath = $"{pathBase}/{tunnel.Name}.{tunnel.Domain}";
                 }
             }
 
@@ -770,12 +826,13 @@ namespace Microsoft.DevTunnels.Management
             {
                 string.IsNullOrEmpty(clusterId) ? "global=true" : null,
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
+                !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
             var result = await this.SendRequestAsync<Tunnel[]>(
                 HttpMethod.Get,
                 clusterId,
-                TunnelsApiPath,
+                TunnelsPath,
                 query,
                 options,
                 cancellation);
@@ -798,12 +855,13 @@ namespace Microsoft.DevTunnels.Management
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
                 $"tags={string.Join(",", tags.Select(HttpUtility.UrlEncode))}",
                 $"allTags={requireAllTags}",
+                !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
             var result = await this.SendRequestAsync<Tunnel[]>(
                 HttpMethod.Get,
                 clusterId,
-                TunnelsApiPath,
+                TunnelsPath,
                 query,
                 options,
                 cancellation);
@@ -821,7 +879,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ReadAccessTokenScopes,
                 path: null,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result;
@@ -845,8 +903,8 @@ namespace Microsoft.DevTunnels.Management
             var result = await this.SendRequestAsync<Tunnel, Tunnel>(
                 HttpMethod.Post,
                 tunnel.ClusterId,
-                TunnelsApiPath,
-                query: null,
+                TunnelsPath,
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelForRequest(tunnel),
                 cancellation);
@@ -864,7 +922,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManageAccessTokenScope,
                 path: null,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelForRequest(tunnel),
                 cancellation);
@@ -890,7 +948,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManageAccessTokenScope,
                 path: null,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result;
@@ -912,7 +970,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 HostAccessTokenScope,
                 path,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 endpoint,
                 cancellation))!;
@@ -947,7 +1005,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 HostAccessTokenScope,
                 path,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 cancellation);
 
@@ -973,7 +1031,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ReadAccessTokenScopes,
                 PortsApiSubPath,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result!;
@@ -992,7 +1050,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ReadAccessTokenScopes,
                 path,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 cancellation);
             return result;
@@ -1012,7 +1070,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 PortsApiSubPath,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
@@ -1053,7 +1111,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 path,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
@@ -1091,7 +1149,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 path,
-                query: null,
+                query: GetApiQuery(),
                 options,
                 cancellation);
 
@@ -1178,8 +1236,8 @@ namespace Microsoft.DevTunnels.Management
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(
                 HttpMethod.Post,
                 clusterId: null,
-                SubjectsApiPath + "/format",
-                query: null,
+                SubjectsPath + "/format",
+                query: GetApiQuery(),
                 options,
                 subjects,
                 cancellation);
@@ -1203,8 +1261,8 @@ namespace Microsoft.DevTunnels.Management
                 <TunnelAccessSubject[], TunnelAccessSubject[]>(
                 HttpMethod.Post,
                 clusterId: null,
-                SubjectsApiPath + "/resolve",
-                query: null,
+                SubjectsPath + "/resolve",
+                query: GetApiQuery(),
                 options,
                 subjects,
                 cancellation);
@@ -1217,8 +1275,8 @@ namespace Microsoft.DevTunnels.Management
             var userLimits = await SendRequestAsync<NamedRateStatus[]>(
                 HttpMethod.Get,
                 clusterId: null,
-                UserLimitsApiPath,
-                query: null,
+                UserLimitsPath,
+                query: GetApiQuery(),
                 options: null,
                 cancellation);
             return userLimits!;
@@ -1249,11 +1307,20 @@ namespace Microsoft.DevTunnels.Management
             return await this.SendRequestAsync<bool>(
                 HttpMethod.Get,
                 clusterId: null,
-                TunnelsApiPath + "/" + name + CheckAvailableSubPath,
+                TunnelsPath + "/" + name + CheckAvailableSubPath,
                 query: null,
                 options: null,
                 cancellation
             );
+        }
+
+        /// <summary>
+        /// Gets required query string parmeters
+        /// </summary>
+        /// <returns>Query string</returns>
+        protected virtual string? GetApiQuery()
+        {
+            return string.IsNullOrEmpty(ApiVersion) ? null : $"api-version={ApiVersion}";
         }
     }
 }
