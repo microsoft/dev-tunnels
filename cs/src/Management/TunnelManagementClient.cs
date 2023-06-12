@@ -37,8 +37,8 @@ namespace Microsoft.DevTunnels.Management
         private const string UserLimitsApiPath = "/userlimits";
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
-        private const string ClustersPath = "/clusters";
-        private const string ClustersV1Path = ApiV1Path + "/clusters";
+        private const string ClustersApiPath = "/clusters";
+        private const string ClustersV1ApiPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
         private const string CheckAvailableSubPath = "/checkNameAvailability";
@@ -257,6 +257,26 @@ namespace Microsoft.DevTunnels.Management
         private ProductInfoHeaderValue[] UserAgents { get; }
 
         private string? ApiVersion { get; }
+
+        private string TunnelsPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? TunnelsV1ApiPath : TunnelsApiPath; }
+        }
+
+        private string ClustersPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? ClustersV1ApiPath : ClustersApiPath; }
+        }
+
+        private string SubjectsPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? SubjectsV1ApiPath : SubjectsApiPath; }
+        }
+
+        private string UserLimitsPath
+        {
+            get { return string.IsNullOrEmpty(ApiVersion) ? UserLimitsV1ApiPath : UserLimitsApiPath; }
+        }
 
         /// <summary>
         /// Sends an HTTP request to the tunnel management API, targeting a specific tunnel.
@@ -1255,7 +1275,7 @@ namespace Microsoft.DevTunnels.Management
             var userLimits = await SendRequestAsync<NamedRateStatus[]>(
                 HttpMethod.Get,
                 clusterId: null,
-                string.IsNullOrEmpty(ApiVersion) ? UserLimitsV1ApiPath : UserLimitsApiPath,
+                UserLimitsPath,
                 query: GetApiVersionQuery(),
                 options: null,
                 cancellation);
@@ -1266,7 +1286,7 @@ namespace Microsoft.DevTunnels.Management
         public async Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation) {
             var baseAddress = this.httpClient.BaseAddress!;
             var builder = new UriBuilder(baseAddress);
-            builder.Path = string.IsNullOrEmpty(ApiVersion) ? ClustersV1Path : ClustersPath;
+            builder.Path = ClustersPath;
             var clusterDetails = await SendRequestAsync<object, ClusterDetails[]>(
                 HttpMethod.Get,
                 builder.Uri,
