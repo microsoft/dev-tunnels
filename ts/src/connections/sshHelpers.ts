@@ -8,6 +8,8 @@ import {
     connection as WebSocketConnection,
     IClientConfig,
 } from 'websocket';
+import * as http from 'http';
+ 
 
 declare module 'websocket' {
     interface client {
@@ -139,6 +141,8 @@ export class SshHelpers {
                 resolve(new ssh.WebSocketStream(new WebsocketStreamAdapter(connection)));
             });
 
+            console.log("clientConfig = ", clientConfig?.tlsOptions?.agent);
+
             // If the server responds but doesn't properly upgrade the connection to web socket, WebSocketClient fires 'httpResponse' event.
             // TODO: Return ProblemDetails from TunnelRelay service
             client.on('httpResponse', ({ statusCode, statusMessage }) => {
@@ -170,7 +174,12 @@ export class SshHelpers {
 
                 reject(new RelayConnectionError(`error.${errorContext.error}`, errorContext));
             });
-            client.connect(relayUri, protocols, undefined, headers);
+
+            const requestOptions: http.RequestOptions = {
+                agent: clientConfig?.tlsOptions?.agent,
+            };
+
+            client.connect(relayUri, protocols, undefined, headers, requestOptions);
         });
     }
 }

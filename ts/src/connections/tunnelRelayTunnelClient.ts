@@ -11,6 +11,8 @@ import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
 import { TunnelClientBase, webSocketSubProtocol, webSocketSubProtocolv2 } from './tunnelClientBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
+import * as http from 'http';
+
 
 // Check for an environment variable to determine which protocol version to use.
 // By default, prefer V2 and fall back to V1.
@@ -29,6 +31,7 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 ) {
     public static readonly webSocketSubProtocol = webSocketSubProtocol;
     public static readonly webSocketSubProtocolv2 = webSocketSubProtocolv2;
+    public static readonly httpAgent: http.Agent;
 
     public connectionModes: TunnelConnectionMode[] = [];
 

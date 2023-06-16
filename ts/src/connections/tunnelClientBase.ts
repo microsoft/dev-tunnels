@@ -34,6 +34,7 @@ import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
+import * as http from 'http';
 
 export const webSocketSubProtocol = 'tunnel-relay-client';
 export const webSocketSubProtocolv2 = 'tunnel-relay-client-v2-dev';
@@ -130,9 +131,9 @@ export class TunnelClientBase
         super(TunnelAccessScopes.Connect, trace, managementClient);
     }
 
-    public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[]): Promise<void> {
+    public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[], httpAgent?: http.Agent): Promise<void> {
         this.endpoints = endpoints;
-        await this.connectTunnelSession(tunnel);
+        await this.connectTunnelSession(tunnel, httpAgent);
     }
 
     public async connect(tunnel: Tunnel, hostId?: string): Promise<void> {
