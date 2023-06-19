@@ -65,4 +65,13 @@ export class TunnelManagementTests {
         assert(this.lastRequest.uri.startsWith('http://global.'));
         assert(this.lastRequest.uri.includes('includePorts=true&global=true'));
     }
+
+    @test
+    public async listUserLimits() {
+        this.nextResponse = [];
+        await this.managementClient.listUserLimits();
+        assert(this.lastRequest && this.lastRequest.uri);
+        assert.equal(this.lastRequest.method, 'GET');
+        assert(this.lastRequest.uri.endsWith('/api/v1/userlimits'));
+    }
 }
