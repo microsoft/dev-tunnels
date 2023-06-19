@@ -157,7 +157,7 @@ export interface TunnelManagementClient {
     ): Promise<boolean>;
 
     /**
-     * Lists details of tunneling service clusters in all supported Azure regions.
+     * Lists limits and consumption status for the calling user.
      */
     listUserLimits(): Promise<NamedRateStatus[]>;
 

@@ -315,14 +315,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return result;
     }
 
-    public listUserLimits(): Promise<NamedRateStatus[]> {
-        return this.sendRequest<NamedRateStatus[]>(
+    public async listUserLimits(): Promise<NamedRateStatus[]> {
+        const results = await this.sendRequest<NamedRateStatus[]>(
             'GET',
             undefined,
             limitsApiPath,
             undefined,
             undefined,
-        ).then(r => r || []);
+        );
+        return results || [];
     }
 
     public async listTunnelPorts(
