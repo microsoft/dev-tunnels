@@ -22,6 +22,7 @@ import {
 } from '@microsoft/dev-tunnels-ssh-tcp';
 import { PortRelayRequestMessage } from './messages/portRelayRequestMessage';
 import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
+import * as http from 'http';
 
 /**
  * Tunnel connection session.
@@ -291,7 +292,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      *     Undefined if the connection information is already known and the tunnel is not needed.
      *     Tunnel object to get the connection information from that tunnel.
      */
-    public async connectTunnelSession(tunnel?: Tunnel): Promise<void> {
+    public async connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void> {
         if (tunnel && this.tunnel) {
             throw new Error(
                 'Already connected to a tunnel. Use separate instances to connect to multiple tunnels.',
@@ -310,7 +311,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             if (!this.connector) {
                 this.connector = this.createTunnelConnector();
             }
-            await this.connector.connectSession(isReconnect, this.disposeToken);
+            await this.connector.connectSession(isReconnect, this.disposeToken, httpAgent);
         });
     }
 

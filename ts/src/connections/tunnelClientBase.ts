@@ -34,6 +34,7 @@ import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
+import * as http from 'http';
 
 export const webSocketSubProtocol = 'tunnel-relay-client';
 export const webSocketSubProtocolv2 = 'tunnel-relay-client-v2-dev';
@@ -47,6 +48,7 @@ export class TunnelClientBase
     private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
     private localForwardingHostAddressValue: string = '127.0.0.1';
+    private httpAgent: http.Agent | undefined;
 
     public connectionModes: TunnelConnectionMode[] = [];
 
@@ -128,11 +130,12 @@ export class TunnelClientBase
 
     public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
         super(TunnelAccessScopes.Connect, trace, managementClient);
+        this.httpAgent = managementClient?.httpsAgent;
     }
 
     public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[]): Promise<void> {
         this.endpoints = endpoints;
-        await this.connectTunnelSession(tunnel);
+        await this.connectTunnelSession(tunnel, this.httpAgent);
     }
 
     public async connect(tunnel: Tunnel, hostId?: string): Promise<void> {

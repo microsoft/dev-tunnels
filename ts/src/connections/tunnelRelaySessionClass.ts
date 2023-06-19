@@ -7,6 +7,9 @@ import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
 import { Stream, TraceLevel } from '@microsoft/dev-tunnels-ssh';
 import { TunnelRelayStreamFactory, DefaultTunnelRelayStreamFactory } from '.';
 import { TunnelSession } from './tunnelSession';
+import { IClientConfig } from 'websocket';
+import * as http from 'http';
+
 
 type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -38,6 +41,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          */
         public async createSessionStream(
             cancellation: CancellationToken,
+            httpAgent?: http.Agent
         ): Promise<{ stream: Stream, protocol: string }> {
             if (!this.relayUri) {
                 throw new Error(
@@ -54,10 +58,17 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
                 this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${tokenTrace}>`);
             }
 
+            const clientConfig: IClientConfig = {
+                tlsOptions: {
+                    agent: httpAgent,
+                },
+            };
+
             const streamAndProtocol = await this.streamFactory.createRelayStream(
                 this.relayUri,
                 protocols,
                 accessToken,
+                clientConfig
             );
 
             this.trace(
@@ -74,9 +85,9 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          *     Tunnel object to get the connection information from that tunnel.
          * @internal
          */
-        public async connectTunnelSession(tunnel?: Tunnel): Promise<void> {
+        public async connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void> {
             try {
-                await super.connectTunnelSession(tunnel);
+                await super.connectTunnelSession(tunnel, httpAgent);
             } catch (ex) {
                 throw new Error('Failed to connect to tunnel relay. ' + ex);
             }

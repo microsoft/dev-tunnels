@@ -8,6 +8,7 @@ import {
     connection as WebSocketConnection,
     IClientConfig,
 } from 'websocket';
+ 
 
 declare module 'websocket' {
     interface client {
@@ -170,6 +171,7 @@ export class SshHelpers {
 
                 reject(new RelayConnectionError(`error.${errorContext.error}`, errorContext));
             });
+
             client.connect(relayUri, protocols, undefined, headers);
         });
     }

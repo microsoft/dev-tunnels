@@ -16,6 +16,8 @@ import { delay, getErrorMessage } from './utils';
 import { BrowserWebSocketRelayError, RelayConnectionError } from './sshHelpers';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { TunnelSession } from './tunnelSession';
+import * as http from 'http';
+
 
 // After the 6th attemt, each next attempt will happen after a delay of 2^7 * 100ms = 12.8s
 const maxReconnectDelayMs = 13000;
@@ -45,6 +47,7 @@ export class RelayTunnelConnector implements TunnelConnector {
     public async connectSession(
         isReconnect: boolean,
         cancellation: CancellationToken,
+        httpAgent : http.Agent,
     ): Promise<void> {
         let disconnectReason: SshDisconnectReason | undefined;
         let error: Error | undefined;
@@ -124,7 +127,7 @@ export class RelayTunnelConnector implements TunnelConnector {
             error = undefined;
             try {
                 const streamAndProtocol = await this.tunnelSession.createSessionStream(
-                    cancellation);
+                    cancellation, httpAgent);
                 stream = streamAndProtocol.stream;
 
                 await this.tunnelSession.configureSession(
