@@ -322,7 +322,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      *     Tunnel object to get the connection data if defined.
      *     Undefined if the connection data is already known.
      */
-    public onConnectingToTunnel(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void> {
+    public onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
         return Promise.resolve();
     }
 

@@ -5,6 +5,7 @@ import {
     TunnelConnectionMode,
     Tunnel,
     TunnelRelayTunnelEndpoint,
+    TunnelEndpoint,
 } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken } from 'vscode-jsonrpc';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
@@ -31,7 +32,6 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
 ) {
     public static readonly webSocketSubProtocol = webSocketSubProtocol;
     public static readonly webSocketSubProtocolv2 = webSocketSubProtocolv2;
-    public static readonly httpAgent: http.Agent;
 
     public connectionModes: TunnelConnectionMode[] = [];
 

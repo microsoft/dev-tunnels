@@ -48,6 +48,7 @@ export class TunnelClientBase
     private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
     private localForwardingHostAddressValue: string = '127.0.0.1';
+    private httpAgent: http.Agent | undefined;
 
     public connectionModes: TunnelConnectionMode[] = [];
 
@@ -129,11 +130,12 @@ export class TunnelClientBase
 
     public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
         super(TunnelAccessScopes.Connect, trace, managementClient);
+        this.httpAgent = managementClient?.httpsAgent;
     }
 
-    public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[], httpAgent?: http.Agent): Promise<void> {
+    public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[]): Promise<void> {
         this.endpoints = endpoints;
-        await this.connectTunnelSession(tunnel, httpAgent);
+        await this.connectTunnelSession(tunnel, this.httpAgent);
     }
 
     public async connect(tunnel: Tunnel, hostId?: string): Promise<void> {

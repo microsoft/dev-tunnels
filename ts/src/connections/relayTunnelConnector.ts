@@ -131,7 +131,7 @@ export class RelayTunnelConnector implements TunnelConnector {
                 stream = streamAndProtocol.stream;
 
                 await this.tunnelSession.configureSession(
-                    stream, streamAndProtocol.protocol, isReconnect, cancellation, httpAgent);
+                    stream, streamAndProtocol.protocol, isReconnect, cancellation);
 
                 stream = undefined;
                 disconnectReason = undefined;
