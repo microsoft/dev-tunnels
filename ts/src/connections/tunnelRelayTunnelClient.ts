@@ -12,7 +12,6 @@ import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
 import { TunnelClientBase, webSocketSubProtocol, webSocketSubProtocolv2 } from './tunnelClientBase';
 import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
 
-
 // Check for an environment variable to determine which protocol version to use.
 // By default, prefer V2 and fall back to V1.
 const protocolVersion = process?.env && process.env.DEVTUNNELS_PROTOCOL_VERSION;
