@@ -339,4 +339,9 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     {
         throw new NotImplementedException();
     }
+
+    public Task<NamedRateStatus[]> ListUserLimitsAsync(CancellationToken cancellation = default)
+    {
+        throw new NotImplementedException();
+    }
 }

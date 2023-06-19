@@ -62,7 +62,7 @@ pub const ACCESS_CONTROL_MAX_SCOPES: i32 = 10;
 // Regular expression that can match or validate tunnel cluster ID strings.
 //
 // Cluster IDs are alphanumeric; hyphens are not permitted.
-pub const CLUSTER_ID_PATTERN: &str = r#"[a-z][a-z0-9]{2,11}"#;
+pub const CLUSTER_ID_PATTERN: &str = r#"^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$"#;
 
 // Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 // excluding vowels and 'y' (to avoid accidentally generating any random words).
