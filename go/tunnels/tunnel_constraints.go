@@ -83,7 +83,7 @@ const (
 	//
 	// Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
 	// empty string because tunnels may be unnamed.
-	TunnelConstraintsTunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|"
+	TunnelConstraintsTunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)"
 
 	// Regular expression that can match or validate tunnel or port tags.
 	TunnelConstraintsTagPattern = "[\\w-=]{1,50}"
@@ -92,7 +92,7 @@ const (
 	//
 	// The tunnel service may perform additional contextual validation at the time the domain
 	// is registered.
-	TunnelConstraintsTunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]"
+	TunnelConstraintsTunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]|(^$)"
 
 	// Regular expression that can match or validate an access control subject or
 	// organization ID.
