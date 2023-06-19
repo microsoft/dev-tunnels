@@ -8,7 +8,6 @@ import {
     connection as WebSocketConnection,
     IClientConfig,
 } from 'websocket';
-import * as http from 'http';
  
 
 declare module 'websocket' {
