@@ -12,7 +12,7 @@ use url::Url;
 
 use crate::contracts::{
     env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelRelayTunnelEndpoint, TunnelServiceProperties,
+    TunnelRelayTunnelEndpoint, TunnelServiceProperties, NamedRateStatus,
 };
 
 use super::{
@@ -29,6 +29,7 @@ pub struct TunnelManagementClient {
 }
 
 const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
+const USER_LIMITS_API_PATH: &str = "/api/v1/userlimits";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
 const CHECK_TUNNEL_NAME_SUB_PATH: &str = "/checkNameAvailability";
@@ -263,6 +264,17 @@ impl TunnelManagementClient {
             .await?;
         self.execute_no_response("delete_tunnel_port", request)
             .await
+    }
+
+    /// Lists all user limits.
+    pub async fn list_user_limits(
+        &self,
+        options: &TunnelRequestOptions,
+    ) -> HttpResult<Vec<NamedRateStatus>> {
+        let url = self.build_uri(None, USER_LIMITS_API_PATH);
+
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
+        self.execute_json("list_user_limits", request).await
     }
 
     /// Sends the request and deserializes a JSON response
