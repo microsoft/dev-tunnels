@@ -809,7 +809,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             config.url = uri;
             config.method = method;
             config.data = data;
-            
+
             const response = await axios.request<TResult>(config);
             traceResponse(response);
 

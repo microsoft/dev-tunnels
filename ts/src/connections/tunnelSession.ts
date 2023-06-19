@@ -68,7 +68,6 @@ export interface TunnelSession {
         protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
-        httpAgent?: http.Agent,
     ): Promise<void>;
 
     /**
