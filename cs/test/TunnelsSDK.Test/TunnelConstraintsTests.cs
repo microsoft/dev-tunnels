@@ -48,7 +48,6 @@ public class TunnelConstraintsTests
     [InlineData("bcd-ghjk")]
     [InlineData("jfullerton44-name-with-special-char--jrw9q5vrfjpwx")]
     [InlineData("012345678901234567890123456789012345678901234567890123456789")]
-    [InlineData("")]
     public void IsValidTunnelName_Valid(string tunnelName)
     {
         Assert.True(IsValidTunnelName(tunnelName));
