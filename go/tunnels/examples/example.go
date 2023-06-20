@@ -50,6 +50,14 @@ func main() {
 		return
 	}
 
+	limits, err := managementClient.ListUserLimits(ctx)
+	if err != nil {
+		fmt.Println(fmt.Errorf(err.Error()))
+		return
+	}
+
+	logger.Printf(fmt.Sprintf("Successfully retrieved %d user limit(s)", len(limits)))
+
 	// set up options to request a connect token
 	options := &tunnels.TunnelRequestOptions{IncludePorts: true, TokenScopes: []tunnels.TunnelAccessScope{"connect"}}
 
