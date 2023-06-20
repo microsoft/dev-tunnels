@@ -42,7 +42,7 @@ type tokenProviderfn func() string
 const (
 	apiV1Path                  = "/api/v1"
 	tunnelsApiPath             = apiV1Path + "/tunnels"
-	userLimitsApiPath		   = apiV1Path + "/userlimits"
+	userLimitsApiPath          = apiV1Path + "/userlimits"
 	subjectsApiPath            = apiV1Path + "/subjects"
 	clustersApiPath            = apiV1Path + "/clusters"
 	checkNameAvailabilityPath  = "/checkNameAvailability"

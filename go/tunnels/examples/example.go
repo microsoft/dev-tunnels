@@ -56,7 +56,7 @@ func main() {
 		return
 	}
 
-	logger.Printf(fmt.Sprintf("Successfully retrieved %d user limit(s)", len(limits)))
+	logger.Printf("Successfully retrieved %d user limit(s)", len(limits))
 
 	// set up options to request a connect token
 	options := &tunnels.TunnelRequestOptions{IncludePorts: true, TokenScopes: []tunnels.TunnelAccessScope{"connect"}}
