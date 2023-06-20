@@ -9,6 +9,7 @@ import {
     TunnelConnectionMode,
     TunnelEndpoint,
     ClusterDetails,
+    NamedRateStatus,
 } from '@microsoft/dev-tunnels-contracts';
 
 export class MockTunnelManagementClient implements TunnelManagementClient {
@@ -217,6 +218,10 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         }
 
         return Promise.resolve(false);
+    }
+
+    listUserLimits(): Promise<NamedRateStatus[]> {
+        throw new Error('Method not implemented.');
     }
 
     listClusters(): Promise<ClusterDetails[]> {
