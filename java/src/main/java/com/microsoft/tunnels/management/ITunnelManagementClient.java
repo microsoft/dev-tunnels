@@ -4,6 +4,7 @@
 package com.microsoft.tunnels.management;
 
 import com.microsoft.tunnels.contracts.ClusterDetails;
+import com.microsoft.tunnels.contracts.NamedRateStatus;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
 import com.microsoft.tunnels.contracts.TunnelEndpoint;
@@ -217,4 +218,10 @@ public interface ITunnelManagementClient {
    * @return Array of {@link ClusterDetails}.
    */
   public CompletableFuture<Collection<ClusterDetails>> listClustersAsync();
+
+  /**
+   * Lists limits and consumption status for the calling user.
+   * @return Array of {@link NamedRateStatus}.
+   */
+  public CompletableFuture<Collection<NamedRateStatus>> listUserLimitsAsync();
 }
