@@ -190,14 +190,26 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
         if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
         {
-            // Configure optional encryption, including "none" as an enabled and preferred kex algorithm,
-            // because encryption of the outer SSH session is optional since it is already over a TLS websocket.
+            // Configure optional encryption, including "none" as an enabled and preferred
+            // encryption algorithm, because encryption of the outer SSH session is optional
+            // since it is already over a TLS websocket.
             clientConfig.KeyExchangeAlgorithms.Clear();
-            clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.None);
             clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp384);
             clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp256);
             clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup16Sha512);
             clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup14Sha256);
+
+            clientConfig.EncryptionAlgorithms.Clear();
+            clientConfig.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.None);
+            clientConfig.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.Aes256Gcm);
+            clientConfig.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.Aes256Cbc);
+            clientConfig.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.Aes256Ctr);
+            clientConfig.HmacAlgorithms.Clear();
+            ////clientConfig.HmacAlgorithms.Add(SshAlgorithms.Hmac.None);
+            clientConfig.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha512Etm);
+            clientConfig.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha256Etm);
+            clientConfig.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha512);
+            clientConfig.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha256);
         }
 
         // Enable port-forwarding via the SSH protocol.
@@ -322,12 +334,58 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             this.Trace.Verbose("Verified host identity with public key " + hostKey);
             e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
         }
+        else if (Tunnel != null && ManagementClient != null)
+        {
+            this.Trace.Verbose("Host public key verificiation failed. Refreshing tunnel.");
+            this.Trace.Verbose("Host key: " + hostKey);
+            this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
+            e.AuthenticationTask = RefreshTunnelAndAuthenticateHostAsync(hostKey, DisposeToken);
+        }
         else
         {
             this.Trace.Error("Host public key verificiation failed.");
             this.Trace.Verbose("Host key: " + hostKey);
             this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
         }
+    }
+
+    private async Task<ClaimsPrincipal?> RefreshTunnelAndAuthenticateHostAsync(string hostKey, CancellationToken cancellation)
+    {
+        var status = ConnectionStatus;
+        ConnectionStatus = ConnectionStatus.RefreshingTunnelHostPublicKey;
+        try
+        {
+            await RefreshTunnelAsync(cancellation);
+        }
+        finally
+        {
+            ConnectionStatus = status;
+        }
+
+        if (Tunnel == null)
+        {
+            this.Trace.Warning("Host public key verificiation failed. Tunnel is not found.");
+            return null;
+        }
+
+        if (this.HostPublicKeys == null)
+        {
+            this.Trace.Warning(
+                "Host identity could not be verified because no public keys were provided.");
+
+            return new ClaimsPrincipal();
+        }
+
+        if (this.HostPublicKeys.Contains(hostKey))
+        {
+            this.Trace.Verbose("Verified host identity with public key " + hostKey);
+            return new ClaimsPrincipal();
+        }
+
+        this.Trace.Error("Host public key verificiation failed.");
+        this.Trace.Verbose("Host key: " + hostKey);
+        this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
+        return null;
     }
 
     private void OnSshServerAuthenticating(object? sender, SshAuthenticatingEventArgs e)

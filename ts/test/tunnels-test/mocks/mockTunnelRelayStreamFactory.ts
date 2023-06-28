@@ -36,7 +36,7 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
         if (!relayUri || !accessToken || !protocols.includes(this.connectionType)) {
             throw new Error('Invalid params');
         }
-        return Promise.resolve({ stream: this.stream, protocol: protocols[0] });
+        return Promise.resolve({ stream: this.stream, protocol: this.connectionType });
     };
 
     public static from(

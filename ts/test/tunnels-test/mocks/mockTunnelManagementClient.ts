@@ -55,8 +55,8 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
             return null;
         }
 
-        this.issueMockTokens(tunnel, options);
-        return tunnel;
+        this.issueMockTokens(t, options);
+        return t;
     }
 
     async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {

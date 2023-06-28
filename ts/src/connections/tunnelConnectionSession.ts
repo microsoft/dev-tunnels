@@ -8,7 +8,7 @@ import {
     TunnelRequestOptions,
 } from '@microsoft/dev-tunnels-management';
 import { CancellationError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
-import { CancellationToken, Emitter } from 'vscode-jsonrpc';
+import { CancellationToken } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';
 import { TunnelConnector } from './tunnelConnector';
@@ -32,6 +32,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;
     private connectionProtocolValue?: string;
+
+    public httpAgent?: http.Agent;
 
     /**
      * Name of the protocol used to connect to the tunnel.
@@ -58,6 +60,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     ) {
         super(tunnelAccessScope);
         this.trace = trace ?? (() => {});
+        this.httpAgent = managementClient?.httpsAgent;
     }
 
     /**
@@ -73,7 +76,39 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     private set tunnel(value: Tunnel | null) {
-        this.connectedTunnel = value;
+        if (value !== this.connectedTunnel) {
+
+            // Get the tunnel access token from the new tunnel, or the original Tunnal object if the new tunnel doesn't have the token,
+            // which may happen when the tunnel was authenticated with a tunnel access token from Tunnel.AccessTokens.
+            // Add the tunnel access token to the new tunnel's AccessTokens if it is not there.
+            if (value &&
+                !TunnelAccessTokenProperties.getTunnelAccessToken(value, this.tunnelAccessScope)) {
+
+                const accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
+                    this.tunnel,
+                    this.tunnelAccessScope,
+                );
+
+                if (accessToken) {
+                    value.accessTokens ??= {};
+                    value.accessTokens[this.tunnelAccessScope] = accessToken;
+                }
+            }
+
+            this.connectedTunnel = value;
+            this.tunnelChanged();
+        }
+    }
+
+    /**
+     * Tunnel has been assigned to or changed.
+     */
+    protected tunnelChanged() {
+        if (this.tunnel) {
+            this.accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(this.tunnel, this.tunnelAccessScope);
+        } else {
+            this.accessToken = undefined;
+        }
     }
 
     /**
@@ -130,9 +165,14 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
 
     /**
      * Refreshes the tunnel access token. This may be useful when the Relay service responds with 401 Unauthorized.
+     * Does nothing if the object is disposed, or there is no way to refresh the token.
      */
     public async refreshTunnelAccessToken(cancellation: CancellationToken): Promise<boolean> {
         if (this.isDisposed) {
+            return false;
+        }
+
+        if (!this.isRefreshingTunnelAccessTokenEventHandled && !this.canRefreshTunnel) {
             return false;
         }
 
@@ -144,17 +184,24 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                     this.accessToken,
                 )}`,
             );
-            const newAccessToken = await this.getFreshTunnelAccessToken(cancellation);
-            if (newAccessToken) {
-                TunnelAccessTokenProperties.validateTokenExpiration(newAccessToken);
-                this.traceInfo(
-                    `Refreshed tunnel access token. New token: ${TunnelAccessTokenProperties.getTokenTrace(
-                        newAccessToken,
-                    )}`,
-                );
-                this.accessToken = newAccessToken;
-                return true;
+
+            if (this.isRefreshingTunnelAccessTokenEventHandled) {
+                this.accessToken = await this.getFreshTunnelAccessToken(cancellation) ?? undefined;
+            } else {
+                await this.refreshTunnel(cancellation);
             }
+
+            if (this.accessToken) {
+                TunnelAccessTokenProperties.validateTokenExpiration(this.accessToken);
+            }
+
+            this.traceInfo(
+                `Refreshed tunnel access token. New token: ${TunnelAccessTokenProperties.getTokenTrace(
+                    this.accessToken,
+                )}`,
+            );
+
+            return true;
         } finally {
             this.connectionStatus = previousStatus;
         }
@@ -163,54 +210,35 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
-     * Gets the fresh tunnel access token or undefined if it cannot.
+     * Get a value indicating whether this session can attempt refreshing tunnel.
+     * Note: tunnel refresh may still fail if the tunnel doesn't exist in the service, 
+     * tunnel access has changed, or tunnel access token has expired.
      */
-    protected async getFreshTunnelAccessToken(
-        cancellation: CancellationToken,
-    ): Promise<string | null | undefined> {
-        if (!this.isRefreshingTunnelAccessTokenEventHandled) {
-            if (!this.tunnel || !this.managementClient) {
-                return;
-            }
+    protected get canRefreshTunnel() {
+        return this.tunnel && this.managementClient;
+    }
+
+    /**
+     * Fetch the tunnel from the service if {@link managementClient} and {@link tunnel} are set.
+     */
+    protected async refreshTunnel(cancellation?: CancellationToken) {
+        if (this.canRefreshTunnel) {
+            this.traceInfo('Refreshing tunnel.');
             const options: TunnelRequestOptions = {
                 tokenScopes: [this.tunnelAccessScope],
             };
 
-            const tunnel = await withCancellation(
-                this.managementClient.getTunnel(this.tunnel, options),
+            this.tunnel = await withCancellation(
+                this.managementClient!.getTunnel(this.tunnel!, options),
                 cancellation,
             );
 
-            if (!tunnel) {
-                // Tunnel doesn't exist
-                return;
+            if (this.tunnel) {
+                this.traceInfo('Refreshed tunnel.');
+            } else {
+                this.traceInfo('Tunnel not found.');
             }
-
-            // Get the tunnel access token from the fetched tunnel, or the original this.tunnel object if the fetched tunnel doesn't have the token,
-            // which may happen when the tunnel was authenticated with a tunnel acccess token from this.tunnel.accessTokens.
-            // Add the tunnel access token to the fetched tunnel's accessTokens if it is not there.
-            let accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
-                tunnel,
-                this.tunnelAccessScope,
-            );
-
-            if (!accessToken) {
-                accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
-                    this.tunnel,
-                    this.tunnelAccessScope,
-                );
-
-                if (accessToken) {
-                    tunnel.accessTokens ??= {};
-                    tunnel.accessTokens[this.tunnelAccessScope] = accessToken;
-                }
-            }
-
-            this.tunnel = tunnel;
-            return accessToken;
         }
-
-        return await super.getFreshTunnelAccessToken(cancellation);
     }
 
     /**
@@ -232,6 +260,13 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      */
     protected traceVerbose(msg: string) {
         this.trace(TraceLevel.Verbose, 0, msg);
+    }
+
+    /**
+     * Trace warning message.
+     */
+    protected traceWarning(msg: string, err?: Error) {
+        this.trace(TraceLevel.Warning, 0, msg, err);
     }
 
     /**
@@ -293,36 +328,33 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      *     Tunnel object to get the connection information from that tunnel.
      */
     public async connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void> {
-        if (tunnel && this.tunnel) {
-            throw new Error(
-                'Already connected to a tunnel. Use separate instances to connect to multiple tunnels.',
-            );
-        }
-        await this.connectSession(async () => {
-            const isReconnect = this.isReconnectable && !tunnel;
-            await this.onConnectingToTunnel(tunnel);
-            if (tunnel) {
-                this.tunnel = tunnel;
-                this.accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
-                    tunnel,
-                    this.tunnelAccessScope,
+        if (tunnel) {
+            if (this.tunnel) {
+                throw new Error(
+                    'Already connected to a tunnel. Use separate instances to connect to multiple tunnels.',
                 );
             }
+            
+            this.tunnel = tunnel;
+        }
+
+        this.httpAgent ??= httpAgent;
+
+        await this.connectSession(async () => {
+            const isReconnect = this.isReconnectable && !tunnel;
+            await this.onConnectingToTunnel();
             if (!this.connector) {
                 this.connector = this.createTunnelConnector();
             }
-            await this.connector.connectSession(isReconnect, this.disposeToken, httpAgent);
+            await this.connector.connectSession(isReconnect, this.disposeToken);
         });
     }
 
     /**
-     * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
+     * Validate the {@link tunnel} and get data needed to connect to it, if the tunnel is provided;
      * otherwise, ensure that there is already sufficient data to connect to a tunnel.
-     * @param tunnel Tunnel to use for the connection.
-     *     Tunnel object to get the connection data if defined.
-     *     Undefined if the connection data is already known.
      */
-    public onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
+    public onConnectingToTunnel(): Promise<void> {
         return Promise.resolve();
     }
 

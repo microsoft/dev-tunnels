@@ -25,6 +25,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
     private ConnectionStatus connectionStatus;
+    private Tunnel? tunnel;
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelConnection"/> class.
@@ -78,7 +79,32 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// Get the tunnel that is being hosted or connected to.
     /// May be null if the tunnel client used relay service URL and tunnel access token directly.
     /// </summary>
-    public Tunnel? Tunnel { get; private set; }
+    public Tunnel? Tunnel {
+        get => this.tunnel;
+        private set
+        {
+            if (value != this.tunnel)
+            {
+                // Get the tunnel access token from the new tunnel, or the original Tunnal object if the new tunnel doesn't have the token,
+                // which may happen when the tunnel was authenticated with a tunnel access token from Tunnel.AccessTokens.
+                // Add the tunnel access token to the new tunnel's AccessTokens if it is not there.
+                string? accessToken;
+                if (value != null &&
+                    !value.TryGetAccessToken(TunnelAccessScope, out var _) &&
+                    this.tunnel?.TryGetAccessToken(TunnelAccessScope, out accessToken) == true &&
+                    !string.IsNullOrEmpty(accessToken) &&
+                    TunnelAccessTokenProperties.TryParse(accessToken) is TunnelAccessTokenProperties tokenProperties &&
+                    (tokenProperties.Expiration == null || tokenProperties.Expiration > DateTime.UtcNow))
+                {
+                    value.AccessTokens ??= new Dictionary<string, string>();
+                    value.AccessTokens[TunnelAccessScope] = accessToken;
+                }
+
+                this.tunnel = value;
+                OnTunnelChanged();
+            }
+        }
+    }
 
     /// <summary>
     /// Trace to write output to console.
@@ -130,6 +156,14 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// on the channel request or response message.
     /// </remarks>
     public bool EnableE2EEncryption { get; set; } = true;
+
+    /// <summary>
+    /// Tunnel has been assigned to or changed.
+    /// </summary>
+    protected virtual void OnTunnelChanged()
+    {
+        this.accessToken = Tunnel?.TryGetAccessToken(TunnelAccessScope, out var token) == true ? token : null;
+    }
 
     /// <summary>
     /// Validate <see cref="accessToken"/> if it is not null or empty.
@@ -249,18 +283,22 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
             TunnelAccessTokenProperties.GetTokenTrace(this.accessToken));
         try
         {
-            var newTunnelAccessToken = await GetFreshTunnelAccessTokenAsync(cancellation);
-            if (!string.IsNullOrEmpty(newTunnelAccessToken))
+            if (!await OnRefreshingTunnelAccessTokenAsync(cancellation))
             {
-                TunnelAccessTokenProperties.ValidateTokenExpiration(newTunnelAccessToken);
-                Trace.TraceInformation(
-                    "Refreshed tunnel access token. New token: {0}",
-                    TunnelAccessTokenProperties.GetTokenTrace(newTunnelAccessToken));
-                this.accessToken = newTunnelAccessToken;
-                return true;
+                return false;
             }
 
-            return false;
+            // Access token may be null if tunnel allows anonymous access.
+            if (this.accessToken != null)
+            {
+                TunnelAccessTokenProperties.ValidateTokenExpiration(this.accessToken);
+            }
+
+            Trace.TraceInformation(
+                "Refreshed tunnel access token. New token: {0}",
+                TunnelAccessTokenProperties.GetTokenTrace(this.accessToken));
+
+            return true;
         }
         finally
         {
@@ -269,55 +307,62 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     }
 
     /// <summary>
-    /// Gets the fresh tunnel access token or null if it cannot.
+    /// Fetch the tunnel from the service if <see cref="ManagementClient"/> and <see cref="Tunnel"/> are not null.
     /// </summary>
-    /// <remarks>
-    /// If <see cref="Tunnel"/>, <see cref="ManagementClient"/> are not null and <see cref="RefreshingTunnelAccessToken"/> is null,
-    /// gets the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/> and gets the token
-    /// off it based on <see cref="TunnelAccessScope"/>.
-    /// Otherwise, invokes <see cref="RefreshingTunnelAccessToken"/> event.
-    /// </remarks>
-    protected virtual async Task<string?> GetFreshTunnelAccessTokenAsync(CancellationToken cancellation)
+    /// <returns><c>true</c> if <see cref="Tunnel"/> was refreshed; otherwise, <c>false</c>.</returns>
+    protected virtual async Task<bool> RefreshTunnelAsync(CancellationToken cancellation)
     {
-        if (Tunnel != null &&
-            ManagementClient != null &&
-            RefreshingTunnelAccessToken == null)
+        if (Tunnel != null && ManagementClient != null)
         {
+            Trace.TraceInformation("Refreshing tunnel.");
             var options = new TunnelRequestOptions
             {
                 TokenScopes = new[] { TunnelAccessScope },
             };
 
-            var tunnel = await ManagementClient.GetTunnelAsync(Tunnel, options, cancellation);
-            if (tunnel == null)
+            Tunnel = await ManagementClient.GetTunnelAsync(Tunnel, options, cancellation);
+            if (Tunnel != null)
             {
-                // Tunnel doesn't exist
-                return null;
+                Trace.TraceInformation("Refreshed tunnel.");
+            }
+            else
+            {
+                Trace.TraceInformation("Tunnel not found.");
             }
 
-            // Get the tunnel access token from the fetched tunnel, or the original Tunnal object if the fetched tunnel doesn't have the token,
-            // which may happen when the tunnel was authenticated with a tunnel acccess token from Tunnel.AccessTokens.
-            // Add the tunnel access token to the fetched tunnel's AccessTokens if it is not there.
-            string? result;
-            if (!tunnel.TryGetAccessToken(TunnelAccessScope, out result) &&
-                Tunnel.TryGetAccessToken(TunnelAccessScope, out result))
-            {
-                tunnel.AccessTokens ??= new Dictionary<string, string>();
-                tunnel.AccessTokens[TunnelAccessScope] = result;
-            }
-
-            Tunnel = tunnel;
-            return result;
+            return true;
         }
 
-        if (RefreshingTunnelAccessToken == null)
+        return false;
+    }
+
+
+    /// <summary>
+    /// Refresh tunnel access token.
+    /// </summary>
+    /// <remarks>
+    /// If <see cref="Tunnel"/>, <see cref="ManagementClient"/> are not null and <see cref="RefreshingTunnelAccessToken"/> is null,
+    /// refreshes the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/>
+    /// and this gets the token off it based on <see cref="TunnelAccessScope"/>.
+    /// Otherwise, invokes <see cref="RefreshingTunnelAccessToken"/> event.
+    /// </remarks>
+    protected virtual async Task<bool> OnRefreshingTunnelAccessTokenAsync(CancellationToken cancellation)
+    {
+        var handler = RefreshingTunnelAccessToken;
+        if (handler == null)
         {
-            return null;
+            return await RefreshTunnelAsync(cancellation);
         }
 
         var eventArgs = new RefreshingTunnelAccessTokenEventArgs(TunnelAccessScope, cancellation);
-        RefreshingTunnelAccessToken?.Invoke(this, eventArgs);
-        return eventArgs.TunnelAccessTokenTask != null ? await eventArgs.TunnelAccessTokenTask.ConfigureAwait(false) : null;
+        handler(this, eventArgs);
+        if (eventArgs.TunnelAccessTokenTask == null)
+        {
+            return false;
+        }
+
+        this.accessToken = await eventArgs.TunnelAccessTokenTask.ConfigureAwait(false);
+        return true;
     }
 
     /// <inheritdoc />

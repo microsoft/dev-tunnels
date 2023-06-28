@@ -107,9 +107,6 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     protected override async Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
     {
         Requires.NotNull(Tunnel!, nameof(Tunnel));
-
-        this.accessToken = null!;
-        Tunnel.TryGetAccessToken(TunnelAccessScope, out this.accessToken!);
         Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
 
         var hostPublicKeys = new[]
@@ -215,11 +212,22 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             // optional since it is already over a TLS websocket.
             var config = new SshSessionConfiguration();
             config.KeyExchangeAlgorithms.Clear();
-            config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.None);
             config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp384);
             config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.EcdhNistp256);
             config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup16Sha512);
             config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup14Sha256);
+
+            config.EncryptionAlgorithms.Clear();
+            config.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.None);
+            config.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.Aes256Gcm);
+            config.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.Aes256Cbc);
+            config.EncryptionAlgorithms.Add(SshAlgorithms.Encryption.Aes256Ctr);
+            config.HmacAlgorithms.Clear();
+            ////config.HmacAlgorithms.Add(SshAlgorithms.Hmac.None);
+            config.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha512Etm);
+            config.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha256Etm);
+            config.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha512);
+            config.HmacAlgorithms.Add(SshAlgorithms.Hmac.HmacSha256);
 
             config.AddService(typeof(PortForwardingService));
             session = new SshClientSession(config, Trace.WithName("HostSSH"));
