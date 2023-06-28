@@ -121,18 +121,15 @@ export class TunnelHostBase
     }
 
     /**
-     * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
+     * Validate the {@link tunnel} and get data needed to connect to it, if the tunnel is provided;
      * otherwise, ensure that there is already sufficient data to connect to a tunnel.
-     * @param tunnel Tunnel to use for the connection.
-     *     Tunnel object to get the connection data if defined.
-     *     Undefined if the connection data is already known.
      * @internal
      */
-    public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
+    public async onConnectingToTunnel(): Promise<void> {
         if (this.hostPrivateKey && this.hostPublicKeys) {
             return;
         }
-        if (!tunnel) {
+        if (!this.tunnel) {
             throw new Error('Tunnel is required');
         }
 

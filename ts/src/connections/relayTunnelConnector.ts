@@ -47,7 +47,6 @@ export class RelayTunnelConnector implements TunnelConnector {
     public async connectSession(
         isReconnect: boolean,
         cancellation: CancellationToken,
-        httpAgent : http.Agent,
     ): Promise<void> {
         let disconnectReason: SshDisconnectReason | undefined;
         let error: Error | undefined;
@@ -127,7 +126,7 @@ export class RelayTunnelConnector implements TunnelConnector {
             error = undefined;
             try {
                 const streamAndProtocol = await this.tunnelSession.createSessionStream(
-                    cancellation, httpAgent);
+                    cancellation);
                 stream = streamAndProtocol.stream;
 
                 await this.tunnelSession.configureSession(

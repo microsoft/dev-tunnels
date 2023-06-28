@@ -132,7 +132,7 @@ export class TunnelAccessTokenProperties {
      * @returns Tunnel access token if found; otherwise, undefined.
      */
     public static getTunnelAccessToken(
-        tunnel?: Tunnel,
+        tunnel?: Tunnel | null,
         accessTokenScopes?: string | string[],
     ): string | undefined {
         if (!tunnel?.accessTokens || !accessTokenScopes) {

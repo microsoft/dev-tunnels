@@ -3,7 +3,6 @@
 
 import {
     TunnelConnectionMode,
-    Tunnel,
     TunnelRelayTunnelEndpoint,
 } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken } from 'vscode-jsonrpc';
@@ -36,27 +35,28 @@ export class TunnelRelayTunnelClient extends tunnelRelaySessionClass(
         super(trace, managementClient);
     }
 
-    /**
-     * Gets the tunnel relay URI.
-     * @internal
-     */
-    public async getTunnelRelayUri(tunnel?: Tunnel): Promise<string> {
-        if (!this.endpoints || this.endpoints.length === 0) {
-            throw new Error('No hosts are currently accepting connections for the tunnel.');
+    protected tunnelChanged() {
+        super.tunnelChanged();
+        if (!this.tunnel) {
+            this.relayUri = undefined;
+        } else {
+            if (!this.endpoints || this.endpoints.length === 0) {
+                throw new Error('No hosts are currently accepting connections for the tunnel.');
+            }
+            const tunnelEndpoints: TunnelRelayTunnelEndpoint[] = this.endpoints.filter(
+                (ep) => ep.connectionMode === TunnelConnectionMode.TunnelRelay,
+            );
+    
+            if (tunnelEndpoints.length === 0) {
+                throw new Error('The host is not currently accepting Tunnel relay connections.');
+            }
+    
+            // TODO: What if there are multiple relay endpoints, which one should the tunnel client pick, or is this an error?
+            // For now, just chose the first one.
+            const endpoint = tunnelEndpoints[0];
+            this.hostPublicKeys = endpoint.hostPublicKeys;
+            this.relayUri = endpoint.clientRelayUri!;
         }
-        const tunnelEndpoints: TunnelRelayTunnelEndpoint[] = this.endpoints.filter(
-            (ep) => ep.connectionMode === TunnelConnectionMode.TunnelRelay,
-        );
-
-        if (tunnelEndpoints.length === 0) {
-            throw new Error('The host is not currently accepting Tunnel relay connections.');
-        }
-
-        // TODO: What if there are multiple relay endpoints, which one should the tunnel client pick, or is this an error?
-        // For now, just chose the first one.
-        const endpoint = tunnelEndpoints[0];
-        this.hostPublicKeys = endpoint.hostPublicKeys;
-        return endpoint.clientRelayUri!;
     }
 
     /**

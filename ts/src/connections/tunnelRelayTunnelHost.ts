@@ -2,15 +2,12 @@
 // Licensed under the MIT license.
 
 import {
-    Tunnel,
-    TunnelAccessScopes,
     TunnelConnectionMode,
     TunnelProtocol,
     TunnelRelayTunnelEndpoint,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
-    MultiChannelStream,
     SshChannelOpeningEventArgs,
     SshChannelOpenFailureReason,
     SshStream,
@@ -150,29 +147,30 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
     }
 
-    /**
-     * Gets the tunnel relay URI.
-     * @internal
-     */
-    public async getTunnelRelayUri(tunnel?: Tunnel): Promise<string> {
-        if (!tunnel) {
-            throw new Error('Tunnel is required');
+    public async onConnectingToTunnel(): Promise<void> {
+        await super.onConnectingToTunnel();
+        if (!this.relayUri) {
+            if (!this.tunnel) {
+                throw new Error('Tunnel is required');
+            }
+    
+            let endpoint: TunnelRelayTunnelEndpoint = {
+                hostId: this.hostId,
+                hostPublicKeys: this.hostPublicKeys,
+                connectionMode: TunnelConnectionMode.TunnelRelay,
+            };
+            
+            let additionalQueryParameters = undefined;
+            if (this.tunnel.ports != null && this.tunnel.ports.find((v) => v.protocol === TunnelProtocol.Ssh)) {
+                additionalQueryParameters = { includeSshGatewayPublicKey: 'true' };
+            }
+    
+            endpoint = await this.managementClient!.updateTunnelEndpoint(this.tunnel, endpoint, {
+                additionalQueryParameters: additionalQueryParameters,
+            });
+            
+            this.relayUri = endpoint.hostRelayUri!;
         }
-
-        let endpoint: TunnelRelayTunnelEndpoint = {
-            hostId: this.hostId,
-            hostPublicKeys: this.hostPublicKeys,
-            connectionMode: TunnelConnectionMode.TunnelRelay,
-        };
-        let additionalQueryParameters = undefined;
-        if (tunnel.ports != null && tunnel.ports.find((v) => v.protocol === TunnelProtocol.Ssh)) {
-            additionalQueryParameters = { includeSshGatewayPublicKey: 'true' };
-        }
-
-        endpoint = await this.managementClient!.updateTunnelEndpoint(tunnel, endpoint, {
-            additionalQueryParameters: additionalQueryParameters,
-        });
-        return endpoint.hostRelayUri!;
     }
 
     private hostSession_ChannelOpening(sender: SshClientSession, e: SshChannelOpeningEventArgs) {
@@ -463,14 +461,13 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
     }
 
-    public async refreshPorts(): Promise<void> {
-        if (!this.tunnel || !this.managementClient) {
+    public async refreshPorts(cancellation?: CancellationToken): Promise<void> {
+        if (!this.canRefreshTunnel) {
             return;
         }
 
-        const updatedTunnel = await this.managementClient.getTunnel(this.tunnel, undefined);
-        const updatedPorts = updatedTunnel?.ports ?? [];
-        this.tunnel.ports = updatedPorts;
+        await this.refreshTunnel(cancellation);
+        const ports = this.tunnel?.ports ?? [];
 
         let sessions: SshSession[] = this.sshSessions;
         if (this.connectionProtocol === webSocketSubProtocolv2 && this.sshSession) {
@@ -481,7 +478,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
 
         const forwardPromises: Promise<any>[] = [];
 
-        for (const port of updatedPorts) {
+        for (const port of ports) {
             for (const session of sessions.filter((s) => s.isConnected && s.sessionId)) {
                 const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
                 const forwarder = this.remoteForwarders.get(key.toString());
@@ -493,7 +490,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
 
         for (const [key, forwarder] of Object.entries(this.remoteForwarders)) {
-            if (!updatedPorts.some((p) => p.portNumber === forwarder.localPort)) {
+            if (!ports.some((p) => p.portNumber === forwarder.localPort)) {
                 this.remoteForwarders.delete(key);
                 forwarder.dispose();
             }

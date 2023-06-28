@@ -107,9 +107,6 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     protected override async Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
     {
         Requires.NotNull(Tunnel!, nameof(Tunnel));
-
-        this.accessToken = null!;
-        Tunnel.TryGetAccessToken(TunnelAccessScope, out this.accessToken!);
         Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
 
         var hostPublicKeys = new[]

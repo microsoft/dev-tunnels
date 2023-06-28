@@ -29,4 +29,10 @@ export enum ConnectionStatus {
      * Disconnected from the tunnel and could not reconnect either due to disposal, service down, tunnel deleted, or token expiration. This is the final status.
      */
     Disconnected = 'disconnected',
+
+    /**
+     * Refreshing tunnel host public key. 
+     * This may happen when a client is connecting to a tunnel with a stale host public key. SDK client will try to fetch a fresh tunnel from the tunnelManagementClient.
+     */
+    RefreshingTunnelHostPublicKey = 'refreshingTunnelHostPublicKey',
 }

@@ -1,4 +1,4 @@
-﻿// <copyright file="ConnectionStatus.cs" company="Microsoft">
+// <copyright file="ConnectionStatus.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -34,4 +34,9 @@ public enum ConnectionStatus
     /// Disconnected from the service and could not reconnect either due to disposal, service down, tunnel deleted, or token expiration. This is the final status.
     /// </summary>
     Disconnected,
+
+    /// <summary>
+    /// Refreshing tunnel host public key.
+    /// </summary>
+    RefreshingTunnelHostPublicKey,
 }

@@ -16,7 +16,7 @@ type Constructor<T = object> = new (...args: any[]) => T;
 /**
  * Tunnel relay mixin class that adds relay connection capability to descendants of TunnelSession.
  * @param base Base class constructor.
- * @param webSocketSubProtocol Web socket sub-protocol.
+ * @param protocols Web socket sub-protocols.
  * @returns A class where createSessionStream() connects to tunnel relay.
  */
 export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>>(
@@ -39,10 +39,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          * Creates a stream to the tunnel.
          * @internal
          */
-        public async createSessionStream(
-            cancellation: CancellationToken,
-            httpAgent?: http.Agent
-        ): Promise<{ stream: Stream, protocol: string }> {
+        public async createSessionStream(cancellation: CancellationToken): Promise<{ stream: Stream, protocol: string }> {
             if (!this.relayUri) {
                 throw new Error(
                     'Cannot create tunnel session stream. Tunnel relay endpoint URI is missing',
@@ -60,7 +57,7 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
 
             const clientConfig: IClientConfig = {
                 tlsOptions: {
-                    agent: httpAgent,
+                    agent: this.httpAgent,
                 },
             };
 
@@ -91,32 +88,6 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
             } catch (ex) {
                 throw new Error('Failed to connect to tunnel relay. ' + ex);
             }
-        }
-
-        /**
-         * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
-         * otherwise, ensure that there is already sufficient data to connect to a tunnel.
-         * @param tunnel Tunnel to use for the connection.
-         *     Tunnel object to get the connection data if defined.
-         *     Undefined if the connection data is already known.
-         * @internal
-         */
-        public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
-            await super.onConnectingToTunnel(tunnel);
-            if (!this.relayUri) {
-                this.relayUri = await this.getTunnelRelayUri(tunnel);
-                if (!this.relayUri) {
-                    throw new Error('The tunnel relay endpoint URI is missing.');
-                }
-            }
-        }
-
-        /**
-         * Gets the tunnel relay URI.
-         * @internal
-         */
-        public async getTunnelRelayUri(tunnel?: Tunnel): Promise<string> {
-            throw new Error('getTunnelRelayUri() is not implemented');
         }
     };
 }

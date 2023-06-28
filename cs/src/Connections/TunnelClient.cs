@@ -322,12 +322,58 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             this.Trace.Verbose("Verified host identity with public key " + hostKey);
             e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
         }
+        else if (Tunnel != null && ManagementClient != null)
+        {
+            this.Trace.Verbose("Host public key verificiation failed. Refreshing tunnel.");
+            this.Trace.Verbose("Host key: " + hostKey);
+            this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
+            e.AuthenticationTask = RefreshTunnelAndAuthenticateHostAsync(hostKey, DisposeToken);
+        }
         else
         {
             this.Trace.Error("Host public key verificiation failed.");
             this.Trace.Verbose("Host key: " + hostKey);
             this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
         }
+    }
+
+    private async Task<ClaimsPrincipal?> RefreshTunnelAndAuthenticateHostAsync(string hostKey, CancellationToken cancellation)
+    {
+        var status = ConnectionStatus;
+        ConnectionStatus = ConnectionStatus.RefreshingTunnelHostPublicKey;
+        try
+        {
+            await RefreshTunnelAsync(cancellation);
+        }
+        finally
+        {
+            ConnectionStatus = status;
+        }
+
+        if (Tunnel == null)
+        {
+            this.Trace.Warning("Host public key verificiation failed. Tunnel is not found.");
+            return null;
+        }
+
+        if (this.HostPublicKeys == null)
+        {
+            this.Trace.Warning(
+                "Host identity could not be verified because no public keys were provided.");
+
+            return new ClaimsPrincipal();
+        }
+
+        if (this.HostPublicKeys.Contains(hostKey))
+        {
+            this.Trace.Verbose("Verified host identity with public key " + hostKey);
+            return new ClaimsPrincipal();
+        }
+
+        this.Trace.Error("Host public key verificiation failed.");
+        this.Trace.Verbose("Host key: " + hostKey);
+        this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
+        return null;
     }
 
     private void OnSshServerAuthenticating(object? sender, SshAuthenticatingEventArgs e)
