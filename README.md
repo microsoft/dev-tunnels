@@ -7,8 +7,8 @@ Dev tunnels allows developers to securely expose local web services to the Inter
 | Feature | C# | TypeScript | Java | Go | Rust |
 |---|---|---|---|---|---|
 | Management API | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Tunnel Client Connections | ✅ | ✅ | ✅ | ✅ | 🚧 |
-| Tunnel Host Connections | ✅ | ✅ | ❌ | ❌ | 🚧 |
+| Tunnel Client Connections | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tunnel Host Connections | ✅ | ✅ | ❌ | ❌ | ✅ |
 | Reconnection | ✅ | ✅ | 🗓️ | 🗓️ | ❌ |
 | SSH-level Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Automatic tunnel access token refresh | ✅ | ✅ | 🗓️ | 🗓️ | ❌ |
@@ -33,8 +33,7 @@ Dev tunnels allows developers to securely expose local web services to the Inter
 - [Advanced developer tips and tricks in Visual Studio](https://youtu.be/Czr2M9qcdW4?t=491)
 
 #### Community-created
-- [On .NET Live - Develop webhooks locally with tunnels](https://www.youtube.com/watch?v=T4HiInCKGzA)
-- [ASP.NET Community Standup - Dev tunnels in Visual Studio for ASP.NET Core projects](https://www.youtube.com/watch?v=B9K9eseNcKE)
+- [ASP.NET Community Standup - Dev tunnels in Visual Studio for ASP.NET Core projects](https://youtu.be/B9K9eseNcKE?t=185)
 - [New Visual Studio Feature is a Game Changer for API Developers - Put localhost Online](https://www.youtube.com/watch?v=NPJhrftkqeg)
 - [Connect Any Client, Anywhere to localhost with Visual Studio Dev Tunnels!](https://www.youtube.com/watch?v=azuC8SFHWp8)
 - [Dev Tunnels Visual Studio in 10 Minutes or Less](https://www.youtube.com/watch?v=kdaHwOkQf7c)
