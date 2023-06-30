@@ -40,12 +40,22 @@ Dev tunnels allows developers to securely expose local web services to the Inter
 - [Share Local Web Services Across the Internet with Dev Tunnels CLI](https://www.youtube.com/watch?v=doUDcQNoy38)
 - [ChatGPT Plugin development with Visual Studio](https://www.youtube.com/watch?v=iB9oxyJZhSA)
 
-## Contributing & Feedback
+## Feedback
 
 Have a question or feedback? There are many ways to contribute.
 
 - [Up-vote a feature or request a new one](https://github.com/microsoft/dev-tunnels/issues?q=is%3Aissue+is%3Aopen+label%3Afeature-request)
 - Search [existing bugs](https://github.com/microsoft/dev-tunnels/issues?q=is%3Aissue+is%3Aopen+label%3Abug) or [file a new issue](https://github.com/microsoft/dev-tunnels/issues/new)
+
+## Contributing
+
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+
+When you submit a pull request, a CLA bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repos using our CLA.
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
