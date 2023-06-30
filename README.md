@@ -42,7 +42,7 @@ Dev tunnels allows developers to securely expose local web services to the Inter
 
 ## Feedback
 
-Have a question or feedback? There are many ways to contribute.
+Have a question or feedback? There are many ways to submit feedback.
 
 - [Up-vote a feature or request a new one](https://github.com/microsoft/dev-tunnels/issues?q=is%3Aissue+is%3Aopen+label%3Afeature-request)
 - Search [existing bugs](https://github.com/microsoft/dev-tunnels/issues?q=is%3Aissue+is%3Aopen+label%3Abug) or [file a new issue](https://github.com/microsoft/dev-tunnels/issues/new)
@@ -60,6 +60,12 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+## Security
+
+Microsoft takes the security of our software products and services seriously, which includes all source code repositories managed through our GitHub organizations, which include [Microsoft](https://github.com/Microsoft), [Azure](https://github.com/Azure), [DotNet](https://github.com/dotnet), [AspNet](https://github.com/aspnet), [Xamarin](https://github.com/xamarin), and [our GitHub organizations](https://opensource.microsoft.com/).
+
+If you believe you have found a security vulnerability in any Microsoft-owned repository that meets [Microsoft's definition of a security vulnerability](https://docs.microsoft.com/en-us/previous-versions/tn-archive/cc751383(v=technet.10)), please report it to us as described in [SECURITY](SECURITY.md).
 
 ## Trademarks
 
