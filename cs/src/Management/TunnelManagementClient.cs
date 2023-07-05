@@ -1287,6 +1287,7 @@ namespace Microsoft.DevTunnels.Management
             var baseAddress = this.httpClient.BaseAddress!;
             var builder = new UriBuilder(baseAddress);
             builder.Path = ClustersPath;
+            builder.Query = GetApiQuery();
             var clusterDetails = await SendRequestAsync<object, ClusterDetails[]>(
                 HttpMethod.Get,
                 builder.Uri,
