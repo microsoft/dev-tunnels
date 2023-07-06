@@ -22,4 +22,9 @@ public class TunnelAuthenticationSchemes {
      * Authentication scheme for tunnel access tokens.
      */
     public static final String tunnel = "tunnel";
+
+    /**
+     * Authentication scheme for tunnelPlan access tokens.
+     */
+    public static final String tunnelPlan = "tunnelplan";
 }

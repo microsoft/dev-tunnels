@@ -12,3 +12,6 @@ pub const TUNNEL_AUTHENTICATION_SCHEMES_GITHUB: &str = r#"github"#;
 
 // Authentication scheme for tunnel access tokens.
 pub const TUNNEL_AUTHENTICATION_SCHEMES_TUNNEL: &str = r#"tunnel"#;
+
+// Authentication scheme for tunnelPlan access tokens.
+pub const TUNNEL_AUTHENTICATION_SCHEMES_TUNNEL_PLAN: &str = r#"tunnelplan"#;
