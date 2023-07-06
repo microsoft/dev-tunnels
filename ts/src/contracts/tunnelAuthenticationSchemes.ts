@@ -21,4 +21,9 @@ export enum TunnelAuthenticationSchemes {
      * Authentication scheme for tunnel access tokens.
      */
     Tunnel = 'tunnel',
+
+    /**
+     * Authentication scheme for tunnelPlan access tokens.
+     */
+    TunnelPlan = 'tunnelplan',
 }

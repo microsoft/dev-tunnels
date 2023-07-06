@@ -10,11 +10,14 @@ type TunnelAuthenticationScheme string
 
 const (
 	// Authentication scheme for AAD (or Microsoft account) access tokens.
-	TunnelAuthenticationSchemeAad    TunnelAuthenticationScheme = "aad"
+	TunnelAuthenticationSchemeAad        TunnelAuthenticationScheme = "aad"
 
 	// Authentication scheme for GitHub access tokens.
-	TunnelAuthenticationSchemeGitHub TunnelAuthenticationScheme = "github"
+	TunnelAuthenticationSchemeGitHub     TunnelAuthenticationScheme = "github"
 
 	// Authentication scheme for tunnel access tokens.
-	TunnelAuthenticationSchemeTunnel TunnelAuthenticationScheme = "tunnel"
+	TunnelAuthenticationSchemeTunnel     TunnelAuthenticationScheme = "tunnel"
+
+	// Authentication scheme for tunnelPlan access tokens.
+	TunnelAuthenticationSchemeTunnelPlan TunnelAuthenticationScheme = "tunnelplan"
 )

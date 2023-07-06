@@ -24,4 +24,9 @@ public static class TunnelAuthenticationSchemes
     /// Authentication scheme for tunnel access tokens.
     /// </summary>
     public const string Tunnel = "tunnel";
+
+    /// <summary>
+    /// Authentication scheme for tunnelPlan access tokens.
+    /// </summary>
+    public const string TunnelPlan = "tunnelplan";
 }
