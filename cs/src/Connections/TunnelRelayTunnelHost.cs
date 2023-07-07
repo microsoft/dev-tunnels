@@ -162,7 +162,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         };
 
         ValidateAccessToken();
-        Trace.TraceInformation("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
+        Trace.Verbose("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
         var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
             this.relayUri!,
             this.accessToken,
@@ -495,11 +495,12 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             // Reconnecting client session may cause the new session close with 'None' reason and null exception.
             if (cancellation.IsCancellationRequested)
             {
-                Trace.TraceInformation("Client ssh session cancelled.");
+                Trace.WithName("ClientSSH").Verbose("Session cancelled.");
             }
             else if (e.Reason == SshDisconnectReason.ByApplication)
             {
-                Trace.TraceInformation("Client ssh session closed.");
+                Trace.WithName("ClientSSH").Verbose("Session closed.");
+
             }
             else if (e.Reason != SshDisconnectReason.None || e.Exception != null)
             {
