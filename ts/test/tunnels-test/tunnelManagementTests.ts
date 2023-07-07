@@ -2,10 +2,10 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
-import { suite, test, slow, timeout } from '@testdeck/mocha';
-import { TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
 import axios, { AxiosPromise, AxiosRequestConfig, Method } from 'axios';
 import * as https from 'https';
+import { suite, test, slow, timeout } from '@testdeck/mocha';
+import { TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
 
 @suite
 @slow(3000)
