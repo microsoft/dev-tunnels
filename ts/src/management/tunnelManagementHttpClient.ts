@@ -21,7 +21,7 @@ import {
 import { TunnelRequestOptions } from './tunnelRequestOptions';
 import { TunnelAccessTokenProperties } from './tunnelAccessTokenProperties';
 import { tunnelSdkUserAgent } from './version';
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
+import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
@@ -101,12 +101,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * the global tunnel service URI.
      * @param httpsAgent Optional agent that will be invoked for HTTPS requests to the tunnel
      * service.
+     * @param adapter Optional axios adapter to use for HTTP requests.
      */
     public constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
         userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
+        private readonly adapter?: AxiosAdapter
     ) {
         if (!userAgents) {
             throw new TypeError('User agent must be provided.');
@@ -535,6 +537,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         );
         const config: AxiosRequestConfig = {
             httpsAgent: this.httpsAgent,
+            adapter: this.adapter,
         };
         return await this.request<boolean>('GET', uri, undefined, config);
     }
@@ -697,6 +700,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const config: AxiosRequestConfig = {
             headers,
             ...(this.httpsAgent && { httpsAgent: this.httpsAgent }),
+            ...(this.adapter && { adapter: this.adapter }),
         };
 
         if (options?.followRedirects === false) {

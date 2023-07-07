@@ -2,16 +2,17 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
+import axios, { AxiosPromise, AxiosRequestConfig, Method } from 'axios';
+import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
-import { AxiosRequestConfig, Method } from 'axios';
 
 @suite
 @slow(3000)
 @timeout(10000)
 export class TunnelManagementTests {
 
-    private readonly managementClient : TunnelManagementHttpClient;
+    private readonly managementClient: TunnelManagementHttpClient;
 
     public constructor() {
         this.managementClient = new TunnelManagementHttpClient(
@@ -47,7 +48,6 @@ export class TunnelManagementTests {
         assert(!this.lastRequest.uri.includes('global=true'));
     }
 
-
     @test
     public async listTunnelsGlobal() {
         this.nextResponse = [];
@@ -73,5 +73,52 @@ export class TunnelManagementTests {
         assert(this.lastRequest && this.lastRequest.uri);
         assert.equal(this.lastRequest.method, 'GET');
         assert(this.lastRequest.uri.endsWith('/api/v1/userlimits'));
+    }
+
+    @test
+    public async configDoesNotContainHttpsAgentAndAdapter() {
+        this.nextResponse = [];
+        await this.managementClient.listUserLimits();
+        assert(this.lastRequest);
+        assert(this.lastRequest.config.httpsAgent === undefined);
+        assert(this.lastRequest.config.adapter === undefined);
+    }
+
+    @test
+    public async configContainsHttpsAgentAndAdapter() {
+        // Create a mock https agent
+        const httpsAgent = new https.Agent({
+            rejectUnauthorized: true,
+            keepAlive: true,
+        });
+
+        // Create a mock axios adapter
+        interface AxiosAdapter {
+            (config: AxiosRequestConfig): AxiosPromise<any>;
+        }
+
+        class AxiosAdapter implements AxiosAdapter {
+            constructor(private client: any, private auth: any) { }
+        }
+
+        const axiosAdapter = new AxiosAdapter(axios, { auth: { username: 'test', password: 'test' } });
+
+        // Create a management client with a mock https agent and adapter
+        const managementClient = new TunnelManagementHttpClient(
+            'test/0.0.0', undefined, 'http://global.tunnels.test.api.visualstudio.com', httpsAgent, axiosAdapter);
+        (<any>managementClient).request = this.mockRequest.bind(this);
+
+        this.nextResponse = [];
+        await managementClient.listUserLimits();
+        assert(this.lastRequest);
+
+        // Assert that the https agent and adapter are the same as the ones we passed into the constructor
+        assert(this.lastRequest.config.httpsAgent === httpsAgent);
+        assert(this.lastRequest.config.httpsAgent !== new https.Agent({
+            rejectUnauthorized: true,
+            keepAlive: true,
+        }));
+        assert(this.lastRequest.config.adapter === axiosAdapter);
+        assert(this.lastRequest.config.adapter !== new AxiosAdapter(axios, { auth: { username: 'test', password: 'test' } }))
     }
 }
