@@ -17,13 +17,14 @@ import {
     SshClientCredentials,
     SshClientSession,
     SshDisconnectReason,
+    SshProtocolExtensionNames,
     SshRequestEventArgs,
     SshSessionClosedEventArgs,
     Stream,
     Trace,
     TraceLevel,
 } from '@microsoft/dev-tunnels-ssh';
-import { ForwardedPortConnectingEventArgs, ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
+import { ForwardedPortConnectingEventArgs, ForwardedPortEventArgs, ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
 import { isNode, SshHelpers } from './sshHelpers';
 import { TunnelClient } from './tunnelClient';
@@ -48,6 +49,7 @@ export class TunnelClientBase
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
     private localForwardingHostAddressValue: string = '127.0.0.1';
     private hostId?: string;
+    private readonly disconnectedStreams = new Map<number, SecureStream[]>();
 
     public connectionModes: TunnelConnectionMode[] = [];
 
@@ -184,6 +186,12 @@ export class TunnelClientBase
             this.sshSession = SshHelpers.createSshClientSession((config) => {
                 // Enable port-forwarding via the SSH protocol.
                 config.addService(PortForwardingService);
+
+                if (this.connectionProtocol === webSocketSubProtocol) {
+                    // Enable client SSH session reconnect for V1 protocol only.
+                    // (V2 SSH reconnect is handled by the SecureStream class.)
+                    config.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
+                }
             });
             this.sshSession.trace = this.trace;
             this.sshSession.onClosed((e) => this.onSshSessionClosed(e));
@@ -236,6 +244,26 @@ export class TunnelClientBase
         if (this.connectionProtocol === webSocketSubProtocolv2) {
             pfs.messageFactory = this;
             pfs.onForwardedPortConnecting((e) => this.onForwardedPortConnecting(e));
+            pfs.remoteForwardedPorts.onPortAdded((e) => this.onForwardedPortAdded(pfs, e));
+            pfs.remoteForwardedPorts.onPortUpdated((e) => this.onForwardedPortAdded(pfs, e));
+        }
+    }
+
+    private onForwardedPortAdded(pfs: PortForwardingService, e: ForwardedPortEventArgs) {
+        const port = e.port.remotePort;
+        if (typeof port !== 'number') {
+            return;
+        }
+
+        // If there are disconnected streams for the port, re-connect them now.
+        const disconnectedStreamsCount = this.disconnectedStreams.get(port)?.length ?? 0;
+        for (let i = 0; i < disconnectedStreamsCount; i++) {
+            pfs.connectToForwardedPort(port).catch((error) => {
+                this.trace(
+                    TraceLevel.Warning,
+                    0,
+                    `Failed to reconnect to forwarded port ${port}: ${error}`);
+            });
         }
     }
 
@@ -255,20 +283,52 @@ export class TunnelClientBase
             const clientCredentials: SshClientCredentials = { username: "tunnel" };
 
             e.transformPromise = new Promise((resolve, reject) => {
-                const secureStream = new SecureStream(
-                    e.stream,
-                    clientCredentials);
-                secureStream.trace = this.trace;
-                secureStream.onAuthenticating((authEvent) =>
-                    authEvent.authenticationPromise = this.onHostAuthenticating(authEvent).catch());
+                // If there's a disconnected SecureStream for the port, try to reconnect it.
+                // If there are multiple, pick one and the host will match by SSH session ID.
+                let secureStream = this.disconnectedStreams.get(e.port)?.shift();
+                if (secureStream) {
+                    this.trace(
+                        TraceLevel.Verbose,
+                        0,
+                        `Reconnecting encrypted stream for port ${e.port}...`);
+                    secureStream.reconnect(e.stream)
+                        .then(() => {
+                            this.trace(
+                                TraceLevel.Verbose,
+                                0,
+                                `Reconnecting encrypted stream for port ${e.port} succeeded.`);
+                            resolve(secureStream!);
+                        }).catch(reject);
+                } else {
+                    secureStream = new SecureStream(
+                        e.stream,
+                        clientCredentials);
+                    secureStream.trace = this.trace;
+                    secureStream.onAuthenticating((authEvent) => authEvent.authenticationPromise =
+                        this.onHostAuthenticating(authEvent).catch());
+                    secureStream.onDisconnected(
+                        () => this.onSecureStreamDisconnected(e.port, secureStream!));
 
-                // Do not pass the cancellation token from the connecting event,
-                // because the connection will outlive the event.
-                secureStream.connect().then(() => resolve(secureStream)).catch(reject);
+                    // Do not pass the cancellation token from the connecting event,
+                    // because the connection will outlive the event.
+                    secureStream.connect().then(() => resolve(secureStream!)).catch(reject);
+                }
+
             });
         }
 
         super.onForwardedPortConnecting(e);
+    }
+
+    private onSecureStreamDisconnected(port: number, secureStream: SecureStream): void {
+        this.trace(TraceLevel.Verbose, 0, `Encrypted stream for port ${port} disconnected.`);
+
+        const streams = this.disconnectedStreams.get(port);
+        if (streams) {
+            streams.push(secureStream);
+        } else {
+            this.disconnectedStreams.set(port, [secureStream]);
+        }
     }
 
     private async onHostAuthenticating(e: SshAuthenticatingEventArgs): Promise<object | null> {
@@ -309,7 +369,7 @@ export class TunnelClientBase
                 }
             }
 
-            this.traceError('Host public key verificiation failed.');
+            this.traceError('Host public key verification failed.');
             this.traceVerbose(`Host key: ${hostKey}`);
             this.traceVerbose(`Expected key(s): ${this.hostPublicKeys.join(', ')}`);
             return null;

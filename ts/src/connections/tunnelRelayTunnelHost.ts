@@ -244,7 +244,8 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             };
             const secureStream = new SecureStream(
                 e.stream,
-                serverCredentials);
+                serverCredentials,
+                this.reconnectableSessions);
             secureStream.trace = this.trace;
 
             // The client was already authenticated by the relay.

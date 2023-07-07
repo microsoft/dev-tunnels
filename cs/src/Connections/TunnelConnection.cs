@@ -56,7 +56,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
                 if (value != previousConnectionStatus)
                 {
                     // If there were temporary connection issue, DisconnectException may be not null.
-                    // Since we have successfuly connected after all, clean it up.
+                    // Since we have successfully connected after all, clean it up.
                     if (value == ConnectionStatus.Connected)
                     {
                         DisconnectException = null;
@@ -392,6 +392,8 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     {
         lock (DisposeLock)
         {
+            ConnectionStatus = ConnectionStatus.Disconnected;
+
             if (!this.disposeCts.IsCancellationRequested &&
                 this.reconnectTask == null &&
                 this.connector != null) // The connector may be null if the tunnel client/host was created directly from a stream.

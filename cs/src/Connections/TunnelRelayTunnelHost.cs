@@ -373,7 +373,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             var secureStream = new SecureStream(
                 e.Stream,
                 serverCredentials,
-                null,
+                this.reconnectableSessions,
                 channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId));
 
             // The client was already authenticated by the relay.

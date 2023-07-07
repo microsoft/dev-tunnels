@@ -262,6 +262,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      * Start reconnecting if the tunnel connection is not yet disposed.
      */
     protected startReconnectingIfNotDisposed() {
+        this.connectionStatus = ConnectionStatus.Disconnected;
+
         if (!this.isDisposed && !this.reconnectPromise) {
             this.reconnectPromise = (async () => {
                 try {

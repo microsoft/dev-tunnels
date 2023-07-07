@@ -122,8 +122,6 @@ export class SshHelpers {
         config.keyExchangeAlgorithms.push(ssh.SshAlgorithms.keyExchange.ecdhNistp384Sha384);
         config.keyExchangeAlgorithms.push(ssh.SshAlgorithms.keyExchange.ecdhNistp256Sha256);
         config.keyExchangeAlgorithms.push(ssh.SshAlgorithms.keyExchange.dhGroup14Sha256);
-        config.protocolExtensions.push(ssh.SshProtocolExtensionNames.sessionReconnect);
-        config.protocolExtensions.push(ssh.SshProtocolExtensionNames.sessionLatency);
 
         return factoryCallback(config);
     }
