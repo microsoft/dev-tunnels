@@ -8,6 +8,7 @@ import {
     connection as WebSocketConnection,
     IClientConfig,
 } from 'websocket';
+ 
 
 declare module 'websocket' {
     interface client {
@@ -45,7 +46,7 @@ export class SshHelpers {
         protocols?: string[],
         headers?: object,
         clientConfig?: IClientConfig,
-    ): Promise<ssh.Stream> {
+    ): Promise<ssh.WebSocketStream> {
         if (isNode()) {
             return SshHelpers.nodeSshStreamFactory(relayUri, protocols, headers, clientConfig);
         }
@@ -97,9 +98,9 @@ export class SshHelpers {
      * @param socket
      * @returns
      */
-    public static webSshStreamFactory(socket: WebSocket): Promise<ssh.Stream> {
+    public static webSshStreamFactory(socket: WebSocket): Promise<ssh.WebSocketStream> {
         socket.binaryType = 'arraybuffer';
-        return new Promise<ssh.Stream>((resolve, reject) => {
+        return new Promise<ssh.WebSocketStream>((resolve, reject) => {
             socket.onopen = () => {
                 resolve(new ssh.WebSocketStream(socket));
             };
@@ -132,9 +133,9 @@ export class SshHelpers {
         protocols?: string[],
         headers?: object,
         clientConfig?: IClientConfig,
-    ): Promise<ssh.Stream> {
+    ): Promise<ssh.WebSocketStream> {
         const client = new WebSocketClient(clientConfig);
-        return new Promise<ssh.Stream>((resolve, reject) => {
+        return new Promise<ssh.WebSocketStream>((resolve, reject) => {
             client.on('connect', (connection: any) => {
                 resolve(new ssh.WebSocketStream(new WebsocketStreamAdapter(connection)));
             });
@@ -170,6 +171,7 @@ export class SshHelpers {
 
                 reject(new RelayConnectionError(`error.${errorContext.error}`, errorContext));
             });
+
             client.connect(relayUri, protocols, undefined, headers);
         });
     }
@@ -181,6 +183,10 @@ export class SshHelpers {
  */
 class WebsocketStreamAdapter {
     public constructor(private connection: WebSocketConnection) {}
+
+    public get protocol(): string | undefined {
+        return this.connection.protocol;
+    }
 
     public set onmessage(messageHandler: ((e: { data: ArrayBuffer }) => void) | null) {
         if (messageHandler) {

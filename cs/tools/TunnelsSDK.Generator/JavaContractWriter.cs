@@ -25,6 +25,7 @@ internal class JavaContractWriter : ContractWriter
     public const String EnumDeclarationHeader = "public enum";
     public const String GsonExposeType = "com.google.gson.annotations.Expose";
     public const String GsonExposeTag = "@Expose";
+    public const String DeprecatedTag = "@Deprecated";
 
     public JavaContractWriter(string repoRoot, string csNamespace) : base(repoRoot, csNamespace)
     {
@@ -159,7 +160,11 @@ internal class JavaContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    "));
+            s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    ", GetJavaDoc(member)));
+            if (GetObsoleteAttribute(member) != null)
+            {
+               s.AppendLine($"{indent}    {DeprecatedTag}");
+            }
 
             var memberType = (property?.Type ?? field!.Type).ToDisplayString();
             var isNullable = memberType.EndsWith("?");
@@ -197,6 +202,10 @@ internal class JavaContractWriter : ContractWriter
             if (method.IsStatic && method.MethodKind == MethodKind.Ordinary && method.DeclaredAccessibility == Accessibility.Public) {
                 s.AppendLine();
                 s.Append(FormatDocComment(method.GetDocumentationCommentXml(), indent + "    "));
+                if (GetObsoleteAttribute(method) != null)
+                {
+                    s.AppendLine($"{indent}    {DeprecatedTag}");
+                }
                 var javaName = ToCamelCase(method.Name);
                 var javaReturnType = GetJavaTypeForCSType(method.ReturnType.ToDisplayString(), javaName, imports);
 
@@ -238,7 +247,13 @@ internal class JavaContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    ", GetJavaDoc(member)));
+
+            if (member != null && GetObsoleteAttribute(member) != null)
+            {
+                s.AppendLine($"{indent}    {DeprecatedTag}");
+            }
+
             s.AppendLine($"{indent}    {SerializedNameTag}(\"{field.Name}\")");
             s.AppendLine($"{indent}    {field.Name},");
         }
@@ -290,7 +305,7 @@ internal class JavaContractWriter : ContractWriter
         return name.Substring(0, 1).ToLowerInvariant() + name.Substring(1);
     }
 
-    private string FormatDocComment(string? comment, string indent)
+    private string FormatDocComment(string? comment, string indent, List<string>? javaDoc = null)
     {
         if (comment == null)
         {
@@ -321,6 +336,14 @@ internal class JavaContractWriter : ContractWriter
             foreach (var commentLine in WrapComment(remarks, 90 - 3 - indent.Length))
             {
                 s.AppendLine(indent + " * " + commentLine);
+            }
+        }
+
+        if (javaDoc != null)
+        {
+            foreach (var line in javaDoc)
+            {
+                s.AppendLine(indent + " * " + line);
             }
         }
 
@@ -421,5 +444,18 @@ internal class JavaContractWriter : ContractWriter
         }
         javaType += suffix;
         return javaType;
+    }
+
+    private static List<string> GetJavaDoc(ISymbol symbol)
+    {
+        var doc = new List<string>();
+        var obsoleteAttribute = GetObsoleteAttribute(symbol);
+        if (obsoleteAttribute != null)
+        {
+            var message = GetObsoleteMessage(obsoleteAttribute);
+            doc.Add($"@deprecated {message}");
+        }
+
+        return doc;
     }
 }

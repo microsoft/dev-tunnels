@@ -104,7 +104,7 @@ public class TunnelConstraints {
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
-    public static final String clusterIdPattern = "[a-z][a-z0-9]{2,11}";
+    public static final String clusterIdPattern = "^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$";
 
     /**
      * Regular expression that can match or validate tunnel cluster ID strings.
@@ -141,7 +141,7 @@ public class TunnelConstraints {
      * Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
      * empty string because tunnels may be unnamed.
      */
-    public static final String tunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|";
+    public static final String tunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)";
 
     /**
      * Regular expression that can match or validate tunnel names.
@@ -167,7 +167,7 @@ public class TunnelConstraints {
      * The tunnel service may perform additional contextual validation at the time the
      * domain is registered.
      */
-    public static final String tunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]";
+    public static final String tunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]|(^$)";
 
     /**
      * Regular expression that can match or validate tunnel domains.

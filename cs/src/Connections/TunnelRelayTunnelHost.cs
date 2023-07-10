@@ -162,7 +162,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         };
 
         ValidateAccessToken();
-        Trace.TraceInformation("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
+        Trace.Verbose("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
         var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
             this.relayUri!,
             this.accessToken,
@@ -371,8 +371,6 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             // size of one client channel.
             channel.MaxWindowSize = SshChannel.DefaultMaxWindowSize * 2;
 
-            // TODO: Publish the host public key to the relay so that the client can verify.
-
             SshServerCredentials serverCredentials =
                 new SshServerCredentials(HostPrivateKey);
             var secureStream = new SecureStream(
@@ -497,11 +495,12 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             // Reconnecting client session may cause the new session close with 'None' reason and null exception.
             if (cancellation.IsCancellationRequested)
             {
-                Trace.TraceInformation("Client ssh session cancelled.");
+                Trace.WithName("ClientSSH").Verbose("Session cancelled.");
             }
             else if (e.Reason == SshDisconnectReason.ByApplication)
             {
-                Trace.TraceInformation("Client ssh session closed.");
+                Trace.WithName("ClientSSH").Verbose("Session closed.");
+
             }
             else if (e.Reason != SshDisconnectReason.None || e.Exception != null)
             {
@@ -558,25 +557,20 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     private async Task StartForwardingExistingPortsAsync(
         SshSession session, bool removeUnusedPorts = false)
     {
+        // Send port-forward request messages concurrently. The client may still handle the
+        // requests sequentially but at least there is no network round-trip between them.
+        var forwardTasks = new List<Task>();
+
         var tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
         var pfs = session.ActivateService<PortForwardingService>();
         pfs.ForwardConnectionsToLocalPorts = this.ForwardConnectionsToLocalPorts;
         foreach (TunnelPort port in tunnelPorts)
         {
-            try
-            {
-                await ForwardPortAsync(pfs, port, CancellationToken.None);
-            }
-            catch (Exception exception)
-            {
-                Trace.TraceEvent(
-                    TraceEventType.Error,
-                    0,
-                    "Error forwarding port {0} to client: {1}",
-                    port.PortNumber,
-                    exception.Message);
-            }
+            // ForwardPortAsync() catches and logs most exceptions that might normally occur.
+            forwardTasks.Add(ForwardPortAsync(pfs, port, CancellationToken.None));
         }
+
+        await Task.WhenAll(forwardTasks);
 
         // If a tunnel client reconnects, its SSH session Port Forwarding service may
         // have remote port forwarders for the ports no longer forwarded.

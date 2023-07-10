@@ -137,7 +137,7 @@ public static class TunnelConstraints
     /// Cluster IDs are alphanumeric; hyphens are not permitted.
     /// </remarks>
     /// <seealso cref="Tunnel.ClusterId"/>
-    public const string ClusterIdPattern = "[a-z][a-z0-9]{2,11}";
+    public const string ClusterIdPattern = "^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel cluster ID strings.
@@ -183,7 +183,7 @@ public static class TunnelConstraints
     /// allows an empty string because tunnels may be unnamed.
     /// </remarks>
     /// <seealso cref="Tunnel.Name"/>
-    public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|";
+    public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel names.
@@ -216,7 +216,7 @@ public static class TunnelConstraints
     /// is registered.
     /// </remarks>
     /// <seealso cref="Tunnel.Domain"/>
-    public const string TunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]";
+    public const string TunnelDomainPattern = "[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]|(^$)";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel domains.

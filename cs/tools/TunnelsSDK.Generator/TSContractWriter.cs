@@ -155,7 +155,7 @@ internal class TSContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent, GetJsDoc(field)));
             s.AppendLine($"{indent}export const {ToCamelCase(field.Name)} = '{field.ConstantValue}';");
         }
 
@@ -180,7 +180,7 @@ internal class TSContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    "));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), indent + "    ", GetJsDoc(field)));
 
             var value = type.BaseType?.Name == "Enum" ? field.Name : field.ConstantValue;
             s.AppendLine($"{indent}    {field.Name} = '{value}',");
@@ -226,7 +226,7 @@ internal class TSContractWriter : ContractWriter
             if (value != null)
             {
                 s.AppendLine();
-                s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    "));
+                s.Append(FormatDocComment(member.GetDocumentationCommentXml(), indent + "    ", GetJsDoc(member)));
                 s.AppendLine($"{indent}    " +
                     $"export const {tsName}: {tsType}{(isNullable ? " | null" : "")} = {value};");
             }
@@ -283,7 +283,7 @@ internal class TSContractWriter : ContractWriter
         return name.Substring(0, 1).ToLowerInvariant() + name.Substring(1);
     }
 
-    private string FormatDocComment(string? comment, string indent)
+    private string FormatDocComment(string? comment, string indent, List<string>? jsdoc = null)
     {
         if (comment == null)
         {
@@ -314,6 +314,14 @@ internal class TSContractWriter : ContractWriter
             foreach (var commentLine in WrapComment(remarks, 90 - 3 - indent.Length))
             {
                 s.AppendLine(indent + " * " + commentLine);
+            }
+        }
+
+        if (jsdoc != null)
+        {
+            foreach (var line in jsdoc)
+            {
+                s.AppendLine(indent + " * " + line);
             }
         }
 
@@ -413,5 +421,18 @@ internal class TSContractWriter : ContractWriter
 
         tsType += suffix;
         return tsType;
+    }
+
+    private static List<string> GetJsDoc(ISymbol symbol)
+    {
+        var doc = new List<string>();
+        var obsoleteAttribute = GetObsoleteAttribute(symbol);
+        if (obsoleteAttribute != null)
+        {
+            var message = GetObsoleteMessage(obsoleteAttribute);
+            doc.Add($"@deprecated {message}");
+        }
+
+        return doc;
     }
 }

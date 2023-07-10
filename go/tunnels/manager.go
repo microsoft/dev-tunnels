@@ -42,13 +42,14 @@ type tokenProviderfn func() string
 const (
 	apiV1Path                  = "/api/v1"
 	tunnelsApiPath             = apiV1Path + "/tunnels"
+	userLimitsApiPath          = apiV1Path + "/userlimits"
 	subjectsApiPath            = apiV1Path + "/subjects"
 	clustersApiPath            = apiV1Path + "/clusters"
 	checkNameAvailabilityPath  = "/checkNameAvailability"
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
-	goUserAgent                = "Visual-Studio-Tunnel-Service-Go-SDK/" + PackageVersion
+	goUserAgent                = "Dev-Tunnels-Service-Go-SDK/" + PackageVersion
 )
 
 var (
@@ -459,6 +460,25 @@ func (m *Manager) DeleteTunnelPort(
 	}
 	tunnel.Ports = newPorts
 	return nil
+}
+
+// Lists user limits.
+// Returns error if the list fails.
+func (m *Manager) ListUserLimits(ctx context.Context) (limits []*NamedRateStatus, err error) {
+	url := m.buildUri("", userLimitsApiPath, nil, "")
+	token := m.tokenProvider()
+	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, token, false)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting user limits: %w", err)
+	}
+
+	err = json.Unmarshal(response, &limits)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to NamedRateStatus: %w", err)
+	}
+
+	return limits, nil
 }
 
 func (m *Manager) ListClusters(ctx context.Context) (clusters []*ClusterDetails, err error) {

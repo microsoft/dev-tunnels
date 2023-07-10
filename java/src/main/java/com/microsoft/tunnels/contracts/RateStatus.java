@@ -22,7 +22,7 @@ public class RateStatus extends ResourceStatus {
     public int periodSeconds;
 
     /**
-     * Gets or sets the unix time when this status will be reset.
+     * Gets or sets the unix time in seconds when this status will be reset.
      */
     @Expose
     public long resetTime;

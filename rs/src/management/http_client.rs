@@ -12,7 +12,7 @@ use url::Url;
 
 use crate::contracts::{
     env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelRelayTunnelEndpoint, TunnelServiceProperties,
+    TunnelRelayTunnelEndpoint, TunnelServiceProperties, NamedRateStatus,
 };
 
 use super::{
@@ -29,6 +29,7 @@ pub struct TunnelManagementClient {
 }
 
 const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
+const USER_LIMITS_API_PATH: &str = "/api/v1/userlimits";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
 const CHECK_TUNNEL_NAME_SUB_PATH: &str = "/checkNameAvailability";
@@ -265,6 +266,17 @@ impl TunnelManagementClient {
             .await
     }
 
+    /// Lists all user limits.
+    pub async fn list_user_limits(
+        &self,
+        options: &TunnelRequestOptions,
+    ) -> HttpResult<Vec<NamedRateStatus>> {
+        let url = self.build_uri(None, USER_LIMITS_API_PATH);
+
+        let request = self.make_tunnel_request(Method::GET, url, options).await?;
+        self.execute_json("list_user_limits", request).await
+    }
+
     /// Sends the request and deserializes a JSON response
     #[cfg(feature = "instrumentation")]
     async fn execute_json<T>(&self, feature: &'static str, request: Request) -> HttpResult<T>
@@ -454,7 +466,7 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
     let pkg_version = PKG_VERSION.unwrap_or("unknown");
     let full_user_agent = format!(
         "{}{}{}",
-        user_agent, " Visual-Studio-Tunnel-Service-Rust-SDK/", pkg_version
+        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version
     );
     TunnelClientBuilder {
         authorization: Arc::new(Box::new(super::StaticAuthorizationProvider(
@@ -672,7 +684,7 @@ mod tests {
 
         // verify
         let re = Regex::new(
-            r"^test-caller Visual-Studio-Tunnel-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$",
+            r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$",
         )
         .unwrap();
         let full_agent = builder.user_agent.to_str().unwrap();

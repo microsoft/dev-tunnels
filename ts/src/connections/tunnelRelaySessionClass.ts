@@ -7,6 +7,9 @@ import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
 import { Stream, TraceLevel } from '@microsoft/dev-tunnels-ssh';
 import { TunnelRelayStreamFactory, DefaultTunnelRelayStreamFactory } from '.';
 import { TunnelSession } from './tunnelSession';
+import { IClientConfig } from 'websocket';
+import * as http from 'http';
+
 
 type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -18,14 +21,9 @@ type Constructor<T = object> = new (...args: any[]) => T;
  */
 export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>>(
     base: TBase,
-    webSocketSubProtocol: string,
+    protocols: string[],
 ) {
     return class TunnelRelaySession extends base {
-        /**
-         * Web socket sub-protocol to connect to the tunnel relay endpoint.
-         */
-        public static readonly webSocketSubProtocol = webSocketSubProtocol;
-
         /**
          * Tunnel relay URI.
          * @internal
@@ -41,7 +39,10 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          * Creates a stream to the tunnel.
          * @internal
          */
-        public async createSessionStream(cancellation: CancellationToken): Promise<Stream> {
+        public async createSessionStream(
+            cancellation: CancellationToken,
+            httpAgent?: http.Agent
+        ): Promise<{ stream: Stream, protocol: string }> {
             if (!this.relayUri) {
                 throw new Error(
                     'Cannot create tunnel session stream. Tunnel relay endpoint URI is missing',
@@ -51,17 +52,30 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
             const name = this.tunnelAccessScope === TunnelAccessScopes.Connect ? 'client' : 'host';
             const accessToken = this.validateAccessToken();
             this.trace(TraceLevel.Info, 0, `Connecting to ${name} tunnel relay ${this.relayUri}`);
-            this.trace(TraceLevel.Verbose, 0, `Sec-WebSocket-Protocol: ${webSocketSubProtocol}`);
+            this.trace(TraceLevel.Verbose, 0, `Sec-WebSocket-Protocol: ${protocols.join(', ')}`);
             if (accessToken) {
                 const tokenTrace = TunnelAccessTokenProperties.getTokenTrace(accessToken);
                 this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${tokenTrace}>`);
             }
 
-            return await this.streamFactory.createRelayStream(
+            const clientConfig: IClientConfig = {
+                tlsOptions: {
+                    agent: httpAgent,
+                },
+            };
+
+            const streamAndProtocol = await this.streamFactory.createRelayStream(
                 this.relayUri,
-                webSocketSubProtocol,
+                protocols,
                 accessToken,
+                clientConfig
             );
+
+            this.trace(
+                TraceLevel.Verbose,
+                0,
+                `Connected with subprotocol '${streamAndProtocol.protocol}'`);
+            return streamAndProtocol;
         }
 
         /**
@@ -71,9 +85,9 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          *     Tunnel object to get the connection information from that tunnel.
          * @internal
          */
-        public async connectTunnelSession(tunnel?: Tunnel): Promise<void> {
+        public async connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void> {
             try {
-                await super.connectTunnelSession(tunnel);
+                await super.connectTunnelSession(tunnel, httpAgent);
             } catch (ex) {
                 throw new Error('Failed to connect to tunnel relay. ' + ex);
             }

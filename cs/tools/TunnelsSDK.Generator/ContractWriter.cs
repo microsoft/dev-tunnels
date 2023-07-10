@@ -1,4 +1,4 @@
-﻿// <copyright file="ContractWriter.cs" company="Microsoft">
+// <copyright file="ContractWriter.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 
@@ -100,5 +101,20 @@ internal abstract class ContractWriter
 
             yield return comment.TrimEnd();
         }
+    }
+
+    protected static AttributeData? GetAttribute(ISymbol symbol, string attributeName)
+    {
+        return symbol.GetAttributes().FirstOrDefault((a) => a.AttributeClass?.Name == attributeName);
+    }
+
+    protected static AttributeData? GetObsoleteAttribute(ISymbol symbol)
+    {
+        return GetAttribute(symbol, nameof(ObsoleteAttribute));
+    }
+
+    protected static string? GetObsoleteMessage(AttributeData? obsoleteAttribute)
+    {
+        return obsoleteAttribute?.ConstructorArguments.FirstOrDefault().Value?.ToString();
     }
 }

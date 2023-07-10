@@ -45,13 +45,20 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     public ForwardedPortsCollection? ForwardedPorts =>
         SshPortForwardingService?.RemoteForwardedPorts;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Connection protocol used to connect to host.
+    /// </summary>
     public string? ConnectionProtocol { get; protected set; }
 
     /// <summary>
     /// Session used to connect to host
     /// </summary>
     protected SshClientSession? SshSession { get; set; }
+
+    /// <summary>
+    /// One or more SSH public keys published by the host with the tunnel endpoint.
+    /// </summary>
+    protected string[]? HostPublicKeys { get; set; }
 
     /// <summary>
     /// Port forwarding service on <see cref="SshSession"/>.
@@ -214,7 +221,13 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         if (this.SshSession.SessionId != null)
         {
             var clientCredentials = new SshClientCredentials("tunnel", password: null);
-            await this.SshSession.AuthenticateAsync(clientCredentials);
+            if (!await this.SshSession.AuthenticateAsync(clientCredentials))
+            {
+                // Server authentication happens first, and if it succeeds then it sets a principal.
+                throw new SshConnectionException(
+                    this.SshSession.Principal == null ?
+                    "SSH server authentication failed." : "SSH client authentication failed.");
+            }
         }
 
         ConnectionStatus = ConnectionStatus.Connected;
@@ -269,11 +282,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
                     e.Stream,
                     clientCredentials,
                     channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId));
-
-                // TODO: Verify the host public key shared via the tunnel service?
-                secureStream.Authenticating += (_, e) =>
-                    e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(
-                        new ClaimsPrincipal());
+                secureStream.Authenticating += OnHostAuthenticating;
 
                 // Do not pass the cancellation token from the connecting event,
                 // because the connection will outlive the event.
@@ -283,6 +292,58 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         }
 
         this.ForwardedPortConnecting?.Invoke(this, e);
+    }
+
+    private void OnHostAuthenticating(object? sender, SshAuthenticatingEventArgs e)
+    {
+        // If this method returns without assigning e.AuthenticationTask, the auth fails.
+
+        if (e.AuthenticationType != SshAuthenticationType.ServerPublicKey || e.PublicKey == null)
+        {
+            this.Trace.Warning("Invalid host authenticating event.");
+            return;
+        }
+
+        // The public key property on this event comes from SSH key-exchange; at this point the
+        // SSH server has cryptographically proven that it holds the corresponding private key.
+        // Convert host key bytes to base64 to match the format in which the keys are published.
+        var hostKey = e.PublicKey.GetPublicKeyBytes(e.PublicKey.KeyAlgorithmName).ToBase64();
+
+        // Host public keys are obtained from the tunnel endpoint record published by the host.
+        if (this.HostPublicKeys == null)
+        {
+            this.Trace.Warning(
+                "Host identity could not be verified because no public keys were provided.");
+            this.Trace.Verbose("Host key: " + hostKey);
+            e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
+        }
+        else if (this.HostPublicKeys.Contains(hostKey))
+        {
+            this.Trace.Verbose("Verified host identity with public key " + hostKey);
+            e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
+        }
+        else
+        {
+            this.Trace.Error("Host public key verificiation failed.");
+            this.Trace.Verbose("Host key: " + hostKey);
+            this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
+        }
+    }
+
+    private void OnSshServerAuthenticating(object? sender, SshAuthenticatingEventArgs e)
+    {
+        if (this.ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocol)
+        {
+            // For V1 protocol the SSH server is the host; it should be authenticated with public key.
+            OnHostAuthenticating(sender, e);
+        }
+        else
+        {
+            // For V2 protocol the SSH server is the relay.
+            // Relay server authentication is done via the websocket TLS host certificate.
+            // If SSH encryption/authentication is used anyway, just accept any SSH host key.
+            e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
+        }
     }
 
     /// <summary>
@@ -326,13 +387,6 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     {
         IsSshSessionActive = false;
         SshSessionClosed?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void OnSshServerAuthenticating(object? sender, SshAuthenticatingEventArgs e)
-    {
-        // Relay server authentication is done via the websocket TLS host certificate.
-        // If SSH encryption/authentication is used anyway, just accept any SSH host key.
-        e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
     }
 
     private void OnRequest(object? sender, SshRequestEventArgs<SessionRequestMessage> e)

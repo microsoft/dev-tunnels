@@ -11,6 +11,7 @@ import {
     ProblemDetails,
     TunnelServiceProperties,
     ClusterDetails,
+    NamedRateStatus,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -20,13 +21,14 @@ import {
 import { TunnelRequestOptions } from './tunnelRequestOptions';
 import { TunnelAccessTokenProperties } from './tunnelAccessTokenProperties';
 import { tunnelSdkUserAgent } from './version';
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
+import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
 const apiV1Path = `/api/v1`;
 const tunnelsApiPath = apiV1Path + '/tunnels';
+const limitsApiPath = apiV1Path + '/userlimits';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
 const clustersApiPath = apiV1Path + '/clusters';
@@ -99,12 +101,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * the global tunnel service URI.
      * @param httpsAgent Optional agent that will be invoked for HTTPS requests to the tunnel
      * service.
+     * @param adapter Optional axios adapter to use for HTTP requests.
      */
     public constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
         userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
+        private readonly adapter?: AxiosAdapter
     ) {
         if (!userAgents) {
             throw new TypeError('User agent must be provided.');
@@ -311,6 +315,17 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         return result;
+    }
+
+    public async listUserLimits(): Promise<NamedRateStatus[]> {
+        const results = await this.sendRequest<NamedRateStatus[]>(
+            'GET',
+            undefined,
+            limitsApiPath,
+            undefined,
+            undefined,
+        );
+        return results || [];
     }
 
     public async listTunnelPorts(
@@ -522,6 +537,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         );
         const config: AxiosRequestConfig = {
             httpsAgent: this.httpsAgent,
+            adapter: this.adapter,
         };
         return await this.request<boolean>('GET', uri, undefined, config);
     }
@@ -684,6 +700,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const config: AxiosRequestConfig = {
             headers,
             ...(this.httpsAgent && { httpsAgent: this.httpsAgent }),
+            ...(this.adapter && { adapter: this.adapter }),
         };
 
         if (options?.followRedirects === false) {

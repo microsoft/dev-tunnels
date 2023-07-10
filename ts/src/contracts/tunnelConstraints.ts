@@ -101,7 +101,7 @@ namespace TunnelConstraints {
      *
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
-    export const clusterIdPattern: string = '[a-z][a-z0-9]{2,11}';
+    export const clusterIdPattern: string = '^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$';
 
     /**
      * Regular expression that can match or validate tunnel cluster ID strings.
@@ -138,7 +138,7 @@ namespace TunnelConstraints {
      * Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
      * empty string because tunnels may be unnamed.
      */
-    export const tunnelNamePattern: string = '([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|';
+    export const tunnelNamePattern: string = '([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)';
 
     /**
      * Regular expression that can match or validate tunnel names.
@@ -164,7 +164,7 @@ namespace TunnelConstraints {
      * The tunnel service may perform additional contextual validation at the time the
      * domain is registered.
      */
-    export const tunnelDomainPattern: string = '[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]';
+    export const tunnelDomainPattern: string = '[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]|(^$)';
 
     /**
      * Regular expression that can match or validate tunnel domains.

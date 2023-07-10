@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 export { Tunnel } from './tunnel';
+export { NamedRateStatus } from './namedRateStatus';
 export { ProblemDetails } from './problemDetails';
 export { TunnelAccessControl } from './tunnelAccessControl';
 export { TunnelAccessControlEntry } from './tunnelAccessControlEntry';

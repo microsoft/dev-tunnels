@@ -62,7 +62,7 @@ pub const ACCESS_CONTROL_MAX_SCOPES: i32 = 10;
 // Regular expression that can match or validate tunnel cluster ID strings.
 //
 // Cluster IDs are alphanumeric; hyphens are not permitted.
-pub const CLUSTER_ID_PATTERN: &str = r#"[a-z][a-z0-9]{2,11}"#;
+pub const CLUSTER_ID_PATTERN: &str = r#"^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$"#;
 
 // Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 // excluding vowels and 'y' (to avoid accidentally generating any random words).
@@ -78,7 +78,7 @@ pub const TUNNEL_ID_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{8}"#;
 //
 // Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an empty
 // string because tunnels may be unnamed.
-pub const TUNNEL_NAME_PATTERN: &str = r#"([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|"#;
+pub const TUNNEL_NAME_PATTERN: &str = r#"([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)"#;
 
 // Regular expression that can match or validate tunnel or port tags.
 pub const TAG_PATTERN: &str = r#"[\w-=]{1,50}"#;
@@ -87,7 +87,7 @@ pub const TAG_PATTERN: &str = r#"[\w-=]{1,50}"#;
 //
 // The tunnel service may perform additional contextual validation at the time the domain
 // is registered.
-pub const TUNNEL_DOMAIN_PATTERN: &str = r#"[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]"#;
+pub const TUNNEL_DOMAIN_PATTERN: &str = r#"[0-9a-z][0-9a-z-.]{1,158}[0-9a-z]|(^$)"#;
 
 // Regular expression that can match or validate an access control subject or organization
 // ID.

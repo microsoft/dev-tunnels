@@ -5,7 +5,7 @@ import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken, Disposable } from 'vscode-jsonrpc';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
-
+import * as http from 'http';
 /**
  * Tunnel session.
  */
@@ -50,18 +50,22 @@ export interface TunnelSession {
      *     Undefined if the connection information is already known and the tunnel is not needed.
      *     Tunnel object to get the connection information from that tunnel.
      */
-    connectTunnelSession(tunnel?: Tunnel): Promise<void>;
+    connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void>;
 
     /**
      * Creates a stream to the tunnel for the tunnel session.
      */
-    createSessionStream(cancellation: CancellationToken): Promise<Stream>;
+    createSessionStream(
+        cancellation: CancellationToken,
+        httpAgent?: http.Agent,
+    ): Promise<{ stream: Stream, protocol: string }>;
 
     /**
      * Configures the tunnel session with the given stream.
      */
     configureSession(
         stream: Stream,
+        protocol: string,
         isReconnect: boolean,
         cancellation: CancellationToken,
     ): Promise<void>;

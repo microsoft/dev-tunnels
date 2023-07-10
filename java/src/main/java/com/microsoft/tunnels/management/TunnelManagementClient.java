@@ -6,6 +6,7 @@ package com.microsoft.tunnels.management;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.tunnels.contracts.ClusterDetails;
+import com.microsoft.tunnels.contracts.NamedRateStatus;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
 import com.microsoft.tunnels.contracts.TunnelAccessScopes;
@@ -51,6 +52,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private static final String prodServiceUri = "https://global.rel.tunnels.api.visualstudio.com";
   private static final String apiV1Path = "/api/v1";
   private static final String tunnelsApiPath = apiV1Path + "/tunnels";
+  private static final String userLimitsApiPath = apiV1Path + "/userlimits";
   private static final String subjectsApiPath = apiV1Path + "/subjects";
   private static final String endpointsApiSubPath = "/endpoints";
   private static final String portsApiSubPath = "/ports";
@@ -756,6 +758,25 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     }
     catch (UnsupportedEncodingException e) {
       throw new Error("Error encoding tunnel name: " + name);
+    }
+  }
+
+  @Override
+  public CompletableFuture<Collection<NamedRateStatus>> listUserLimitsAsync() {
+    URI uri;
+    try {
+      uri = new URI(this.baseAddress + TunnelManagementClient.userLimitsApiPath);
+      final Type responseType = new TypeToken<Collection<NamedRateStatus>>() {}.getType();
+      return requestAsync(
+          null,
+          null,
+          HttpMethod.GET,
+          uri,
+          null,
+          null,
+          responseType);
+    } catch (URISyntaxException e) {
+      throw new Error("Error parsing URI: " + this.baseAddress + TunnelManagementClient.userLimitsApiPath);
     }
   }
 }

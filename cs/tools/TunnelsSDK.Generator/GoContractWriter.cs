@@ -172,7 +172,7 @@ internal class GoContractWriter : ContractWriter
             }
 
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), ""));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), "", GetGoDoc(field)));
             s.AppendLine($"var {fieldName} = \"{field.ConstantValue}\"");
         }
 
@@ -207,7 +207,7 @@ internal class GoContractWriter : ContractWriter
         foreach (var field in fields)
         {
             s.AppendLine();
-            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), "\t"));
+            s.Append(FormatDocComment(field.GetDocumentationCommentXml(), "\t", GetGoDoc(field)));
             var alignment = new string(' ', maxFieldNameLength - field.Name.Length);
             var value = type.BaseType?.Name == "Enum" ? field.Name : field.ConstantValue;
             s.AppendLine($"\t{typeName}{field.Name}{alignment} {typeName} = \"{value}\"");
@@ -249,7 +249,7 @@ internal class GoContractWriter : ContractWriter
 
                 var lines = (value.All((c) => char.IsDigit(c)) ||
                     (value.StartsWith("\"") && value.EndsWith("\""))) ? constLines : varLines;
-                lines.Add(FormatDocComment(member.GetDocumentationCommentXml(), "\t")
+                lines.Add(FormatDocComment(member.GetDocumentationCommentXml(), "\t", GetGoDoc(member))
                     .Replace("// Gets a ", "// A ").TrimEnd());
                 lines.Add($"\t{type.Name}{memberName} = {value}");
                 lines.Add(string.Empty);
@@ -294,7 +294,7 @@ internal class GoContractWriter : ContractWriter
         return s.ToString();
     }
 
-    private string FormatDocComment(string? comment, string prefix)
+    private string FormatDocComment(string? comment, string prefix, List<string>? godoc = null)
     {
         if (comment == null)
         {
@@ -324,6 +324,14 @@ internal class GoContractWriter : ContractWriter
             foreach (var commentLine in WrapComment(remarks, 90 - 3 - prefix.Length))
             {
                 s.AppendLine(prefix + "// " + commentLine);
+            }
+        }
+
+        if (godoc != null)
+        {
+            foreach (var doc in godoc)
+            {
+                s.AppendLine(prefix + "// " + doc);
             }
         }
 
@@ -469,5 +477,18 @@ internal class GoContractWriter : ContractWriter
 
         goType = prefix + goType;
         return goType;
+    }
+
+    private static List<string> GetGoDoc(ISymbol symbol)
+    {
+        var doc = new List<string>();
+        var obsoleteAttribute = GetObsoleteAttribute(symbol);
+        if (obsoleteAttribute != null)
+        {
+            var message = GetObsoleteMessage(obsoleteAttribute);
+            doc.Add($"Deprecated: {message}");
+        }
+
+        return doc;
     }
 }

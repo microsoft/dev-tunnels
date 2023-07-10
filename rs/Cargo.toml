@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"], default-features = false }
 reqwest = { version = "0.11", features = ["default", "json"] }
 url = "2"
 opentelemetry = { version = "0.17", features = ["trace"], optional = true }
@@ -19,8 +19,8 @@ tokio-tungstenite = { version = "0.17", optional = true, features = ["native-tls
 futures = { version = "0.3", optional = true }
 tungstenite = { version = "0.17", optional = true, features = ["native-tls"] }
 uuid = { version = "0.8.2", features = ["v4"], optional = true }
-russh = { version = "0.34.0-beta.16", default-features = false, features = ["openssl", "flate2"], optional = true }
-russh-keys = { version = "0.22.0-beta.7", default-features = false, features = ["openssl"], optional = true }
+russh = { version = "0.37.1", default-features = false, features = ["openssl", "flate2"], optional = true }
+russh-keys = { version = "0.37.1", default-features = false, features = ["openssl"], optional = true }
 hyper = "0.14"
 
 [dev-dependencies]

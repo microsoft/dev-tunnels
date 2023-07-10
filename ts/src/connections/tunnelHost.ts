@@ -17,7 +17,6 @@ export interface TunnelHost extends TunnelConnection {
     start(tunnel: Tunnel): Promise<void>;
 
     /**
-     *
      * Refreshes ports that were updated using the management API.
      *
      * After using the management API to add or remove ports, call this method to have the
