@@ -81,6 +81,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             // Get the tunnel access token from the new tunnel, or the original Tunnal object if the new tunnel doesn't have the token,
             // which may happen when the tunnel was authenticated with a tunnel access token from Tunnel.AccessTokens.
             // Add the tunnel access token to the new tunnel's AccessTokens if it is not there.
+
+            // TODO: remove this access token preservation logic when https://github.com/microsoft/basis-planning/issues/990 is fixed.
             if (value &&
                 !TunnelAccessTokenProperties.getTunnelAccessToken(value, this.tunnelAccessScope)) {
 
@@ -179,7 +181,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
         const previousStatus = this.connectionStatus;
         this.connectionStatus = ConnectionStatus.RefreshingTunnelAccessToken;
         try {
-            this.traceInfo(
+            this.traceVerbose(
                 `Refreshing tunnel access token. Current token: ${TunnelAccessTokenProperties.getTokenTrace(
                     this.accessToken,
                 )}`,
@@ -195,7 +197,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 TunnelAccessTokenProperties.validateTokenExpiration(this.accessToken);
             }
 
-            this.traceInfo(
+            this.traceVerbose(
                 `Refreshed tunnel access token. New token: ${TunnelAccessTokenProperties.getTokenTrace(
                     this.accessToken,
                 )}`,
