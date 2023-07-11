@@ -89,7 +89,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
                 // which may happen when the tunnel was authenticated with a tunnel access token from Tunnel.AccessTokens.
                 // Add the tunnel access token to the new tunnel's AccessTokens if it is not there.
 
-                // TODO: remove this access token preservation logic when https://github.com/microsoft/basis-planning/issues/990 is fixed.
+                // TODO: remove this access token preservation logic when #990 is fixed.
                 string? accessToken;
                 if (value != null &&
                     !value.TryGetAccessToken(TunnelAccessScope, out var _) &&
