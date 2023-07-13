@@ -950,6 +950,33 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Empty(tunnel.Ports);
     }
 
+    [Fact]
+    public async Task ConnectClientToStaleEndpoint_RefreshesTunnel()
+    {
+        var tunnel = CreateRelayTunnel(addClientEndpoint: true);
+        var hostPublicKey = this.serverSshKey.GetPublicKeyBytes(this.serverSshKey.KeyAlgorithmName).ToBase64();
+        tunnel.Endpoints[0].HostPublicKeys = new[] { hostPublicKey };
+
+        var managementClient = new MockTunnelManagementClient();
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
+
+        var staleTunnel = CreateRelayTunnel(addClientEndpoint: true);
+        staleTunnel.Endpoints[0].HostPublicKeys = new[] { "StaleHostPublicKey" };
+        staleTunnel.TunnelId = tunnel.TunnelId;
+
+        var relayClient = new TunnelRelayTunnelClient(managementClient, TestTS);
+        var isTunnelHostPublicKeyRefreshed = false;
+        relayClient.ConnectionStatusChanged += (_, e) =>
+            isTunnelHostPublicKeyRefreshed |= (e.Status == ConnectionStatus.RefreshingTunnelHostPublicKey);
+
+        using var session = await ConnectRelayClientAsync(relayClient, staleTunnel);
+
+        Assert.True(isTunnelHostPublicKeyRefreshed);
+        Assert.Equal(ConnectionStatus.Connected, relayClient.ConnectionStatus);
+        Assert.Equal(tunnel, relayClient.Tunnel);
+        Assert.Equal(hostPublicKey, tunnel.Endpoints[0].HostPublicKeys[0]);
+    }
+
     private static Task<Stream> ThrowNotAWebSocket(HttpStatusCode statusCode)
     {
         var wse = new WebSocketException(WebSocketError.NotAWebSocket, $"The server returned status code '{statusCode:D}' when status code '101' was expected.");

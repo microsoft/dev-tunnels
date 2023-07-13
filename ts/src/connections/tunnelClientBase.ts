@@ -19,7 +19,6 @@ import {
     SshDisconnectReason,
     SshRequestEventArgs,
     SshSessionClosedEventArgs,
-    SshStream,
     Stream,
     Trace,
     TraceLevel,
@@ -34,7 +33,7 @@ import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
-import * as http from 'http';
+import { ConnectionStatus } from './connectionStatus';
 
 export const webSocketSubProtocol = 'tunnel-relay-client';
 export const webSocketSubProtocolv2 = 'tunnel-relay-client-v2-dev';
@@ -48,7 +47,7 @@ export class TunnelClientBase
     private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
     private localForwardingHostAddressValue: string = '127.0.0.1';
-    private httpAgent: http.Agent | undefined;
+    private hostId?: string;
 
     public connectionModes: TunnelConnectionMode[] = [];
 
@@ -130,67 +129,45 @@ export class TunnelClientBase
 
     public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
         super(TunnelAccessScopes.Connect, trace, managementClient);
-        this.httpAgent = managementClient?.httpsAgent;
-    }
-
-    public async connectClient(tunnel: Tunnel, endpoints: TunnelEndpoint[]): Promise<void> {
-        this.endpoints = endpoints;
-        await this.connectTunnelSession(tunnel, this.httpAgent);
     }
 
     public async connect(tunnel: Tunnel, hostId?: string): Promise<void> {
-        const endpoints = TunnelClientBase.getEndpoints(tunnel, hostId);
-        await this.connectClient(tunnel, endpoints);
+        this.hostId = hostId;
+        await this.connectTunnelSession(tunnel);
     }
 
-    /**
-     * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
-     * otherwise, ensure that there is already sufficient data to connect to a tunnel.
-     * @param tunnel Tunnel to use for the connection.
-     *     Tunnel object to get the connection data if defined.
-     *     Undefined if the connection data is already known.
-     * @internal
-     */
-    public async onConnectingToTunnel(tunnel?: Tunnel): Promise<void> {
-        if (!this.endpoints) {
-            this.endpoints = TunnelClientBase.getEndpoints(tunnel);
-        }
-        await super.onConnectingToTunnel(tunnel);
-    }
-
-    private static getEndpoints(tunnel?: Tunnel, hostId?: string): TunnelEndpoint[] {
-        if (!tunnel) {
-            throw new Error('Tunnel must be defined.');
-        }
-        if (!tunnel.endpoints) {
-            throw new Error('Tunnel endpoints cannot be null');
-        }
-        if (tunnel.endpoints.length === 0) {
-            throw new Error('No hosts are currently accepting connections for the tunnel.');
-        }
-
-        const endpointGroups = List.groupBy(
-            tunnel.endpoints,
-            (endpoint: TunnelEndpoint) => endpoint.hostId,
-        );
-
-        let endpoints: TunnelEndpoint[];
-        if (hostId) {
-            endpoints = endpointGroups.get(hostId)!;
-            if (!endpoints) {
-                throw new Error(
-                    'The specified host is not currently accepting connections to the tunnel.',
-                );
+    protected tunnelChanged() {
+        super.tunnelChanged();
+        this.endpoints = undefined;
+        if (this.tunnel) {
+            if (!this.tunnel.endpoints) {
+                throw new Error('Tunnel endpoints cannot be null');
             }
-        } else if (endpointGroups.size > 1) {
-            throw new Error(
-                'There are multiple hosts for the tunnel. Specify a host ID to connect to.',
-            );
-        } else {
-            endpoints = endpointGroups.entries().next().value[1];
-        }
 
-        return endpoints;
+            if (this.tunnel.endpoints.length === 0) {
+                throw new Error('No hosts are currently accepting connections for the tunnel.');
+            }
+    
+            const endpointGroups = List.groupBy(
+                this.tunnel.endpoints,
+                (endpoint: TunnelEndpoint) => endpoint.hostId,
+            );
+    
+            if (this.hostId) {
+                this.endpoints = endpointGroups.get(this.hostId)!;
+                if (!this.endpoints) {
+                    throw new Error(
+                        'The specified host is not currently accepting connections to the tunnel.',
+                    );
+                }
+            } else if (endpointGroups.size > 1) {
+                throw new Error(
+                    'There are multiple hosts for the tunnel. Specify a host ID to connect to.',
+                );
+            } else {
+                this.endpoints = endpointGroups.entries().next().value[1];
+            }
+        }
     }
 
     private onRequest(e: SshRequestEventArgs<SessionRequestMessage>) {
@@ -296,7 +273,7 @@ export class TunnelClientBase
 
     private async onHostAuthenticating(e: SshAuthenticatingEventArgs): Promise<object | null> {
         if (e.authenticationType !== SshAuthenticationType.serverPublicKey || !e.publicKey) {
-            this.trace(TraceLevel.Warning, 0, 'Invalid host authenticating event.');
+            this.traceWarning('Invalid host authenticating event.');
             return null;
         }
 
@@ -308,17 +285,33 @@ export class TunnelClientBase
 
         // Host public keys are obtained from the tunnel endpoint record published by the host.
         if (!this.hostPublicKeys) {
-            this.trace(TraceLevel.Warning, 0, 'Host identity could not be verified because ' +
+            this.traceWarning('Host identity could not be verified because ' +
                 'no public keys were provided.');
-            this.trace(TraceLevel.Verbose, 0, 'Host key: ' + hostKey);
+            this.traceVerbose(`Host key: ${hostKey}`);
             return {};
         } else if (this.hostPublicKeys.includes(hostKey)) {
-            this.trace(TraceLevel.Verbose, 0, 'Verified host identity with public key ' + hostKey);
+            this.traceVerbose(`Verified host identity with public key ${hostKey}`);
             return {};
         } else {
-            this.trace(TraceLevel.Error, 0, "Host public key verificiation failed.");
-            this.trace(TraceLevel.Verbose, 0, "Host key: " + hostKey);
-            this.trace(TraceLevel.Verbose, 0, "Expected key(s): " + this.hostPublicKeys.join(', '));
+            // The tunnel host may have reconnected with a different host public key.
+            // Try fetching the tunnel again to refresh the key.
+            if (this.canRefreshTunnel && !this.disposeToken.isCancellationRequested) {
+                const previousStatus = this.connectionStatus;
+                this.connectionStatus = ConnectionStatus.RefreshingTunnelHostPublicKey;
+                try {
+                    await this.refreshTunnel(this.disposeToken);
+                    if (this.hostPublicKeys.includes(hostKey)) {
+                        this.traceVerbose('Verified host identity with public key ' + hostKey);
+                        return {};
+                    }
+                } finally {
+                    this.connectionStatus = previousStatus;
+                }
+            }
+
+            this.traceError('Host public key verificiation failed.');
+            this.traceVerbose(`Host key: ${hostKey}`);
+            this.traceVerbose(`Expected key(s): ${this.hostPublicKeys.join(', ')}`);
             return null;
         }
     }

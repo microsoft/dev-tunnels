@@ -3,13 +3,19 @@
 
 import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
-import { CancellationToken, Disposable } from 'vscode-jsonrpc';
+import { CancellationToken } from 'vscode-jsonrpc';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import * as http from 'http';
 /**
  * Tunnel session.
  */
 export interface TunnelSession {
+
+    /**
+     * Gets the tunnel.
+     */
+    tunnel: Tunnel | null;
+
     /**
      * Gets the trace source.
      */
@@ -19,6 +25,11 @@ export interface TunnelSession {
      * Gets tunnel access scope for this tunnel session.
      */
     tunnelAccessScope: string;
+
+    /**
+     * Gets the http agent for http requests.
+     */
+    httpAgent?: http.Agent;
 
     /**
      * Validates tunnel access token if it's present. Returns the token.
@@ -31,13 +42,10 @@ export interface TunnelSession {
     onRetrying(event: RetryingTunnelConnectionEventArgs): void;
 
     /**
-     * Validate the tunnel and get data needed to connect to it, if the tunnel is provided;
+     * Validate {@link tunnel} and get data needed to connect to it, if the tunnel is provided;
      * otherwise, ensure that there is already sufficient data to connect to a tunnel.
-     * @param tunnel Tunnel to use for the connection.
-     *     Tunnel object to get the connection data if defined.
-     *     Undefined if the connection data is already known.
      */
-    onConnectingToTunnel(tunnel?: Tunnel): Promise<void>;
+    onConnectingToTunnel(): Promise<void>;
 
     /**
      * Connect to the tunnel session by running the provided {@link action}.
@@ -57,7 +65,6 @@ export interface TunnelSession {
      */
     createSessionStream(
         cancellation: CancellationToken,
-        httpAgent?: http.Agent,
     ): Promise<{ stream: Stream, protocol: string }>;
 
     /**

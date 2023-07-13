@@ -25,6 +25,7 @@ import {
     TunnelRelayTunnelHost,
 } from '@microsoft/dev-tunnels-connections';
 import {
+    KeyPair,    
     NodeStream,
     PromiseCompletionSource,
     SshAlgorithms,
@@ -91,10 +92,7 @@ export class TunnelHostAndClientTests {
         } as Tunnel;
     }
 
-    private async createSshServerSession(): Promise<SshServerSession> {
-        const [serverStream, clientStream] = await DuplexStream.createStreams();
-        const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
-
+    private async createSshServerSession(serverSshKey?: KeyPair): Promise<SshServerSession> {
         let sshConfig = new SshSessionConfiguration();
         sshConfig.addService(PortForwardingService);
         let sshSession = new SshServerSession(sshConfig);
@@ -135,11 +133,11 @@ export class TunnelHostAndClientTests {
         relayClient: TestTunnelRelayTunnelClient,
         tunnel: Tunnel,
         clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
+        serverSshKey?: KeyPair,
     ): Promise<SshServerSession> {
         const [serverStream, clientStream] = await DuplexStream.createStreams();
-        const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
-
-        let sshSession = await this.createSshServerSession();
+        serverSshKey ??= await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
+        let sshSession = await this.createSshServerSession(serverSshKey);
         let serverConnectPromise = sshSession.connect(serverStream);
 
         relayClient.streamFactory = new MockTunnelRelayStreamFactory(
@@ -266,6 +264,95 @@ export class TunnelHostAndClientTests {
             "Not authorized (401). Provide a fresh tunnel access token with 'connect' scope.",
         );
     }
+
+    @test
+    async connectRelayClientWithValidHostKey() {
+        // A good tunnel with the correct host public key.
+        const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
+        const publicKeyBuffer = await serverSshKey.getPublicKeyBytes(serverSshKey.keyAlgorithmName);
+        const tunnel = this.createRelayTunnel();
+        tunnel.endpoints![0].hostPublicKeys = [publicKeyBuffer!.toString('base64')];
+
+        const relayClient = new TestTunnelRelayTunnelClient();
+        const serverSession = await this.connectRelayClient(relayClient, tunnel, undefined, serverSshKey);
+
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected, 'Client must be connected.');
+        assert.strictEqual(serverSession.isConnected, true, 'Server SSH session must be connected.');
+
+        relayClient.dispose()
+        serverSession.dispose();
+    }
+
+    @test
+    async connectRelayClientWithStaleHostKey() {
+        // A good tunnel with the correct host public key.
+        const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
+        const publicKeyBuffer = await serverSshKey.getPublicKeyBytes(serverSshKey.keyAlgorithmName);
+        const tunnel = this.createRelayTunnel();
+        tunnel.endpoints![0].hostPublicKeys = [publicKeyBuffer!.toString('base64')];
+
+        // Management client can fetch the good tunnel.
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.tunnels = [tunnel];
+
+        // Client tries to connect to a stale tunnel with outdated host public key.
+        const staleTunnel = this.createRelayTunnel();
+        staleTunnel.endpoints![0].hostPublicKeys = ['staleToken'];
+
+        const relayClient = new TestTunnelRelayTunnelClient(managementClient);
+        let isHostPublicKeyRefreshed = false;
+        relayClient.connectionStatusChanged((e) => isHostPublicKeyRefreshed ||= (e.status === ConnectionStatus.RefreshingTunnelHostPublicKey));
+        const serverSession = await this.connectRelayClient(relayClient, staleTunnel, undefined, serverSshKey);
+
+        // Client should be connected after refreshing host public key.
+        assert.strictEqual(isHostPublicKeyRefreshed, true, 'Client must have refreshed host public keys.');
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected, 'Client must be connected.');
+        assert.strictEqual(serverSession.isConnected, true, 'Server SSH session must be connected.');
+
+        relayClient.dispose()
+        serverSession.dispose();
+    }
+
+    @test
+    async connectRelayClientWithStaleHostKeyTunnelIsMissing() {
+        // Management client cannot fetch the tunnel.
+        const managementClient = new MockTunnelManagementClient();
+
+        // Client tries to connect to a stale tunnel with outdated host public key.
+        const staleTunnel = this.createRelayTunnel();
+        staleTunnel.endpoints![0].hostPublicKeys = ['staleToken'];
+
+        const relayClient = new TestTunnelRelayTunnelClient(managementClient);
+        let isHostPublicKeyRefreshed = false;
+        relayClient.connectionStatusChanged((e) => isHostPublicKeyRefreshed ||= (e.status === ConnectionStatus.RefreshingTunnelHostPublicKey));
+        await assert.rejects(
+            () => this.connectRelayClient(relayClient, staleTunnel), 
+            (e) => (<Error>e).message === 'Failed to connect to tunnel relay. Error: SSH server authentication failed.');
+
+        assert.strictEqual(isHostPublicKeyRefreshed, true, 'Client must have tried to refresh the host public key.');
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected, 'Client must be disconnected.');
+
+        relayClient.dispose()
+    }    
+
+    @test
+    async connectRelayClientWithStaleHostKeyNoTunnelManagementClient() {
+        // Client tries to connect to a stale tunnel with outdated host public key.
+        const staleTunnel = this.createRelayTunnel();
+        staleTunnel.endpoints![0].hostPublicKeys = ['staleToken'];
+
+        const relayClient = new TestTunnelRelayTunnelClient();
+        let isHostPublicKeyRefreshed = false;
+        relayClient.connectionStatusChanged((e) => isHostPublicKeyRefreshed ||= (e.status === ConnectionStatus.RefreshingTunnelHostPublicKey));
+        await assert.rejects(
+            () => this.connectRelayClient(relayClient, staleTunnel), 
+            (e) => (<Error>e).message === 'Failed to connect to tunnel relay. Error: SSH server authentication failed.');
+
+        assert.strictEqual(isHostPublicKeyRefreshed, false, 'Client must not have tried to refresh the host public key.');
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected, 'Client must be disconnected.');
+
+        relayClient.dispose()
+    }       
 
     private async connectRelayClientFailsForError(error: Error, expectedErrorMessage?: string) {
         const relayClient = new TestTunnelRelayTunnelClient();

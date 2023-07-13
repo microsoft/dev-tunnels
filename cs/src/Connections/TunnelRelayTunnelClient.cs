@@ -60,46 +60,58 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     public override IReadOnlyCollection<TunnelConnectionMode> ConnectionModes
          => new[] { TunnelConnectionMode.TunnelRelay };
 
-    /// <inheritdoc />
-    protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
+    /// <summary>
+    /// Tunnel has been assigned to or changed.
+    /// Update tunnel access token, relay URI, and host public key from the tunnel.
+    /// </summary>
+    protected override void OnTunnelChanged()
     {
-        Requires.NotNull(Tunnel!, nameof(Tunnel));
-        Requires.NotNull(Tunnel.Endpoints!, nameof(Tunnel.Endpoints));
-
-        var endpointGroups = Tunnel.Endpoints.GroupBy((ep) => ep.HostId).ToArray();
-        IGrouping<string?, TunnelEndpoint> endpoints;
-        if (HostId != null)
+        base.OnTunnelChanged();
+        if (Tunnel?.Endpoints?.Length > 0)
         {
-            endpoints = endpointGroups.SingleOrDefault((g) => g.Key == HostId) ??
+            var endpointGroups = Tunnel.Endpoints.GroupBy((ep) => ep.HostId).ToArray();
+            IGrouping<string?, TunnelEndpoint> endpoints;
+            if (HostId != null)
+            {
+                endpoints = endpointGroups.SingleOrDefault((g) => g.Key == HostId) ??
+                    throw new InvalidOperationException(
+                        "The specified host is not currently accepting connections to the tunnel.");
+            }
+            else if (endpointGroups.Length > 1)
+            {
                 throw new InvalidOperationException(
-                    "The specified host is not currently accepting connections to the tunnel.");
-        }
-        else if (endpointGroups.Length > 1)
-        {
-            throw new InvalidOperationException(
-                "There are multiple hosts for the tunnel. Specify a host ID to connect to.");
+                    "There are multiple hosts for the tunnel. Specify a host ID to connect to.");
+            }
+            else
+            {
+                endpoints = endpointGroups.Single();
+            }
+
+            var endpoint = endpoints
+                .OfType<TunnelRelayTunnelEndpoint>()
+                .SingleOrDefault() ??
+                throw new InvalidOperationException(
+                    "The host is not currently accepting Tunnel relay connections.");
+
+            Requires.Argument(
+                !string.IsNullOrEmpty(endpoint?.ClientRelayUri),
+                nameof(Tunnel),
+                $"The tunnel client relay endpoint URI is missing.");
+
+            this.relayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
+            this.HostPublicKeys = endpoint.HostPublicKeys;
         }
         else
         {
-            endpoints = endpointGroups.Single();
+            this.relayUri = null;
+            this.HostPublicKeys = null;
         }
+    }
 
-        var endpoint = endpoints
-            .OfType<TunnelRelayTunnelEndpoint>()
-            .SingleOrDefault() ??
-            throw new InvalidOperationException(
-                "The host is not currently accepting Tunnel relay connections.");
-
-        Requires.Argument(
-            !string.IsNullOrEmpty(endpoint?.ClientRelayUri),
-            nameof(Tunnel),
-            $"The tunnel client relay endpoint URI is missing.");
-
-        // The access token might be null if connecting to a tunnel that allows anonymous access.
-        Tunnel.TryGetAccessToken(TunnelAccessScope, out this.accessToken);
-        this.relayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
-        this.HostPublicKeys = endpoint.HostPublicKeys;
-
+    /// <inheritdoc />
+    protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
+    {
+        Requires.NotNull(this.relayUri!, nameof(this.relayUri));
         ITunnelConnector result = new RelayTunnelConnector(this);
         return Task.FromResult(result);
     }

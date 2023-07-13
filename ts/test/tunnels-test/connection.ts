@@ -72,7 +72,7 @@ async function startTunnelRelayConnection() {
     let tunnelInstance = await tunnelManagementClient.getTunnel(tunnel, tunnelRequestOptions);
 
     let tunnelRelayTunnelClient = new TunnelRelayTunnelClient();
-    await tunnelRelayTunnelClient.connectClient(tunnelInstance!, tunnelInstance!.endpoints!);
+    await tunnelRelayTunnelClient.connect(tunnelInstance!);
     // Wait indefinitely so the connection does not close
     await new Promise((resolve) => {});
     return 0;
