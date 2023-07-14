@@ -32,6 +32,7 @@ import {
     SshSession,
     SshServerCredentials,
     SecureStream,
+    SshProtocolExtensionNames,
 } from '@microsoft/dev-tunnels-ssh';
 import {
     ForwardedPortConnectingEventArgs,
@@ -100,22 +101,14 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             this.sshSession = new SshClientSession(
                 new SshSessionConfiguration(false)); // no encryption
         } else {
-            // The V2 protocol configures optional encryption, including "none" as an enabled and
-            // preferred key-exchange algorithm, because encryption of the outer SSH session is
-            // optional since it is already over a TLS websocket.
-            const config = new SshSessionConfiguration();
-            config.keyExchangeAlgorithms.splice(
-                0,
-                config.keyExchangeAlgorithms.length,
-                SshAlgorithms.keyExchange.none,
-                SshAlgorithms.keyExchange.ecdhNistp384Sha384,
-                SshAlgorithms.keyExchange.ecdhNistp256Sha256,
-                SshAlgorithms.keyExchange.dhGroup16Sha512,
-                SshAlgorithms.keyExchange.dhGroup14Sha256,
-            );
+            this.sshSession = SshHelpers.createSshClientSession((config) => {
+                // The V2 protocol configures optional encryption, including "none" as an enabled
+                // and preferred key-exchange algorithm, because encryption of the outer SSH
+                // session is optional since it is already over a TLS websocket.
+                config.keyExchangeAlgorithms.splice(0, 0, SshAlgorithms.keyExchange.none);
 
-            config.addService(PortForwardingService);
-            this.sshSession = new SshClientSession(config);
+                config.addService(PortForwardingService);
+            });
 
             const hostPfs = this.sshSession.activateService(PortForwardingService);
             hostPfs.messageFactory = this;
@@ -277,6 +270,10 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
     }
 
+    /**
+     * Creates an SSH server session for a client (V1 protocol), runs the session,
+     * and waits for it to close.
+     */
     private async connectAndRunClientSession(
         stream: SshStream,
         cancellation: CancellationToken,
@@ -287,6 +284,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
 
         const session = SshHelpers.createSshServerSession(this.reconnectableSessions, (config) => {
+            config.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
             config.addService(PortForwardingService);
         });
         session.trace = this.trace;

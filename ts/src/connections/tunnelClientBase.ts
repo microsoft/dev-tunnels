@@ -12,6 +12,7 @@ import {
     CancellationToken,
     SecureStream,
     SessionRequestMessage,
+    SshAlgorithms,
     SshAuthenticatingEventArgs,
     SshAuthenticationType,
     SshClientCredentials,
@@ -191,6 +192,11 @@ export class TunnelClientBase
                     // Enable client SSH session reconnect for V1 protocol only.
                     // (V2 SSH reconnect is handled by the SecureStream class.)
                     config.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
+                } else {
+                    // The V2 protocol configures optional encryption, including "none" as an enabled
+                    // and preferred key-exchange algorithm, because encryption of the outer SSH
+                    // session is optional since it is already over a TLS websocket.
+                    config.keyExchangeAlgorithms.splice(0, 0, SshAlgorithms.keyExchange.none);
                 }
             });
             this.sshSession.trace = this.trace;

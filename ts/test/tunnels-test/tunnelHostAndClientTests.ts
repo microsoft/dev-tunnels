@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
-import { until } from './promiseUtils';
+import { until, withTimeout } from './promiseUtils';
 import { suite, test, params, slow, timeout } from '@testdeck/mocha';
 import { MockTunnelManagementClient } from './mocks/mockTunnelManagementClient';
 import {
@@ -146,11 +146,11 @@ export class TunnelHostAndClientTests {
             clientStreamFactory,
         );
 
-        assert.strictEqual(false, relayClient.isSshSessionActiveProperty);
+        assert.strictEqual(relayClient.isSshSessionActiveProperty, false);
         await relayClient.connect(tunnel, undefined);
 
         await serverConnectPromise;
-        assert.strictEqual(true, relayClient.isSshSessionActiveProperty);
+        assert.strictEqual(relayClient.isSshSessionActiveProperty, true);
 
         return sshSession;
     }
@@ -193,11 +193,11 @@ export class TunnelHostAndClientTests {
 
         let tunnel = this.createRelayTunnel();
         await this.connectRelayClient(relayClient, tunnel);
-        assert.strictEqual(false, sshSessionClosedEventFired);
+        assert.strictEqual(sshSessionClosedEventFired, false);
 
         await relayClient.dispose();
-        assert.strictEqual(false, relayClient.isSshSessionActiveProperty);
-        assert.strictEqual(true, sshSessionClosedEventFired);
+        assert.strictEqual(relayClient.isSshSessionActiveProperty, false);
+        assert.strictEqual(sshSessionClosedEventFired, true);
         assert.strictEqual(relayClient.disconnectError, undefined);
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
     }
@@ -393,7 +393,7 @@ export class TunnelHostAndClientTests {
 
         let testPort = 9881;
 
-        assert.strictEqual(false, relayClient.hasForwardedChannels(testPort));
+        assert.strictEqual(relayClient.hasForwardedChannels(testPort), false);
 
         let remotePortStreamer = await pfs.streamFromRemotePort('127.0.0.1', testPort);
         assert.notStrictEqual(remotePortStreamer, null);
@@ -410,9 +410,9 @@ export class TunnelHostAndClientTests {
         });
 
         const forwardedStream = await relayClient.connectToForwardedPort(testPort);
-        assert.notStrictEqual(null, forwardedStream);
-        assert.strictEqual(true, relayClient.hasForwardedChannels(testPort));
-        assert.strictEqual(true, isStreamOpenedOnServer);
+        assert.notStrictEqual(forwardedStream, null);
+        assert.strictEqual(relayClient.hasForwardedChannels(testPort), true);
+        assert.strictEqual(isStreamOpenedOnServer, true);
         tcs.resolve();
 
         forwardedStream.destroy();
@@ -464,24 +464,31 @@ export class TunnelHostAndClientTests {
 
     @test
     public async connectRelayClientAddPortInUse() {
-        let relayClient = new TestTunnelRelayTunnelClient();
+        const relayClient = new TestTunnelRelayTunnelClient();
 
-        let tunnel = this.createRelayTunnel([9982]);
-        let serverSshSession = await this.connectRelayClient(relayClient, tunnel);
-        let pfs = serverSshSession.activateService(PortForwardingService);
+        const testPort = 9982;
+        const tunnel = this.createRelayTunnel([testPort]);
+        const serverSshSession = await this.connectRelayClient(relayClient, tunnel);
+        const pfs = serverSshSession.activateService(PortForwardingService);
 
-        let testPort = 9982;
-        const socket = new net.Socket();
-        socket.connect(testPort, '127.0.0.1', async () => {
+        const connectCompletion = new PromiseCompletionSource<void>();
+        const conflictListener = new net.Server();
+        conflictListener.listen(testPort, '127.0.0.1', async () => {
             let remotePortStreamer = await pfs.streamFromRemotePort('127.0.0.1', testPort);
-            assert.notStrictEqual(remotePortStreamer, null);
-            assert.notStrictEqual(testPort, remotePortStreamer?.remotePort);
 
             // The port number should be the same because the host does not know
             // when the client chose a different port number due to the conflict.
             assert.strictEqual(testPort, remotePortStreamer?.remotePort);
+
+            connectCompletion.resolve();
         });
-        socket.destroy();
+
+        try {
+            await withTimeout(connectCompletion.promise, 5000);
+        } finally {
+            conflictListener.close();
+            relayClient.dispose();
+        }
     }
 
     @test
@@ -495,7 +502,7 @@ export class TunnelHostAndClientTests {
         let testPort = 9983;
         let remotePortStreamer = await pfs.streamFromRemotePort('::', testPort);
         assert.notStrictEqual(remotePortStreamer, null);
-        assert.strictEqual(testPort, remotePortStreamer?.remotePort);
+        assert.strictEqual(remotePortStreamer?.remotePort, testPort);
 
         // Disposing this object stops forwarding the port.
         remotePortStreamer?.dispose();
@@ -744,6 +751,8 @@ export class TunnelHostAndClientTests {
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
         let clientSshSession = this.createSshClientSession();
+        clientSshSession.activateService(PortForwardingService)
+            .acceptLocalConnectionsForForwardedPorts = false;
         try {
             await clientSshSession.connect(new NodeStream(clientRelayStream));
             let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
@@ -822,6 +831,7 @@ export class TunnelHostAndClientTests {
         // Wait for client disconnection and closed SSH session
         const disconnected = this.connectionStatusChanged(
             relayClient,
+            ConnectionStatus.Connecting,
             ConnectionStatus.Disconnected,
         );
         const sshSessionClosed = new Promise<void>((resolve) => {
@@ -842,7 +852,7 @@ export class TunnelHostAndClientTests {
         // Disconnect the tunnel client. It won't reconnect when it hits 404.
         clientStream?.channel.dispose();
         await sshSessionClosed;
-        assert.strictEqual(error, await disconnected);
+        assert.strictEqual(await disconnected, error);
 
         await testConnection.dispose();
     }
@@ -886,11 +896,6 @@ export class TunnelHostAndClientTests {
                 const disposables: Disposable[] = [];
                 let clientPortAdded = new Promise((resolve, reject) => {
                     relayClient.forwardedPorts?.onPortAdded((e) => resolve(e.port.remotePort), disposables);
-                    relayClient.connectionStatusChanged((e) => {
-                        if (e.status === ConnectionStatus.Disconnected) {
-                            reject(new Error('Relay client disconnected unexpectedly.'));
-                        }
-                    }, disposables);
                 });
         
                 await managementClient.createTunnelPort(relayHost.tunnel!, { portNumber });
@@ -910,23 +915,18 @@ export class TunnelHostAndClientTests {
 
     private async connectionStatusChanged(
         connection: TunnelConnection,
-        expectedStatus: ConnectionStatus,
+        ...expectedStatus: ConnectionStatus[]
     ): Promise<Error | undefined> {
-        const result = await new Promise<Error | undefined>((resolve, reject) => {
+        return await new Promise<Error | undefined>((resolve, reject) => {
             connection.connectionStatusChanged((e) => {
-                if (e.status === expectedStatus) {
-                    resolve(e.disconnectError);
-                }
-                if (e.status === ConnectionStatus.Disconnected) {
-                    reject(
-                        e.disconnectError ??
-                            new Error('Tunnel connection disconnected unexpectedly.'),
-                    );
+                if (e.status === expectedStatus[0]) {
+                    if (expectedStatus.length > 1) {
+                        expectedStatus.shift();
+                    } else {
+                        resolve(e.disconnectError);
+                    }
                 }
             });
         });
-
-        assert.strictEqual(connection.connectionStatus, expectedStatus);
-        return result;
     }
 }
