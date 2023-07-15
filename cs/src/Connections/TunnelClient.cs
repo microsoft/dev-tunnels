@@ -281,20 +281,27 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             }
         }
 
-        for (int i = 0; i < disconnectedStreamsCount; i++)
+        if (disconnectedStreamsCount > 0)
         {
-            Task.Run(async () =>
+            this.Trace.Verbose(
+                $"Reconnecting {disconnectedStreamsCount} stream(s) to forwarded port {port}");
+
+            for (int i = 0; i < disconnectedStreamsCount; i++)
             {
-                try
+                Task.Run(async () =>
                 {
-                    await pfs.ConnectToForwardedPortAsync(port.Value, CancellationToken.None);
-                }
-                catch (Exception ex)
-                {
-                    this.Trace.Warning(
-                        $"Failed to reconnect to forwarded port {port}: {ex.Message}");
-                }
-            });
+                    try
+                    {
+                        await pfs.ConnectToForwardedPortAsync(port.Value, CancellationToken.None);
+                        this.Trace.Verbose($"Reconnected stream to forwarded port {port}");
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Trace.Warning(
+                            $"Failed to reconnect to forwarded port {port}: {ex.Message}");
+                    }
+                });
+            }
         }
     }
 
