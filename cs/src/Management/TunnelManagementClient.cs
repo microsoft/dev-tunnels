@@ -820,13 +820,15 @@ namespace Microsoft.DevTunnels.Management
             string? clusterId,
             string? domain,
             TunnelRequestOptions? options,
-            CancellationToken cancellation)
+            CancellationToken cancellation,
+            bool ownedTunnelsOnly = false)
         {
             var queryParams = new string?[]
             {
                 string.IsNullOrEmpty(clusterId) ? "global=true" : null,
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
                 !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
+                ownedTunnelsOnly ? "ownedTunnelsOnly=true" : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
             var result = await this.SendRequestAsync<Tunnel[]>(
