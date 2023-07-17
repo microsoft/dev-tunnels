@@ -281,6 +281,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
                 var secureStream = new SecureStream(
                     e.Stream,
                     clientCredentials,
+                    false,
                     channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId));
                 secureStream.Authenticating += OnHostAuthenticating;
 
