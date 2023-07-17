@@ -302,9 +302,13 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
                         lock (this.disconnectedStreams)
                         {
                             // The host is no longer accepting connections on the forwarded port?
-                            // Clear the list of disconnected streams for the port, because
-                            // it seems it is no longer possible to reconnect them.
-                            streams.Clear();
+                            // Dispose and clear the list of disconnected streams for the port,
+                            // because it seems it is no longer possible to reconnect them.
+                            while (streams.Count > 0)
+                            {
+                                streams[0].Dispose();
+                                streams.RemoveAt(0);
+                            }
                         }
                     }
                 });
