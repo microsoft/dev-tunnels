@@ -21,8 +21,8 @@
 		"build-pack-publish": "npm run build && npm run pack && npm run publish"
 	},
 	"dependencies": {
-		"@microsoft/dev-tunnels-ssh": "^3.11.11",
-		"@microsoft/dev-tunnels-ssh-tcp": "^3.11.11",
+		"@microsoft/dev-tunnels-ssh": "^3.11.13",
+		"@microsoft/dev-tunnels-ssh-tcp": "^3.11.13",
 		"await-semaphore": "^0.1.3",
 		"axios": "^0.21.1",
 		"buffer": "^5.2.1",
