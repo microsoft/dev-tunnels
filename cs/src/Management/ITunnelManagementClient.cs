@@ -23,6 +23,7 @@ namespace Microsoft.DevTunnels.Management
         /// <param name="clusterId">A tunnel cluster ID, or null to list tunnels globally.</param>
         /// <param name="domain">Tunnel domain, or null for the default domain.</param>
         /// <param name="options">Request options.</param>
+        /// <param name="ownedTunnelsOnly">If authenticated with a tunnel plan token, only show the tunnels the user owns.</param>
         /// <param name="cancellation">Cancellation token.</param>
         /// <returns>Array of tunnel objects.</returns>
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
@@ -36,6 +37,7 @@ namespace Microsoft.DevTunnels.Management
             string? clusterId = null,
             string? domain = null,
             TunnelRequestOptions? options = null,
+            bool? ownedTunnelsOnly = null,
             CancellationToken cancellation = default);
 
         /// <summary>
