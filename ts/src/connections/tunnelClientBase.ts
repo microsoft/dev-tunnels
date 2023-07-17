@@ -269,6 +269,14 @@ export class TunnelClientBase
                     TraceLevel.Warning,
                     0,
                     `Failed to reconnect to forwarded port ${port}: ${error}`);
+
+                // The host is no longer accepting connections on the forwarded port?
+                // Clear the list of disconnected streams for the port, because
+                // it seems it is no longer possible to reconnect them.
+                const streams = this.disconnectedStreams.get(port);
+                if (streams) {
+                    streams.splice(0, streams.length);
+                }
             });
         }
     }

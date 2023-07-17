@@ -271,22 +271,22 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             return;
         }
 
-        var disconnectedStreamsCount = 0;
+        List<SecureStream>? streams;
         lock (this.disconnectedStreams)
         {
             // If there are disconnected streams for the port, re-connect them now.
-            if (this.disconnectedStreams.TryGetValue(port.Value, out var streams))
+            if (!this.disconnectedStreams.TryGetValue(port.Value, out streams))
             {
-                disconnectedStreamsCount = streams.Count;
+                streams = null;
             }
         }
 
-        if (disconnectedStreamsCount > 0)
+        if (streams?.Count > 0)
         {
             this.Trace.Verbose(
-                $"Reconnecting {disconnectedStreamsCount} stream(s) to forwarded port {port}");
+                $"Reconnecting {streams.Count} stream(s) to forwarded port {port}");
 
-            for (int i = 0; i < disconnectedStreamsCount; i++)
+            for (int i = streams.Count; i > 0; i--)
             {
                 Task.Run(async () =>
                 {
@@ -299,6 +299,13 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
                     {
                         this.Trace.Warning(
                             $"Failed to reconnect to forwarded port {port}: {ex.Message}");
+                        lock (this.disconnectedStreams)
+                        {
+                            // The host is no longer accepting connections on the forwarded port?
+                            // Clear the list of disconnected streams for the port, because
+                            // it seems it is no longer possible to reconnect them.
+                            streams.Clear();
+                        }
                     }
                 });
             }
