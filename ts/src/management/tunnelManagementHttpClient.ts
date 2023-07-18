@@ -495,7 +495,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         body?: object,
         allowNotFound?: boolean,
     ): Promise<NullableIfNotBoolean<TResult>> {
-        const uri = this.buildUriForTunnel(tunnel, path, query, options);
+        const uri = await this.buildUriForTunnel(tunnel, path, query, options);
         const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
@@ -524,7 +524,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         body?: object,
         allowNotFound?: boolean,
     ): Promise<NullableIfNotBoolean<TResult>> {
-        const uri = this.buildUri(clusterId, path, query, options);
+        const uri = await this.buildUri(clusterId, path, query, options);
         const config = await this.getAxiosRequestConfig(undefined, options);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
@@ -532,7 +532,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async checkNameAvailablility(tunnelName: string): Promise<boolean> {
         tunnelName = encodeURI(tunnelName);
-        const uri = this.buildUri(
+        const uri = await this.buildUri(
             undefined,
             `${tunnelsApiPath}/${tunnelName}${checkAvailablePath}`,
         );
