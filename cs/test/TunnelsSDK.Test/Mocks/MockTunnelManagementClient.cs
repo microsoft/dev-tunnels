@@ -19,6 +19,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         string clusterId,
         string domain,
         TunnelRequestOptions options,
+        bool? ownedTunnelsOnly,
         CancellationToken cancellation)
     {
         IEnumerable<Tunnel> tunnels = Tunnels;
