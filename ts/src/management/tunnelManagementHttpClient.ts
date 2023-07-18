@@ -23,6 +23,7 @@ import { TunnelAccessTokenProperties } from './tunnelAccessTokenProperties';
 import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
+import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -576,14 +577,23 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     // Helper functions
-    private buildUri(
+    private async buildUri(
         clusterId: string | undefined,
         path: string,
         query?: string,
         options?: TunnelRequestOptions,
     ) {
+        if (!clusterId && this.userTokenCallback) {
+            var token = await this.userTokenCallback();
+            if (token && token.startsWith("tunnelplan")) {
+                token = token.replace("tunnelplan ", "");
+                var parsedToken = TunnelPlanTokenProperties.tryParse(token)
+                if (parsedToken != undefined && parsedToken.clusterId) {
+                    clusterId = parsedToken.clusterId
+                }
+            }
+        }
         let baseAddress = this.baseAddress;
-
         if (clusterId) {
             const url = new URL(baseAddress);
             const portNumber = parseInt(url.port, 10);
