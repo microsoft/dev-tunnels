@@ -477,6 +477,16 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
             where TRequest : class
         {
+            if (authHeader?.Scheme == TunnelAuthenticationSchemes.TunnelPlan)
+            {
+                var token = TunnelPlanTokenProperties.TryParse(authHeader.Parameter ?? string.Empty);
+                if (!string.IsNullOrEmpty(token?.ClusterId))
+                {
+                    var uriStr = uri.ToString().Replace("global.", $"{token.ClusterId}.");
+                    uri = new Uri(uriStr);
+                }
+            }
+
             var request = new HttpRequestMessage(method, uri);
             request.Headers.Authorization = authHeader;
 
@@ -820,6 +830,7 @@ namespace Microsoft.DevTunnels.Management
             string? clusterId,
             string? domain,
             TunnelRequestOptions? options,
+            bool? ownedTunnelsOnly,
             CancellationToken cancellation)
         {
             var queryParams = new string?[]
@@ -827,6 +838,7 @@ namespace Microsoft.DevTunnels.Management
                 string.IsNullOrEmpty(clusterId) ? "global=true" : null,
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
                 !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
+                ownedTunnelsOnly == true ? "ownedTunnelsOnly=true" : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
             var result = await this.SendRequestAsync<Tunnel[]>(

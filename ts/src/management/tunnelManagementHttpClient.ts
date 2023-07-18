@@ -23,6 +23,7 @@ import { TunnelAccessTokenProperties } from './tunnelAccessTokenProperties';
 import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
+import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -494,7 +495,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         body?: object,
         allowNotFound?: boolean,
     ): Promise<NullableIfNotBoolean<TResult>> {
-        const uri = this.buildUriForTunnel(tunnel, path, query, options);
+        const uri = await this.buildUriForTunnel(tunnel, path, query, options);
         const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
@@ -523,7 +524,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         body?: object,
         allowNotFound?: boolean,
     ): Promise<NullableIfNotBoolean<TResult>> {
-        const uri = this.buildUri(clusterId, path, query, options);
+        const uri = await this.buildUri(clusterId, path, query, options);
         const config = await this.getAxiosRequestConfig(undefined, options);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
@@ -531,7 +532,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async checkNameAvailablility(tunnelName: string): Promise<boolean> {
         tunnelName = encodeURI(tunnelName);
-        const uri = this.buildUri(
+        const uri = await this.buildUri(
             undefined,
             `${tunnelsApiPath}/${tunnelName}${checkAvailablePath}`,
         );
@@ -576,14 +577,23 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     // Helper functions
-    private buildUri(
+    private async buildUri(
         clusterId: string | undefined,
         path: string,
         query?: string,
         options?: TunnelRequestOptions,
     ) {
+        if (clusterId === undefined && this.userTokenCallback) {
+            let token = await this.userTokenCallback();
+            if (token && token.startsWith("tunnelplan")) {
+                token = token.replace("tunnelplan ", "");
+                const parsedToken = TunnelPlanTokenProperties.tryParse(token)
+                if (parsedToken !== null && parsedToken.clusterId) {
+                    clusterId = parsedToken.clusterId
+                }
+            }
+        }
         let baseAddress = this.baseAddress;
-
         if (clusterId) {
             const url = new URL(baseAddress);
             const portNumber = parseInt(url.port, 10);
