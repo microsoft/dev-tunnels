@@ -587,8 +587,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             let token = await this.userTokenCallback();
             if (token && token.startsWith("tunnelplan")) {
                 token = token.replace("tunnelplan ", "");
-                let parsedToken = TunnelPlanTokenProperties.tryParse(token)
-                if (parsedToken != undefined && parsedToken.clusterId) {
+                const parsedToken = TunnelPlanTokenProperties.tryParse(token)
+                if (parsedToken !== null && parsedToken.clusterId) {
                     clusterId = parsedToken.clusterId
                 }
             }
