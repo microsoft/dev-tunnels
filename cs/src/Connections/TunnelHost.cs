@@ -127,7 +127,7 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
             forwarder = await pfs.ForwardFromRemotePortAsync(
                 IPAddress.Loopback,
                 portNumber,
-                IPAddress.Loopback.ToString(),
+                'localhost',
                 portNumber,
                 cancellation);
         }
