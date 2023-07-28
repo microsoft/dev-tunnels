@@ -85,23 +85,6 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
         {
             if (value != this.tunnel)
             {
-                // Get the tunnel access token from the new tunnel, or the original Tunnal object if the new tunnel doesn't have the token,
-                // which may happen when the tunnel was authenticated with a tunnel access token from Tunnel.AccessTokens.
-                // Add the tunnel access token to the new tunnel's AccessTokens if it is not there.
-
-                // TODO: remove this access token preservation logic when #990 is fixed.
-                string? accessToken;
-                if (value != null &&
-                    !value.TryGetAccessToken(TunnelAccessScope, out var _) &&
-                    this.tunnel?.TryGetAccessToken(TunnelAccessScope, out accessToken) == true &&
-                    !string.IsNullOrEmpty(accessToken) &&
-                    TunnelAccessTokenProperties.TryParse(accessToken) is TunnelAccessTokenProperties tokenProperties &&
-                    (tokenProperties.Expiration == null || tokenProperties.Expiration > DateTime.UtcNow))
-                {
-                    value.AccessTokens ??= new Dictionary<string, string>();
-                    value.AccessTokens[TunnelAccessScope] = accessToken;
-                }
-
                 this.tunnel = value;
                 OnTunnelChanged();
             }

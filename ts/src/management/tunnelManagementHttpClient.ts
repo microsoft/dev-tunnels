@@ -66,6 +66,28 @@ function parseTunnelPortDates(port: TunnelPort | null) {
     }
 }
 
+/**
+ * Copy access tokens from the request object to the result object, except for any
+ * tokens that were refreshed by the request.
+ */
+function preserveAccessTokens<T extends Tunnel | TunnelPort>(
+    requestObject: T,
+    resultObject: T | null,
+) {
+    // This intentionally does not check whether any existing tokens are expired. So
+    // expired tokens may be preserved also, if not refreshed. This allows for better
+    // diagnostics in that case.
+    if (requestObject.accessTokens && resultObject) {
+        resultObject.accessTokens ??= {};
+        for (const scopeAndToken of Object.entries(requestObject.accessTokens)) {
+            if (!resultObject.accessTokens[scopeAndToken[0]]) {
+                resultObject.accessTokens[scopeAndToken[0]] = scopeAndToken[1];
+            }
+        }
+    }
+}
+
+
 const manageAccessTokenScope = [TunnelAccessScopes.Manage];
 const hostAccessTokenScope = [TunnelAccessScopes.Host];
 const managePortsAccessTokenScopes = [
@@ -200,6 +222,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
         );
+        preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
         return result;
     }
@@ -219,6 +242,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             tunnel,
         ))!;
+        preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
         return result;
     }
@@ -233,13 +257,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             this.convertTunnelForRequest(tunnel),
         ))!;
-
-        if (!options?.tokenScopes) {
-            // If no new tokens were requested in the update, preserve any existing
-            // access tokens in the resulting tunnel object.
-            result.accessTokens = tunnel.accessTokens;
-        }
-
+        preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
         return result;
     }
@@ -412,6 +430,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             tunnelPort,
         ))!;
+        preserveAccessTokens(tunnelPort, result);
+        parseTunnelPortDates(result);
 
         if (tunnel.ports) {
             // Also update the port in the local tunnel object.
@@ -421,13 +441,6 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 .sort(comparePorts);
         }
 
-        if (!options?.tokenScopes) {
-            // If no new tokens were requested in the update, preserve any existing
-            // access tokens in the resulting port object.
-            result.accessTokens = tunnelPort.accessTokens;
-        }
-
-        parseTunnelPortDates(result);
         return result;
     }
 
