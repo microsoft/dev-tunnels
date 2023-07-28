@@ -108,7 +108,7 @@ export class TunnelHostBase
         const forwarder = await pfs.forwardFromRemotePort(
             this.loopbackIp,
             portNumber,
-            this.loopbackIp,
+            'localhost',
             portNumber,
         );
         if (!forwarder) {
