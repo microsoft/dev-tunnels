@@ -1,0 +1,16 @@
+name: Auto Comment
+on: [pull_request]
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: wow-actions/auto-comment@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          pullRequestOpened: |
+            👋 @{{ author }}
+            Once you merge this PR, please make sure you have follow these steps for CLI to pick up your changes.
+            1. Checkout the new build number: [SDK CI build]({{ https://dev.azure.com/devdiv/OnlineServices/_build?definitionId=16351 }})
+            2. Go to tunnels repo and update "TunnelClientPackageVersion" with new SDK CI build number in [build.props file here]({{ https://dev.azure.com/devdiv/OnlineServices/_git/tunnels?path=/build/build.props&version=GBmain&_a=contents }})
+            3. You can run dotnet restore and build the solution in your local to see if everything is working fine.
+            Once above PR are merged CLI should pick up your changes.
