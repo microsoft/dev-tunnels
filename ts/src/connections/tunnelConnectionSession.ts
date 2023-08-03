@@ -77,26 +77,6 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
 
     private set tunnel(value: Tunnel | null) {
         if (value !== this.connectedTunnel) {
-
-            // Get the tunnel access token from the new tunnel, or the original Tunnal object if the new tunnel doesn't have the token,
-            // which may happen when the tunnel was authenticated with a tunnel access token from Tunnel.AccessTokens.
-            // Add the tunnel access token to the new tunnel's AccessTokens if it is not there.
-
-            // TODO: remove this access token preservation logic when #990 is fixed.
-            if (value &&
-                !TunnelAccessTokenProperties.getTunnelAccessToken(value, this.tunnelAccessScope)) {
-
-                const accessToken = TunnelAccessTokenProperties.getTunnelAccessToken(
-                    this.tunnel,
-                    this.tunnelAccessScope,
-                );
-
-                if (accessToken) {
-                    value.accessTokens ??= {};
-                    value.accessTokens[this.tunnelAccessScope] = accessToken;
-                }
-            }
-
             this.connectedTunnel = value;
             this.tunnelChanged();
         }

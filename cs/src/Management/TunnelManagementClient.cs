@@ -894,6 +894,7 @@ namespace Microsoft.DevTunnels.Management
                 query: GetApiQuery(),
                 options,
                 cancellation);
+            PreserveAccessTokens(tunnel, result);
             return result;
         }
 
@@ -920,6 +921,7 @@ namespace Microsoft.DevTunnels.Management
                 options,
                 ConvertTunnelForRequest(tunnel),
                 cancellation);
+            PreserveAccessTokens(tunnel, result);
             return result!;
         }
 
@@ -938,14 +940,7 @@ namespace Microsoft.DevTunnels.Management
                 options,
                 ConvertTunnelForRequest(tunnel),
                 cancellation);
-
-            // If no new tokens were requested in the update, preserve any existing
-            // access tokens in the resulting tunnel object.
-            if (options?.TokenScopes == null)
-            {
-                result!.AccessTokens = tunnel.AccessTokens;
-            }
-
+            PreserveAccessTokens(tunnel, result);
             return result!;
         }
 
@@ -1086,6 +1081,7 @@ namespace Microsoft.DevTunnels.Management
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
+            PreserveAccessTokens(tunnelPort, result);
 
             if (tunnel.Ports != null)
             {
@@ -1127,6 +1123,7 @@ namespace Microsoft.DevTunnels.Management
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
+            PreserveAccessTokens(tunnelPort, result);
 
             if (tunnel.Ports != null)
             {
@@ -1136,13 +1133,6 @@ namespace Microsoft.DevTunnels.Management
                     .Append(result)
                     .OrderBy((p) => p.PortNumber)
                     .ToArray();
-            }
-
-            // If no new tokens were requested in the update, preserve any existing
-            // access tokens in the resulting port object.
-            if (options?.TokenScopes == null)
-            {
-                result!.AccessTokens = tunnelPort.AccessTokens;
             }
 
             return result;
@@ -1334,6 +1324,49 @@ namespace Microsoft.DevTunnels.Management
         protected virtual string? GetApiQuery()
         {
             return string.IsNullOrEmpty(ApiVersion) ? null : $"api-version={ApiVersion}";
+        }
+
+        /// <summary>
+        /// Copy access tokens from the request object to the result object, except for any
+        /// tokens that were refreshed by the request.
+        /// </summary>
+        /// <remarks>
+        /// This intentionally does not check whether any existing tokens are expired. So
+        /// expired tokens may be preserved also, if not refreshed. This allows for better
+        /// diagnostics in that case.
+        /// </remarks>
+        private static void PreserveAccessTokens(Tunnel requestTunnel, Tunnel? resultTunnel)
+        {
+            if (requestTunnel.AccessTokens != null && resultTunnel != null)
+            {
+                resultTunnel.AccessTokens ??= new Dictionary<string, string>();
+                foreach (var scopeAndToken in requestTunnel.AccessTokens)
+                {
+                    if (!resultTunnel.AccessTokens.ContainsKey(scopeAndToken.Key))
+                    {
+                        resultTunnel.AccessTokens[scopeAndToken.Key] = scopeAndToken.Value;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Copy access tokens from the request object to the result object, except for any
+        /// tokens that were refreshed by the request.
+        /// </summary>
+        private static void PreserveAccessTokens(TunnelPort requestPort, TunnelPort? resultPort)
+        {
+            if (requestPort.AccessTokens != null && resultPort != null)
+            {
+                resultPort.AccessTokens ??= new Dictionary<string, string>();
+                foreach (var scopeAndToken in requestPort.AccessTokens)
+                {
+                    if (!resultPort.AccessTokens.ContainsKey(scopeAndToken.Key))
+                    {
+                        resultPort.AccessTokens[scopeAndToken.Key] = scopeAndToken.Value;
+                    }
+                }
+            }
         }
     }
 }

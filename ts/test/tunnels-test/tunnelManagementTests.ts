@@ -6,6 +6,7 @@ import axios, { AxiosPromise, AxiosRequestConfig, Method } from 'axios';
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
+import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 
 @suite
 @slow(3000)
@@ -120,5 +121,32 @@ export class TunnelManagementTests {
         }));
         assert(this.lastRequest.config.adapter === axiosAdapter);
         assert(this.lastRequest.config.adapter !== new AxiosAdapter(axios, { auth: { username: 'test', password: 'test' } }))
+    }
+
+    @test
+    public async preserveAccessTokens() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+            accessTokens: {
+                'manage': 'manage-token-1',
+                'connect': 'connect-token-1',
+            },
+        };
+        this.nextResponse = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+            accessTokens: {
+                'manage': 'manage-token-2',
+                'host': 'host-token-2',
+            },
+        };
+        const resultTunnel = await this.managementClient.getTunnel(requestTunnel);
+        assert(this.lastRequest && this.lastRequest.uri);
+        assert(resultTunnel);
+        assert(resultTunnel.accessTokens);
+        assert.strictEqual(resultTunnel.accessTokens['connect'], 'connect-token-1'); // preserved
+        assert.strictEqual(resultTunnel.accessTokens['host'], 'host-token-2');       // added
+        assert.strictEqual(resultTunnel.accessTokens['manage'], 'manage-token-2');   // updated
     }
 }
