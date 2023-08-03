@@ -264,7 +264,10 @@ export class TunnelClientBase
         // If there are disconnected streams for the port, re-connect them now.
         const disconnectedStreamsCount = this.disconnectedStreams.get(port)?.length ?? 0;
         for (let i = 0; i < disconnectedStreamsCount; i++) {
-            pfs.connectToForwardedPort(port).catch((error) => {
+            pfs.connectToForwardedPort(port)
+            .then(() => {
+                this.trace(TraceLevel.Verbose, 0, `Reconnected stream to fowarded port ${port}`);
+            }).catch((error) => {
                 this.trace(
                     TraceLevel.Warning,
                     0,
