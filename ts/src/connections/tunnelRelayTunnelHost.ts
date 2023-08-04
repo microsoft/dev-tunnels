@@ -420,13 +420,14 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         e: SshSessionClosedEventArgs,
         cancellation: CancellationToken,
     ) {
+        // Reconnecting client session may cause the new session to close with 'None' reason.
         if (e.reason === SshDisconnectReason.byApplication) {
             this.traceInfo('Client ssh session closed.');
         } else if (cancellation.isCancellationRequested) {
             this.traceInfo('Client ssh session cancelled.');
-        } else {
+        } else if (e.reason !== SshDisconnectReason.none) {
             this.traceError(
-                `Client ssh session closed unexpectely due to ${e.reason}, "${e.message}"\n${e.error}`,
+                `Client ssh session closed unexpectedly due to ${e.reason}, "${e.message}"\n${e.error}`,
             );
         }
 

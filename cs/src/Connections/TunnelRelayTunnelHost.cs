@@ -450,7 +450,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             session.Reconnected += OnSshClientReconnected;
             session.Request += OnClientSessionRequest;
             session.ChannelOpening += OnSshChannelOpening;
-            session.Closed += Session_Closed;
+            session.Closed += OnClientSessionClosed;
 
             try
             {
@@ -477,7 +477,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
                 session.ClientAuthenticated -= OnSshClientAuthenticated;
                 session.Reconnected -= OnSshClientReconnected;
                 session.ChannelOpening -= OnSshChannelOpening;
-                session.Closed -= Session_Closed;
+                session.Closed -= OnClientSessionClosed;
 
                 RemoveClientSshSession(session);
             }
@@ -488,24 +488,25 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             throw;
         }
 
-        void Session_Closed(object? sender, SshSessionClosedEventArgs e)
+        void OnClientSessionClosed(object? sender, SshSessionClosedEventArgs e)
         {
-            // Reconnecting client session may cause the new session close with 'None' reason and null exception.
+            TraceSource trace = ((SshSession)sender!).Trace;
+
+            // Reconnecting client session may cause the new session to close with 'None' reason.
             if (cancellation.IsCancellationRequested)
             {
-                Trace.WithName("ClientSSH").Verbose("Session cancelled.");
+                trace.Verbose("Session cancelled.");
             }
             else if (e.Reason == SshDisconnectReason.ByApplication)
             {
-                Trace.WithName("ClientSSH").Verbose("Session closed.");
-
+                trace.Verbose("Session closed.");
             }
-            else if (e.Reason != SshDisconnectReason.None || e.Exception != null)
+            else if (e.Reason != SshDisconnectReason.None)
             {
-                Trace.TraceEvent(
+                trace.TraceEvent(
                     TraceEventType.Error,
                     0,
-                    "Client ssh session closed unexpectely due to {0}, \"{1}\"\n{2}",
+                    "Session closed unexpectedly due to {0}, \"{1}\"\n{2}",
                     e.Reason,
                     e.Message,
                     e.Exception);
