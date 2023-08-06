@@ -674,25 +674,26 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
         // Reconnect the tunnel client
+        var relayClientDisconnected = new TaskCompletionSource();
         var relayClientReconnected = new TaskCompletionSource();
         relayClient.ConnectionStatusChanged += (sender, args) =>
         {
             switch (args.Status)
             {
+                case ConnectionStatus.Disconnected:
+                    relayClientDisconnected.TrySetResult();
+                    break;
+
                 case ConnectionStatus.Connected:
                     relayClientReconnected.TrySetResult();
                     break;
-
-                case ConnectionStatus.Disconnected:
-                    relayClientReconnected.TrySetException(args.DisconnectException ?? new Exception("Unexpected disconnection"));
-                    break;
-
             }
         };
 
         await clientSshStream.Channel.CloseAsync();
 
-        await relayClientReconnected.Task;
+        await relayClientDisconnected.Task.WithTimeout(Timeout);
+        await relayClientReconnected.Task.WithTimeout(Timeout);
 
         clientPortAdded = new TaskCompletionSource<int?>();
         await managementClient.CreateTunnelPortAsync(
@@ -761,6 +762,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
         // Expect disconnection
+        bool reconnectStarted = false;
         var relayClientDisconnected = new TaskCompletionSource<Exception>();
         relayClient.ConnectionStatusChanged += (sender, args) =>
         {
@@ -770,10 +772,16 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
                     relayClientDisconnected.TrySetException(new Exception("Unexpected reconnection"));
                     break;
 
-                case ConnectionStatus.Disconnected:
-                    relayClientDisconnected.TrySetResult(args.DisconnectException);
+                case ConnectionStatus.Connecting:
+                    reconnectStarted = true;
                     break;
 
+                case ConnectionStatus.Disconnected:
+                    if (reconnectStarted)
+                    {
+                        relayClientDisconnected.TrySetResult(args.DisconnectException);
+                    }
+                    break;
             }
         };
 

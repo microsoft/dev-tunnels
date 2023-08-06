@@ -30,6 +30,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 {
     private bool acceptLocalConnectionsForForwardedPorts = true;
     private IPAddress localForwardingHostAddress = IPAddress.Loopback;
+    private readonly Dictionary<int, List<SecureStream>> disconnectedStreams = new();
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelClient" /> class.
@@ -185,8 +186,11 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             this.SshSession.Request -= OnRequest;
         }
 
-        // Enable reconnect only if connector is set as reconnect depends on it.
-        var clientConfig = new SshSessionConfiguration(enableReconnect: this.connector != null);
+        // Enable V1 reconnect only if connector is set as reconnect depends on it.
+        // (V2 SSH reconnect is handled by the SecureStream class.)
+        var clientConfig = new SshSessionConfiguration(
+            enableReconnect: this.connector != null &&
+                ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocol);
 
         if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
         {
@@ -254,6 +258,61 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         {
             pfs.MessageFactory = this;
             pfs.ForwardedPortConnecting += OnForwardedPortConnecting;
+            pfs.RemoteForwardedPorts.PortAdded += (_, e) => OnForwardedPortAdded(pfs, e);
+            pfs.RemoteForwardedPorts.PortUpdated += (_, e) => OnForwardedPortAdded(pfs, e);
+        }
+    }
+
+    private void OnForwardedPortAdded(PortForwardingService pfs, ForwardedPortEventArgs e)
+    {
+        var port = e.Port.RemotePort;
+        if (!port.HasValue)
+        {
+            return;
+        }
+
+        List<SecureStream>? streams;
+        lock (this.disconnectedStreams)
+        {
+            // If there are disconnected streams for the port, re-connect them now.
+            if (!this.disconnectedStreams.TryGetValue(port.Value, out streams))
+            {
+                streams = null;
+            }
+        }
+
+        if (streams?.Count > 0)
+        {
+            this.Trace.Verbose(
+                $"Reconnecting {streams.Count} stream(s) to forwarded port {port}");
+
+            for (int i = streams.Count; i > 0; i--)
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await pfs.ConnectToForwardedPortAsync(port.Value, CancellationToken.None);
+                        this.Trace.Verbose($"Reconnected stream to forwarded port {port}");
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Trace.Warning(
+                            $"Failed to reconnect to forwarded port {port}: {ex.Message}");
+                        lock (this.disconnectedStreams)
+                        {
+                            // The host is no longer accepting connections on the forwarded port?
+                            // Dispose and clear the list of disconnected streams for the port,
+                            // because it seems it is no longer possible to reconnect them.
+                            while (streams.Count > 0)
+                            {
+                                streams[0].Dispose();
+                                streams.RemoveAt(0);
+                            }
+                        }
+                    }
+                });
+            }
         }
     }
 
@@ -278,21 +337,62 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             e.TransformTask = EncryptChannelAsync(e.Stream);
             async Task<Stream?> EncryptChannelAsync(SshStream channelStream)
             {
-                var secureStream = new SecureStream(
-                    e.Stream,
-                    clientCredentials,
-                    false,
-                    channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId));
-                secureStream.Authenticating += OnHostAuthenticating;
+                SecureStream? secureStream = null;
 
-                // Do not pass the cancellation token from the connecting event,
-                // because the connection will outlive the event.
-                await secureStream.ConnectAsync();
+                // If there's a disconnected SecureStream for the port, try to reconnect it.
+                // If there are multiple, pick one and the host will match by SSH session ID.
+                lock (this.disconnectedStreams)
+                {
+                    if (this.disconnectedStreams.TryGetValue(e.Port, out var streamsList) &&
+                        streamsList.Count > 0)
+                    {
+                        secureStream = streamsList[0];
+                        streamsList.RemoveAt(0);
+                    }
+                }
+
+                var trace = channel.Trace.WithName(channel.Trace.Name + "." + channel.ChannelId);
+                if (secureStream != null)
+                {
+                    trace.Verbose($"Reconnecting encrypted stream for port {e.Port}...");
+                    await secureStream.ReconnectAsync(channelStream);
+                    trace.Verbose($"Reconnecting encrypted stream for port {e.Port} succeeded.");
+                }
+                else
+                {
+                    secureStream = new SecureStream(
+                        e.Stream, clientCredentials, enableReconnect: true, trace);
+                    secureStream.Authenticating += OnHostAuthenticating;
+                    secureStream.Disconnected += (_, _) => OnSecureStreamDisconnected(
+                        e.Port, secureStream, trace);
+
+                    // Do not pass the cancellation token from the connecting event,
+                    // because the connection will outlive the event.
+                    await secureStream.ConnectAsync();
+                }
+
                 return secureStream;
             }
         }
 
         this.ForwardedPortConnecting?.Invoke(this, e);
+    }
+
+    private void OnSecureStreamDisconnected(int port, SecureStream secureStream, TraceSource trace)
+    {
+        trace.Verbose($"Encrypted stream for port {port} disconnected.");
+
+        lock (this.disconnectedStreams)
+        {
+            if (this.disconnectedStreams.TryGetValue(port, out var streamsList))
+            {
+                streamsList.Add(secureStream);
+            }
+            else
+            {
+                this.disconnectedStreams.Add(port, new List<SecureStream> { secureStream });
+            }
+        }
     }
 
     private void OnHostAuthenticating(object? sender, SshAuthenticatingEventArgs e)
@@ -325,14 +425,14 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         }
         else if (Tunnel != null && ManagementClient != null)
         {
-            this.Trace.Verbose("Host public key verificiation failed. Refreshing tunnel.");
+            this.Trace.Verbose("Host public key verification failed. Refreshing tunnel.");
             this.Trace.Verbose("Host key: " + hostKey);
             this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
             e.AuthenticationTask = RefreshTunnelAndAuthenticateHostAsync(hostKey, DisposeToken);
         }
         else
         {
-            this.Trace.Error("Host public key verificiation failed.");
+            this.Trace.Error("Host public key verification failed.");
             this.Trace.Verbose("Host key: " + hostKey);
             this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
         }
@@ -353,7 +453,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
         if (Tunnel == null)
         {
-            this.Trace.Warning("Host public key verificiation failed. Tunnel is not found.");
+            this.Trace.Warning("Host public key verification failed. Tunnel is not found.");
             return null;
         }
 
@@ -371,7 +471,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             return new ClaimsPrincipal();
         }
 
-        this.Trace.Error("Host public key verificiation failed.");
+        this.Trace.Error("Host public key verification failed.");
         this.Trace.Verbose("Host key: " + hostKey);
         this.Trace.Verbose("Expected key(s): " + string.Join(", ", this.HostPublicKeys));
         return null;
