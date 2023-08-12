@@ -1,5 +1,5 @@
-[![NuGet version](https://badge.fury.io/nu/Microsoft.DevTunnels.Ssh.svg)](https://badge.fury.io/nu/Microsoft.DevTunnels.Connections)
-[![npm version](https://badge.fury.io/js/%40microsoft%2Fdev-tunnels-ssh.svg)](https://badge.fury.io/js/%40microsoft%2Fdev-tunnels-connections)
+[![NuGet version](https://badge.fury.io/nu/Microsoft.DevTunnels.Connections.svg)](https://badge.fury.io/nu/Microsoft.DevTunnels.Connections)
+[![npm version](https://badge.fury.io/js/%40microsoft%2Fdev-tunnels-connections.svg)](https://badge.fury.io/js/%40microsoft%2Fdev-tunnels-connections)
 
 # Dev tunnels
 
