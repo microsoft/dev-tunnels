@@ -1,3 +1,6 @@
+[![NuGet version](https://badge.fury.io/nu/Microsoft.DevTunnels.Connections.svg)](https://badge.fury.io/nu/Microsoft.DevTunnels.Connections)
+[![npm version](https://badge.fury.io/js/%40microsoft%2Fdev-tunnels-connections.svg)](https://badge.fury.io/js/%40microsoft%2Fdev-tunnels-connections)
+
 # Dev tunnels
 
 Dev tunnels allows developers to securely expose local web services to the Internet, control who has access, and easily & debug your web applications from anywhere. Learn more at [Dev tunnels documentation](https://aka.ms/devtunnels/docs).
