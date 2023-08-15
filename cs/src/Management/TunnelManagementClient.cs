@@ -906,11 +906,11 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(tunnel, nameof(tunnel));
 
             var tunnelId = tunnel.TunnelId;
-            if (tunnelId != null)
-            {
-                throw new ArgumentException(
-                    "An ID may not be specified when creating a tunnel.", nameof(tunnelId));
-            }
+            //if (tunnelId != null)
+            //{
+            //    throw new ArgumentException(
+            //        "An ID may not be specified when creating a tunnel.", nameof(tunnelId));
+            //}
 
             var result = await this.SendRequestAsync<Tunnel, Tunnel>(
                 HttpMethod.Post,
@@ -1184,6 +1184,7 @@ namespace Microsoft.DevTunnels.Management
         {
             return new Tunnel
             {
+                TunnelId = tunnel.TunnelId,
                 Name = tunnel.Name,
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,

@@ -66,13 +66,13 @@ pub const CLUSTER_ID_PATTERN: &str = r#"^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|eu
 
 // Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 // excluding vowels and 'y' (to avoid accidentally generating any random words).
-pub const TUNNEL_ID_CHARS: &str = r#"0123456789bcdfghjklmnpqrstvwxz"#;
+pub const TUNNEL_ID_CHARS: &str = r#"0123456789abcdefghijklmnopqrstuvwxyz"#;
 
 // Regular expression that can match or validate tunnel ID strings.
 //
 // Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 // letters (minus vowels and y).
-pub const TUNNEL_ID_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{8}"#;
+pub const TUNNEL_ID_PATTERN: &str = r#"[0123456789abcdefghijklmnopqrstuvwxyz]{3,60}"#;
 
 // Regular expression that can match or validate tunnel names.
 //

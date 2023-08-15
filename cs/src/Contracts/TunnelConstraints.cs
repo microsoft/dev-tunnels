@@ -153,7 +153,7 @@ public static class TunnelConstraints
     /// excluding vowels and 'y' (to avoid accidentally generating any random words).
     /// </summary>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string TunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
+    public const string TunnelIdChars = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel ID strings.
@@ -163,7 +163,7 @@ public static class TunnelConstraints
     /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string TunnelIdPattern = "[" + TunnelIdChars + "]{8}";
+    public const string TunnelIdPattern = "[" + TunnelIdChars + "]{3,60}";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel ID strings.

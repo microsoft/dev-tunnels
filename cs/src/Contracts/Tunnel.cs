@@ -38,7 +38,7 @@ public class Tunnel
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [RegularExpression(TunnelIdPattern)]
-    [StringLength(TunnelIdLength, MinimumLength = TunnelIdLength)]
+    [StringLength(TunnelNameMaxLength)]
     public string? TunnelId { get; set; }
 
     /// <summary>

@@ -117,7 +117,7 @@ public class TunnelConstraints {
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
      * excluding vowels and 'y' (to avoid accidentally generating any random words).
      */
-    public static final String tunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
+    public static final String tunnelIdChars = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -125,7 +125,7 @@ public class TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    public static final String tunnelIdPattern = "[" + TunnelConstraints.tunnelIdChars + "]{8}";
+    public static final String tunnelIdPattern = "[" + TunnelConstraints.tunnelIdChars + "]{3,60}";
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
