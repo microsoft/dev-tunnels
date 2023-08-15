@@ -39,7 +39,7 @@ public class Tunnel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [RegularExpression(TunnelIdPattern)]
     [StringLength(TunnelNameMaxLength)]
-    public string? TunnelId { get; set; }
+    public string? Id { get; set; }
 
     /// <summary>
     /// Gets or sets the optional short name (alias) of the tunnel.
@@ -51,7 +51,7 @@ public class Tunnel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [RegularExpression(TunnelNamePattern)]
     [StringLength(TunnelNameMaxLength)]
-    public string? Name { get; set; }
+    public string? Alias { get; set; }
 
     /// <summary>
     /// Gets or sets the description of the tunnel.

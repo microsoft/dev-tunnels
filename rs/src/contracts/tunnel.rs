@@ -19,13 +19,13 @@ pub struct Tunnel {
     pub cluster_id: Option<String>,
 
     // Gets or sets the generated ID of the tunnel, unique within the cluster.
-    pub tunnel_id: Option<String>,
+    pub id: Option<String>,
 
     // Gets or sets the optional short name (alias) of the tunnel.
     //
     // The name must be globally unique within the parent domain, and must be a valid
     // subdomain.
-    pub name: Option<String>,
+    pub alias: Option<String>,
 
     // Gets or sets the description of the tunnel.
     pub description: Option<String>,

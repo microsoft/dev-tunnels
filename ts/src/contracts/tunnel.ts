@@ -21,7 +21,7 @@ export interface Tunnel {
     /**
      * Gets or sets the generated ID of the tunnel, unique within the cluster.
      */
-    tunnelId?: string;
+    id?: string;
 
     /**
      * Gets or sets the optional short name (alias) of the tunnel.
@@ -29,7 +29,7 @@ export interface Tunnel {
      * The name must be globally unique within the parent domain, and must be a valid
      * subdomain.
      */
-    name?: string;
+    alias?: string;
 
     /**
      * Gets or sets the description of the tunnel.

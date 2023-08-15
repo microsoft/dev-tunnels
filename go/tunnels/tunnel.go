@@ -14,13 +14,13 @@ type Tunnel struct {
 	ClusterID     string `json:"clusterId,omitempty"`
 
 	// Gets or sets the generated ID of the tunnel, unique within the cluster.
-	TunnelID      string `json:"tunnelId,omitempty"`
+	ID            string `json:"id,omitempty"`
 
 	// Gets or sets the optional short name (alias) of the tunnel.
 	//
 	// The name must be globally unique within the parent domain, and must be a valid
 	// subdomain.
-	Name          string `json:"name,omitempty"`
+	Alias         string `json:"alias,omitempty"`
 
 	// Gets or sets the description of the tunnel.
 	Description   string `json:"description,omitempty"`

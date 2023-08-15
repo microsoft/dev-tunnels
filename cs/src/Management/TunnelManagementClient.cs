@@ -760,26 +760,26 @@ namespace Microsoft.DevTunnels.Management
 
             string tunnelPath;
             var pathBase = TunnelsPath;
-            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
+            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.Id))
             {
-                tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
+                tunnelPath = $"{pathBase}/{tunnel.Id}";
             }
             else
             {
                 Requires.Argument(
-                    !string.IsNullOrEmpty(tunnel.Name),
+                    !string.IsNullOrEmpty(tunnel.Alias),
                     nameof(tunnel),
                     "Tunnel object must include either a name or tunnel ID and cluster ID.");
 
                 if (string.IsNullOrEmpty(tunnel.Domain))
                 {
 
-                    tunnelPath = $"{pathBase}/{tunnel.Name}";
+                    tunnelPath = $"{pathBase}/{tunnel.Alias}";
                 }
                 else
                 {
                     // Append the domain to the tunnel name.
-                    tunnelPath = $"{pathBase}/{tunnel.Name}.{tunnel.Domain}";
+                    tunnelPath = $"{pathBase}/{tunnel.Alias}.{tunnel.Domain}";
                 }
             }
 
@@ -905,7 +905,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
-            var tunnelId = tunnel.TunnelId;
+            var tunnelId = tunnel.Id;
             //if (tunnelId != null)
             //{
             //    throw new ArgumentException(
@@ -1184,8 +1184,8 @@ namespace Microsoft.DevTunnels.Management
         {
             return new Tunnel
             {
-                TunnelId = tunnel.TunnelId,
-                Name = tunnel.Name,
+                Id = tunnel.Id,
+                Alias = tunnel.Alias,
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,
                 Tags = tunnel.Tags,
@@ -1211,8 +1211,8 @@ namespace Microsoft.DevTunnels.Management
                     "Tunnel port cluster ID does not match tunnel.", nameof(tunnelPort));
             }
 
-            if (tunnelPort.TunnelId != null && tunnel.TunnelId != null &&
-                tunnelPort.TunnelId != tunnel.TunnelId)
+            if (tunnelPort.TunnelId != null && tunnel.Id != null &&
+                tunnelPort.TunnelId != tunnel.Id)
             {
                 throw new ArgumentException(
                     "Tunnel port tunnel ID does not match tunnel.", nameof(tunnelPort));

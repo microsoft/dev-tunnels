@@ -32,19 +32,19 @@ public static class TunnelConstraints
     /// <summary>
     /// Length of tunnel id.
     /// </summary>
-    /// <seealso cref="Tunnel.TunnelId"/>
+    /// <seealso cref="Tunnel.Id"/>
     public const int TunnelIdLength = 8;
 
     /// <summary>
     /// Min length of tunnel name.
     /// </summary>
-    /// <seealso cref="Tunnel.Name"/>
+    /// <seealso cref="Tunnel.Alias"/>
     public const int TunnelNameMinLength = 3;
 
     /// <summary>
     /// Max length of tunnel name.
     /// </summary>
-    /// <seealso cref="Tunnel.Name"/>
+    /// <seealso cref="Tunnel.Alias"/>
     public const int TunnelNameMaxLength = 60;
 
     /// <summary>
@@ -152,7 +152,7 @@ public static class TunnelConstraints
     /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
     /// excluding vowels and 'y' (to avoid accidentally generating any random words).
     /// </summary>
-    /// <seealso cref="Tunnel.TunnelId"/>
+    /// <seealso cref="Tunnel.Id"/>
     public const string TunnelIdChars = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     /// <summary>
@@ -162,7 +162,7 @@ public static class TunnelConstraints
     /// Tunnel IDs are fixed-length and have a limited character set of
     /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
-    /// <seealso cref="Tunnel.TunnelId"/>
+    /// <seealso cref="Tunnel.Id"/>
     public const string TunnelIdPattern = "[" + TunnelIdChars + "]{3,60}";
 
     /// <summary>
@@ -172,7 +172,7 @@ public static class TunnelConstraints
     /// Tunnel IDs are fixed-length and have a limited character set of
     /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
-    /// <seealso cref="Tunnel.TunnelId"/>
+    /// <seealso cref="Tunnel.Id"/>
     public static Regex TunnelIdRegex { get; } = new Regex(TunnelIdPattern);
 
     /// <summary>
@@ -182,7 +182,7 @@ public static class TunnelConstraints
     /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
     /// allows an empty string because tunnels may be unnamed.
     /// </remarks>
-    /// <seealso cref="Tunnel.Name"/>
+    /// <seealso cref="Tunnel.Alias"/>
     public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)";
 
     /// <summary>
@@ -192,7 +192,7 @@ public static class TunnelConstraints
     /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
     /// allows an empty string because tunnels may be unnamed.
     /// </remarks>
-    /// <seealso cref="Tunnel.Name"/>
+    /// <seealso cref="Tunnel.Alias"/>
     public static Regex TunnelNameRegex { get; } = new Regex(TunnelNamePattern);
 
     /// <summary>
