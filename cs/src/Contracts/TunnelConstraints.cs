@@ -288,11 +288,6 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTunnelId(string tunnelId)
     {
-        if (tunnelId?.Length != TunnelIdLength)
-        {
-            return false;
-        }
-
         var m = TunnelIdRegex.Match(tunnelId);
         return m.Index == 0 && m.Length == tunnelId.Length;
     }
