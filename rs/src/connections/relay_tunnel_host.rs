@@ -4,7 +4,7 @@
 use std::{
     collections::HashMap,
     env, io,
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     pin::Pin,
     sync::Arc,
     task::Poll,
@@ -19,7 +19,7 @@ use crate::{
     },
 };
 use async_trait::async_trait;
-use futures::TryFutureExt;
+use futures::{stream::FuturesUnordered, StreamExt, TryFutureExt};
 use russh::{server::Server as ServerTrait, CryptoVec};
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
@@ -298,12 +298,7 @@ impl RelayTunnelHost {
     /// with the same port will result in an error.
     pub async fn add_port(&self, port_to_add: &TunnelPort) -> Result<(), TunnelError> {
         let rx = self.add_port_raw(port_to_add).await?;
-
-        tokio::spawn(forward_port_to_tcp(
-            SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), port_to_add.port_number).into(),
-            rx,
-        ));
-
+        tokio::spawn(forward_port_to_tcp(port_to_add.port_number, rx));
         Ok(())
     }
 
@@ -690,21 +685,41 @@ impl Server {
 
 /// Connects connections that are sent to the receiver to TCP services locally.
 /// Runs until the receiver is closed (usually via `delete_port()`).
-async fn forward_port_to_tcp(
-    addr: SocketAddr,
-    mut rx: mpsc::UnboundedReceiver<ForwardedPortConnection>,
-) {
+async fn forward_port_to_tcp(port: u16, mut rx: mpsc::UnboundedReceiver<ForwardedPortConnection>) {
+    let ipv4_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+    let ipv6_addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::LOCALHOST), port);
     while let Some(mut conn) = rx.recv().await {
-        let mut stream = match TcpStream::connect(&addr).await {
+        // Try connecting to ipv4 and ipv6 in parallel, using the first successful
+        // connection in the stream. A downside is that it means if different sevices
+        // are listening on the ports, the forwarded application is non-deterministic.
+        //
+        // But that's rare, and in other cases, one interface will time out and
+        // one interface will work, so this lets us respond as quickly as possible.
+        let mut futs = FuturesUnordered::new();
+        futs.push(TcpStream::connect(&ipv4_addr));
+        futs.push(TcpStream::connect(&ipv6_addr));
+
+        let mut last_result = None;
+        while let Some(r) = futs.next().await {
+            let ok = r.is_ok();
+            last_result = Some(r);
+            // stop on first successful:
+            if ok {
+                break;
+            }
+        }
+
+        // unwrap is safe since we know there will be at least one result:
+        let mut stream = match last_result.unwrap() {
             Ok(s) => s,
             Err(e) => {
-                log::info!("Error connecting forwarding to {}, {}", addr, e);
+                log::info!("Error connecting forwarding to port {}, {}", port, e);
                 conn.close().await;
                 continue;
             }
         };
 
-        log::debug!("Forwarded port to {}", addr);
+        log::debug!("Forwarded connection to port {}", port);
 
         tokio::spawn(async move {
             let mut read_buf = vec![0u8; 1024 * 64].into_boxed_slice();
