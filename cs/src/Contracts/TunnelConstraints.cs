@@ -307,7 +307,7 @@ public static class TunnelConstraints
         }
 
         var m = TunnelNameRegex.Match(tunnelName);
-        return m.Index == 0 && m.Length == tunnelName.Length && !IsValidTunnelId(tunnelName);
+        return m.Index == 0 && m.Length == tunnelName.Length;
     }
 
     /// <summary>
