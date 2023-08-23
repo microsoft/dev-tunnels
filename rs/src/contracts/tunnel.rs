@@ -19,7 +19,7 @@ pub struct Tunnel {
     pub cluster_id: Option<String>,
 
     // Gets or sets the generated ID of the tunnel, unique within the cluster.
-    pub id: Option<String>,
+    pub tunnel_id: Option<String>,
 
     // Gets or sets the optional short name (alias) of the tunnel.
     //

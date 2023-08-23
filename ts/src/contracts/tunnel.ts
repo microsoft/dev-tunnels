@@ -21,7 +21,7 @@ export interface Tunnel {
     /**
      * Gets or sets the generated ID of the tunnel, unique within the cluster.
      */
-    id?: string;
+    tunnelId?: string;
 
     /**
      * Gets or sets the optional short name (alias) of the tunnel.

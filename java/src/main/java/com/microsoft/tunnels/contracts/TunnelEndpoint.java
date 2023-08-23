@@ -28,6 +28,12 @@ public class TunnelEndpoint {
     public TunnelConnectionMode connectionMode;
 
     /**
+     * Gets or sets the ID of this endpoint.
+     */
+    @Expose
+    public String id;
+
+    /**
      * Gets or sets the ID of the host that is listening on this endpoint.
      *
      * This property is required when creating or updating an endpoint.  If the host

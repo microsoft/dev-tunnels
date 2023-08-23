@@ -22,6 +22,9 @@ pub struct TunnelEndpoint {
     // determine the subclass type when deserializing.
     pub connection_mode: TunnelConnectionMode,
 
+    // Gets or sets the ID of this endpoint.
+    pub id: String,
+
     // Gets or sets the ID of the host that is listening on this endpoint.
     //
     // This property is required when creating or updating an endpoint.  If the host

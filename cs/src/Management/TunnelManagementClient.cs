@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 #if NET5_0_OR_GREATER
 using System.Net.Http.Json;
 #endif
@@ -69,7 +70,14 @@ namespace Microsoft.DevTunnels.Management
             "2023-05-23-preview"
         };
 
+        private static readonly RandomNumberGenerator Random = RandomNumberGenerator.Create();
 
+        /// <summary>
+        /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+        /// excluding vowels and 'y' (to avoid accidentally generating any random words).
+        /// </summary>
+        /// <seealso cref="Tunnel.TunnelId"/>
+        public const string TunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
             TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
@@ -760,9 +768,9 @@ namespace Microsoft.DevTunnels.Management
 
             string tunnelPath;
             var pathBase = TunnelsPath;
-            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.Id))
+            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
             {
-                tunnelPath = $"{pathBase}/{tunnel.Id}";
+                tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
             }
             else
             {
@@ -905,12 +913,11 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
-            var tunnelId = tunnel.Id;
-            //if (tunnelId != null)
-            //{
-            //    throw new ArgumentException(
-            //        "An ID may not be specified when creating a tunnel.", nameof(tunnelId));
-            //}
+            var tunnelId = tunnel.TunnelId;
+            if (tunnelId == null)
+            {
+                tunnel.TunnelId = GenerateTunnelId();
+            }
 
             var result = await this.SendRequestAsync<Tunnel, Tunnel>(
                 HttpMethod.Post,
@@ -1184,7 +1191,7 @@ namespace Microsoft.DevTunnels.Management
         {
             return new Tunnel
             {
-                Id = tunnel.Id,
+                TunnelId = tunnel.TunnelId,
                 Alias = tunnel.Alias,
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,
@@ -1211,8 +1218,8 @@ namespace Microsoft.DevTunnels.Management
                     "Tunnel port cluster ID does not match tunnel.", nameof(tunnelPort));
             }
 
-            if (tunnelPort.TunnelId != null && tunnel.Id != null &&
-                tunnelPort.TunnelId != tunnel.Id)
+            if (tunnelPort.TunnelId != null && tunnel.TunnelId != null &&
+                tunnelPort.TunnelId != tunnel.TunnelId)
             {
                 throw new ArgumentException(
                     "Tunnel port tunnel ID does not match tunnel.", nameof(tunnelPort));
@@ -1335,6 +1342,34 @@ namespace Microsoft.DevTunnels.Management
         protected virtual string? GetApiQuery()
         {
             return string.IsNullOrEmpty(ApiVersion) ? null : $"api-version={ApiVersion}";
+        }
+
+        /// <summary>
+        /// Generates a random tunnel ID consisting of exactly 8 digits in
+        /// base 30: [0-9a-z] minus vowels and y.
+        /// </summary>
+        /// <remarks>
+        /// Excluding vowels (and y) avoids randomly generating (bad) words or people's names,
+        /// and makes conflicts with tunnel names (aliases) very unlikely.
+        /// </remarks>
+        public static string GenerateTunnelId()
+        {
+            // 30 ^ 8 = 656 billion, which is larger than max-uint32 but smaller than max-uint64.
+            // There's no API to generate a random uint64, so generate 8 random bytes instead.
+            var bytes = new byte[8];
+            Random.GetBytes(bytes);
+            var value = BitConverter.ToUInt64(bytes);
+
+            // Directly mapping the bytes to base30 digits would lose some randomness.
+            // Instead, consume all the bits of the long until enough digits are generated.
+            var id = new char[8];
+            for (int i = 0; i < id.Length; i++)
+            {
+                id[i] = TunnelIdChars[(int)(value % (ulong)TunnelIdChars.Length)];
+                value /= (ulong)TunnelIdChars.Length;
+            }
+
+            return new string(id);
         }
     }
 }

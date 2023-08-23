@@ -14,7 +14,7 @@ type Tunnel struct {
 	ClusterID     string `json:"clusterId,omitempty"`
 
 	// Gets or sets the generated ID of the tunnel, unique within the cluster.
-	ID            string `json:"id,omitempty"`
+	TunnelID      string `json:"tunnelId,omitempty"`
 
 	// Gets or sets the optional short name (alias) of the tunnel.
 	//

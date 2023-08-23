@@ -22,7 +22,7 @@ public class Tunnel {
      * Gets or sets the generated ID of the tunnel, unique within the cluster.
      */
     @Expose
-    public String id;
+    public String tunnelId;
 
     /**
      * Gets or sets the optional short name (alias) of the tunnel.

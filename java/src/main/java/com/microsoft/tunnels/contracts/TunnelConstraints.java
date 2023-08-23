@@ -226,6 +226,14 @@ public class TunnelConstraints {
     }
 
     /**
+     * Validates <paramref name="alias"/> and returns true if it is a valid tunnel alias,
+     * otherwise, false.
+     */
+    public static boolean isValidTunnelAlias(String alias) {
+        return TunnelConstraintsStatics.isValidTunnelAlias(alias);
+    }
+
+    /**
      * Validates <paramref name="tunnelName"/> and returns true if it is a valid tunnel
      * name, otherwise, false.
      */
@@ -256,6 +264,15 @@ public class TunnelConstraints {
      */
     public static String validateTunnelId(String tunnelId, String paramName) {
         return TunnelConstraintsStatics.validateTunnelId(tunnelId, paramName);
+    }
+
+    /**
+     * Validates <paramref name="tunnelAlias"/> and throws exception if it is null or not
+     * a valid tunnel id. Returns <paramref name="tunnelAlias"/> back if it's a valid
+     * tunnel id.
+     */
+    public static String validateTunnelAlias(String tunnelAlias, String paramName) {
+        return TunnelConstraintsStatics.validateTunnelAlias(tunnelAlias, paramName);
     }
 
     /**

@@ -37,6 +37,11 @@ public abstract class TunnelEndpoint
     public TunnelConnectionMode ConnectionMode { get; set; }
 
     /// <summary>
+    /// Gets or sets the ID of this endpoint.
+    /// </summary>
+    public string Id { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the ID of the host that is listening on this endpoint.
     /// </summary>
     /// <remarks>

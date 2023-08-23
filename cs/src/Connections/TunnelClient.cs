@@ -134,7 +134,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
 
     /// <summary>
-    /// Get host Id the client is connecting to.
+    /// Get host TunnelId the client is connecting to.
     /// </summary>
     public string? HostId { get; private set; }
 
