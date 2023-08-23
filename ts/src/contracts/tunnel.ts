@@ -99,7 +99,7 @@ export interface Tunnel {
 
     /**
      * Gets or the custom amount of time the tunnel will be valid if it is not used or
-     * updated.
+     * updated in seconds.
      */
     customExpiration?: number;
 }

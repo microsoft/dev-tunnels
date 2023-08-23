@@ -66,6 +66,6 @@ type Tunnel struct {
 	Expiration       *time.Time `json:"expiration,omitempty"`
 
 	// Gets or the custom amount of time the tunnel will be valid if it is not used or
-	// updated.
+	// updated in seconds.
 	CustomExpiration uint32 `json:"customExpiration,omitempty"`
 }

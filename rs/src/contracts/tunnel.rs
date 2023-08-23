@@ -74,6 +74,6 @@ pub struct Tunnel {
     pub expiration: Option<DateTime<Utc>>,
 
     // Gets or the custom amount of time the tunnel will be valid if it is not used or
-    // updated.
+    // updated in seconds.
     pub custom_expiration: Option<u32>,
 }

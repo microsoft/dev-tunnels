@@ -140,7 +140,7 @@ public class Tunnel
     public DateTime? Expiration { get; set; }
 
     /// <summary>
-    /// Gets or the custom amount of time the tunnel will be valid if it is not used or updated.
+    /// Gets or the custom amount of time the tunnel will be valid if it is not used or updated in seconds.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public uint? CustomExpiration { get; set; }
