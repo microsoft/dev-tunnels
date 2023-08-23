@@ -16,7 +16,7 @@ const (
 	TunnelConstraintsClusterIDMaxLength = 12
 
 	// Length of tunnel id.
-	TunnelConstraintsTunnelIDLength = 8
+	TunnelConstraintsTunnelAliasLength = 8
 
 	// Min length of tunnel name.
 	TunnelConstraintsTunnelNameMinLength = 3
@@ -68,6 +68,10 @@ const (
 	//
 	// Cluster IDs are alphanumeric; hyphens are not permitted.
 	TunnelConstraintsClusterIDPattern = "^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$"
+
+	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+	// excluding vowels and 'y' (to avoid accidentally generating any random words).
+	TunnelConstraintsTunnelAliasChars = "0123456789bcdfghjklmnpqrstvwxz"
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).

@@ -23,7 +23,7 @@ public class TunnelConstraints {
     /**
      * Length of tunnel id.
      */
-    public static final int tunnelIdLength = 8;
+    public static final int tunnelAliasLength = 8;
 
     /**
      * Min length of tunnel name.
@@ -112,6 +112,12 @@ public class TunnelConstraints {
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
     public static final Pattern clusterIdRegex = java.util.regex.Pattern.compile(TunnelConstraints.clusterIdPattern);
+
+    /**
+     * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+     * excluding vowels and 'y' (to avoid accidentally generating any random words).
+     */
+    public static final String tunnelAliasChars = "0123456789bcdfghjklmnpqrstvwxz";
 
     /**
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,

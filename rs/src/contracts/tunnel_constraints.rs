@@ -11,7 +11,7 @@ pub const CLUSTER_ID_MIN_LENGTH: i32 = 3;
 pub const CLUSTER_ID_MAX_LENGTH: i32 = 12;
 
 // Length of tunnel id.
-pub const TUNNEL_ID_LENGTH: i32 = 8;
+pub const TUNNEL_ALIAS_LENGTH: i32 = 8;
 
 // Min length of tunnel name.
 pub const TUNNEL_NAME_MIN_LENGTH: i32 = 3;
@@ -63,6 +63,10 @@ pub const ACCESS_CONTROL_MAX_SCOPES: i32 = 10;
 //
 // Cluster IDs are alphanumeric; hyphens are not permitted.
 pub const CLUSTER_ID_PATTERN: &str = r#"^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|euw|use)$"#;
+
+// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+// excluding vowels and 'y' (to avoid accidentally generating any random words).
+pub const TUNNEL_ALIAS_CHARS: &str = r#"0123456789bcdfghjklmnpqrstvwxz"#;
 
 // Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 // excluding vowels and 'y' (to avoid accidentally generating any random words).

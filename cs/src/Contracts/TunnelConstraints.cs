@@ -33,7 +33,7 @@ public static class TunnelConstraints
     /// Length of tunnel id.
     /// </summary>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const int TunnelIdLength = 8;
+    public const int TunnelAliasLength = 8;
 
     /// <summary>
     /// Min length of tunnel name.
@@ -147,6 +147,13 @@ public static class TunnelConstraints
     /// </remarks>
     /// <seealso cref="Tunnel.ClusterId"/>
     public static Regex ClusterIdRegex { get; } = new Regex(ClusterIdPattern);
+
+    /// <summary>
+    /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+    /// excluding vowels and 'y' (to avoid accidentally generating any random words).
+    /// </summary>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public const string TunnelAliasChars = "0123456789bcdfghjklmnpqrstvwxz";
 
     /// <summary>
     /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,

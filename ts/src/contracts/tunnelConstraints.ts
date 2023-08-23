@@ -20,7 +20,7 @@ namespace TunnelConstraints {
     /**
      * Length of tunnel id.
      */
-    export const tunnelIdLength: number = 8;
+    export const tunnelAliasLength: number = 8;
 
     /**
      * Min length of tunnel name.
@@ -109,6 +109,12 @@ namespace TunnelConstraints {
      * Cluster IDs are alphanumeric; hyphens are not permitted.
      */
     export const clusterIdRegex: RegExp = new RegExp(TunnelConstraints.clusterIdPattern);
+
+    /**
+     * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+     * excluding vowels and 'y' (to avoid accidentally generating any random words).
+     */
+    export const tunnelAliasChars: string = '0123456789bcdfghjklmnpqrstvwxz';
 
     /**
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
