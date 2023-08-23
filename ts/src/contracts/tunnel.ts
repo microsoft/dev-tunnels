@@ -96,4 +96,10 @@ export interface Tunnel {
      * Gets or the time the tunnel will be deleted if it is not used or updated.
      */
     expiration?: Date;
+
+    /**
+     * Gets or the custom amount of time the tunnel will be valid if it is not used or
+     * updated.
+     */
+    customExpiration?: number;
 }

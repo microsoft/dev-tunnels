@@ -109,4 +109,11 @@ public class Tunnel {
      */
     @Expose
     public Date expiration;
+
+    /**
+     * Gets or the custom amount of time the tunnel will be valid if it is not used or
+     * updated.
+     */
+    @Expose
+    public int customExpiration;
 }
