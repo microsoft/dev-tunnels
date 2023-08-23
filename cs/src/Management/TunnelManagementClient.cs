@@ -1178,6 +1178,7 @@ namespace Microsoft.DevTunnels.Management
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,
                 Tags = tunnel.Tags,
+                CustomExpiration = tunnel.CustomExpiration,
                 Options = tunnel.Options,
                 AccessControl = tunnel.AccessControl == null ? null : new TunnelAccessControl(
                     tunnel.AccessControl.Where((ace) => !ace.IsInherited)),
