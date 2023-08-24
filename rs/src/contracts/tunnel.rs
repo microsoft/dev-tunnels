@@ -25,14 +25,14 @@ pub struct Tunnel {
     //
     // The name must be globally unique within the parent domain, and must be a valid
     // subdomain.
-    pub alias: Option<String>,
+    pub global_vanity_name: Option<String>,
 
     // Gets or sets the description of the tunnel.
     pub description: Option<String>,
 
     // Gets or sets the tags of the tunnel.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub tags: Vec<String>,
+    pub labels: Vec<String>,
 
     // Gets or sets the optional parent domain of the tunnel, if it is not using the
     // default parent domain.

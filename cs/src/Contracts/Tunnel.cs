@@ -51,7 +51,7 @@ public class Tunnel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [RegularExpression(TunnelNamePattern)]
     [StringLength(TunnelNameMaxLength)]
-    public string? Alias { get; set; }
+    public string? GlobalVanityName { get; set; }
 
     /// <summary>
     /// Gets or sets the description of the tunnel.
@@ -67,7 +67,7 @@ public class Tunnel
     [MaxLength(MaxTags)]
     [ArrayStringLength(TagMaxLength, MinimumLength = TagMinLength)]
     [ArrayRegularExpression(TagPattern)]
-    public string[]? Tags { get; set; }
+    public string[]? Labels { get; set; }
 
     /// <summary>
     /// Gets or sets the optional parent domain of the tunnel, if it is not using

@@ -38,13 +38,13 @@ public static class TunnelConstraints
     /// <summary>
     /// Min length of tunnel name.
     /// </summary>
-    /// <seealso cref="Tunnel.Alias"/>
+    /// <seealso cref="Tunnel.GlobalVanityName"/>
     public const int TunnelNameMinLength = 3;
 
     /// <summary>
     /// Max length of tunnel name.
     /// </summary>
-    /// <seealso cref="Tunnel.Alias"/>
+    /// <seealso cref="Tunnel.GlobalVanityName"/>
     public const int TunnelNameMaxLength = 60;
 
     /// <summary>
@@ -57,21 +57,21 @@ public static class TunnelConstraints
     /// <summary>
     /// Min length of a single tunnel or port tag.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
+    /// <seealso cref="Tunnel.Labels"/>
     /// <seealso cref="TunnelPort.Tags"/>
     public const int TagMinLength = 1;
 
     /// <summary>
     /// Max length of a single tunnel or port tag.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
+    /// <seealso cref="Tunnel.Labels"/>
     /// <seealso cref="TunnelPort.Tags"/>
     public const int TagMaxLength = 50;
 
     /// <summary>
     /// Maximum number of tags that can be applied to a tunnel or port.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
+    /// <seealso cref="Tunnel.Labels"/>
     /// <seealso cref="TunnelPort.Tags"/>
     public const int MaxTags = 100;
 
@@ -189,7 +189,7 @@ public static class TunnelConstraints
     /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
     /// allows an empty string because tunnels may be unnamed.
     /// </remarks>
-    /// <seealso cref="Tunnel.Alias"/>
+    /// <seealso cref="Tunnel.GlobalVanityName"/>
     public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)";
 
     /// <summary>
@@ -199,7 +199,7 @@ public static class TunnelConstraints
     /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
     /// allows an empty string because tunnels may be unnamed.
     /// </remarks>
-    /// <seealso cref="Tunnel.Alias"/>
+    /// <seealso cref="Tunnel.GlobalVanityName"/>
     public static Regex TunnelNameRegex { get; } = new Regex(TunnelNamePattern);
 
     /// <summary>
@@ -211,7 +211,7 @@ public static class TunnelConstraints
     /// <summary>
     /// Regular expression that can match or validate tunnel or port tags.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
+    /// <seealso cref="Tunnel.Labels"/>
     /// <seealso cref="TunnelPort.Tags"/>
     public static Regex TagRegex { get; } = new Regex(TagPattern);
 

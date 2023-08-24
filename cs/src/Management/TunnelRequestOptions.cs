@@ -92,7 +92,7 @@ namespace Microsoft.DevTunnels.Management
         /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
         /// </summary>
         /// <remarks>
-        /// Requested tags are compared to the <see cref="Tunnel.Tags"/> or
+        /// Requested tags are compared to the <see cref="Tunnel.Labels"/> or
         /// <see cref="TunnelPort.Tags"/> when calling
         /// <see cref="ITunnelManagementClient.ListTunnelsAsync"/> or
         /// <see cref="ITunnelManagementClient.ListTunnelPortsAsync"/> respectively. By default, an
