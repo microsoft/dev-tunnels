@@ -103,6 +103,12 @@ namespace Microsoft.DevTunnels.Management
         /// </returns>
         /// <remarks>
         /// Entries are evaluated in order, with later entries overriding earlier entries.
+        /// All allow rules are processed first, followed by all deny rules. This ensures an
+        /// inherited deny rule cannot be overridden at a lower level.
+        ///
+        /// Warning: This does not consider whether a user may be allowed (or denied) access due to
+        /// group or organization membership. It only scans access control entries of the specified
+        /// type. It may be necessary to separately check group or org access control entry types.
         ///
         /// Generally no entry (null return value) should be handled the same as denial,
         /// but the difference might be relevant for logging/auditing.
@@ -127,15 +133,38 @@ namespace Microsoft.DevTunnels.Management
 
             foreach (var ace in accessControl)
             {
-                if (ace.Type == entryType &&
-                    (string.IsNullOrEmpty(subject) || ace.Subjects.Contains(subject)) &&
-                    ace.Scopes.Contains(scope))
+                if (!ace.IsDeny && IsEntryMatch(ace, entryType, subject, scope))
                 {
-                    allowed = !ace.IsDeny;
+                    allowed = true;
+                    break;
+                }
+            }
+
+            foreach (var ace in accessControl)
+            {
+                if (ace.IsDeny && IsEntryMatch(ace, entryType, subject, scope))
+                {
+                    allowed = false;
+                    break;
                 }
             }
 
             return allowed;
+        }
+
+        /// <summary>
+        /// Checks if an access control entry matches the specified entry type, subject, and scope.
+        /// </summary>
+        private static bool IsEntryMatch(
+            TunnelAccessControlEntry ace,
+            TunnelAccessControlEntryType entryType,
+            string subject,
+            string scope)
+        {
+            return ace.Type == entryType &&
+                (string.IsNullOrEmpty(subject) ||
+                ace.Subjects.Contains(subject) != ace.IsInverse) &&
+                ace.Scopes.Contains(scope);
         }
 
         /// <summary>
