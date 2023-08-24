@@ -160,27 +160,39 @@ public static class TunnelConstraints
     /// excluding vowels and 'y' (to avoid accidentally generating any random words).
     /// </summary>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string TunnelIdChars = "0123456789abcdefghijklmnopqrstuvwxyz";
+    public const string TunnelIdChars = "0123456789abcdefghijklmnopqrstuvwxyz-";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel ID strings.
     /// </summary>
-    /// <remarks>
-    /// Tunnel IDs are fixed-length and have a limited character set of
-    /// numbers and lowercase letters (minus vowels and y).
-    /// </remarks>
     /// <seealso cref="Tunnel.TunnelId"/>
     public const string TunnelIdPattern = "[" + TunnelIdChars + "]{3,60}";
 
     /// <summary>
-    /// Regular expression that can match or validate tunnel ID strings.
+    /// Regular expression that can match or validate tunnel alias strings.
     /// </summary>
     /// <remarks>
-    /// Tunnel IDs are fixed-length and have a limited character set of
+    /// Tunnel Aliases are fixed-length and have a limited character set of
     /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
     /// <seealso cref="Tunnel.TunnelId"/>
+    public const string TunnelAliasPattern = "[" + TunnelAliasChars + "]{3,60}";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel ID strings.
+    /// </summary>
+    /// <seealso cref="Tunnel.TunnelId"/>
     public static Regex TunnelIdRegex { get; } = new Regex(TunnelIdPattern);
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel alias strings.
+    /// </summary>
+    /// <remarks>
+    /// Tunnel Aliases are fixed-length and have a limited character set of
+    /// numbers and lowercase letters (minus vowels and y).
+    /// </remarks>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public static Regex TunnelAliasRegex { get; } = new Regex(TunnelAliasPattern);
 
     /// <summary>
     /// Regular expression that can match or validate tunnel names.
@@ -296,7 +308,7 @@ public static class TunnelConstraints
     public static bool IsValidTunnelId(string tunnelId)
     {
         var m = TunnelIdRegex.Match(tunnelId);
-        return m.Index == 0 && m.Length == tunnelId.Length;
+        return m.Index == 0 && m.Length == tunnelId.Length && !IsValidTunnelAlias(tunnelId);
     }
 
 
@@ -305,8 +317,8 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTunnelAlias(string alias)
     {
-        var m = TunnelIdRegex.Match(alias);
-        return m.Index == 0 && m.Length == alias.Length;
+        var m = TunnelAliasRegex.Match(alias);
+        return (m.Index == 0 && m.Length == alias.Length);
     }
 
     /// <summary>
@@ -374,6 +386,11 @@ public static class TunnelConstraints
         if (!IsValidTunnelId(tunnelId))
         {
             throw new ArgumentException("Invalid tunnel id", paramName);
+        }
+
+        if (IsValidTunnelAlias(tunnelId))
+        {
+            throw new ArgumentException("Tunnel id must either be not 8 characters long or have a vowel", paramName);
         }
 
         return tunnelId;

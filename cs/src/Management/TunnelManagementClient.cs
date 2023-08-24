@@ -67,7 +67,8 @@ namespace Microsoft.DevTunnels.Management
         /// </summary>
         public string[] TunnelsApiVersions =
         {
-            "2023-05-23-preview"
+            "2023-05-23-preview",
+            "2023-09-27-preview"
         };
 
         private static readonly RandomNumberGenerator Random = RandomNumberGenerator.Create();
@@ -349,6 +350,7 @@ namespace Microsoft.DevTunnels.Management
         /// <param name="options">Request options.</param>
         /// <param name="body">Request body object.</param>
         /// <param name="cancellation">Cancellation token.</param>
+        /// <param name="isCreate">Whether the request is a create operation.</param>
         /// <typeparam name="TRequest">The request body type.</typeparam>
         /// <typeparam name="TResult">The expected result type.</typeparam>
         /// <returns>Result of the request.</returns>
@@ -375,10 +377,11 @@ namespace Microsoft.DevTunnels.Management
             string? query,
             TunnelRequestOptions? options,
             TRequest? body,
-            CancellationToken cancellation)
+            CancellationToken cancellation,
+            bool isCreate = false)
             where TRequest : class
         {
-            var uri = BuildTunnelUri(tunnel, path, query, options);
+            var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
             return await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
@@ -762,13 +765,14 @@ namespace Microsoft.DevTunnels.Management
             Tunnel tunnel,
             string? path,
             string? query,
-            TunnelRequestOptions? options)
+            TunnelRequestOptions? options,
+            bool isCreate = false)
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
             string tunnelPath;
             var pathBase = TunnelsPath;
-            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
+            if ((!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId)) || isCreate)
             {
                 tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
             }
@@ -913,20 +917,21 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
-            var tunnelId = tunnel.TunnelId;
-            if (tunnelId == null)
+            if (string.IsNullOrEmpty(tunnel.TunnelId))
             {
-                tunnel.TunnelId = GenerateTunnelId();
+                tunnel.TunnelId = IdGeneration.GenerateTunnelId();
             }
 
-            var result = await this.SendRequestAsync<Tunnel, Tunnel>(
-                HttpMethod.Post,
-                tunnel.ClusterId,
-                TunnelsPath,
+            var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+                HttpMethod.Put,
+                tunnel,
+                ManageAccessTokenScope,
+                path: null,
                 query: GetApiQuery(),
                 options,
                 ConvertTunnelForRequest(tunnel),
-                cancellation);
+                cancellation,
+                true);
             return result!;
         }
 
@@ -1342,34 +1347,6 @@ namespace Microsoft.DevTunnels.Management
         protected virtual string? GetApiQuery()
         {
             return string.IsNullOrEmpty(ApiVersion) ? null : $"api-version={ApiVersion}";
-        }
-
-        /// <summary>
-        /// Generates a random tunnel ID consisting of exactly 8 digits in
-        /// base 30: [0-9a-z] minus vowels and y.
-        /// </summary>
-        /// <remarks>
-        /// Excluding vowels (and y) avoids randomly generating (bad) words or people's names,
-        /// and makes conflicts with tunnel names (aliases) very unlikely.
-        /// </remarks>
-        public static string GenerateTunnelId()
-        {
-            // 30 ^ 8 = 656 billion, which is larger than max-uint32 but smaller than max-uint64.
-            // There's no API to generate a random uint64, so generate 8 random bytes instead.
-            var bytes = new byte[8];
-            Random.GetBytes(bytes);
-            var value = BitConverter.ToUInt64(bytes);
-
-            // Directly mapping the bytes to base30 digits would lose some randomness.
-            // Instead, consume all the bits of the long until enough digits are generated.
-            var id = new char[8];
-            for (int i = 0; i < id.Length; i++)
-            {
-                id[i] = TunnelIdChars[(int)(value % (ulong)TunnelIdChars.Length)];
-                value /= (ulong)TunnelIdChars.Length;
-            }
-
-            return new string(id);
         }
     }
 }

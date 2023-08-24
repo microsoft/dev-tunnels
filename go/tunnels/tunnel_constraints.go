@@ -75,13 +75,16 @@ const (
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
-	TunnelConstraintsTunnelIDChars = "0123456789abcdefghijklmnopqrstuvwxyz"
+	TunnelConstraintsTunnelIDChars = "0123456789abcdefghijklmnopqrstuvwxyz-"
 
 	// Regular expression that can match or validate tunnel ID strings.
-	//
-	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
-	// letters (minus vowels and y).
 	TunnelConstraintsTunnelIDPattern = "[" + TunnelConstraintsTunnelIDChars + "]{3,60}"
+
+	// Regular expression that can match or validate tunnel alias strings.
+	//
+	// Tunnel Aliases are fixed-length and have a limited character set of numbers and
+	// lowercase letters (minus vowels and y).
+	TunnelConstraintsTunnelAliasPattern = "[" + TunnelConstraintsTunnelAliasChars + "]{3,60}"
 
 	// Regular expression that can match or validate tunnel names.
 	//
@@ -121,10 +124,13 @@ var (
 	TunnelConstraintsClusterIDRegex = regexp.MustCompile(TunnelConstraintsClusterIDPattern)
 
 	// Regular expression that can match or validate tunnel ID strings.
-	//
-	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
-	// letters (minus vowels and y).
 	TunnelConstraintsTunnelIDRegex = regexp.MustCompile(TunnelConstraintsTunnelIDPattern)
+
+	// Regular expression that can match or validate tunnel alias strings.
+	//
+	// Tunnel Aliases are fixed-length and have a limited character set of numbers and
+	// lowercase letters (minus vowels and y).
+	TunnelConstraintsTunnelAliasRegex = regexp.MustCompile(TunnelConstraintsTunnelAliasPattern)
 
 	// Regular expression that can match or validate tunnel names.
 	//
