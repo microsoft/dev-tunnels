@@ -51,7 +51,7 @@ public class Tunnel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [RegularExpression(TunnelNamePattern)]
     [StringLength(TunnelNameMaxLength)]
-    public string? GlobalVanityName { get; set; }
+    public string? Name { get; set; }
 
     /// <summary>
     /// Gets or sets the description of the tunnel.

@@ -25,7 +25,7 @@ pub struct Tunnel {
     //
     // The name must be globally unique within the parent domain, and must be a valid
     // subdomain.
-    pub global_vanity_name: Option<String>,
+    pub name: Option<String>,
 
     // Gets or sets the description of the tunnel.
     pub description: Option<String>,

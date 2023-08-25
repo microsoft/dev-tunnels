@@ -779,19 +779,19 @@ namespace Microsoft.DevTunnels.Management
             else
             {
                 Requires.Argument(
-                    !string.IsNullOrEmpty(tunnel.GlobalVanityName),
+                    !string.IsNullOrEmpty(tunnel.Name),
                     nameof(tunnel),
                     "Tunnel object must include either a name or tunnel ID and cluster ID.");
 
                 if (string.IsNullOrEmpty(tunnel.Domain))
                 {
 
-                    tunnelPath = $"{pathBase}/{tunnel.GlobalVanityName}";
+                    tunnelPath = $"{pathBase}/{tunnel.Name}";
                 }
                 else
                 {
                     // Append the domain to the tunnel name.
-                    tunnelPath = $"{pathBase}/{tunnel.GlobalVanityName}.{tunnel.Domain}";
+                    tunnelPath = $"{pathBase}/{tunnel.Name}.{tunnel.Domain}";
                 }
             }
 
@@ -1197,7 +1197,7 @@ namespace Microsoft.DevTunnels.Management
             return new Tunnel
             {
                 TunnelId = tunnel.TunnelId,
-                GlobalVanityName = tunnel.GlobalVanityName,
+                Name = tunnel.Name,
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,
                 Labels = tunnel.Labels,

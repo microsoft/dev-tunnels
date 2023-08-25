@@ -31,7 +31,7 @@ public class Tunnel {
      * subdomain.
      */
     @Expose
-    public String globalVanityName;
+    public String name;
 
     /**
      * Gets or sets the description of the tunnel.

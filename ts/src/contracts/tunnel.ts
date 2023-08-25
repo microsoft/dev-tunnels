@@ -29,7 +29,7 @@ export interface Tunnel {
      * The name must be globally unique within the parent domain, and must be a valid
      * subdomain.
      */
-    globalVanityName?: string;
+    name?: string;
 
     /**
      * Gets or sets the description of the tunnel.

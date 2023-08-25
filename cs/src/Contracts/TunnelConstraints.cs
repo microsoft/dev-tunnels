@@ -38,13 +38,13 @@ public static class TunnelConstraints
     /// <summary>
     /// Min length of tunnel name.
     /// </summary>
-    /// <seealso cref="Tunnel.GlobalVanityName"/>
+    /// <seealso cref="Tunnel.Name"/>
     public const int TunnelNameMinLength = 3;
 
     /// <summary>
     /// Max length of tunnel name.
     /// </summary>
-    /// <seealso cref="Tunnel.GlobalVanityName"/>
+    /// <seealso cref="Tunnel.Name"/>
     public const int TunnelNameMaxLength = 60;
 
     /// <summary>
@@ -201,7 +201,7 @@ public static class TunnelConstraints
     /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
     /// allows an empty string because tunnels may be unnamed.
     /// </remarks>
-    /// <seealso cref="Tunnel.GlobalVanityName"/>
+    /// <seealso cref="Tunnel.Name"/>
     public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)";
 
     /// <summary>
@@ -211,7 +211,7 @@ public static class TunnelConstraints
     /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
     /// allows an empty string because tunnels may be unnamed.
     /// </remarks>
-    /// <seealso cref="Tunnel.GlobalVanityName"/>
+    /// <seealso cref="Tunnel.Name"/>
     public static Regex TunnelNameRegex { get; } = new Regex(TunnelNamePattern);
 
     /// <summary>
