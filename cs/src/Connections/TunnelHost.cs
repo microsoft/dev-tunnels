@@ -137,6 +137,10 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
             // Treat it as equivalent to the client rejecting the forwarding request.
             forwarder = null;
         }
+        catch (ObjectDisposedException)
+        {
+            forwarder = null;
+        }
 
         if (forwarder == null)
         {
