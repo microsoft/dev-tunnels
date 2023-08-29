@@ -556,48 +556,62 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     private async Task StartForwardingExistingPortsAsync(
         SshSession session, bool removeUnusedPorts = false)
     {
-        // Send port-forward request messages concurrently. The client may still handle the
-        // requests sequentially but at least there is no network round-trip between them.
-        var forwardTasks = new List<Task>();
-
-        var tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
-        var pfs = session.ActivateService<PortForwardingService>();
-        pfs.ForwardConnectionsToLocalPorts = this.ForwardConnectionsToLocalPorts;
-        foreach (TunnelPort port in tunnelPorts)
+        try
         {
-            // ForwardPortAsync() catches and logs most exceptions that might normally occur.
-            forwardTasks.Add(ForwardPortAsync(pfs, port, CancellationToken.None));
-        }
+            // Send port-forward request messages concurrently. The client may still handle the
+            // requests sequentially but at least there is no network round-trip between them.
+            var forwardTasks = new List<Task>();
 
-        await Task.WhenAll(forwardTasks);
-
-        // If a tunnel client reconnects, its SSH session Port Forwarding service may
-        // have remote port forwarders for the ports no longer forwarded.
-        // Remove such forwarders.
-        if (removeUnusedPorts && session.SessionId != null)
-        {
-            tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
-            var unusedlocalPorts = new HashSet<int>(
-                pfs.LocalForwardedPorts
-                    .Select(p => p.LocalPort)
-                    .Where(localPort => localPort.HasValue && !tunnelPorts.Any(tp => tp.PortNumber == localPort))
-                    .Select(localPort => localPort!.Value));
-
-            var remoteForwardersToDispose = RemoteForwarders
-                .Where((kvp) =>
-                    ((kvp.Key.SessionId == null && session.SessionId == null) ||
-                        ((kvp.Key.SessionId != null && session.SessionId != null) &&
-                        Enumerable.SequenceEqual(kvp.Key.SessionId, session.SessionId))) &&
-                    unusedlocalPorts.Contains(kvp.Value.LocalPort))
-                .Select(kvp => kvp.Key);
-
-            foreach (SessionPortKey key in remoteForwardersToDispose)
+            var tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
+            var pfs = session.ActivateService<PortForwardingService>();
+            pfs.ForwardConnectionsToLocalPorts = this.ForwardConnectionsToLocalPorts;
+            foreach (TunnelPort port in tunnelPorts)
             {
-                if (RemoteForwarders.TryRemove(key, out var remoteForwarder))
+                // ForwardPortAsync() catches and logs most exceptions that might normally occur.
+                forwardTasks.Add(ForwardPortAsync(pfs, port, CancellationToken.None));
+            }
+
+            await Task.WhenAll(forwardTasks);
+
+            // If a tunnel client reconnects, its SSH session Port Forwarding service may
+            // have remote port forwarders for the ports no longer forwarded.
+            // Remove such forwarders.
+            if (removeUnusedPorts && session.SessionId != null)
+            {
+                tunnelPorts = Tunnel!.Ports ?? Enumerable.Empty<TunnelPort>();
+                var unusedLocalPorts = new HashSet<int>(
+                    pfs.LocalForwardedPorts
+                        .Select(p => p.LocalPort)
+                        .Where(localPort => localPort.HasValue &&
+                            !tunnelPorts.Any(tp => tp.PortNumber == localPort))
+                        .Select(localPort => localPort!.Value));
+
+                var remoteForwardersToDispose = RemoteForwarders
+                    .Where((kvp) =>
+                        ((kvp.Key.SessionId == null && session.SessionId == null) ||
+                            ((kvp.Key.SessionId != null && session.SessionId != null) &&
+                            Enumerable.SequenceEqual(kvp.Key.SessionId, session.SessionId))) &&
+                        unusedLocalPorts.Contains(kvp.Value.LocalPort))
+                    .Select(kvp => kvp.Key);
+
+                foreach (SessionPortKey key in remoteForwardersToDispose)
                 {
-                    remoteForwarder?.Dispose();
+                    if (RemoteForwarders.TryRemove(key, out var remoteForwarder))
+                    {
+                        remoteForwarder?.Dispose();
+                    }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            // Catch unexpected exceptions because this method is called from async void methods.
+            TraceSource trace = session.Trace;
+            trace.TraceEvent(
+                TraceEventType.Error,
+                0,
+                "Unhandled exception when forwarding ports.\n{1}",
+                ex);
         }
     }
 
