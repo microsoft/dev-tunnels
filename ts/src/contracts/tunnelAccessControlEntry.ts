@@ -6,7 +6,7 @@
 import { TunnelAccessControlEntryType } from './tunnelAccessControlEntryType';
 
 /**
- * Data contract for an access control entry on a {@link TunnelV1} or {@link TunnelPort}.
+ * Data contract for an access control entry on a {@link Tunnel} or {@link TunnelPort}.
  *
  * An access control entry (ACE) grants or denies one or more access scopes to one or more
  * subjects. Tunnel ports inherit access control entries from their tunnel, and they may

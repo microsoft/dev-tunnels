@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-// Data contract for `TunnelV1` or `TunnelPort` options.
+// Data contract for `Tunnel` or `TunnelPort` options.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelOptions {

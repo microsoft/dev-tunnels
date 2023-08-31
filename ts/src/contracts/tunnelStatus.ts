@@ -7,7 +7,7 @@ import { RateStatus } from './rateStatus';
 import { ResourceStatus } from './resourceStatus';
 
 /**
- * Data contract for {@link TunnelV1} status.
+ * Data contract for {@link Tunnel} status.
  */
 export interface TunnelStatus {
     /**

@@ -4,7 +4,7 @@
 
 package tunnels
 
-// Data contract for `TunnelV1` or `TunnelPort` options.
+// Data contract for `Tunnel` or `TunnelPort` options.
 type TunnelOptions struct {
 	// Gets or sets a value indicating whether web-forwarding of this tunnel can run on any
 	// cluster (region) without redirecting to the home cluster. This is only applicable if

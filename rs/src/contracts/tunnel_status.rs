@@ -6,7 +6,7 @@ use crate::contracts::RateStatus;
 use crate::contracts::ResourceStatus;
 use serde::{Deserialize, Serialize};
 
-// Data contract for `TunnelV1` status.
+// Data contract for `Tunnel` status.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelStatus {

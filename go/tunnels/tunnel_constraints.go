@@ -16,7 +16,7 @@ const (
 	TunnelConstraintsClusterIDMaxLength = 12
 
 	// Length of V1 tunnel id.
-	TunnelConstraintsTunnelV1IDLength = 8
+	TunnelConstraintsTunnelIDLength = 8
 
 	// Min length of V2 tunnelId.
 	TunnelConstraintsTunnelV2IDMinLength = 3
@@ -80,13 +80,13 @@ const (
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
-	TunnelConstraintsTunnelV1IDChars = "0123456789bcdfghjklmnpqrstvwxz"
+	TunnelConstraintsTunnelIDChars = "0123456789bcdfghjklmnpqrstvwxz"
 
 	// Regular expression that can match or validate tunnel ID strings.
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV1IDPattern = "[" + TunnelV1TunnelConstraintsIDChars + "]{8}"
+	TunnelConstraintsTunnelIDPattern = "[" + TunnelTunnelConstraintsIDChars + "]{8}"
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
@@ -149,7 +149,7 @@ var (
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV1IDRegex = regexp.MustCompile(TunnelV1TunnelConstraintsIDPattern)
+	TunnelConstraintsTunnelIDRegex = regexp.MustCompile(TunnelTunnelConstraintsIDPattern)
 
 	// Regular expression that can match or validate tunnel ID strings.
 	//
