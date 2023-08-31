@@ -15,17 +15,8 @@ const (
 	// Max length of tunnel cluster ID.
 	TunnelConstraintsClusterIDMaxLength = 12
 
-	// Length of V1 tunnel id.
-	TunnelConstraintsTunnelV1IDLength = 8
-
-	// Min length of V2 tunnelId.
-	TunnelConstraintsTunnelV2IDMinLength = 3
-
-	// Max length of V2 tunnelId.
-	TunnelConstraintsTunnelV2IDMaxLength = 60
-
-	// Length of a tunnel alias.
-	TunnelConstraintsTunnelAliasLength = 8
+	// Length of tunnel id.
+	TunnelConstraintsTunnelIDLength = 8
 
 	// Min length of tunnel name.
 	TunnelConstraintsTunnelNameMinLength = 3
@@ -80,33 +71,13 @@ const (
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
-	TunnelConstraintsTunnelV1IDChars = "0123456789bcdfghjklmnpqrstvwxz"
+	TunnelConstraintsTunnelIDChars = "0123456789bcdfghjklmnpqrstvwxz"
 
 	// Regular expression that can match or validate tunnel ID strings.
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV1IDPattern = "[" + TunnelConstraintsTunnelV1IDChars + "]{8}"
-
-	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
-	// excluding vowels and 'y' (to avoid accidentally generating any random words).
-	TunnelConstraintsTunnelV2IDChars = "0123456789abcdfghijklmnopqrstuvwxyz"
-
-	// Regular expression that can match or validate tunnel ID strings.
-	//
-	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
-	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV2IDPattern = "[" + TunnelConstraintsTunnelV2IDChars + "]{3,60}"
-
-	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
-	// excluding vowels and 'y' (to avoid accidentally generating any random words).
-	TunnelConstraintsTunnelAliasChars = "0123456789bcdfghjklmnpqrstvwxz"
-
-	// Regular expression that can match or validate tunnel alias strings.
-	//
-	// Tunnel Aliases are fixed-length and have a limited character set of numbers and
-	// lowercase letters (minus vowels and y).
-	TunnelConstraintsTunnelAliasPattern = "[" + TunnelConstraintsTunnelAliasChars + "]{3,60}"
+	TunnelConstraintsTunnelIDPattern = "[" + TunnelConstraintsTunnelIDChars + "]{8}"
 
 	// Regular expression that can match or validate tunnel names.
 	//
@@ -150,19 +121,7 @@ var (
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV1IDRegex = regexp.MustCompile(TunnelConstraintsTunnelV1IDPattern)
-
-	// Regular expression that can match or validate tunnel ID strings.
-	//
-	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
-	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV2IDRegex = regexp.MustCompile(TunnelConstraintsTunnelV2IDPattern)
-
-	// Regular expression that can match or validate tunnel alias strings.
-	//
-	// Tunnel Aliases are fixed-length and have a limited character set of numbers and
-	// lowercase letters (minus vowels and y).
-	TunnelConstraintsTunnelAliasRegex = regexp.MustCompile(TunnelConstraintsTunnelAliasPattern)
+	TunnelConstraintsTunnelIDRegex = regexp.MustCompile(TunnelConstraintsTunnelIDPattern)
 
 	// Regular expression that can match or validate tunnel names.
 	//
