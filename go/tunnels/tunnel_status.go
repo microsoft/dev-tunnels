@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Data contract for `TunnelV1` status.
+// Data contract for `Tunnel` status.
 type TunnelStatus struct {
 	// Gets or sets the current value and limit for the number of ports on the tunnel.
 	PortCount                *ResourceStatus `json:"portCount,omitempty"`

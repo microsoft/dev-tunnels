@@ -13,7 +13,7 @@ type Tunnel struct {
 	// Gets or sets the ID of the cluster the tunnel was created in.
 	ClusterID        string `json:"clusterId,omitempty"`
 
-	// Gets or sets the ID of the tunnel, unique within the cluster.
+	// Gets or sets the generated ID of the tunnel, unique within the cluster.
 	TunnelID         string `json:"tunnelId,omitempty"`
 
 	// Gets or sets the optional short name (alias) of the tunnel.
@@ -24,6 +24,9 @@ type Tunnel struct {
 
 	// Gets or sets the description of the tunnel.
 	Description      string `json:"description,omitempty"`
+
+	// Gets or sets the tags of the tunnel.
+	Tags             []string `json:"tags,omitempty"`
 
 	// Gets or sets the optional parent domain of the tunnel, if it is not using the default
 	// parent domain.
@@ -65,25 +68,4 @@ type Tunnel struct {
 	// Gets or the custom amount of time the tunnel will be valid if it is not used or
 	// updated in seconds.
 	CustomExpiration uint32 `json:"customExpiration,omitempty"`
-
-	TunnelV1
-	TunnelV2
-}
-
-// Tunnel type used for tunnel service API version 2023-05-23-preview
-type TunnelV1 struct {
-	// Gets or sets the ID of the tunnel, unique within the cluster.
-	TunnelID string `json:"tunnelId,omitempty"`
-
-	// Gets or sets the tags of the tunnel.
-	Tags     []string `json:"tags,omitempty"`
-}
-
-// Tunnel type used for tunnel service API versions greater than 2023-05-23-preview
-type TunnelV2 struct {
-	// Gets or sets the ID of the tunnel, unique within the cluster.
-	TunnelID string `json:"tunnelId,omitempty"`
-
-	// Gets or sets the tags of the tunnel.
-	Labels   []string `json:"labels,omitempty"`
 }
