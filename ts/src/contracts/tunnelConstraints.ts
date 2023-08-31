@@ -18,9 +18,24 @@ namespace TunnelConstraints {
     export const clusterIdMaxLength: number = 12;
 
     /**
-     * Length of tunnel id.
+     * Length of V1 tunnel id.
      */
-    export const tunnelIdLength: number = 8;
+    export const oldTunnelIdLength: number = 8;
+
+    /**
+     * Min length of V2 tunnelId.
+     */
+    export const newTunnelIdMinLength: number = 3;
+
+    /**
+     * Max length of V2 tunnelId.
+     */
+    export const newTunnelIdMaxLength: number = 60;
+
+    /**
+     * Length of a tunnel alias.
+     */
+    export const tunnelAliasLength: number = 8;
 
     /**
      * Min length of tunnel name.
@@ -114,7 +129,7 @@ namespace TunnelConstraints {
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
      * excluding vowels and 'y' (to avoid accidentally generating any random words).
      */
-    export const tunnelIdChars: string = '0123456789bcdfghjklmnpqrstvwxz';
+    export const oldTunnelIdChars: string = '0123456789bcdfghjklmnpqrstvwxz';
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -122,7 +137,7 @@ namespace TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    export const tunnelIdPattern: string = '[' + TunnelConstraints.tunnelIdChars + ']{8}';
+    export const oldTunnelIdPattern: string = '[' + TunnelConstraints.oldTunnelIdChars + ']{8}';
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -130,7 +145,51 @@ namespace TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    export const tunnelIdRegex: RegExp = new RegExp(TunnelConstraints.tunnelIdPattern);
+    export const oldTunnelIdRegex: RegExp = new RegExp(TunnelConstraints.oldTunnelIdPattern);
+
+    /**
+     * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+     * excluding vowels and 'y' (to avoid accidentally generating any random words).
+     */
+    export const newTunnelIdChars: string = '0123456789abcdfghijklmnopqrstuvwxyz';
+
+    /**
+     * Regular expression that can match or validate tunnel ID strings.
+     *
+     * Tunnel IDs are fixed-length and have a limited character set of numbers and
+     * lowercase letters (minus vowels and y).
+     */
+    export const newTunnelIdPattern: string = '[' + TunnelConstraints.newTunnelIdChars + ']{3,60}';
+
+    /**
+     * Regular expression that can match or validate tunnel ID strings.
+     *
+     * Tunnel IDs are fixed-length and have a limited character set of numbers and
+     * lowercase letters (minus vowels and y).
+     */
+    export const newTunnelIdRegex: RegExp = new RegExp(TunnelConstraints.newTunnelIdPattern);
+
+    /**
+     * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+     * excluding vowels and 'y' (to avoid accidentally generating any random words).
+     */
+    export const tunnelAliasChars: string = '0123456789bcdfghjklmnpqrstvwxz';
+
+    /**
+     * Regular expression that can match or validate tunnel alias strings.
+     *
+     * Tunnel Aliases are fixed-length and have a limited character set of numbers and
+     * lowercase letters (minus vowels and y).
+     */
+    export const tunnelAliasPattern: string = '[' + TunnelConstraints.tunnelAliasChars + ']{3,60}';
+
+    /**
+     * Regular expression that can match or validate tunnel alias strings.
+     *
+     * Tunnel Aliases are fixed-length and have a limited character set of numbers and
+     * lowercase letters (minus vowels and y).
+     */
+    export const tunnelAliasRegex: RegExp = new RegExp(TunnelConstraints.tunnelAliasPattern);
 
     /**
      * Regular expression that can match or validate tunnel names.

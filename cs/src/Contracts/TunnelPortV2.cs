@@ -15,12 +15,12 @@ using static TunnelConstraints;
 /// <summary>
 /// Data contract for tunnel port objects managed through the tunnel service REST API.
 /// </summary>
-public class TunnelPort
+public class TunnelPortV2
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TunnelPort"/> class.
     /// </summary>
-    public TunnelPort()
+    public TunnelPortV2()
     {
     }
 
@@ -36,8 +36,8 @@ public class TunnelPort
     /// Gets or sets the generated ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(OldTunnelIdPattern)]
-    [StringLength(OldTunnelIdLength, MinimumLength = OldTunnelIdLength)]
+    [RegularExpression(NewTunnelIdPattern)]
+    [StringLength(NewTunnelIdMaxLength, MinimumLength = NewTunnelIdMinLength)]
     public string? TunnelId { get; set; }
 
     /// <summary>

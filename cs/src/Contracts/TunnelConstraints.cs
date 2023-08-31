@@ -30,10 +30,25 @@ public static class TunnelConstraints
     public const int ClusterIdMaxLength = 12;
 
     /// <summary>
-    /// Length of tunnel id.
+    /// Length of V1 tunnel id.
     /// </summary>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const int TunnelIdLength = 8;
+    public const int OldTunnelIdLength = 8;
+
+    /// <summary>
+    /// Min length of V2 tunnelId.
+    /// </summary>
+    public const int NewTunnelIdMinLength = 3;
+
+    /// <summary>
+    /// Max length of V2 tunnelId.
+    /// </summary>
+    public const int NewTunnelIdMaxLength = 60;
+
+    /// <summary>
+    /// Length of a tunnel alias.
+    /// </summary>
+    public const int TunnelAliasLength = 8;
 
     /// <summary>
     /// Min length of tunnel name.
@@ -153,7 +168,7 @@ public static class TunnelConstraints
     /// excluding vowels and 'y' (to avoid accidentally generating any random words).
     /// </summary>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string TunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
+    public const string OldTunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel ID strings.
@@ -163,7 +178,7 @@ public static class TunnelConstraints
     /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string TunnelIdPattern = "[" + TunnelIdChars + "]{8}";
+    public const string OldTunnelIdPattern = "[" + OldTunnelIdChars + "]{8}";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel ID strings.
@@ -173,7 +188,61 @@ public static class TunnelConstraints
     /// numbers and lowercase letters (minus vowels and y).
     /// </remarks>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public static Regex TunnelIdRegex { get; } = new Regex(TunnelIdPattern);
+    public static Regex OldTunnelIdRegex { get; } = new Regex(OldTunnelIdPattern);
+
+    /// <summary>
+    /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+    /// excluding vowels and 'y' (to avoid accidentally generating any random words).
+    /// </summary>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public const string NewTunnelIdChars = "0123456789abcdfghijklmnopqrstuvwxyz";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel ID strings.
+    /// </summary>
+    /// <remarks>
+    /// Tunnel IDs are fixed-length and have a limited character set of
+    /// numbers and lowercase letters (minus vowels and y).
+    /// </remarks>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public const string NewTunnelIdPattern = "[" + NewTunnelIdChars + "]{3,60}";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel ID strings.
+    /// </summary>
+    /// <remarks>
+    /// Tunnel IDs are fixed-length and have a limited character set of
+    /// numbers and lowercase letters (minus vowels and y).
+    /// </remarks>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public static Regex NewTunnelIdRegex { get; } = new Regex(NewTunnelIdPattern);
+
+    /// <summary>
+    /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+    /// excluding vowels and 'y' (to avoid accidentally generating any random words).
+    /// </summary>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public const string TunnelAliasChars = "0123456789bcdfghjklmnpqrstvwxz";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel alias strings.
+    /// </summary>
+    /// <remarks>
+    /// Tunnel Aliases are fixed-length and have a limited character set of
+    /// numbers and lowercase letters (minus vowels and y).
+    /// </remarks>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public const string TunnelAliasPattern = "[" + TunnelAliasChars + "]{3,60}";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel alias strings.
+    /// </summary>
+    /// <remarks>
+    /// Tunnel Aliases are fixed-length and have a limited character set of
+    /// numbers and lowercase letters (minus vowels and y).
+    /// </remarks>
+    /// <seealso cref="Tunnel.TunnelId"/>
+    public static Regex TunnelAliasRegex { get; } = new Regex(TunnelAliasPattern);
 
     /// <summary>
     /// Regular expression that can match or validate tunnel names.
@@ -286,15 +355,43 @@ public static class TunnelConstraints
     /// <summary>
     /// Validates <paramref name="tunnelId"/> and returns true if it is a valid tunnel id, otherwise, false.
     /// </summary>
-    public static bool IsValidTunnelId(string tunnelId)
+    public static bool IsValidOldTunnelId(string tunnelId)
     {
-        if (tunnelId?.Length != TunnelIdLength)
+        if (string.IsNullOrEmpty(tunnelId) || tunnelId.Length != OldTunnelIdLength)
         {
             return false;
         }
 
-        var m = TunnelIdRegex.Match(tunnelId);
+        var m = OldTunnelIdRegex.Match(tunnelId);
         return m.Index == 0 && m.Length == tunnelId.Length;
+    }
+
+    /// <summary>
+    /// Validates <paramref name="tunnelId"/> and returns true if it is a valid tunnel id, otherwise, false.
+    /// </summary>
+    public static bool IsValidNewTunnelId(string tunnelId)
+    {
+        if (string.IsNullOrEmpty(tunnelId) || tunnelId.Length < NewTunnelIdMinLength || tunnelId.Length > NewTunnelIdMaxLength)
+        {
+            return false;
+        }
+
+        var m = NewTunnelIdRegex.Match(tunnelId);
+        return m.Index == 0 && m.Length == tunnelId?.Length && !IsValidTunnelAlias(tunnelId);
+    }
+
+    /// <summary>
+    /// Validates <paramref name="alias"/> and returns true if it is a valid tunnel alias, otherwise, false.
+    /// </summary>
+    public static bool IsValidTunnelAlias(string alias)
+    {
+        if (string.IsNullOrEmpty(alias) || alias.Length != TunnelAliasLength)
+        {
+            return false;
+        }
+
+        var m = TunnelAliasRegex.Match(alias);
+        return (m.Index == 0 && m.Length == alias.Length);
     }
 
     /// <summary>
@@ -312,7 +409,7 @@ public static class TunnelConstraints
         }
 
         var m = TunnelNameRegex.Match(tunnelName);
-        return m.Index == 0 && m.Length == tunnelName.Length && !IsValidTunnelId(tunnelName);
+        return m.Index == 0 && m.Length == tunnelName.Length && !IsValidTunnelAlias(tunnelName);
     }
 
     /// <summary>
@@ -350,7 +447,7 @@ public static class TunnelConstraints
     /// </summary>
     /// <exception cref="ArgumentNullException">If <paramref name="tunnelId"/> is null.</exception>
     /// <exception cref="ArgumentException">If <paramref name="tunnelId"/> is not a valid tunnel id.</exception>
-    public static string ValidateTunnelId(string tunnelId, string? paramName = default)
+    public static string ValidateOldTunnelId(string tunnelId, string? paramName = default)
     {
         paramName ??= nameof(tunnelId);
 
@@ -359,12 +456,63 @@ public static class TunnelConstraints
             throw new ArgumentNullException(paramName);
         }
 
-        if (!IsValidTunnelId(tunnelId))
+        if (!IsValidOldTunnelId(tunnelId))
         {
             throw new ArgumentException("Invalid tunnel id", paramName);
         }
 
         return tunnelId;
+    }
+
+    /// <summary>
+    /// Validates <paramref name="tunnelId"/> and throws exception if it is null or not a valid tunnel id.
+    /// Returns <paramref name="tunnelId"/> back if it's a valid tunnel id.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">If <paramref name="tunnelId"/> is null.</exception>
+    /// <exception cref="ArgumentException">If <paramref name="tunnelId"/> is not a valid tunnel id.</exception>
+    public static string ValidateNewTunnelId(string tunnelId, string? paramName = default)
+    {
+        paramName ??= nameof(tunnelId);
+
+        if (tunnelId == null)
+        {
+            throw new ArgumentNullException(paramName);
+        }
+
+        if (!IsValidNewTunnelId(tunnelId))
+        {
+            throw new ArgumentException("Invalid tunnel id", paramName);
+        }
+
+        if (IsValidTunnelAlias(tunnelId))
+        {
+            throw new ArgumentException("Tunnel id must either be not 8 characters long or have a vowel", paramName);
+        }
+
+        return tunnelId;
+    }
+
+    /// <summary>
+    /// Validates <paramref name="tunnelAlias"/> and throws exception if it is null or not a valid tunnel id.
+    /// Returns <paramref name="tunnelAlias"/> back if it's a valid tunnel id.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">If <paramref name="tunnelAlias"/> is null.</exception>
+    /// <exception cref="ArgumentException">If <paramref name="tunnelAlias"/> is not a valid tunnel id.</exception>
+    public static string ValidateTunnelAlias(string tunnelAlias, string? paramName = default)
+    {
+        paramName ??= nameof(tunnelAlias);
+
+        if (tunnelAlias == null)
+        {
+            throw new ArgumentNullException(paramName);
+        }
+
+        if (!IsValidTunnelAlias(tunnelAlias))
+        {
+            throw new ArgumentException("Invalid tunnel id", paramName);
+        }
+
+        return tunnelAlias;
     }
 
     /// <summary>

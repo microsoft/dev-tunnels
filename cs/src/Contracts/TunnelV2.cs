@@ -16,12 +16,12 @@ using static TunnelConstraints;
 /// <summary>
 /// Data contract for tunnel objects managed through the tunnel service REST API.
 /// </summary>
-public class Tunnel
+public class TunnelV2
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Tunnel"/> class.
     /// </summary>
-    public Tunnel()
+    public TunnelV2()
     {
     }
 
@@ -37,9 +37,9 @@ public class Tunnel
     /// Gets or sets the generated ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(OldTunnelIdPattern)]
-    [StringLength(OldTunnelIdLength, MinimumLength = OldTunnelIdLength)]
-    public virtual string? TunnelId { get; set; }
+    [RegularExpression(NewTunnelIdPattern)]
+    [StringLength(NewTunnelIdMaxLength, MinimumLength = NewTunnelIdMinLength)]
+    public string? TunnelId { get; set; }
 
     /// <summary>
     /// Gets or sets the optional short name (alias) of the tunnel.
@@ -67,7 +67,7 @@ public class Tunnel
     [MaxLength(MaxTags)]
     [ArrayStringLength(TagMaxLength, MinimumLength = TagMinLength)]
     [ArrayRegularExpression(TagPattern)]
-    public string[]? Tags { get; set; }
+    public string[]? Labels { get; set; }
 
     /// <summary>
     /// Gets or sets the optional parent domain of the tunnel, if it is not using

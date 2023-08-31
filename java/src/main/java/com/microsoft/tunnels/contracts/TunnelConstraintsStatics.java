@@ -15,13 +15,32 @@ class TunnelConstraintsStatics {
     return matcher.find() && matcher.start() == 0 && matcher.end() == clusterId.length();
   }
 
-  static boolean isValidTunnelId(String tunnelId) {
-    if (tunnelId == null || tunnelId.length() != TunnelConstraints.tunnelIdLength) {
+  static boolean isValidOldTunnelId(String tunnelId) {
+    if (tunnelId == null || tunnelId.length() != TunnelConstraints.oldTunnelIdLength) {
       return false;
     }
 
-    var matcher = TunnelConstraints.tunnelIdRegex.matcher(tunnelId);
+    var matcher = TunnelConstraints.oldTunnelIdRegex.matcher(tunnelId);
     return matcher.find() && matcher.start() == 0 && matcher.end() == tunnelId.length();
+  }
+
+  static boolean isValidNewTunnelId(String tunnelId) {
+    if (tunnelId == null || tunnelId.length() < TunnelConstraints.newTunnelIdMinLength  || tunnelId.length() > TunnelConstraints.newTunnelIdMaxLength) {
+      return false;
+    }
+
+    var matcher = TunnelConstraints.newTunnelIdRegex.matcher(tunnelId);
+    return matcher.find() && matcher.start() == 0 && matcher.end() == tunnelId.length();
+  }
+
+
+  static boolean isValidTunnelAlias(String alias) {
+    if (alias == null || alias.length() != TunnelConstraints.tunnelAliasLength) {
+      return false;
+    }
+
+    var matcher = TunnelConstraints.tunnelAliasRegex.matcher(alias);
+    return matcher.find() && matcher.start() == 0 && matcher.end() == alias.length();
   }
 
   static boolean isValidTunnelName(String tunnelName) {
@@ -31,7 +50,7 @@ class TunnelConstraintsStatics {
 
     var matcher = TunnelConstraints.tunnelNameRegex.matcher(tunnelName);
     return matcher.find() && matcher.start() == 0 && matcher.end() == tunnelName.length() &&
-      !isValidTunnelId(tunnelName);
+      !isValidOldTunnelId(tunnelName);
   }
 
   static boolean isValidTag(String tag) {
@@ -53,14 +72,34 @@ class TunnelConstraintsStatics {
     return matcher.find() && matcher.start() == 0 && matcher.end() == tunnelIdOrName.length();
   }
 
-  static String validateTunnelId(String tunnelId, String paramName) {
+  static String validateOldTunnelId(String tunnelId, String paramName) {
     if (StringUtils.isBlank(tunnelId)) {
       throw new IllegalArgumentException(tunnelId);
     }
-    if (!isValidTunnelId(tunnelId)) {
+    if (!isValidOldTunnelId(tunnelId)) {
       throw new IllegalArgumentException("Invalid tunnel id: " + tunnelId);
     }
     return tunnelId;
+  }
+
+  static String validateNewTunnelId(String tunnelId, String paramName) {
+    if (StringUtils.isBlank(tunnelId)) {
+      throw new IllegalArgumentException(tunnelId);
+    }
+    if (!isValidNewTunnelId(tunnelId)) {
+      throw new IllegalArgumentException("Invalid tunnel id: " + tunnelId);
+    }
+    return tunnelId;
+  }
+
+    static String validateTunnelAlias(String alias, String paramName) {
+    if (StringUtils.isBlank(alias)) {
+      throw new IllegalArgumentException(alias);
+    }
+    if (!isValidTunnelAlias(alias)) {
+      throw new IllegalArgumentException("Invalid tunnel id: " + alias);
+    }
+    return alias;
   }
 
   static String validateTunnelIdOrName(String tunnelIdOrName, String paramName) {
