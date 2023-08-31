@@ -4,7 +4,7 @@
 /* eslint-disable */
 
 /**
- * Data contract for {@link TunnelV1} or {@link TunnelPort} options.
+ * Data contract for {@link Tunnel} or {@link TunnelPort} options.
  */
 export interface TunnelOptions {
     /**

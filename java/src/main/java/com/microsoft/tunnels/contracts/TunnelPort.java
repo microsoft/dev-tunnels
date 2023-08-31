@@ -63,7 +63,7 @@ public class TunnelPort {
      * A client that connects to a tunnel (by ID or name) without specifying a port number
      * will connect to the default port for the tunnel, if a default is configured. Or if
      * the tunnel has only one port then the single port is the implicit default.
-     *
+     * 
      * Selection of a default port for a connection also depends on matching the
      * connection to the port {@link TunnelPort#protocol}, so it is possible to configure
      * separate defaults for distinct protocols like {@link TunnelProtocol#http} and

@@ -21,24 +21,9 @@ public class TunnelConstraints {
     public static final int clusterIdMaxLength = 12;
 
     /**
-     * Length of V1 tunnel id.
+     * Length of tunnel id.
      */
-    public static final int tunnelV1IdLength = 8;
-
-    /**
-     * Min length of V2 tunnelId.
-     */
-    public static final int tunnelV2IdMinLength = 3;
-
-    /**
-     * Max length of V2 tunnelId.
-     */
-    public static final int tunnelV2IdMaxLength = 60;
-
-    /**
-     * Length of a tunnel alias.
-     */
-    public static final int tunnelAliasLength = 8;
+    public static final int tunnelIdLength = 8;
 
     /**
      * Min length of tunnel name.
@@ -132,7 +117,7 @@ public class TunnelConstraints {
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
      * excluding vowels and 'y' (to avoid accidentally generating any random words).
      */
-    public static final String tunnelV1IdChars = "0123456789bcdfghjklmnpqrstvwxz";
+    public static final String tunnelIdChars = "0123456789bcdfghjklmnpqrstvwxz";
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -140,7 +125,7 @@ public class TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    public static final String tunnelV1IdPattern = "[" + TunnelV1IdChars + "]{8}";
+    public static final String tunnelIdPattern = "[" + TunnelConstraints.tunnelIdChars + "]{8}";
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -148,51 +133,7 @@ public class TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    public static final Pattern tunnelV1IdRegex = java.util.regex.Pattern.compile(TunnelV1IdPattern);
-
-    /**
-     * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
-     * excluding vowels and 'y' (to avoid accidentally generating any random words).
-     */
-    public static final String tunnelV2IdChars = "0123456789abcdfghijklmnopqrstuvwxyz";
-
-    /**
-     * Regular expression that can match or validate tunnel ID strings.
-     *
-     * Tunnel IDs are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
-     */
-    public static final String tunnelV2IdPattern = "[" + TunnelV2IdChars + "]{3,60}";
-
-    /**
-     * Regular expression that can match or validate tunnel ID strings.
-     *
-     * Tunnel IDs are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
-     */
-    public static final Pattern tunnelV2IdRegex = java.util.regex.Pattern.compile(TunnelV2IdPattern);
-
-    /**
-     * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
-     * excluding vowels and 'y' (to avoid accidentally generating any random words).
-     */
-    public static final String tunnelAliasChars = "0123456789bcdfghjklmnpqrstvwxz";
-
-    /**
-     * Regular expression that can match or validate tunnel alias strings.
-     *
-     * Tunnel Aliases are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
-     */
-    public static final String tunnelAliasPattern = "[" + TunnelConstraints.tunnelAliasChars + "]{3,60}";
-
-    /**
-     * Regular expression that can match or validate tunnel alias strings.
-     *
-     * Tunnel Aliases are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
-     */
-    public static final Pattern tunnelAliasRegex = java.util.regex.Pattern.compile(TunnelConstraints.tunnelAliasPattern);
+    public static final Pattern tunnelIdRegex = java.util.regex.Pattern.compile(TunnelConstraints.tunnelIdPattern);
 
     /**
      * Regular expression that can match or validate tunnel names.
@@ -280,24 +221,8 @@ public class TunnelConstraints {
      * Validates <paramref name="tunnelId"/> and returns true if it is a valid tunnel id,
      * otherwise, false.
      */
-    public static boolean isValidTunnelV1Id(String tunnelId) {
-        return TunnelConstraintsStatics.isValidTunnelV1Id(tunnelId);
-    }
-
-    /**
-     * Validates <paramref name="tunnelId"/> and returns true if it is a valid tunnel id,
-     * otherwise, false.
-     */
-    public static boolean isValidTunnelV2Id(String tunnelId) {
-        return TunnelConstraintsStatics.isValidTunnelV2Id(tunnelId);
-    }
-
-    /**
-     * Validates <paramref name="alias"/> and returns true if it is a valid tunnel alias,
-     * otherwise, false.
-     */
-    public static boolean isValidTunnelAlias(String alias) {
-        return TunnelConstraintsStatics.isValidTunnelAlias(alias);
+    public static boolean isValidTunnelId(String tunnelId) {
+        return TunnelConstraintsStatics.isValidTunnelId(tunnelId);
     }
 
     /**
@@ -329,26 +254,8 @@ public class TunnelConstraints {
      * valid tunnel id. Returns <paramref name="tunnelId"/> back if it's a valid tunnel
      * id.
      */
-    public static String validateTunnelV1Id(String tunnelId, String paramName) {
-        return TunnelConstraintsStatics.validateTunnelV1Id(tunnelId, paramName);
-    }
-
-    /**
-     * Validates <paramref name="tunnelId"/> and throws exception if it is null or not a
-     * valid tunnel id. Returns <paramref name="tunnelId"/> back if it's a valid tunnel
-     * id.
-     */
-    public static String validateTunnelV2Id(String tunnelId, String paramName) {
-        return TunnelConstraintsStatics.validateTunnelV2Id(tunnelId, paramName);
-    }
-
-    /**
-     * Validates <paramref name="tunnelAlias"/> and throws exception if it is null or not
-     * a valid tunnel id. Returns <paramref name="tunnelAlias"/> back if it's a valid
-     * tunnel id.
-     */
-    public static String validateTunnelAlias(String tunnelAlias, String paramName) {
-        return TunnelConstraintsStatics.validateTunnelAlias(tunnelAlias, paramName);
+    public static String validateTunnelId(String tunnelId, String paramName) {
+        return TunnelConstraintsStatics.validateTunnelId(tunnelId, paramName);
     }
 
     /**
