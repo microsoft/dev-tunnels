@@ -15,6 +15,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelEndpoint {
+    // Gets or sets the ID of this endpoint.
+    pub id: String,
+
     // Gets or sets the connection mode of the endpoint.
     //
     // This property is required when creating or updating an endpoint.  The subclass type

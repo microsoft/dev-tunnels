@@ -10,8 +10,17 @@ pub const CLUSTER_ID_MIN_LENGTH: i32 = 3;
 // Max length of tunnel cluster ID.
 pub const CLUSTER_ID_MAX_LENGTH: i32 = 12;
 
-// Length of tunnel id.
-pub const TUNNEL_ID_LENGTH: i32 = 8;
+// Length of V1 tunnel id.
+pub const TUNNEL_V1_ID_LENGTH: i32 = 8;
+
+// Min length of V2 tunnelId.
+pub const TUNNEL_V2_ID_MIN_LENGTH: i32 = 3;
+
+// Max length of V2 tunnelId.
+pub const TUNNEL_V2_ID_MAX_LENGTH: i32 = 60;
+
+// Length of a tunnel alias.
+pub const TUNNEL_ALIAS_LENGTH: i32 = 8;
 
 // Min length of tunnel name.
 pub const TUNNEL_NAME_MIN_LENGTH: i32 = 3;
@@ -66,13 +75,33 @@ pub const CLUSTER_ID_PATTERN: &str = r#"^(([a-z]{3,4}[0-9]{1,3})|asse|aue|brs|eu
 
 // Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 // excluding vowels and 'y' (to avoid accidentally generating any random words).
-pub const TUNNEL_ID_CHARS: &str = r#"0123456789bcdfghjklmnpqrstvwxz"#;
+pub const TUNNEL_V1_ID_CHARS: &str = r#"0123456789bcdfghjklmnpqrstvwxz"#;
 
 // Regular expression that can match or validate tunnel ID strings.
 //
 // Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 // letters (minus vowels and y).
-pub const TUNNEL_ID_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{8}"#;
+pub const TUNNEL_V1_ID_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{8}"#;
+
+// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+// excluding vowels and 'y' (to avoid accidentally generating any random words).
+pub const TUNNEL_V2_ID_CHARS: &str = r#"0123456789abcdfghijklmnopqrstuvwxyz"#;
+
+// Regular expression that can match or validate tunnel ID strings.
+//
+// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
+// letters (minus vowels and y).
+pub const TUNNEL_V2_ID_PATTERN: &str = r#"[0123456789abcdfghijklmnopqrstuvwxyz]{3,60}"#;
+
+// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
+// excluding vowels and 'y' (to avoid accidentally generating any random words).
+pub const TUNNEL_ALIAS_CHARS: &str = r#"0123456789bcdfghjklmnpqrstvwxz"#;
+
+// Regular expression that can match or validate tunnel alias strings.
+//
+// Tunnel Aliases are fixed-length and have a limited character set of numbers and
+// lowercase letters (minus vowels and y).
+pub const TUNNEL_ALIAS_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{3,60}"#;
 
 // Regular expression that can match or validate tunnel names.
 //
