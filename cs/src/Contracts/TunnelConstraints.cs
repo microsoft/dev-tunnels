@@ -357,7 +357,7 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTunnelV1Id(string tunnelId)
     {
-        if (tunnelId.Length != TunnelV1IdLength)
+        if (string.IsNullOrEmpty(tunnelId) || tunnelId.Length != TunnelV1IdLength)
         {
             return false;
         }
@@ -371,7 +371,7 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTunnelV2Id(string tunnelId)
     {
-        if (tunnelId.Length < TunnelV2IdMinLength || tunnelId.Length > TunnelV2IdMaxLength)
+        if (string.IsNullOrEmpty(tunnelId) || tunnelId.Length < TunnelV2IdMinLength || tunnelId.Length > TunnelV2IdMaxLength)
         {
             return false;
         }
@@ -385,6 +385,11 @@ public static class TunnelConstraints
     /// </summary>
     public static bool IsValidTunnelAlias(string alias)
     {
+        if (string.IsNullOrEmpty(alias) || alias.Length != TunnelAliasLength)
+        {
+            return false;
+        }
+
         var m = TunnelAliasRegex.Match(alias);
         return (m.Index == 0 && m.Length == alias.Length);
     }
