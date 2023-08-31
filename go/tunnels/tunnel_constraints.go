@@ -86,7 +86,7 @@ const (
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV1IDPattern = "[" + TunnelV1TunnelConstraintsIDChars + "]{8}"
+	TunnelConstraintsTunnelV1IDPattern = "[" + TunnelConstraintsTunnelV1IDChars + "]{8}"
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
@@ -96,7 +96,7 @@ const (
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV2IDPattern = "[" + TunnelV2TunnelConstraintsIDChars + "]{3,60}"
+	TunnelConstraintsTunnelV2IDPattern = "[" + TunnelConstraintsTunnelV2IDChars + "]{3,60}"
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
@@ -139,6 +139,7 @@ const (
 	// avoid any XSS risks.
 	TunnelConstraintsAccessControlSubjectNamePattern = "[ \\w\\d-.,/'\"_@()<>]{0,200}"
 )
+
 var (
 	// Regular expression that can match or validate tunnel cluster ID strings.
 	//
@@ -149,13 +150,13 @@ var (
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV1IDRegex = regexp.MustCompile(TunnelV1TunnelConstraintsIDPattern)
+	TunnelConstraintsTunnelV1IDRegex = regexp.MustCompile(TunnelConstraintsTunnelV1IDPattern)
 
 	// Regular expression that can match or validate tunnel ID strings.
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsTunnelV2IDRegex = regexp.MustCompile(TunnelV2TunnelConstraintsIDPattern)
+	TunnelConstraintsTunnelV2IDRegex = regexp.MustCompile(TunnelConstraintsTunnelV2IDPattern)
 
 	// Regular expression that can match or validate tunnel alias strings.
 	//
