@@ -7,7 +7,7 @@ package com.microsoft.tunnels.contracts;
 import com.google.gson.annotations.Expose;
 
 /**
- * Data contract for {@link Tunnel} or {@link TunnelPort} options.
+ * Data contract for {@link TunnelV1} or {@link TunnelPort} options.
  */
 public class TunnelOptions {
     /**

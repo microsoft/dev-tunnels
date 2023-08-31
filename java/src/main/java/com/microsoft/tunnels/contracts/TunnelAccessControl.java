@@ -8,7 +8,7 @@ import com.google.gson.annotations.Expose;
 import java.util.Collection;
 
 /**
- * Data contract for access control on a {@link Tunnel} or {@link TunnelPort}.
+ * Data contract for access control on a {@link TunnelV1} or {@link TunnelPort}.
  *
  * Tunnels and tunnel ports can each optionally have an access-control property set on
  * them. An access-control object contains a list (ACL) of entries (ACEs) that specify the

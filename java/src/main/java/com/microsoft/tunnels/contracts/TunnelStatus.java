@@ -8,7 +8,7 @@ import com.google.gson.annotations.Expose;
 import java.util.Date;
 
 /**
- * Data contract for {@link Tunnel} status.
+ * Data contract for {@link TunnelV1} status.
  */
 public class TunnelStatus {
     /**

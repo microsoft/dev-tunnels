@@ -44,7 +44,7 @@ type TunnelPort struct {
 
 	// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
 	//
-	// Unlike the tokens in `Tunnel.AccessTokens`, these tokens are restricted to the
+	// Unlike the tokens in `TunnelBase.AccessTokens`, these tokens are restricted to the
 	// individual port.
 	AccessTokens       map[TunnelAccessScope]string `json:"accessTokens,omitempty"`
 

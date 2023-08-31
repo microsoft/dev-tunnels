@@ -63,7 +63,7 @@ public class TunnelPort {
      * A client that connects to a tunnel (by ID or name) without specifying a port number
      * will connect to the default port for the tunnel, if a default is configured. Or if
      * the tunnel has only one port then the single port is the implicit default.
-     *
+     * 
      * Selection of a default port for a connection also depends on matching the
      * connection to the port {@link TunnelPort#protocol}, so it is possible to configure
      * separate defaults for distinct protocols like {@link TunnelProtocol#http} and
@@ -75,8 +75,8 @@ public class TunnelPort {
     /**
      * Gets or sets a dictionary mapping from scopes to tunnel access tokens.
      *
-     * Unlike the tokens in {@link Tunnel#accessTokens}, these tokens are restricted to
-     * the individual port.
+     * Unlike the tokens in {@link TunnelBase#accessTokens}, these tokens are restricted
+     * to the individual port.
      */
     @Expose
     public Map<String, String> accessTokens;

@@ -18,6 +18,12 @@ import java.net.URI;
  */
 public class TunnelEndpoint {
     /**
+     * Gets or sets the ID of this endpoint.
+     */
+    @Expose
+    public String id;
+
+    /**
      * Gets or sets the connection mode of the endpoint.
      *
      * This property is required when creating or updating an endpoint.  The subclass type
@@ -94,7 +100,7 @@ public class TunnelEndpoint {
      *
      * Requests to the URI may result in HTTP 307 redirections, so the client may need to
      * follow the redirection in order to connect to the port.
-     *
+     * 
      * If the port is not currently shared via the tunnel, or if a host is not currently
      * connected to the tunnel, then requests to the port URI may result in a 502 Bad
      * Gateway response.
@@ -107,7 +113,7 @@ public class TunnelEndpoint {
      * Gets a ssh command which can be used to connect to a tunnel ssh port.
      *
      * SSH client on Windows/Linux/MacOS  are supported.
-     *
+     * 
      * If the port is not currently shared via the tunnel, or if a host is not currently
      * connected to the tunnel, then ssh connection might fail.
      */
