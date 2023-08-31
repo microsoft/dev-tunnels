@@ -137,7 +137,7 @@ namespace TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    export const tunnelV1IdPattern: string = '[' + TunnelV1idChars + ']{8}';
+    export const tunnelV1IdPattern: string = '[' + tunnelV1IdChars + ']{8}';
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -145,7 +145,7 @@ namespace TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    export const tunnelV1IdRegex: RegExp = new RegExp(TunnelV1idPattern);
+    export const tunnelV1IdRegex: RegExp = new RegExp(tunnelV1IdPattern);
 
     /**
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
@@ -159,7 +159,7 @@ namespace TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    export const tunnelV2IdPattern: string = '[' + TunnelV2idChars + ']{3,60}';
+    export const tunnelV2IdPattern: string = '[' + tunnelV2IdChars + ']{3,60}';
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -167,7 +167,7 @@ namespace TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    export const tunnelV2IdRegex: RegExp = new RegExp(TunnelV2idPattern);
+    export const tunnelV2IdRegex: RegExp = new RegExp(tunnelV2IdPattern);
 
     /**
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
