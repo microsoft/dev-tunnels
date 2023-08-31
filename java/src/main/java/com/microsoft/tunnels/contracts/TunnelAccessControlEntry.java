@@ -7,7 +7,7 @@ package com.microsoft.tunnels.contracts;
 import com.google.gson.annotations.Expose;
 
 /**
- * Data contract for an access control entry on a {@link Tunnel} or {@link TunnelPort}.
+ * Data contract for an access control entry on a {@link TunnelV1} or {@link TunnelPort}.
  *
  * An access control entry (ACE) grants or denies one or more access scopes to one or more
  * subjects. Tunnel ports inherit access control entries from their tunnel, and they may

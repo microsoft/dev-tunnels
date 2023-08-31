@@ -140,7 +140,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     public string? HostId { get; private set; }
 
     /// <inheritdoc />
-    public async Task ConnectAsync(Tunnel tunnel, string? hostId, CancellationToken cancellation)
+    public async Task ConnectAsync(TunnelV1 tunnel, string? hostId, CancellationToken cancellation)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNull(tunnel.Endpoints!, nameof(Tunnel.Endpoints));

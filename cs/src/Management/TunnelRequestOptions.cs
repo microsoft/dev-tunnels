@@ -92,7 +92,7 @@ namespace Microsoft.DevTunnels.Management
         /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
         /// </summary>
         /// <remarks>
-        /// Requested tags are compared to the <see cref="Tunnel.Tags"/> or
+        /// Requested tags are compared to the <see cref="TunnelV1.Tags"/> or
         /// <see cref="TunnelPort.Tags"/> when calling
         /// <see cref="ITunnelManagementClient.ListTunnelsAsync"/> or
         /// <see cref="ITunnelManagementClient.ListTunnelPortsAsync"/> respectively. By default, an
@@ -115,7 +115,7 @@ namespace Microsoft.DevTunnels.Management
         /// Each item in the array must be a single scope from <see cref="TunnelAccessScopes"/>
         /// or a space-delimited combination of multiple scopes. The service issues an access
         /// token for each scope or combination and returns the token(s) in the
-        /// <see cref="Tunnel.AccessTokens"/> or <see cref="TunnelPort.AccessTokens"/> dictionary.
+        /// <see cref="TunnelBase.AccessTokens"/> or <see cref="TunnelPort.AccessTokens"/> dictionary.
         /// If the caller does not have permission to get a token for one or more scopes then a
         /// token is not returned but the overall request does not fail. Token properties including
         /// scopes and expiration may be checked using <see cref="TunnelAccessTokenProperties"/>.

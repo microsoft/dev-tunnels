@@ -1,21 +1,24 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-// Generated from ../../../cs/src/Contracts/Tunnel.cs
-/* eslint-disable */
+// Generated from ../../../../../../../../cs/src/Contracts/Tunnel.cs
 
-import { TunnelBase } from './tunnelBase';
+package com.microsoft.tunnels.contracts;
+
+import com.google.gson.annotations.Expose;
 
 /**
  * Tunnel type used for tunnel service API versions greater than 2023-05-23-preview
  */
-export interface Tunnel extends TunnelBase {
+public class TunnelV2 extends TunnelBase {
     /**
      * Gets or sets the ID of the tunnel, unique within the cluster.
      */
-    tunnelId?: string;
+    @Expose
+    public String tunnelId;
 
     /**
      * Gets or sets the tags of the tunnel.
      */
-    labels?: string[];
+    @Expose
+    public String[] labels;
 }

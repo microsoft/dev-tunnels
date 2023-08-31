@@ -27,7 +27,7 @@ public class TunnelManagementClientTests
             }
         };
 
-        var tunnel = new Tunnel
+        var tunnel = new TunnelV1
         {
             TunnelId = TunnelId,
             ClusterId = ClusterId,
@@ -55,7 +55,7 @@ public class TunnelManagementClientTests
     [Fact]
     public async Task PreserveAccessTokens()
     {
-        var requestTunnel = new Tunnel
+        var requestTunnel = new TunnelV1
         {
             TunnelId = TunnelId,
             ClusterId = ClusterId,
@@ -69,7 +69,7 @@ public class TunnelManagementClientTests
         var handler = new MockHttpMessageHandler(
             (message, ct) =>
             {
-                var responseTunnel = new Tunnel
+                var responseTunnel = new TunnelV1
                 {
                     TunnelId = TunnelId,
                     ClusterId = ClusterId,

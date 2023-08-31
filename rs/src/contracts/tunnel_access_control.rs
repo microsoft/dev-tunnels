@@ -5,7 +5,7 @@
 use crate::contracts::TunnelAccessControlEntry;
 use serde::{Deserialize, Serialize};
 
-// Data contract for access control on a `Tunnel` or `TunnelPort`.
+// Data contract for access control on a `TunnelV1` or `TunnelPort`.
 //
 // Tunnels and tunnel ports can each optionally have an access-control property set on
 // them. An access-control object contains a list (ACL) of entries (ACEs) that specify the

@@ -50,13 +50,13 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         this.localPortsFixture = localPortsFixture;
     }
 
-    private Tunnel CreateRelayTunnel(bool addClientEndpoint = true) => CreateRelayTunnel(addClientEndpoint, Enumerable.Empty<int>());
+    private TunnelV1 CreateRelayTunnel(bool addClientEndpoint = true) => CreateRelayTunnel(addClientEndpoint, Enumerable.Empty<int>());
 
-    private Tunnel CreateRelayTunnel(params int[] ports) => CreateRelayTunnel(addClientEndpoint: true, ports);
+    private TunnelV1 CreateRelayTunnel(params int[] ports) => CreateRelayTunnel(addClientEndpoint: true, ports);
 
-    private Tunnel CreateRelayTunnel(bool addClientEndpoint, IEnumerable<int> ports)
+    private TunnelV1 CreateRelayTunnel(bool addClientEndpoint, IEnumerable<int> ports)
     {
-        return new Tunnel
+        return new TunnelV1
         {
             TunnelId = "test",
             ClusterId = "localhost",
@@ -125,7 +125,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     /// on the other end of the stream.
     /// </summary>
     private async Task<SshServerSession> ConnectRelayClientAsync(
-        TunnelRelayTunnelClient relayClient, Tunnel tunnel, Func<string, Task<Stream>> clientStreamFactory = null)
+        TunnelRelayTunnelClient relayClient, TunnelV1 tunnel, Func<string, Task<Stream>> clientStreamFactory = null)
     {
         var sshSession = CreateSshServerSession();
         var serverConnectTask = sshSession.ConnectAsync(
@@ -153,7 +153,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     /// </summary>
     private async Task<MultiChannelStream> StartRelayHostAsync(
         TunnelRelayTunnelHost relayHost,
-        Tunnel tunnel)
+        TunnelV1 tunnel)
     {
         var multiChannelStream = new MultiChannelStream(this.serverStream);
         var serverConnectTask = multiChannelStream.ConnectAsync(CancellationToken.None);

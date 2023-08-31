@@ -10,7 +10,7 @@ using Microsoft.DevTunnels.Contracts;
 namespace Microsoft.DevTunnels.Management;
 
 /// <summary>
-/// Extension methods for working with <see cref="Tunnel"/> objects.
+/// Extension methods for working with <see cref="TunnelV1"/> objects.
 /// </summary>
 public static class TunnelExtensions
 {
@@ -30,7 +30,7 @@ public static class TunnelExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException">If <paramref name="tunnel"/> or <paramref name="accessTokenScope"/> is null.</exception>
     /// <exception cref="ArgumentException">If <paramref name="accessTokenScope"/> is empty.</exception>
-    public static bool TryGetAccessToken(this Tunnel tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
+    public static bool TryGetAccessToken(this TunnelV1 tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNullOrEmpty(accessTokenScope, nameof(accessTokenScope));
@@ -91,7 +91,7 @@ public static class TunnelExtensions
     /// <exception cref="ArgumentNullException">If <paramref name="tunnel"/> or <paramref name="accessTokenScope"/> is null.</exception>
     /// <exception cref="ArgumentException">If <paramref name="accessTokenScope"/> is empty.</exception>
     /// <exception cref="UnauthorizedAccessException">If the token for <paramref name="accessTokenScope"/> is expired.</exception>
-    public static bool TryGetValidAccessToken(this Tunnel tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
+    public static bool TryGetValidAccessToken(this TunnelV1 tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNullOrEmpty(accessTokenScope, nameof(accessTokenScope));

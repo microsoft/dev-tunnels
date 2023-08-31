@@ -12,6 +12,9 @@ package tunnels
 // clients can select their preferred endpoint(s) from those depending on network
 // environment or client capabilities.
 type TunnelEndpoint struct {
+	// Gets or sets the ID of this endpoint.
+	ID                   string `json:"id"`
+
 	// Gets or sets the connection mode of the endpoint.
 	//
 	// This property is required when creating or updating an endpoint.  The subclass type is

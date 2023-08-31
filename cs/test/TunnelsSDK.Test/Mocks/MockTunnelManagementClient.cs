@@ -6,7 +6,7 @@ namespace Microsoft.DevTunnels.Test.Mocks;
 public class MockTunnelManagementClient : ITunnelManagementClient
 {
     private uint idCounter = 0;
-    public IList<Tunnel> Tunnels { get; } = new List<Tunnel>();
+    public IList<TunnelV1> Tunnels { get; } = new List<TunnelV1>();
 
     public string HostRelayUri { get; set; }
 
@@ -15,14 +15,14 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     public ICollection<TunnelAccessSubject> KnownSubjects { get; }
         = new List<TunnelAccessSubject>();
 
-    public Task<Tunnel[]> ListTunnelsAsync(
+    public Task<TunnelV1[]> ListTunnelsAsync(
         string clusterId,
         string domain,
         TunnelRequestOptions options,
         bool? ownedTunnelsOnly,
         CancellationToken cancellation)
     {
-        IEnumerable<Tunnel> tunnels = Tunnels;
+        IEnumerable<TunnelV1> tunnels = Tunnels;
 
         domain ??= string.Empty;
         tunnels = tunnels.Where((t) => (t.Domain ?? string.Empty) == domain);
@@ -30,8 +30,8 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         return Task.FromResult(tunnels.ToArray());
     }
 
-    public Task<Tunnel> GetTunnelAsync(
-        Tunnel tunnel,
+    public Task<TunnelV1> GetTunnelAsync(
+        TunnelV1 tunnel,
         TunnelRequestOptions options,
         CancellationToken cancellation)
     {
@@ -47,8 +47,8 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         return Task.FromResult(tunnel);
     }
 
-    public async Task<Tunnel> CreateTunnelAsync(
-        Tunnel tunnel,
+    public async Task<TunnelV1> CreateTunnelAsync(
+        TunnelV1 tunnel,
         TunnelRequestOptions options,
         CancellationToken cancellation)
     {
@@ -65,8 +65,8 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         return tunnel;
     }
 
-    public Task<Tunnel> UpdateTunnelAsync(
-        Tunnel tunnel,
+    public Task<TunnelV1> UpdateTunnelAsync(
+        TunnelV1 tunnel,
         TunnelRequestOptions options,
         CancellationToken cancellation)
     {
@@ -97,7 +97,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<bool> DeleteTunnelAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         TunnelRequestOptions options,
         CancellationToken cancellation)
     {
@@ -115,7 +115,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<TunnelEndpoint> UpdateTunnelEndpointAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         TunnelEndpoint endpoint,
         TunnelRequestOptions options = null,
         CancellationToken cancellation = default)
@@ -151,7 +151,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<bool> DeleteTunnelEndpointsAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         string hostId,
         TunnelConnectionMode? connectionMode,
         TunnelRequestOptions options = null,
@@ -174,7 +174,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
 
 
     public Task<TunnelPort[]> ListTunnelPortsAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         TunnelRequestOptions options,
         CancellationToken cancellation)
     {
@@ -182,7 +182,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<TunnelPort> GetTunnelPortAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         ushort portNumber,
         TunnelRequestOptions options,
         CancellationToken cancellation)
@@ -191,7 +191,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<TunnelPort> CreateTunnelPortAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         TunnelPort tunnelPort,
         TunnelRequestOptions options,
         CancellationToken cancellation)
@@ -213,7 +213,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<TunnelPort> UpdateTunnelPortAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         TunnelPort tunnelPort,
         TunnelRequestOptions options,
         CancellationToken cancellation)
@@ -222,7 +222,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<bool> DeleteTunnelPortAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         ushort portNumber,
         TunnelRequestOptions options,
         CancellationToken cancellation)
@@ -237,7 +237,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         return Task.FromResult(true);
     }
 
-    public Task<Tunnel[]> SearchTunnelsAsync(
+    public Task<TunnelV1[]> SearchTunnelsAsync(
         string[] tags,
         bool requireAllTags,
         string clusterId,
@@ -245,7 +245,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         TunnelRequestOptions options,
         CancellationToken cancellation)
     {
-        IEnumerable<Tunnel> tunnels;
+        IEnumerable<TunnelV1> tunnels;
         if (!requireAllTags)
         {
             tunnels = Tunnels.Where(tunnel => (tunnel.Tags != null) && (tunnel.Tags.Intersect(tags).Count() > 0));
@@ -313,7 +313,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         throw new NotImplementedException();
     }
 
-    private static void IssueMockTokens(Tunnel tunnel, TunnelRequestOptions options)
+    private static void IssueMockTokens(TunnelV1 tunnel, TunnelRequestOptions options)
     {
         if (tunnel != null && options?.TokenScopes != null)
         {

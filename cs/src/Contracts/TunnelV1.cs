@@ -9,14 +9,15 @@ namespace Microsoft.DevTunnels.Contracts;
 using static TunnelConstraints;
 
 /// <summary>
-/// Tunnel type used for tunnel service API versions greater than 2023-05-23-preview
+/// Tunnel type used for tunnel service API version 2023-05-23-preview
 /// </summary>
-public class Tunnel : TunnelBase
+public class TunnelV1 : TunnelBase
 {
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="Tunnel"/> class.
+    /// Initializes a new instance of the <see cref="TunnelV1"/> class.
     /// </summary>
-    public Tunnel()
+    public TunnelV1()
     {
     }
 
@@ -24,8 +25,8 @@ public class Tunnel : TunnelBase
     /// Gets or sets the ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(TunnelV2IdPattern)]
-    [StringLength(TunnelV2IdMaxLength, MinimumLength = TunnelV2IdMinLength)]
+    [RegularExpression(TunnelV1IdPattern)]
+    [StringLength(TunnelV1IdLength, MinimumLength = TunnelV1IdLength)]
     public override string? TunnelId { get; set; }
 
     /// <summary>
@@ -35,5 +36,5 @@ public class Tunnel : TunnelBase
     [MaxLength(MaxTags)]
     [ArrayStringLength(TagMaxLength, MinimumLength = TagMinLength)]
     [ArrayRegularExpression(TagPattern)]
-    public string[]? Labels { get; set; }
+    public string[]? Tags { get; set; }
 }

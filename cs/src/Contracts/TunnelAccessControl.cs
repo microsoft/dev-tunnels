@@ -14,7 +14,7 @@ using System.Text.Json.Serialization;
 namespace Microsoft.DevTunnels.Contracts
 {
     /// <summary>
-    /// Data contract for access control on a <see cref="Tunnel"/> or <see cref="TunnelPort"/>.
+    /// Data contract for access control on a <see cref="TunnelV1"/> or <see cref="TunnelPort"/>.
     /// </summary>
     /// <remarks>
     /// Tunnels and tunnel ports can each optionally have an access-control property set on them.

@@ -75,8 +75,8 @@ public class TunnelPort {
     /**
      * Gets or sets a dictionary mapping from scopes to tunnel access tokens.
      *
-     * Unlike the tokens in {@link Tunnel#accessTokens}, these tokens are restricted to
-     * the individual port.
+     * Unlike the tokens in {@link TunnelBase#accessTokens}, these tokens are restricted
+     * to the individual port.
      */
     @Expose
     public Map<String, String> accessTokens;

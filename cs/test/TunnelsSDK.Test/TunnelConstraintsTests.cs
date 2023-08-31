@@ -17,8 +17,8 @@ public class TunnelConstraintsTests
     [InlineData("stvwxzzz")]
     public void IsValidTunnelId_Valid(string tunnelId)
     {
-        Assert.True(IsValidTunnelId(tunnelId));
-        ValidateTunnelId(tunnelId);
+        Assert.True(IsValidTunnelV1Id(tunnelId));
+        ValidateTunnelV1Id(tunnelId);
     }
 
     [Theory]
@@ -29,14 +29,14 @@ public class TunnelConstraintsTests
     [InlineData("000-0000")]  // 8 chars with invalid char ('-')
     public void IsValidTunnelId_NotValid(string tunnelId)
     {
-        Assert.False(IsValidTunnelId(tunnelId));
+        Assert.False(IsValidTunnelV1Id(tunnelId));
         if (tunnelId == null)
         {
-            Assert.Throws<ArgumentNullException>(() => ValidateTunnelId(tunnelId));
+            Assert.Throws<ArgumentNullException>(() => ValidateTunnelV1Id(tunnelId));
         }
         else
         {
-            Assert.Throws<ArgumentException>(() => ValidateTunnelId(tunnelId));
+            Assert.Throws<ArgumentException>(() => ValidateTunnelV1Id(tunnelId));
         }
     }
 

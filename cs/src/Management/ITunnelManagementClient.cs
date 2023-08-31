@@ -33,7 +33,7 @@ namespace Microsoft.DevTunnels.Management
         /// Ports will not be included in the returned tunnels unless
         /// <see cref="TunnelRequestOptions.IncludePorts"/> is set to true.
         /// </remarks>
-        Task<Tunnel[]> ListTunnelsAsync(
+        Task<TunnelV1[]> ListTunnelsAsync(
             string? clusterId = null,
             string? domain = null,
             TunnelRequestOptions? options = null,
@@ -53,7 +53,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
         [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Tags instead.")]
-        Task<Tunnel[]> SearchTunnelsAsync(
+        Task<TunnelV1[]> SearchTunnelsAsync(
             string[] tags,
             bool requireAllTags,
             string? clusterId = null,
@@ -75,8 +75,8 @@ namespace Microsoft.DevTunnels.Management
         /// Ports will not be included in the returned tunnel unless
         /// <see cref="TunnelRequestOptions.IncludePorts"/> is set to true.
         /// </remarks>
-        Task<Tunnel?> GetTunnelAsync(
-            Tunnel tunnel,
+        Task<TunnelV1?> GetTunnelAsync(
+            TunnelV1 tunnel,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
 
@@ -89,14 +89,14 @@ namespace Microsoft.DevTunnels.Management
         /// <returns>The created tunnel object.</returns>
         /// <remarks>
         /// Ports may be created at the same time as creating the tunnel by supplying
-        /// items in the <see cref="Tunnel.Ports" /> array.
+        /// items in the <see cref="TunnelBase.Ports" /> array.
         /// </remarks>
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
         /// <exception cref="ArgumentException">A required property was missing, or a property
         /// value was invalid.</exception>
-        Task<Tunnel> CreateTunnelAsync(
-            Tunnel tunnel,
+        Task<TunnelV1> CreateTunnelAsync(
+            TunnelV1 tunnel,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
 
@@ -117,8 +117,8 @@ namespace Microsoft.DevTunnels.Management
         /// <see cref="HttpRequestException" /> status code may distinguish between these cases.)
         /// </exception>
         /// <exception cref="ArgumentException">An updated property value was invalid.</exception>
-        Task<Tunnel> UpdateTunnelAsync(
-            Tunnel tunnel,
+        Task<TunnelV1> UpdateTunnelAsync(
+            TunnelV1 tunnel,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
 
@@ -133,7 +133,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
         Task<bool> DeleteTunnelAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
 
@@ -160,7 +160,7 @@ namespace Microsoft.DevTunnels.Management
         /// and delete the endpoints when they stop accepting connections.
         /// </remarks>
         Task<TunnelEndpoint> UpdateTunnelEndpointAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelEndpoint endpoint,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
@@ -185,7 +185,7 @@ namespace Microsoft.DevTunnels.Management
         /// and delete the endpoints when they stop accepting connections.
         /// </remarks>
         Task<bool> DeleteTunnelEndpointsAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             string hostId,
             TunnelConnectionMode? connectionMode,
             TunnelRequestOptions? options = null,
@@ -207,7 +207,7 @@ namespace Microsoft.DevTunnels.Management
         /// The list can be filtered by setting <see cref="TunnelRequestOptions.Tags"/>.
         /// </remarks>
         Task<TunnelPort[]> ListTunnelPortsAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
 
@@ -226,7 +226,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="InvalidOperationException">The tunnel ID or name was not found.
         /// </exception>
         Task<TunnelPort?> GetTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             ushort portNumber,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
@@ -249,7 +249,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="ArgumentException">A required property was missing, or a property
         /// value was invalid.</exception>
         Task<TunnelPort> CreateTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelPort tunnelPort,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
@@ -274,7 +274,7 @@ namespace Microsoft.DevTunnels.Management
         /// </exception>
         /// <exception cref="ArgumentException">An updated property value was invalid.</exception>
         Task<TunnelPort> UpdateTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelPort tunnelPort,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
@@ -291,7 +291,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
         Task<bool> DeleteTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             ushort portNumber,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);

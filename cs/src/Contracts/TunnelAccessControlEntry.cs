@@ -15,7 +15,7 @@ namespace Microsoft.DevTunnels.Contracts;
 using static TunnelConstraints;
 
 /// <summary>
-/// Data contract for an access control entry on a <see cref="Tunnel"/> or
+/// Data contract for an access control entry on a <see cref="TunnelV1"/> or
 /// <see cref="TunnelPort"/>.
 /// </summary>
 /// <remarks>

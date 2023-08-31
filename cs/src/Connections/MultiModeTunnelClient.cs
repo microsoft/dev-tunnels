@@ -85,7 +85,7 @@ public class MultiModeTunnelClient : TunnelConnection, ITunnelClient
 
     /// <inheritdoc />
     public async Task ConnectAsync(
-        Tunnel tunnel,
+        TunnelV1 tunnel,
         string? hostId,
         CancellationToken cancellation)
     {

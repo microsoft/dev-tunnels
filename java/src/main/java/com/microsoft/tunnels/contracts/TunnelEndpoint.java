@@ -18,6 +18,12 @@ import java.net.URI;
  */
 public class TunnelEndpoint {
     /**
+     * Gets or sets the ID of this endpoint.
+     */
+    @Expose
+    public String id;
+
+    /**
      * Gets or sets the connection mode of the endpoint.
      *
      * This property is required when creating or updating an endpoint.  The subclass type

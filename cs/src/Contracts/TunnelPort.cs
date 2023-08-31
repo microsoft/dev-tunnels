@@ -36,8 +36,8 @@ public class TunnelPort
     /// Gets or sets the generated ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(TunnelIdPattern)]
-    [StringLength(TunnelIdLength, MinimumLength = TunnelIdLength)]
+    [RegularExpression(TunnelV2IdPattern)]
+    [StringLength(TunnelV2IdMaxLength, MinimumLength = TunnelV2IdMinLength)]
     public string? TunnelId { get; set; }
 
     /// <summary>
@@ -101,7 +101,7 @@ public class TunnelPort
     /// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
     /// </summary>
     /// <remarks>
-    /// Unlike the tokens in <see cref="Tunnel.AccessTokens"/>, these tokens are restricted
+    /// Unlike the tokens in <see cref="TunnelBase.AccessTokens"/>, these tokens are restricted
     /// to the individual port.
     /// </remarks>
     /// <seealso cref="TunnelAccessScopes" />

@@ -84,7 +84,7 @@ public interface ITunnelClient : IAsyncDisposable
     /// access to connect to the tunnel.</exception>
     /// <exception cref="TunnelConnectionException">The client failed to connect to the
     /// tunnel, or connected but encountered a protocol errror.</exception>
-    Task ConnectAsync(Tunnel tunnel, CancellationToken cancellation)
+    Task ConnectAsync(TunnelV1 tunnel, CancellationToken cancellation)
         => ConnectAsync(tunnel, hostId: null, cancellation);
 
     /// <summary>
@@ -105,7 +105,7 @@ public interface ITunnelClient : IAsyncDisposable
     /// access to connect to the tunnel.</exception>
     /// <exception cref="TunnelConnectionException">The client failed to connect to the
     /// tunnel, or connected but encountered a protocol errror.</exception>
-    Task ConnectAsync(Tunnel tunnel, string? hostId, CancellationToken cancellation);
+    Task ConnectAsync(TunnelV1 tunnel, string? hostId, CancellationToken cancellation);
 
     /// <summary>
     /// Waits for the specified port to be forwarded by the remote host.
@@ -120,7 +120,7 @@ public interface ITunnelClient : IAsyncDisposable
     /// Returns null if the session gets closed, or the port is no longer forwarded by the host.
     /// </summary>
     /// <remarks>
-    /// Set <see cref="AcceptLocalConnectionsForForwardedPorts"/> to <c>false</c> before calling <see cref="ConnectAsync(Tunnel, CancellationToken)"/> to ensure
+    /// Set <see cref="AcceptLocalConnectionsForForwardedPorts"/> to <c>false</c> before calling <see cref="ConnectAsync(TunnelV1, CancellationToken)"/> to ensure
     /// that forwarded tunnel ports won't get local TCP listeners.
     /// </remarks>
     /// <param name="forwardedPort">Remote port to connect to.</param>

@@ -284,7 +284,7 @@ namespace Microsoft.DevTunnels.Management
         /// <param name="method">HTTP request method.</param>
         /// <param name="tunnel">Tunnel that the request is targeting.</param>
         /// <param name="accessTokenScopes">Required list of access scopes for tokens in
-        /// <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that could be used to
+        /// <paramref name="tunnel"/> <see cref="TunnelBase.AccessTokens"/> that could be used to
         /// authorize the request.</param>
         /// <param name="path">Optional request sub-path relative to the tunnel.</param>
         /// <param name="query">Optional query string to append to the request.</param>
@@ -304,12 +304,12 @@ namespace Microsoft.DevTunnels.Management
         /// Authentication will use one of the following, if available, in order of preference:
         ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
         ///   - token provided by the user token callback
-        ///   - token in <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that matches
+        ///   - token in <paramref name="tunnel"/> <see cref="TunnelBase.AccessTokens"/> that matches
         ///     one of the scopes in <paramref name="accessTokenScopes"/>
         /// </remarks>
         protected Task<TResult?> SendTunnelRequestAsync<TResult>(
             HttpMethod method,
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             string[] accessTokenScopes,
             string? path,
             string? query,
@@ -334,7 +334,7 @@ namespace Microsoft.DevTunnels.Management
         /// <param name="method">HTTP request method.</param>
         /// <param name="tunnel">Tunnel that the request is targeting.</param>
         /// <param name="accessTokenScopes">Required list of access scopes for tokens in
-        /// <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that could be used to
+        /// <paramref name="tunnel"/> <see cref="TunnelBase.AccessTokens"/> that could be used to
         /// authorize the request.</param>
         /// <param name="path">Optional request sub-path relative to the tunnel.</param>
         /// <param name="query">Optional query string to append to the request.</param>
@@ -356,12 +356,12 @@ namespace Microsoft.DevTunnels.Management
         /// Authentication will use one of the following, if available, in order of preference:
         ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
         ///   - token provided by the user token callback
-        ///   - token in <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that matches
+        ///   - token in <paramref name="tunnel"/> <see cref="TunnelBase.AccessTokens"/> that matches
         ///     one of the scopes in <paramref name="accessTokenScopes"/>
         /// </remarks>
         protected async Task<TResult?> SendTunnelRequestAsync<TRequest, TResult>(
             HttpMethod method,
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             string[] accessTokenScopes,
             string? path,
             string? query,
@@ -751,7 +751,7 @@ namespace Microsoft.DevTunnels.Management
         }
 
         private Uri BuildTunnelUri(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             string? path,
             string? query,
             TunnelRequestOptions? options)
@@ -791,7 +791,7 @@ namespace Microsoft.DevTunnels.Management
         }
 
         private async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
-            Tunnel? tunnel,
+            TunnelV1? tunnel,
             string[]? accessTokenScopes,
             TunnelRequestOptions? options)
         {
@@ -826,7 +826,7 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc />
-        public async Task<Tunnel[]> ListTunnelsAsync(
+        public async Task<TunnelV1[]> ListTunnelsAsync(
             string? clusterId,
             string? domain,
             TunnelRequestOptions? options,
@@ -841,7 +841,7 @@ namespace Microsoft.DevTunnels.Management
                 ownedTunnelsOnly == true ? "ownedTunnelsOnly=true" : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
-            var result = await this.SendRequestAsync<Tunnel[]>(
+            var result = await this.SendRequestAsync<TunnelV1[]>(
                 HttpMethod.Get,
                 clusterId,
                 TunnelsPath,
@@ -853,7 +853,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Tags instead.")]
-        public async Task<Tunnel[]> SearchTunnelsAsync(
+        public async Task<TunnelV1[]> SearchTunnelsAsync(
             string[] tags,
             bool requireAllTags,
             string? clusterId,
@@ -870,7 +870,7 @@ namespace Microsoft.DevTunnels.Management
                 !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
-            var result = await this.SendRequestAsync<Tunnel[]>(
+            var result = await this.SendRequestAsync<TunnelV1[]>(
                 HttpMethod.Get,
                 clusterId,
                 TunnelsPath,
@@ -881,12 +881,12 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc />
-        public async Task<Tunnel?> GetTunnelAsync(
-            Tunnel tunnel,
+        public async Task<TunnelV1?> GetTunnelAsync(
+            TunnelV1 tunnel,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var result = await this.SendTunnelRequestAsync<Tunnel>(
+            var result = await this.SendTunnelRequestAsync<TunnelV1>(
                 HttpMethod.Get,
                 tunnel,
                 ReadAccessTokenScopes,
@@ -899,8 +899,8 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc />
-        public async Task<Tunnel> CreateTunnelAsync(
-            Tunnel tunnel,
+        public async Task<TunnelV1> CreateTunnelAsync(
+            TunnelV1 tunnel,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
@@ -913,7 +913,7 @@ namespace Microsoft.DevTunnels.Management
                     "An ID may not be specified when creating a tunnel.", nameof(tunnelId));
             }
 
-            var result = await this.SendRequestAsync<Tunnel, Tunnel>(
+            var result = await this.SendRequestAsync<TunnelV1, TunnelV1>(
                 HttpMethod.Post,
                 tunnel.ClusterId,
                 TunnelsPath,
@@ -926,12 +926,12 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc />
-        public async Task<Tunnel> UpdateTunnelAsync(
-            Tunnel tunnel,
+        public async Task<TunnelV1> UpdateTunnelAsync(
+            TunnelV1 tunnel,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+            var result = await this.SendTunnelRequestAsync<TunnelV1, TunnelV1>(
                 HttpMethod.Put,
                 tunnel,
                 ManageAccessTokenScope,
@@ -946,7 +946,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<bool> DeleteTunnelAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
@@ -963,7 +963,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<TunnelEndpoint> UpdateTunnelEndpointAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelEndpoint endpoint,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default)
@@ -997,7 +997,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<bool> DeleteTunnelEndpointsAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             string hostId,
             TunnelConnectionMode? connectionMode,
             TunnelRequestOptions? options = null,
@@ -1029,7 +1029,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<TunnelPort[]> ListTunnelPortsAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
@@ -1046,7 +1046,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<TunnelPort?> GetTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             ushort portNumber,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
@@ -1065,7 +1065,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<TunnelPort> CreateTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelPort tunnelPort,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
@@ -1098,7 +1098,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<TunnelPort> UpdateTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             TunnelPort tunnelPort,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
@@ -1140,7 +1140,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <inheritdoc />
         public async Task<bool> DeleteTunnelPortAsync(
-            Tunnel tunnel,
+            TunnelV1 tunnel,
             ushort portNumber,
             TunnelRequestOptions? options,
             CancellationToken cancellation)
@@ -1170,9 +1170,9 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Removes read-only properties like tokens and status from create/update requests.
         /// </summary>
-        private Tunnel ConvertTunnelForRequest(Tunnel tunnel)
+        private TunnelV1 ConvertTunnelForRequest(TunnelV1 tunnel)
         {
-            return new Tunnel
+            return new TunnelV1
             {
                 Name = tunnel.Name,
                 Domain = tunnel.Domain,
@@ -1192,7 +1192,7 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Removes read-only properties like tokens and status from create/update requests.
         /// </summary>
-        private TunnelPort ConvertTunnelPortForRequest(Tunnel tunnel, TunnelPort tunnelPort)
+        private TunnelPort ConvertTunnelPortForRequest(TunnelV1 tunnel, TunnelPort tunnelPort)
         {
             if (tunnelPort.ClusterId != null && tunnel.ClusterId != null &&
                 tunnelPort.ClusterId != tunnel.ClusterId)
@@ -1336,7 +1336,7 @@ namespace Microsoft.DevTunnels.Management
         /// expired tokens may be preserved also, if not refreshed. This allows for better
         /// diagnostics in that case.
         /// </remarks>
-        private static void PreserveAccessTokens(Tunnel requestTunnel, Tunnel? resultTunnel)
+        private static void PreserveAccessTokens(TunnelV1 requestTunnel, TunnelV1? resultTunnel)
         {
             if (requestTunnel.AccessTokens != null && resultTunnel != null)
             {

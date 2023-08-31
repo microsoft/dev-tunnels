@@ -9,7 +9,7 @@ using System.Text.Json.Serialization;
 namespace Microsoft.DevTunnels.Contracts
 {
     /// <summary>
-    /// Data contract for <see cref="Tunnel"/> or <see cref="TunnelPort"/> options.
+    /// Data contract for <see cref="TunnelV1"/> or <see cref="TunnelPort"/> options.
     /// </summary>
     public class TunnelOptions
     {

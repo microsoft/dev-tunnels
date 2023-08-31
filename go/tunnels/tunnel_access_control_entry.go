@@ -4,7 +4,7 @@
 
 package tunnels
 
-// Data contract for an access control entry on a `Tunnel` or `TunnelPort`.
+// Data contract for an access control entry on a `TunnelV1` or `TunnelPort`.
 //
 // An access control entry (ACE) grants or denies one or more access scopes to one or more
 // subjects. Tunnel ports inherit access control entries from their tunnel, and they may

@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-// Generated from ../../../cs/src/Contracts/Tunnel.cs
+// Generated from ../../../cs/src/Contracts/TunnelBase.cs
 
 package tunnels
 
@@ -9,7 +9,7 @@ import (
 )
 
 // Data contract for tunnel objects managed through the tunnel service REST API.
-type Tunnel struct {
+type TunnelBase struct {
 	// Gets or sets the ID of the cluster the tunnel was created in.
 	ClusterID        string `json:"clusterId,omitempty"`
 
@@ -66,8 +66,17 @@ type Tunnel struct {
 	// updated in seconds.
 	CustomExpiration uint32 `json:"customExpiration,omitempty"`
 
+	Tunnel
 	TunnelV1
-	TunnelV2
+}
+
+// Tunnel type used for tunnel service API versions greater than 2023-05-23-preview
+type Tunnel struct {
+	// Gets or sets the ID of the tunnel, unique within the cluster.
+	TunnelID string `json:"tunnelId,omitempty"`
+
+	// Gets or sets the tags of the tunnel.
+	Labels   []string `json:"labels,omitempty"`
 }
 
 // Tunnel type used for tunnel service API version 2023-05-23-preview
@@ -77,13 +86,4 @@ type TunnelV1 struct {
 
 	// Gets or sets the tags of the tunnel.
 	Tags     []string `json:"tags,omitempty"`
-}
-
-// Tunnel type used for tunnel service API versions greater than 2023-05-23-preview
-type TunnelV2 struct {
-	// Gets or sets the ID of the tunnel, unique within the cluster.
-	TunnelID string `json:"tunnelId,omitempty"`
-
-	// Gets or sets the tags of the tunnel.
-	Labels   []string `json:"labels,omitempty"`
 }

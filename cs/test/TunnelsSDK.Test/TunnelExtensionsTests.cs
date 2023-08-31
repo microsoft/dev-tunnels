@@ -8,7 +8,7 @@ namespace Microsoft.DevTunnels.Test;
 
 public class TunnelExtensionsTests
 {
-    private static Tunnel Tunnel { get; } = new Tunnel
+    private static TunnelV1 Tunnel { get; } = new TunnelV1
     {
         AccessTokens = new Dictionary<string, string>
         {
@@ -24,7 +24,7 @@ public class TunnelExtensionsTests
 
     [Fact]
     public void TryGetAccessToken_NullTunnel_Throws() =>
-        Assert.Throws<ArgumentNullException>(() => ((Tunnel)null).TryGetAccessToken("scope", out var _));
+        Assert.Throws<ArgumentNullException>(() => ((TunnelV1)null).TryGetAccessToken("scope", out var _));
 
     [Fact]
     public void TryGetAccessToken_NullScope_Throws() =>
@@ -36,11 +36,11 @@ public class TunnelExtensionsTests
 
     [Fact]
     public void TryGetAccessToken_NullAccessTokens() =>
-        Assert.False(new Tunnel().TryGetAccessToken("scope", out var _));
+        Assert.False(new TunnelV1().TryGetAccessToken("scope", out var _));
 
     [Fact]
     public void TryGetValidAccessToken_NullTunnel_Throws() =>
-        Assert.Throws<ArgumentNullException>(() => ((Tunnel)null).TryGetValidAccessToken("scope", out var _));
+        Assert.Throws<ArgumentNullException>(() => ((TunnelV1)null).TryGetValidAccessToken("scope", out var _));
 
     [Fact]
     public void TryGetValidAccessToken_NullScope_Throws() =>
@@ -52,7 +52,7 @@ public class TunnelExtensionsTests
 
     [Fact]
     public void TryGetValidAccessToken_NullAccessTokens() =>
-        Assert.False(new Tunnel().TryGetValidAccessToken("scope", out var _));
+        Assert.False(new TunnelV1().TryGetValidAccessToken("scope", out var _));
 
     [Theory]
     [InlineData("scope1", "token1")]
@@ -91,7 +91,7 @@ public class TunnelExtensionsTests
     public void TryGetValidAccessTokenNotExipred()
     {
         var token = GetToken(isExpired: false);
-        var tunnel = new Tunnel
+        var tunnel = new TunnelV1
         {
             AccessTokens = new Dictionary<string, string>
             {
@@ -107,7 +107,7 @@ public class TunnelExtensionsTests
     public void TryGetValidAccessTokenExipred()
     {
         var token = GetToken(isExpired: true);
-        var tunnel = new Tunnel
+        var tunnel = new TunnelV1
         {
             AccessTokens = new Dictionary<string, string>
             {

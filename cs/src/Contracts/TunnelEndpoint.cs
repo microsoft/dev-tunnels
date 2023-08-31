@@ -26,6 +26,11 @@ public abstract class TunnelEndpoint
     // TODO: Add validation attributes on properties of this class.
 
     /// <summary>
+    /// Gets or sets the ID of this endpoint.
+    /// </summary>
+    public string Id { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the connection mode of the endpoint.
     /// </summary>
     /// <remarks>

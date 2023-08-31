@@ -6,9 +6,9 @@ use crate::contracts::TunnelBase;
 use serde::{Deserialize, Serialize};
 
 // Tunnel type used for tunnel service API versions greater than 2023-05-23-preview
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
-pub struct Tunnel {
+pub struct TunnelV2 {
     #[serde(flatten)]
     pub base: TunnelBase,
 
