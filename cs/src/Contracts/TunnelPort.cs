@@ -36,8 +36,8 @@ public class TunnelPort
     /// Gets or sets the generated ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(TunnelIdPattern)]
-    [StringLength(TunnelIdLength, MinimumLength = TunnelIdLength)]
+    [RegularExpression(OldTunnelIdPattern)]
+    [StringLength(OldTunnelIdLength, MinimumLength = OldTunnelIdLength)]
     public string? TunnelId { get; set; }
 
     /// <summary>

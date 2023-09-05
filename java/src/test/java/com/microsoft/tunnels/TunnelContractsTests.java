@@ -36,8 +36,8 @@ public class TunnelContractsTests {
     assertTrue(TunnelConstraints.isValidClusterId("usw2"));
     assertFalse(TunnelConstraints.isValidClusterId("usw$2")); // unallowed special character
 
-    assertTrue(TunnelConstraints.isValidTunnelId("bcd123fg"));
-    assertFalse(TunnelConstraints.isValidTunnelId("bcd123fgh")); // id too long
+    assertTrue(TunnelConstraints.isValidOldTunnelId("bcd123fg"));
+    assertFalse(TunnelConstraints.isValidOldTunnelId("bcd123fgh")); // id too long
 
     assertTrue(TunnelConstraints.isValidTunnelName("mytunnel"));
     assertFalse(TunnelConstraints.isValidTunnelName("my$unnel")); // unallowed special character
@@ -49,7 +49,7 @@ public class TunnelContractsTests {
     assertTrue(TunnelConstraints.isValidTag("my-tunnel-tag"));
     assertFalse(TunnelConstraints.isValidTag("my-tunnel&tag")); // unallowed specialcharacter
 
-    assertNotNull(TunnelConstraints.validateTunnelId("bcdf123g", null));
+    assertNotNull(TunnelConstraints.validateOldTunnelId("bcdf123g", null));
     assertNotNull(TunnelConstraints.validateTunnelIdOrName("mytunnel", null));
   }
 

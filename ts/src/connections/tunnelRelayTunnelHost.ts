@@ -47,6 +47,7 @@ import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
 import { SessionPortKey } from './sessionPortKey';
 import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
+import { v4 as uuidv4 } from 'uuid';
 
 const webSocketSubProtocol = 'tunnel-relay-host';
 const webSocketSubProtocolv2 = 'tunnel-relay-host-v2-dev';
@@ -75,6 +76,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
      */
     public static clientStreamChannelType: string = 'client-ssh-session-stream';
 
+    private readonly id: string;
     private readonly hostId: string;
     private readonly clientSessionPromises: Promise<void>[] = [];
     private readonly reconnectableSessions: SshServerSession[] = [];
@@ -82,6 +84,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(managementClient, trace);
         this.hostId = MultiModeTunnelHost.hostId;
+        this.id = uuidv4();
     }
 
     /**
@@ -148,6 +151,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             }
     
             let endpoint: TunnelRelayTunnelEndpoint = {
+                id: this.id,
                 hostId: this.hostId,
                 hostPublicKeys: this.hostPublicKeys,
                 connectionMode: TunnelConnectionMode.TunnelRelay,

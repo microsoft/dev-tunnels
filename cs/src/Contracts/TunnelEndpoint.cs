@@ -26,11 +26,16 @@ public abstract class TunnelEndpoint
     // TODO: Add validation attributes on properties of this class.
 
     /// <summary>
+    /// Gets or sets the ID of this endpoint.
+    /// </summary>
+    public string Id { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the connection mode of the endpoint.
     /// </summary>
     /// <remarks>
     /// This property is required when creating or updating an endpoint.
-    /// 
+    ///
     /// The subclass type is also an indication of the connection mode, but this property
     /// is necessary to determine the subclass type when deserializing.
     /// </remarks>
@@ -41,7 +46,7 @@ public abstract class TunnelEndpoint
     /// </summary>
     /// <remarks>
     /// This property is required when creating or updating an endpoint.
-    /// 
+    ///
     /// If the host supports multiple connection modes, the host's ID is the same for
     /// all the endpoints it supports. However different hosts may simultaneously accept
     /// connections at different endpoints for the same tunnel, if enabled in tunnel
@@ -99,7 +104,7 @@ public abstract class TunnelEndpoint
     public const string PortToken = "{port}";
 
     /// <summary>
-    /// Gets a URI where a web client can connect to a tunnel port. 
+    /// Gets a URI where a web client can connect to a tunnel port.
     /// </summary>
     /// <param name="endpoint">A tunnel endpoint containing a port URI format.</param>
     /// <param name="portNumber">The port number to connect to; the port is assumed to be
@@ -136,7 +141,7 @@ public abstract class TunnelEndpoint
     }
 
     /// <summary>
-    /// Gets a ssh command which can be used to connect to a tunnel ssh port. 
+    /// Gets a ssh command which can be used to connect to a tunnel ssh port.
     /// </summary>
     /// <param name="endpoint">A tunnel endpoint containing a port ssh URI format.</param>
     /// <param name="portNumber">The port number to connect to; the port is assumed to be
@@ -157,7 +162,7 @@ public abstract class TunnelEndpoint
             {
                 return null;
             }
-            
+
             return endpoint.TunnelSshCommand;
         }
 

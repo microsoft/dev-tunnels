@@ -1,9 +1,8 @@
-// <copyright file="Tunnel.cs" company="Microsoft">
+// <copyright file="TunnelPort.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
 
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
@@ -14,14 +13,14 @@ namespace Microsoft.DevTunnels.Contracts;
 using static TunnelConstraints;
 
 /// <summary>
-/// Data contract for tunnel objects managed through the tunnel service REST API.
+/// Data contract for tunnel port objects managed through the tunnel service REST API.
 /// </summary>
-public class Tunnel
+public class TunnelPortV2
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="Tunnel"/> class.
+    /// Initializes a new instance of the <see cref="TunnelPort"/> class.
     /// </summary>
-    public Tunnel()
+    public TunnelPortV2()
     {
     }
 
@@ -37,16 +36,20 @@ public class Tunnel
     /// Gets or sets the generated ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(OldTunnelIdPattern)]
-    [StringLength(OldTunnelIdLength, MinimumLength = OldTunnelIdLength)]
+    [RegularExpression(NewTunnelIdPattern)]
+    [StringLength(NewTunnelIdMaxLength, MinimumLength = NewTunnelIdMinLength)]
     public string? TunnelId { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional short name (alias) of the tunnel.
+    /// Gets or sets the IP port number of the tunnel port.
+    /// </summary>
+    public ushort PortNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional short name of the port.
     /// </summary>
     /// <remarks>
-    /// The name must be globally unique within the parent domain, and must be a valid
-    /// subdomain.
+    /// The name must be unique among named ports of the same tunnel.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [RegularExpression(TunnelNamePattern)]
@@ -54,14 +57,14 @@ public class Tunnel
     public string? Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the description of the tunnel.
+    /// Gets or sets the optional description of the port.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [StringLength(DescriptionMaxLength)]
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the tags of the tunnel.
+    /// Gets or sets the tags of the port.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [MaxLength(MaxTags)]
@@ -70,23 +73,43 @@ public class Tunnel
     public string[]? Tags { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional parent domain of the tunnel, if it is not using
-    /// the default parent domain.
+    /// Gets or sets the protocol of the tunnel port.
     /// </summary>
+    /// <remarks>
+    /// Should be one of the string constants from <see cref="TunnelProtocol"/>.
+    /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(TunnelDomainPattern)]
-    [StringLength(TunnelDomainMaxLength)]
-    public string? Domain { get; set; }
+    [StringLength(TunnelProtocol.MaxLength)]
+    public string? Protocol { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this port is a default port for the tunnel.
+    /// </summary>
+    /// <remarks>
+    /// A client that connects to a tunnel (by ID or name) without specifying a port number will
+    /// connect to the default port for the tunnel, if a default is configured. Or if the tunnel
+    /// has only one port then the single port is the implicit default.
+    /// <para/>
+    /// Selection of a default port for a connection also depends on matching the connection to the
+    /// port <see cref="Protocol" />, so it is possible to configure separate defaults for distinct
+    /// protocols like <see cref="TunnelProtocol.Http" /> and <see cref="TunnelProtocol.Ssh" />.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsDefault { get; set; }
 
     /// <summary>
     /// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
     /// </summary>
+    /// <remarks>
+    /// Unlike the tokens in <see cref="Tunnel.AccessTokens"/>, these tokens are restricted
+    /// to the individual port.
+    /// </remarks>
     /// <seealso cref="TunnelAccessScopes" />
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IDictionary<string, string>? AccessTokens { get; set; }
 
     /// <summary>
-    /// Gets or sets access control settings for the tunnel.
+    /// Gets or sets access control settings for the tunnel port.
     /// </summary>
     /// <remarks>
     /// See <see cref="TunnelAccessControl" /> documentation for details about the
@@ -96,52 +119,36 @@ public class Tunnel
     public TunnelAccessControl? AccessControl { get; set; }
 
     /// <summary>
-    /// Gets or sets default options for the tunnel.
+    /// Gets or sets options for the tunnel port.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public TunnelOptions? Options { get; set; }
 
     /// <summary>
-    /// Gets or sets current connection status of the tunnel.
+    /// Gets or sets current connection status of the tunnel port.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public TunnelStatus? Status { get; set; }
+    public TunnelPortStatus? Status { get; set; }
 
     /// <summary>
-    /// Gets or sets an array of endpoints where hosts are currently accepting
-    /// client connections to the tunnel.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public TunnelEndpoint[]? Endpoints { get; set; }
-
-    /// <summary>
-    /// Gets or sets a list of ports in the tunnel.
+    /// Gets or sets the username for the ssh service user is trying to forward.
     /// </summary>
     /// <remarks>
-    /// This optional property enables getting info about all ports in a tunnel at the same time
-    /// as getting tunnel info, or creating one or more ports at the same time as creating a
-    /// tunnel. It is omitted when listing (multiple) tunnels, or when updating tunnel
-    /// properties. (For the latter, use APIs to create/update/delete individual ports instead.)
+    /// Should be provided if the <see cref="TunnelProtocol"/> is Ssh.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [MaxLength(TunnelMaxPorts)]
-    public TunnelPort[]? Ports { get; set; }
+    [StringLength(TunnelNameMaxLength)]
+    public string? SshUser { get; set; }
 
     /// <summary>
-    /// Gets or sets the time in UTC of tunnel creation.
+    /// Gets or sets web forwarding URIs.
+    /// If set, it's a list of absolute URIs where the port can be accessed with web forwarding.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? Created { get; set; }
+    public string[]? PortForwardingUris { get; set; }
 
     /// <summary>
-    /// Gets or the time the tunnel will be deleted if it is not used or updated.
+    /// Gets or sets inspection URI.
+    /// If set, it's an absolute URIs where the port's traffic can be inspected.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? Expiration { get; set; }
-
-    /// <summary>
-    /// Gets or the custom amount of time the tunnel will be valid if it is not used or updated in seconds.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public uint? CustomExpiration { get; set; }
+    public string? InspectionUri { get; set; }
 }
