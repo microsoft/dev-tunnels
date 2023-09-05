@@ -338,6 +338,15 @@ public class TunnelConstraints {
      * valid tunnel id. Returns <paramref name="tunnelId"/> back if it's a valid tunnel
      * id.
      */
+    public static String validateNewOrOldTunnelId(String tunnelId, String paramName) {
+        return TunnelConstraintsStatics.validateNewOrOldTunnelId(tunnelId, paramName);
+    }
+
+    /**
+     * Validates <paramref name="tunnelId"/> and throws exception if it is null or not a
+     * valid tunnel id. Returns <paramref name="tunnelId"/> back if it's a valid tunnel
+     * id.
+     */
     public static String validateNewTunnelId(String tunnelId, String paramName) {
         return TunnelConstraintsStatics.validateNewTunnelId(tunnelId, paramName);
     }
