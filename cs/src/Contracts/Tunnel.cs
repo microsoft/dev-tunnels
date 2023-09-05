@@ -39,7 +39,7 @@ public class Tunnel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [RegularExpression(OldTunnelIdPattern)]
     [StringLength(OldTunnelIdLength, MinimumLength = OldTunnelIdLength)]
-    public virtual string? TunnelId { get; set; }
+    public string? TunnelId { get; set; }
 
     /// <summary>
     /// Gets or sets the optional short name (alias) of the tunnel.
