@@ -92,6 +92,14 @@ class TunnelConstraintsStatics {
     return tunnelId;
   }
 
+  static String validateNewOrOldTunnelId(String tunnelId, String paramName) {
+    try {
+      return validateNewTunnelId(tunnelId, paramName);
+    } catch (IllegalArgumentException e) {
+      return validateOldTunnelId(tunnelId, paramName);
+    }
+  }
+
     static String validateTunnelAlias(String alias, String paramName) {
     if (StringUtils.isBlank(alias)) {
       throw new IllegalArgumentException(alias);

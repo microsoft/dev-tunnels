@@ -470,6 +470,23 @@ public static class TunnelConstraints
     /// </summary>
     /// <exception cref="ArgumentNullException">If <paramref name="tunnelId"/> is null.</exception>
     /// <exception cref="ArgumentException">If <paramref name="tunnelId"/> is not a valid tunnel id.</exception>
+    public static string ValidateNewOrOldTunnelId(string tunnelId, string? paramName = default)
+    {
+        try {
+            return ValidateNewTunnelId(tunnelId, paramName);
+        }
+        catch (ArgumentException)
+        {
+            return ValidateOldTunnelId(tunnelId, paramName);
+        }
+    }
+
+    /// <summary>
+    /// Validates <paramref name="tunnelId"/> and throws exception if it is null or not a valid tunnel id.
+    /// Returns <paramref name="tunnelId"/> back if it's a valid tunnel id.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">If <paramref name="tunnelId"/> is null.</exception>
+    /// <exception cref="ArgumentException">If <paramref name="tunnelId"/> is not a valid tunnel id.</exception>
     public static string ValidateNewTunnelId(string tunnelId, string? paramName = default)
     {
         paramName ??= nameof(tunnelId);
