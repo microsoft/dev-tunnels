@@ -133,14 +133,16 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         }
     }
 
-
     /// <summary>
     /// Get host Id the client is connecting to.
     /// </summary>
     public string? HostId { get; private set; }
 
     /// <inheritdoc />
-    public async Task ConnectAsync(Tunnel tunnel, string? hostId, CancellationToken cancellation)
+    public override async Task ConnectAsync(
+        Tunnel tunnel,
+        TunnelConnectionOptions? options,
+        CancellationToken cancellation = default)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNull(tunnel.Endpoints!, nameof(Tunnel.Endpoints));
@@ -157,8 +159,8 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
                 "No hosts are currently accepting connections for the tunnel.");
         }
 
-        HostId = hostId;
-        await ConnectTunnelSessionAsync(tunnel, cancellation);
+        HostId = options?.HostId;
+        await ConnectTunnelSessionAsync(tunnel, options, cancellation);
     }
 
     /// <inheritdoc />
@@ -210,6 +212,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         this.SshSession = new SshClientSession(clientConfig, Trace.WithName("SSH"));
         this.SshSession.Authenticating += OnSshServerAuthenticating;
         this.SshSession.Disconnected += OnSshSessionDisconnected;
+        this.SshSession.Closed += OnSshSessionClosed;
 
         SshPortForwardingService = this.SshSession.ActivateService<PortForwardingService>();
         ConfigurePortForwardingService();
@@ -239,6 +242,12 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
     private void OnSshSessionDisconnected(object? sender, EventArgs e) =>
         StartReconnectTaskIfNotDisposed();
+
+    private void OnSshSessionClosed(object? sender, EventArgs e)
+    {
+        ConnectionStatus = ConnectionStatus.Disconnected;
+        this.SshSession = null;
+    }
 
     private void ConfigurePortForwardingService()
     {
@@ -554,7 +563,6 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         if (this.SshSession != null)
         {
             await this.SshSession.CloseAsync(SshDisconnectReason.ByApplication);
-            this.SshSession.Dispose();
         }
 
         SshSessionClosed = null;

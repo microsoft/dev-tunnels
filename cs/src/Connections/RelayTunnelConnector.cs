@@ -35,6 +35,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
 
     /// <inheritdoc/>
     public async Task ConnectSessionAsync(
+        TunnelConnectionOptions? options,
         bool isReconnect,
         CancellationToken cancellation)
     {
@@ -190,6 +191,11 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
 
             if (exception != null)
             {
+                if (options?.EnableRetry == false)
+                {
+                    throw exception;
+                }
+
                 var retryDelay = TimeSpan.FromMilliseconds(isDelayNeeded ? attemptDelayMs : 0);
                 var retryingArgs = new RetryingTunnelConnectionEventArgs(exception, retryDelay);
                 this.relayClient.OnRetrying(retryingArgs);

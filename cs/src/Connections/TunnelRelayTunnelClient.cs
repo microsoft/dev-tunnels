@@ -117,28 +117,6 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     }
 
     /// <summary>
-    /// Connect to the clientRelayUri using accessToken.
-    /// </summary>
-    protected Task ConnectAsync(
-        string clientRelayUri,
-        string? accessToken,
-        string[]? hostPublicKeys,
-        CancellationToken cancellation)
-    {
-        Requires.NotNull(clientRelayUri, nameof(clientRelayUri));
-        return ConnectTunnelSessionAsync(
-            (cancellation) =>
-            {
-                this.relayUri = new Uri(clientRelayUri, UriKind.Absolute);
-                this.accessToken = accessToken;
-                this.HostPublicKeys = hostPublicKeys;
-                this.connector = new RelayTunnelConnector(this);
-                return this.connector.ConnectSessionAsync(isReconnect: false, cancellation);
-            },
-            cancellation);
-    }
-
-    /// <summary>
     /// Create stream to the tunnel.
     /// </summary>
     protected virtual async Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)

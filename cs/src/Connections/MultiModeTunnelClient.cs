@@ -84,10 +84,10 @@ public class MultiModeTunnelClient : TunnelConnection, ITunnelClient
     protected override string TunnelAccessScope => TunnelAccessScopes.Connect;
 
     /// <inheritdoc />
-    public async Task ConnectAsync(
+    public override async Task ConnectAsync(
         Tunnel tunnel,
-        string? hostId,
-        CancellationToken cancellation)
+        TunnelConnectionOptions? options,
+        CancellationToken cancellation = default)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
 

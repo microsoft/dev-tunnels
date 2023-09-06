@@ -67,9 +67,10 @@ namespace Microsoft.DevTunnels.Connections
 #pragma warning restore CS0067
 
         /// <inheritdoc />
-        public async Task StartAsync(
+        public override async Task ConnectAsync(
             Tunnel tunnel,
-            CancellationToken cancellation)
+            TunnelConnectionOptions? options,
+            CancellationToken cancellation = default)
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
@@ -77,7 +78,7 @@ namespace Microsoft.DevTunnels.Connections
 
             foreach (var host in Hosts)
             {
-                startTasks.Add(host.StartAsync(tunnel, cancellation));
+                startTasks.Add(host.ConnectAsync(tunnel, options, cancellation));
             }
 
             await Task.WhenAll(startTasks);
