@@ -2,10 +2,11 @@
 // Licensed under the MIT license.
 
 import { Tunnel } from '@microsoft/dev-tunnels-contracts';
-import { Stream, Trace } from '@microsoft/dev-tunnels-ssh';
-import { CancellationToken } from 'vscode-jsonrpc';
+import { Stream, Trace, CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 import * as http from 'http';
+
 /**
  * Tunnel session.
  */
@@ -58,13 +59,18 @@ export interface TunnelSession {
      *     Undefined if the connection information is already known and the tunnel is not needed.
      *     Tunnel object to get the connection information from that tunnel.
      */
-    connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void>;
+    connectTunnelSession(
+        tunnel?: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
+    ): Promise<void>;
 
     /**
      * Creates a stream to the tunnel for the tunnel session.
      */
     createSessionStream(
-        cancellation: CancellationToken,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
     ): Promise<{ stream: Stream, protocol: string }>;
 
     /**
@@ -74,7 +80,7 @@ export interface TunnelSession {
         stream: Stream,
         protocol: string,
         isReconnect: boolean,
-        cancellation: CancellationToken,
+        cancellation?: CancellationToken,
     ): Promise<void>;
 
     /**
@@ -85,5 +91,5 @@ export interface TunnelSession {
     /**
      * Refreshes the tunnel access token. This may be useful when the tunnel service responds with 401 Unauthorized.
      */
-    refreshTunnelAccessToken(cancellation: CancellationToken): Promise<boolean>;
+    refreshTunnelAccessToken(cancellation?: CancellationToken): Promise<boolean>;
 }

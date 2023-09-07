@@ -17,6 +17,7 @@ import { BrowserWebSocketRelayError, RelayConnectionError } from './sshHelpers';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { TunnelSession } from './tunnelSession';
 import * as http from 'http';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 
 
 // After the 6th attemt, each next attempt will happen after a delay of 2^7 * 100ms = 12.8s
@@ -46,13 +47,14 @@ export class RelayTunnelConnector implements TunnelConnector {
      */
     public async connectSession(
         isReconnect: boolean,
-        cancellation: CancellationToken,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
     ): Promise<void> {
         let disconnectReason: SshDisconnectReason | undefined;
         let error: Error | undefined;
 
         function throwIfCancellation(e: any) {
-            if (e instanceof CancellationError && cancellation.isCancellationRequested) {
+            if (e instanceof CancellationError && cancellation?.isCancellationRequested) {
                 error = undefined;
                 disconnectReason = SshDisconnectReason.byApplication;
                 throw e;
@@ -76,12 +78,16 @@ export class RelayTunnelConnector implements TunnelConnector {
         let isDelayNeeded = true;
         let errorDescription: string | undefined;
         for (let attempt = 0; ; attempt++) {
-            if (cancellation.isCancellationRequested) {
+            if (cancellation?.isCancellationRequested) {
                 throw new CancellationError();
             }
 
             if (attempt > 0) {
                 if (error) {
+                    if (!(options?.enableRetry ?? true)) {
+                        throw error;
+                    }
+
                     const args = new RetryingTunnelConnectionEventArgs(error, attemptDelayMs);
                     this.tunnelSession.onRetrying(args);
                     if (!args.retry) {
@@ -126,7 +132,7 @@ export class RelayTunnelConnector implements TunnelConnector {
             error = undefined;
             try {
                 const streamAndProtocol = await this.tunnelSession.createSessionStream(
-                    cancellation);
+                    options, cancellation);
                 stream = streamAndProtocol.stream;
 
                 await this.tunnelSession.configureSession(

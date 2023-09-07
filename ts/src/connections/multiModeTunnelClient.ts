@@ -6,6 +6,7 @@ import { CancellationToken, SshStream } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TunnelClient } from '.';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 
 /**
  * Tunnel client implementation that selects one of multiple available connection modes.
@@ -42,7 +43,11 @@ export class MultiModeTunnelClient extends TunnelConnectionBase implements Tunne
         this.clients.forEach((c) => (c.localForwardingHostAddress = value));
     }
 
-    public connect(tunnel: Tunnel, hostId?: string): Promise<void> {
+    public connect(
+        tunnel: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
+    ): Promise<void> {
         if (!tunnel) {
             throw new Error('Tunnel cannot be null');
         }

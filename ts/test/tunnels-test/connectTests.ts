@@ -12,6 +12,7 @@ import { Tunnel, TunnelPort, TunnelConnectionMode } from '@microsoft/dev-tunnels
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { TunnelClient, TunnelConnectionBase, TunnelHost } from '@microsoft/dev-tunnels-connections';
 import { CancellationToken, SshStream } from '@microsoft/dev-tunnels-ssh';
+import { TunnelConnectionOptions } from 'src/connections/tunnelConnectionOptions';
 
 @suite
 @slow(3000)
@@ -78,7 +79,11 @@ class MockTunnelClient extends TunnelConnectionBase implements TunnelClient {
     public connectionModes: TunnelConnectionMode[] = [];
     public acceptLocalConnectionsForForwardedPorts = true;
     public localForwardingHostAddress = '127.0.0.1';
-    connect(tunnel: Tunnel, hostId?: string): Promise<any> {
+    connect(
+        tunnel: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
+    ): Promise<any> {
         throw new Error('Method not implemented.');
     }
     forwardPort(tunnelPort: TunnelPort): Promise<LocalPortForwarder> {

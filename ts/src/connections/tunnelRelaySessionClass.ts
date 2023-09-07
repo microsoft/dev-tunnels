@@ -4,10 +4,11 @@
 import { Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken } from 'vscode-jsonrpc';
 import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
-import { Stream, TraceLevel } from '@microsoft/dev-tunnels-ssh';
+import { CancellationError, ObjectDisposedError, Stream, TraceLevel } from '@microsoft/dev-tunnels-ssh';
 import { TunnelRelayStreamFactory, DefaultTunnelRelayStreamFactory } from '.';
 import { TunnelSession } from './tunnelSession';
 import { IClientConfig } from 'websocket';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 import * as http from 'http';
 
 
@@ -39,7 +40,10 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          * Creates a stream to the tunnel.
          * @internal
          */
-        public async createSessionStream(cancellation: CancellationToken): Promise<{ stream: Stream, protocol: string }> {
+        public async createSessionStream(
+            options?: TunnelConnectionOptions,
+            cancellation?: CancellationToken,
+        ): Promise<{ stream: Stream, protocol: string }> {
             if (!this.relayUri) {
                 throw new Error(
                     'Cannot create tunnel session stream. Tunnel relay endpoint URI is missing',
@@ -82,11 +86,18 @@ export function tunnelRelaySessionClass<TBase extends Constructor<TunnelSession>
          *     Tunnel object to get the connection information from that tunnel.
          * @internal
          */
-        public async connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void> {
+        public async connectTunnelSession(
+            tunnel?: Tunnel,
+            options?: TunnelConnectionOptions,
+            cancellation?: CancellationToken,
+        ): Promise<void> {
             try {
-                await super.connectTunnelSession(tunnel, httpAgent);
-            } catch (ex) {
-                throw new Error('Failed to connect to tunnel relay. ' + ex);
+                await super.connectTunnelSession(tunnel, options, cancellation);
+            } catch (e) {
+                if (e instanceof CancellationError || e instanceof ObjectDisposedError) {
+                    throw e;
+                }
+                throw new Error('Failed to connect to tunnel relay. ' + e);
             }
         }
     };
