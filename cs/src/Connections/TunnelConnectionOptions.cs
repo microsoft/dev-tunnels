@@ -31,8 +31,9 @@ public class TunnelConnectionOptions
     /// up to a maximum 12s delay, with further retries using the same max delay.
     ///
     /// Note after the initial connection succeeds, the host or client may still become disconnected
-    /// at any time after that. In that case the <see cref="EnableReconnect" /> option controls
-    /// whether an automatic reconnect will be attempted. Reconnection has the same retry behavior.
+    /// at any time after that due to a network disruption or a relay service upgrade. When that
+    /// happens, the <see cref="EnableReconnect" /> option controls whether an automatic reconnect
+    /// will be attempted. Reconnection has the same retry behavior.
     ///
     /// Listen to the <see cref="TunnelConnection.RetryingTunnelConnection" /> event to be notified
     /// when the connection is retrying.

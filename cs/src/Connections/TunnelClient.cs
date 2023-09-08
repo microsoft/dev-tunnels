@@ -243,11 +243,6 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     private void OnSshSessionDisconnected(object? sender, EventArgs e) =>
         StartReconnectTaskIfNotDisposed();
 
-    private void OnSshSessionClosed(object? sender, EventArgs e)
-    {
-        ConnectionStatus = ConnectionStatus.Disconnected;
-        this.SshSession = null;
-    }
 
     private void ConfigurePortForwardingService()
     {
@@ -508,9 +503,10 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     /// </summary>
     protected virtual void SshSessionCreated()
     {
-        // All tunnel hosts and clients should disable this because they do not use it (for now) and leaving it enabled is a potential security issue.
+        // All tunnel hosts and clients should disable this because they do not use it (for now)
+        // and leaving it enabled is a potential security issue.
         SshPortForwardingService!.AcceptRemoteConnectionsForNonForwardedPorts = false;
-        SshSession!.Closed += SshSession_Closed;
+        SshSession!.Closed += OnSshSessionClosed;
         IsSshSessionActive = true;
     }
 
@@ -626,12 +622,18 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         await SshSession.RequestAsync(request, cancellation);
     }
 
-    private void SshSession_Closed(object? sender, SshSessionClosedEventArgs e)
+    private void OnSshSessionClosed(object? sender, SshSessionClosedEventArgs e)
     {
         if (sender is SshSession sshSession)
         {
-            sshSession.Closed -= SshSession_Closed;
+            sshSession.Authenticating -= OnSshServerAuthenticating;
+            sshSession.Disconnected -= OnSshSessionDisconnected;
+            sshSession.Request -= OnRequest;
+            sshSession.Closed -= OnSshSessionClosed;
         }
+
+        ConnectionStatus = ConnectionStatus.Disconnected;
+        this.SshSession = null;
 
         OnSshSessionClosed(e.Exception);
         if (e.Reason == SshDisconnectReason.ConnectionLost)
