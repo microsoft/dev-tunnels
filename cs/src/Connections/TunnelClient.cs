@@ -184,7 +184,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             // Unsubscribe event handler from the previous session.
             this.SshSession.Authenticating -= OnSshServerAuthenticating;
             this.SshSession.Disconnected -= OnSshSessionDisconnected;
-            this.SshSession.Closed -= SshSession_Closed;
+            this.SshSession.Closed -= OnSshSessionClosed;
             this.SshSession.Request -= OnRequest;
         }
 
