@@ -377,6 +377,55 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <summary>
+        /// Sends an HTTP request with body content to the tunnel management API, targeting a
+        /// specific tunnel.
+        /// </summary>
+        /// <param name="method">HTTP request method.</param>
+        /// <param name="tunnel">Tunnel that the request is targeting.</param>
+        /// <param name="accessTokenScopes">Required list of access scopes for tokens in
+        /// <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that could be used to
+        /// authorize the request.</param>
+        /// <param name="path">Optional request sub-path relative to the tunnel.</param>
+        /// <param name="query">Optional query string to append to the request.</param>
+        /// <param name="options">Request options.</param>
+        /// <param name="body">Request body object.</param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <typeparam name="TRequest">The request body type.</typeparam>
+        /// <typeparam name="TResult">The expected result type.</typeparam>
+        /// <returns>Result of the request.</returns>
+        /// <exception cref="ArgumentException">The request parameters were invalid.</exception>
+        /// <exception cref="UnauthorizedAccessException">The request was unauthorized or forbidden.
+        /// The WWW-Authenticate response header may be captured in the exception data.</exception>
+        /// <exception cref="InvalidOperationException">The request would have caused a conflict
+        /// or exceeded a limit.</exception>
+        /// <exception cref="HttpRequestException">The request failed for some other
+        /// reason.</exception>
+        /// <remarks>
+        /// This protected method enables subclasses to support additional tunnel management APIs.
+        /// Authentication will use one of the following, if available, in order of preference:
+        ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
+        ///   - token provided by the user token callback
+        ///   - token in <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that matches
+        ///     one of the scopes in <paramref name="accessTokenScopes"/>
+        /// </remarks>
+        protected async Task<TResult?> SendTunnelV2RequestAsync<TRequest, TResult>(
+            HttpMethod method,
+            TunnelV2 tunnel,
+            string[] accessTokenScopes,
+            string? path,
+            string? query,
+            TunnelRequestOptions? options,
+            TRequest? body,
+            CancellationToken cancellation)
+            where TRequest : class
+        {
+            var uri = BuildTunnelV2Uri(tunnel, path, query, options);
+            var authHeader = await GetV2AuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
+            return await SendRequestAsync<TRequest, TResult>(
+                method, uri, options, authHeader, body, cancellation);
+        }
+
+        /// <summary>
         /// Sends an HTTP request to the tunnel management API.
         /// </summary>
         /// <param name="method">HTTP request method.</param>
@@ -790,6 +839,46 @@ namespace Microsoft.DevTunnels.Management
                 options);
         }
 
+        private Uri BuildTunnelV2Uri(
+            TunnelV2 tunnel,
+            string? path,
+            string? query,
+            TunnelRequestOptions? options)
+        {
+            Requires.NotNull(tunnel, nameof(tunnel));
+
+            string tunnelPath;
+            var pathBase = TunnelsPath;
+            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
+            {
+                tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
+            }
+            else
+            {
+                Requires.Argument(
+                    !string.IsNullOrEmpty(tunnel.Name),
+                    nameof(tunnel),
+                    "Tunnel object must include either a name or tunnel ID and cluster ID.");
+
+                if (string.IsNullOrEmpty(tunnel.Domain))
+                {
+
+                    tunnelPath = $"{pathBase}/{tunnel.Name}";
+                }
+                else
+                {
+                    // Append the domain to the tunnel name.
+                    tunnelPath = $"{pathBase}/{tunnel.Name}.{tunnel.Domain}";
+                }
+            }
+
+            return BuildUri(
+                tunnel.ClusterId,
+                tunnelPath + (!string.IsNullOrEmpty(path) ? path : string.Empty),
+                query,
+                options);
+        }
+
         private async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
             Tunnel? tunnel,
             string[]? accessTokenScopes,
@@ -814,6 +903,41 @@ namespace Microsoft.DevTunnels.Management
                 foreach (var scope in accessTokenScopes)
                 {
                     if (tunnel.TryGetValidAccessToken(scope, out string? accessToken))
+                    {
+                        authHeader = new AuthenticationHeaderValue(
+                            TunnelAuthenticationScheme, accessToken);
+                        break;
+                    }
+                }
+            }
+
+            return authHeader;
+        }
+
+        private async Task<AuthenticationHeaderValue?> GetV2AuthenticationHeaderAsync(
+            TunnelV2? tunnel,
+            string[]? accessTokenScopes,
+            TunnelRequestOptions? options)
+        {
+            AuthenticationHeaderValue? authHeader = null;
+
+            if (!string.IsNullOrEmpty(options?.AccessToken))
+            {
+                TunnelAccessTokenProperties.ValidateTokenExpiration(options.AccessToken);
+                authHeader = new AuthenticationHeaderValue(
+                    TunnelAuthenticationScheme, options.AccessToken);
+            }
+
+            if (authHeader == null)
+            {
+                authHeader = await this.userTokenCallback();
+            }
+
+            if (authHeader == null && tunnel?.AccessTokens != null && accessTokenScopes != null)
+            {
+                foreach (var scope in accessTokenScopes)
+                {
+                    if (tunnel.TryGetValidAccessTokenV2(scope, out string? accessToken))
                     {
                         authHeader = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);
