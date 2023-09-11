@@ -408,7 +408,7 @@ namespace Microsoft.DevTunnels.Management
         ///   - token in <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that matches
         ///     one of the scopes in <paramref name="accessTokenScopes"/>
         /// </remarks>
-        protected async Task<TResult?> SendTunnelV2RequestAsync<TRequest, TResult>(
+        protected async Task<TResult?> SendTunnelRequestAsync<TRequest, TResult>(
             HttpMethod method,
             TunnelV2 tunnel,
             string[] accessTokenScopes,
@@ -419,8 +419,8 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
             where TRequest : class
         {
-            var uri = BuildTunnelV2Uri(tunnel, path, query, options);
-            var authHeader = await GetV2AuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
+            var uri = BuildTunnelUri(tunnel, path, query, options);
+            var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
             return await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
         }
@@ -507,8 +507,9 @@ namespace Microsoft.DevTunnels.Management
             where TRequest : class
         {
             var uri = BuildUri(clusterId, path, query, options);
+            Tunnel? tunnel = null;
             var authHeader = await GetAuthenticationHeaderAsync(
-                tunnel: null, accessTokenScopes: null, options);
+                tunnel: tunnel, accessTokenScopes: null, options);
             return await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
         }
@@ -839,7 +840,7 @@ namespace Microsoft.DevTunnels.Management
                 options);
         }
 
-        private Uri BuildTunnelV2Uri(
+        private Uri BuildTunnelUri(
             TunnelV2 tunnel,
             string? path,
             string? query,
@@ -914,7 +915,7 @@ namespace Microsoft.DevTunnels.Management
             return authHeader;
         }
 
-        private async Task<AuthenticationHeaderValue?> GetV2AuthenticationHeaderAsync(
+        private async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
             TunnelV2? tunnel,
             string[]? accessTokenScopes,
             TunnelRequestOptions? options)
@@ -937,7 +938,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 foreach (var scope in accessTokenScopes)
                 {
-                    if (tunnel.TryGetValidAccessTokenV2(scope, out string? accessToken))
+                    if (tunnel.TryGetValidAccessToken(scope, out string? accessToken))
                     {
                         authHeader = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);
