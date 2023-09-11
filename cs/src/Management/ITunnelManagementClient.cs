@@ -33,7 +33,7 @@ namespace Microsoft.DevTunnels.Management
         /// Ports will not be included in the returned tunnels unless
         /// <see cref="TunnelRequestOptions.IncludePorts"/> is set to true.
         /// </remarks>
-        Task<Tunnel[]> ListTunnelsAsync(
+        Task<TunnelV2[]> ListTunnelsAsync(
             string? clusterId = null,
             string? domain = null,
             TunnelRequestOptions? options = null,
@@ -53,7 +53,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
         [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Tags instead.")]
-        Task<Tunnel[]> SearchTunnelsAsync(
+        Task<TunnelV2[]> SearchTunnelsAsync(
             string[] tags,
             bool requireAllTags,
             string? clusterId = null,
