@@ -25,7 +25,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     private readonly CancellationTokenSource disposeCts = new();
     private Task? reconnectTask;
     private ConnectionStatus connectionStatus;
-    private Tunnel? tunnel;
+    private TunnelV2? tunnel;
 
     /// <summary>
     /// Creates a new instance of the <see cref="TunnelConnection"/> class.
@@ -79,7 +79,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// Get the tunnel that is being hosted or connected to.
     /// May be null if the tunnel client used relay service URL and tunnel access token directly.
     /// </summary>
-    public Tunnel? Tunnel {
+    public TunnelV2? Tunnel {
         get => this.tunnel;
         private set
         {
@@ -194,7 +194,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// <summary>
     /// Assign the tunnel and connect to it.
     /// </summary>
-    protected Task ConnectTunnelSessionAsync(Tunnel tunnel, CancellationToken cancellation)
+    protected Task ConnectTunnelSessionAsync(TunnelV2 tunnel, CancellationToken cancellation)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         return ConnectTunnelSessionAsync(async (cancellation) =>
@@ -327,7 +327,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// </summary>
     /// <remarks>
     /// If <see cref="Tunnel"/>, <see cref="ManagementClient"/> are not null and <see cref="RefreshingTunnelAccessToken"/> is null,
-    /// refreshes the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(Tunnel, TunnelRequestOptions?, CancellationToken)"/>
+    /// refreshes the tunnel with <see cref="ITunnelManagementClient.GetTunnelAsync(TunnelV2, TunnelRequestOptions?, CancellationToken)"/>
     /// and this gets the token off it based on <see cref="TunnelAccessScope"/>.
     /// Otherwise, invokes <see cref="RefreshingTunnelAccessToken"/> event.
     /// </remarks>

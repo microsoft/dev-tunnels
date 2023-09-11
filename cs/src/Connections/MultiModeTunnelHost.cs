@@ -68,7 +68,7 @@ namespace Microsoft.DevTunnels.Connections
 
         /// <inheritdoc />
         public async Task StartAsync(
-            Tunnel tunnel,
+            TunnelV2 tunnel,
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnel, nameof(tunnel));

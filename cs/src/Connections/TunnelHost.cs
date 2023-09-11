@@ -91,7 +91,7 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     }
 
     /// <inheritdoc />
-    public async Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
+    public async Task StartAsync(TunnelV2 tunnel, CancellationToken cancellation)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
 

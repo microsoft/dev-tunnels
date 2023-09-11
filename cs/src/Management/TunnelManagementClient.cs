@@ -410,7 +410,7 @@ namespace Microsoft.DevTunnels.Management
         /// </remarks>
         protected async Task<TResult?> SendTunnelRequestAsync<TRequest, TResult>(
             HttpMethod method,
-            TunnelV2 tunnel,
+            Tunnel tunnel,
             string[] accessTokenScopes,
             string? path,
             string? query,
@@ -841,7 +841,7 @@ namespace Microsoft.DevTunnels.Management
         }
 
         private Uri BuildTunnelUri(
-            TunnelV2 tunnel,
+            Tunnel tunnel,
             string? path,
             string? query,
             TunnelRequestOptions? options)
@@ -903,7 +903,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 foreach (var scope in accessTokenScopes)
                 {
-                    if (tunnel.TryGetValidAccessTokenV2(scope, out string? accessToken))
+                    if (tunnel.TryGetValidAccessToken(scope, out string? accessToken))
                     {
                         authHeader = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);
@@ -916,7 +916,7 @@ namespace Microsoft.DevTunnels.Management
         }
 
         private async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
-            TunnelV2? tunnel,
+            Tunnel? tunnel,
             string[]? accessTokenScopes,
             TunnelRequestOptions? options)
         {

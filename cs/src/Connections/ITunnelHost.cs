@@ -52,7 +52,7 @@ public interface ITunnelHost : IAsyncDisposable
     /// access to host the tunnel.</exception>
     /// <exception cref="TunnelConnectionException">The host failed to connect to the
     /// tunnel, or connected but encountered a protocol errror.</exception>
-    Task StartAsync(Tunnel tunnel, CancellationToken cancellation);
+    Task StartAsync(TunnelV2 tunnel, CancellationToken cancellation);
 
     /// <summary>
     /// Refreshes ports that were updated using the management API.
