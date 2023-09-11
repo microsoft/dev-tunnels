@@ -632,8 +632,11 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             sshSession.Closed -= OnSshSessionClosed;
         }
 
-        ConnectionStatus = ConnectionStatus.Disconnected;
+        // Clear the SSH session before setting the status to Disconnected, in case the
+        // status-changed event handler immediately triggers annother connection attempt.
         this.SshSession = null;
+
+        ConnectionStatus = ConnectionStatus.Disconnected;
 
         OnSshSessionClosed(e.Exception);
         if (e.Reason == SshDisconnectReason.ConnectionLost)
