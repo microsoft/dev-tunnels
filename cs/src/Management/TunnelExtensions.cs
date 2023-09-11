@@ -88,7 +88,7 @@ public static class TunnelExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException">If <paramref name="tunnel"/> or <paramref name="accessTokenScope"/> is null.</exception>
     /// <exception cref="ArgumentException">If <paramref name="accessTokenScope"/> is empty.</exception>
-    public static bool TryGetAccessTokenV2(this TunnelV2 tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
+    public static bool TryGetAccessToken(this TunnelV2 tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNullOrEmpty(accessTokenScope, nameof(accessTokenScope));
@@ -184,13 +184,13 @@ public static class TunnelExtensions
     /// <exception cref="ArgumentNullException">If <paramref name="tunnel"/> or <paramref name="accessTokenScope"/> is null.</exception>
     /// <exception cref="ArgumentException">If <paramref name="accessTokenScope"/> is empty.</exception>
     /// <exception cref="UnauthorizedAccessException">If the token for <paramref name="accessTokenScope"/> is expired.</exception>
-    public static bool TryGetValidAccessTokenV2(this TunnelV2 tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
+    public static bool TryGetValidAccessToken(this TunnelV2 tunnel, string accessTokenScope, [NotNullWhen(true)] out string? accessToken)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNullOrEmpty(accessTokenScope, nameof(accessTokenScope));
 
         accessToken = null;
-        if (tunnel.TryGetAccessTokenV2(accessTokenScope, out var result))
+        if (tunnel.TryGetAccessToken(accessTokenScope, out var result))
         {
             TunnelAccessTokenProperties.ValidateTokenExpiration(result);
             accessToken = result;
