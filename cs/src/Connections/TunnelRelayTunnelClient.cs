@@ -171,9 +171,10 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// </summary>
     protected virtual async Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
     {
-        if (isReconnect && SshSession != null && !SshSession.IsClosed)
+        var session = SshSession;
+        if (isReconnect && session != null && !session.IsClosed)
         {
-            await SshSession.ReconnectAsync(stream, cancellation);
+            await session.ReconnectAsync(stream, cancellation);
         }
         else
         {
