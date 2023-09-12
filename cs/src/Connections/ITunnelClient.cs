@@ -83,9 +83,9 @@ public interface ITunnelClient : IAsyncDisposable
     /// <exception cref="UnauthorizedAccessException">The client does not have
     /// access to connect to the tunnel.</exception>
     /// <exception cref="TunnelConnectionException">The client failed to connect to the
-    /// tunnel, or connected but encountered a protocol errror.</exception>
-    Task ConnectAsync(Tunnel tunnel, CancellationToken cancellation)
-        => ConnectAsync(tunnel, hostId: null, cancellation);
+    /// tunnel, or connected but encountered a protocol error.</exception>
+    Task ConnectAsync(Tunnel tunnel, CancellationToken cancellation = default)
+        => ConnectAsync(tunnel, options: null, cancellation);
 
     /// <summary>
     /// Connects to a tunnel.
@@ -104,8 +104,33 @@ public interface ITunnelClient : IAsyncDisposable
     /// <exception cref="UnauthorizedAccessException">The client does not have
     /// access to connect to the tunnel.</exception>
     /// <exception cref="TunnelConnectionException">The client failed to connect to the
-    /// tunnel, or connected but encountered a protocol errror.</exception>
-    Task ConnectAsync(Tunnel tunnel, string? hostId, CancellationToken cancellation);
+    /// tunnel, or connected but encountered a protocol error.</exception>
+    [Obsolete("Use ConnectAsync(Tunnel, TunnelConnectionOptions, CancellationToken) instead.")]
+    Task ConnectAsync(Tunnel tunnel, string? hostId, CancellationToken cancellation)
+        => ConnectAsync(
+            tunnel,
+            new TunnelConnectionOptions { HostId = hostId }, cancellation);
+
+    /// <summary>
+    /// Connects to a tunnel.
+    /// </summary>
+    /// <param name="tunnel">Tunnel to connect to.</param>
+    /// <param name="options">Options for the connection.</param>
+    /// <param name="cancellation">Cancellation token.</param>
+    /// <remarks>
+    /// Once connected, tunnel ports are forwarded by the host.
+    /// The client either needs to be logged in as the owner identity, or have
+    /// an access token with "connect" scope for the tunnel.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The tunnel was not found.</exception>
+    /// <exception cref="UnauthorizedAccessException">The client does not have
+    /// access to connect to the tunnel.</exception>
+    /// <exception cref="TunnelConnectionException">The client failed to connect to the
+    /// tunnel, or connected but encountered a protocol error.</exception>
+    Task ConnectAsync(
+        Tunnel tunnel,
+        TunnelConnectionOptions? options,
+        CancellationToken cancellation = default);
 
     /// <summary>
     /// Waits for the specified port to be forwarded by the remote host.

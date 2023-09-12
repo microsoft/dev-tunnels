@@ -106,6 +106,12 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     /// <inheritdoc />
     protected override async Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
     {
+        if (this.hostSession != null)
+        {
+            throw new InvalidOperationException(
+                "Already connected. Use separate instances to connect to multiple tunnels.");
+        }
+
         Requires.NotNull(Tunnel!, nameof(Tunnel));
         Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
 
@@ -232,8 +238,8 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         }
 
         this.hostSession = session;
-        session.ChannelOpening += HostSession_ChannelOpening;
-        session.Closed += HostSession_Closed;
+        session.ChannelOpening += OnHostSessionChannelOpening;
+        session.Closed += OnHostSessionClosed;
         await session.ConnectAsync(stream, cancellation);
 
         // SSH authentication is skipped in V1 protocol, optional in V2 depending on whether the
@@ -267,11 +273,11 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
     #endregion IRelayClient
 
-    private void HostSession_Closed(object? sender, SshSessionClosedEventArgs e)
+    private void OnHostSessionClosed(object? sender, SshSessionClosedEventArgs e)
     {
         var session = (SshClientSession)sender!;
-        session.Closed -= HostSession_Closed;
-        session.ChannelOpening -= HostSession_ChannelOpening;
+        session.Closed -= OnHostSessionClosed;
+        session.ChannelOpening -= OnHostSessionChannelOpening;
         this.hostSession = null;
         Trace.TraceInformation(
             "Connection to host tunnel relay closed.{0}",
@@ -283,7 +289,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         }
     }
 
-    private void HostSession_ChannelOpening(object? sender, SshChannelOpeningEventArgs e)
+    private void OnHostSessionChannelOpening(object? sender, SshChannelOpeningEventArgs e)
     {
         if (!e.IsRemoteRequest)
         {

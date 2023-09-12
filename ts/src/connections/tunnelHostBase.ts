@@ -4,6 +4,7 @@
 import { TunnelPort, Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
+    CancellationToken,
     KeyPair,
     SshAlgorithms,
     SshClientSession,
@@ -16,6 +17,7 @@ import { TunnelConnectionSession } from './tunnelConnectionSession';
 import { TunnelHost } from './tunnelHost';
 import { tunnelSshSessionClass } from './tunnelSshSessionClass';
 import { isNode } from './sshHelpers';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 
 /**
  * Base class for Hosts that host one tunnel and use SSH to connect to the tunnel host service.
@@ -86,9 +88,22 @@ export class TunnelHostBase
     /**
      * Connects to a tunnel as a host and starts accepting incoming connections
      * to local ports as defined on the tunnel.
+     * @deprecated Use `connect()` instead.
      */
     public async start(tunnel: Tunnel): Promise<void> {
-        await this.connectTunnelSession(tunnel);
+        await this.connect(tunnel);
+    }
+
+    /**
+     * Connects to a tunnel as a host and starts accepting incoming connections
+     * to local ports as defined on the tunnel.
+     */
+    public async connect(
+        tunnel: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
+    ): Promise<void> {
+        await this.connectTunnelSession(tunnel, options, cancellation);
     }
 
     public refreshPorts(): Promise<void> {

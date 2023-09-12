@@ -123,6 +123,7 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
         string clientRelayUri,
         string? accessToken,
         string[]? hostPublicKeys,
+        TunnelConnectionOptions options,
         CancellationToken cancellation)
     {
         Requires.NotNull(clientRelayUri, nameof(clientRelayUri));
@@ -133,7 +134,8 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
                 this.accessToken = accessToken;
                 this.HostPublicKeys = hostPublicKeys;
                 this.connector = new RelayTunnelConnector(this);
-                return this.connector.ConnectSessionAsync(isReconnect: false, cancellation);
+                return this.connector.ConnectSessionAsync(
+                    options, isReconnect: false, cancellation);
             },
             cancellation);
     }
@@ -169,9 +171,10 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// </summary>
     protected virtual async Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
     {
-        if (isReconnect && SshSession != null && !SshSession.IsClosed)
+        var session = SshSession;
+        if (isReconnect && session != null && !session.IsClosed)
         {
-            await SshSession.ReconnectAsync(stream, cancellation);
+            await session.ReconnectAsync(stream, cancellation);
         }
         else
         {
@@ -188,7 +191,7 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     TraceSource IRelayClient.Trace => Trace;
 
     /// <inheritdoc />
-    Task<Stream> IRelayClient.CreateSessionStreamAsync(CancellationToken cancellation) => 
+    Task<Stream> IRelayClient.CreateSessionStreamAsync(CancellationToken cancellation) =>
         CreateSessionStreamAsync(cancellation);
 
     /// <inheritdoc />

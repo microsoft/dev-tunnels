@@ -7,8 +7,8 @@ import {
     TunnelManagementClient,
     TunnelRequestOptions,
 } from '@microsoft/dev-tunnels-management';
-import { CancellationError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
-import { CancellationToken } from 'vscode-jsonrpc';
+import { CancellationError, ObjectDisposedError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
+import { CancellationToken, CancellationTokenSource, Disposable } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';
 import { TunnelConnector } from './tunnelConnector';
@@ -23,11 +23,13 @@ import {
 import { PortRelayRequestMessage } from './messages/portRelayRequestMessage';
 import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 import * as http from 'http';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 
 /**
  * Tunnel connection session.
  */
 export class TunnelConnectionSession extends TunnelConnectionBase implements TunnelSession {
+    private connectionOptions?: TunnelConnectionOptions;
     private connectedTunnel: Tunnel | null = null;
     private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;
@@ -120,7 +122,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      * Creates a stream to the tunnel.
      */
     public createSessionStream(
-        cancellation: CancellationToken,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
     ): Promise<{ stream: Stream, protocol: string }> {
         throw new Error('Not implemented');
     }
@@ -262,9 +265,10 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      * Start reconnecting if the tunnel connection is not yet disposed.
      */
     protected startReconnectingIfNotDisposed() {
-        this.connectionStatus = ConnectionStatus.Disconnected;
-
-        if (!this.isDisposed && !this.reconnectPromise) {
+        if (!this.isDisposed &&
+            (this.connectionOptions?.enableReconnect ?? true) &&
+            !this.reconnectPromise
+        ) {
             this.reconnectPromise = (async () => {
                 try {
                     await this.connectTunnelSession();
@@ -276,6 +280,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 }
                 this.reconnectPromise = undefined;
             })();
+        } else {
+            this.connectionStatus = ConnectionStatus.Disconnected;
         }
     }
 
@@ -311,18 +317,17 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      *     Undefined if the connection information is already known and the tunnel is not needed.
      *     Tunnel object to get the connection information from that tunnel.
      */
-    public async connectTunnelSession(tunnel?: Tunnel, httpAgent?: http.Agent): Promise<void> {
+    public async connectTunnelSession(
+        tunnel?: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken): Promise<void> {
         if (tunnel) {
-            if (this.tunnel) {
-                throw new Error(
-                    'Already connected to a tunnel. Use separate instances to connect to multiple tunnels.',
-                );
-            }
-            
             this.tunnel = tunnel;
         }
-
-        this.httpAgent ??= httpAgent;
+        if (options) {
+            this.connectionOptions = options;
+            this.httpAgent ??= options?.httpAgent;
+        }
 
         await this.connectSession(async () => {
             const isReconnect = this.isReconnectable && !tunnel;
@@ -330,7 +335,31 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             if (!this.connector) {
                 this.connector = this.createTunnelConnector();
             }
-            await this.connector.connectSession(isReconnect, this.disposeToken);
+
+            const disposables: Disposable[] = [];
+            if (cancellation) {
+                // Link the provided cancellation token with the dispose token.
+                const linkedCancellationSource = new CancellationTokenSource();
+                disposables.push(
+                    linkedCancellationSource,
+                    cancellation.onCancellationRequested(() => linkedCancellationSource!.cancel()),
+                    this.disposeToken.onCancellationRequested(() => linkedCancellationSource!.cancel()),
+                );
+                cancellation = linkedCancellationSource.token;
+            } else {
+                cancellation = this.disposeToken;
+            }
+            
+            try {
+                await this.connector.connectSession(isReconnect, options, cancellation);
+            } catch (e) {
+                if (e instanceof CancellationError) {
+                    this.throwIfDisposed();
+                }
+                throw e;
+            } finally {
+                for (const disposable of disposables) disposable.dispose();
+            }
         });
     }
 

@@ -133,14 +133,16 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         }
     }
 
-
     /// <summary>
     /// Get host Id the client is connecting to.
     /// </summary>
     public string? HostId { get; private set; }
 
     /// <inheritdoc />
-    public async Task ConnectAsync(Tunnel tunnel, string? hostId, CancellationToken cancellation)
+    public override async Task ConnectAsync(
+        Tunnel tunnel,
+        TunnelConnectionOptions? options,
+        CancellationToken cancellation = default)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNull(tunnel.Endpoints!, nameof(Tunnel.Endpoints));
@@ -157,8 +159,8 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
                 "No hosts are currently accepting connections for the tunnel.");
         }
 
-        HostId = hostId;
-        await ConnectTunnelSessionAsync(tunnel, cancellation);
+        HostId = options?.HostId;
+        await ConnectTunnelSessionAsync(tunnel, options, cancellation);
     }
 
     /// <inheritdoc />
@@ -177,13 +179,14 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     protected async Task StartSshSessionAsync(Stream stream, CancellationToken cancellation)
     {
         ConnectionStatus = ConnectionStatus.Connecting;
-        if (this.SshSession != null)
+        var session = this.SshSession;
+        if (session != null)
         {
             // Unsubscribe event handler from the previous session.
-            this.SshSession.Authenticating -= OnSshServerAuthenticating;
-            this.SshSession.Disconnected -= OnSshSessionDisconnected;
-            this.SshSession.Closed -= SshSession_Closed;
-            this.SshSession.Request -= OnRequest;
+            session.Authenticating -= OnSshServerAuthenticating;
+            session.Disconnected -= OnSshSessionDisconnected;
+            session.Closed -= OnSshSessionClosed;
+            session.Request -= OnRequest;
         }
 
         // Enable V1 reconnect only if connector is set as reconnect depends on it.
@@ -207,29 +210,31 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         // Enable port-forwarding via the SSH protocol.
         clientConfig.AddService(typeof(PortForwardingService));
 
-        this.SshSession = new SshClientSession(clientConfig, Trace.WithName("SSH"));
-        this.SshSession.Authenticating += OnSshServerAuthenticating;
-        this.SshSession.Disconnected += OnSshSessionDisconnected;
+        session = new SshClientSession(clientConfig, Trace.WithName("SSH"));
+        this.SshSession = session;
+        session.Authenticating += OnSshServerAuthenticating;
+        session.Disconnected += OnSshSessionDisconnected;
+        session.Closed += OnSshSessionClosed;
 
-        SshPortForwardingService = this.SshSession.ActivateService<PortForwardingService>();
+        SshPortForwardingService = session.ActivateService<PortForwardingService>();
         ConfigurePortForwardingService();
-        this.SshSession.Request += OnRequest;
+        session.Request += OnRequest;
 
         SshSessionCreated();
-        await this.SshSession.ConnectAsync(stream, cancellation);
+        await session.ConnectAsync(stream, cancellation);
 
         // SSH authentication is required in V1 protocol, optional in V2 depending on whether the
         // session enabled key exchange (as indicated by having a session ID or not). In either case
         // a password is not required. Strong authentication was already handled by the relay
         // service via the tunnel access token used for the websocket connection.
-        if (this.SshSession.SessionId != null)
+        if (session.SessionId != null)
         {
             var clientCredentials = new SshClientCredentials("tunnel", password: null);
-            if (!await this.SshSession.AuthenticateAsync(clientCredentials))
+            if (!await session.AuthenticateAsync(clientCredentials))
             {
                 // Server authentication happens first, and if it succeeds then it sets a principal.
                 throw new SshConnectionException(
-                    this.SshSession.Principal == null ?
+                    session.Principal == null ?
                     "SSH server authentication failed." : "SSH client authentication failed.");
             }
         }
@@ -239,6 +244,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
     private void OnSshSessionDisconnected(object? sender, EventArgs e) =>
         StartReconnectTaskIfNotDisposed();
+
 
     private void ConfigurePortForwardingService()
     {
@@ -499,9 +505,10 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     /// </summary>
     protected virtual void SshSessionCreated()
     {
-        // All tunnel hosts and clients should disable this because they do not use it (for now) and leaving it enabled is a potential security issue.
+        // All tunnel hosts and clients should disable this because they do not use it (for now)
+        // and leaving it enabled is a potential security issue.
         SshPortForwardingService!.AcceptRemoteConnectionsForNonForwardedPorts = false;
-        SshSession!.Closed += SshSession_Closed;
+        SshSession!.Closed += OnSshSessionClosed;
         IsSshSessionActive = true;
     }
 
@@ -551,10 +558,10 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     {
         await base.DisposeAsync();
 
-        if (this.SshSession != null)
+        var session = this.SshSession;
+        if (session != null)
         {
-            await this.SshSession.CloseAsync(SshDisconnectReason.ByApplication);
-            this.SshSession.Dispose();
+            await session.CloseAsync(SshDisconnectReason.ByApplication);
         }
 
         SshSessionClosed = null;
@@ -605,7 +612,8 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     /// <inheritdoc />
     public async Task RefreshPortsAsync(CancellationToken cancellation)
     {
-        if (SshSession == null || SshSession.IsClosed)
+        var session = this.SshSession;
+        if (session == null || session.IsClosed)
         {
             throw new InvalidOperationException("Not connected.");
         }
@@ -615,15 +623,24 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             RequestType = TunnelHost.RefreshPortsRequestType,
             WantReply = true,
         };
-        await SshSession.RequestAsync(request, cancellation);
+        await session.RequestAsync(request, cancellation);
     }
 
-    private void SshSession_Closed(object? sender, SshSessionClosedEventArgs e)
+    private void OnSshSessionClosed(object? sender, SshSessionClosedEventArgs e)
     {
         if (sender is SshSession sshSession)
         {
-            sshSession.Closed -= SshSession_Closed;
+            sshSession.Authenticating -= OnSshServerAuthenticating;
+            sshSession.Disconnected -= OnSshSessionDisconnected;
+            sshSession.Request -= OnRequest;
+            sshSession.Closed -= OnSshSessionClosed;
         }
+
+        // Clear the SSH session before setting the status to Disconnected, in case the
+        // status-changed event handler immediately triggers annother connection attempt.
+        this.SshSession = null;
+
+        ConnectionStatus = ConnectionStatus.Disconnected;
 
         OnSshSessionClosed(e.Exception);
         if (e.Reason == SshDisconnectReason.ConnectionLost)

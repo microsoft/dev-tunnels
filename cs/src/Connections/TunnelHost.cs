@@ -91,18 +91,19 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
     }
 
     /// <inheritdoc />
-    public async Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
+    [Obsolete("Use ConnectAsync() instead.")]
+    public Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
+        => ConnectAsync(tunnel, cancellation);
+
+    /// <inheritdoc />
+    public override async Task ConnectAsync(
+        Tunnel tunnel,
+        TunnelConnectionOptions? options,
+        CancellationToken cancellation = default)
     {
         Requires.NotNull(tunnel, nameof(tunnel));
-
-        if (Tunnel != null)
-        {
-            throw new InvalidOperationException(
-                "Already hosting a tunnel. Use separate instances to host multiple tunnels.");
-        }
-
         Requires.NotNull(tunnel.Ports!, nameof(tunnel.Ports));
-        await ConnectTunnelSessionAsync(tunnel, cancellation);
+        await ConnectTunnelSessionAsync(tunnel, options, cancellation);
     }
 
     internal async Task ForwardPortAsync(

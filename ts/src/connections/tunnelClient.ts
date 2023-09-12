@@ -6,6 +6,7 @@ import { TunnelConnectionMode, Tunnel } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TunnelConnection } from './tunnelConnection';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 
 /**
  * Interface for a client capable of making a connection
@@ -41,10 +42,20 @@ export interface TunnelClient extends TunnelConnection {
 
     /**
      * Connects to a tunnel.
-     * @param tunnel
-     * @param hostId
+     * 
+     * Once connected, tunnel ports are forwarded by the host.
+     * The client either needs to be logged in as the owner identity, or have
+     * an access token with "connect" scope for the tunnel.
+     *
+     * @param tunnel Tunnel to connect to.
+     * @param options Options for the connection.
+     * @param cancellation Optional cancellation token for the connection.
      */
-    connect(tunnel: Tunnel, hostId?: string): Promise<void>;
+    connect(
+        tunnel: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
+    ): Promise<void>;
 
     /**
      * Opens a stream connected to a remote port for clients which cannot forward local TCP ports, such as browsers.

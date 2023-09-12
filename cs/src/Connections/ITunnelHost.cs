@@ -51,8 +51,49 @@ public interface ITunnelHost : IAsyncDisposable
     /// <exception cref="UnauthorizedAccessException">The host does not have
     /// access to host the tunnel.</exception>
     /// <exception cref="TunnelConnectionException">The host failed to connect to the
-    /// tunnel, or connected but encountered a protocol errror.</exception>
-    Task StartAsync(Tunnel tunnel, CancellationToken cancellation);
+    /// tunnel, or connected but encountered a protocol error.</exception>
+    [Obsolete("Use ConnectAsync() instead.")]
+    Task StartAsync(Tunnel tunnel, CancellationToken cancellation)
+        => ConnectAsync(tunnel, options: null, cancellation);
+
+    /// <summary>
+    /// Connects to a tunnel as a host and starts accepting incoming connections
+    /// to local ports as defined on the tunnel.
+    /// </summary>
+    /// <param name="tunnel">Information about the tunnel to connect to.</param>
+    /// <param name="cancellation">Cancellation token.</param>
+    /// <remarks>
+    /// The host either needs to be logged in as the owner identity, or have
+    /// an access token with "host" scope for the tunnel.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The tunnel was not found.</exception>
+    /// <exception cref="UnauthorizedAccessException">The host does not have
+    /// access to host the tunnel.</exception>
+    /// <exception cref="TunnelConnectionException">The host failed to connect to the
+    /// tunnel, or connected but encountered a protocol error.</exception>
+    Task ConnectAsync(Tunnel tunnel, CancellationToken cancellation = default)
+        => ConnectAsync(tunnel, options: null, cancellation);
+
+    /// <summary>
+    /// Connects to a tunnel as a host and starts accepting incoming connections
+    /// to local ports as defined on the tunnel.
+    /// </summary>
+    /// <param name="tunnel">Information about the tunnel to connect to.</param>
+    /// <param name="options">Options for the connection.</param>
+    /// <param name="cancellation">Cancellation token.</param>
+    /// <remarks>
+    /// The host either needs to be logged in as the owner identity, or have
+    /// an access token with "host" scope for the tunnel.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The tunnel was not found.</exception>
+    /// <exception cref="UnauthorizedAccessException">The host does not have
+    /// access to host the tunnel.</exception>
+    /// <exception cref="TunnelConnectionException">The host failed to connect to the
+    /// tunnel, or connected but encountered a protocol error.</exception>
+    Task ConnectAsync(
+        Tunnel tunnel,
+        TunnelConnectionOptions? options,
+        CancellationToken cancellation = default);
 
     /// <summary>
     /// Refreshes ports that were updated using the management API.

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { CancellationError } from '@microsoft/dev-tunnels-ssh';
+import { CancellationError, ObjectDisposedError } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken, CancellationTokenSource, Emitter } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEventArgs';
@@ -174,7 +174,7 @@ export class TunnelConnectionBase implements TunnelConnection {
      */
     protected throwIfDisposed() {
         if (this.isDisposed) {
-            throw new CancellationError('The tunnel connection is disposed.');
+            throw new ObjectDisposedError('The tunnel connection is disposed.');
         }
     }
 }
