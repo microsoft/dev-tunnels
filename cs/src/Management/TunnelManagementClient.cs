@@ -66,7 +66,7 @@ namespace Microsoft.DevTunnels.Management
         /// </summary>
         public string[] TunnelsApiVersions =
         {
-            "2023-08-27-preview"
+            "2023-09-27-preview"
         };
 
 
