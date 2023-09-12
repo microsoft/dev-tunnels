@@ -195,7 +195,7 @@ public static class TunnelConstraints
     /// excluding vowels and 'y' (to avoid accidentally generating any random words).
     /// </summary>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string NewTunnelIdChars = "0123456789abcdfghijklmnopqrstuvwxyz";
+    public const string NewTunnelIdChars = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel ID strings.
