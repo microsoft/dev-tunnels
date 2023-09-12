@@ -154,7 +154,7 @@ public class TunnelConstraints {
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
      * excluding vowels and 'y' (to avoid accidentally generating any random words).
      */
-    public static final String newTunnelIdChars = "0123456789abcdfghijklmnopqrstuvwxyz";
+    public static final String newTunnelIdChars = "0123456789abcdefghijklmnopqrstuvwxyz-";
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
