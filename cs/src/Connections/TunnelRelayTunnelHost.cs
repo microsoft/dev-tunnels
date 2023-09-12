@@ -92,7 +92,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
         if (Tunnel != null)
         {
-            tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, this.hostId, TunnelConnectionMode.TunnelRelay));
+            tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, this.hostId + "-relay"));
         }
 
         foreach (RemotePortForwarder forwarder in RemoteForwarders.Values)
@@ -116,6 +116,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
         var endpoint = new TunnelRelayTunnelEndpoint
         {
+            Id = this.hostId + "-relay",
             HostId = this.hostId,
             HostPublicKeys = hostPublicKeys,
         };
