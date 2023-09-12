@@ -1101,12 +1101,14 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
 
             var path = $"{EndpointsApiSubPath}/{endpoint.Id}";
+            var query = GetApiQuery();
+            query += "&connectionMode=" + endpoint.ConnectionMode;
             var result = (await this.SendTunnelRequestAsync<TunnelEndpoint, TunnelEndpoint>(
                 HttpMethod.Put,
                 tunnel,
                 HostAccessTokenScope,
                 path,
-                query: GetApiQuery(),
+                query: query,
                 options,
                 endpoint,
                 cancellation))!;
