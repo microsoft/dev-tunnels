@@ -151,7 +151,7 @@ namespace TunnelConstraints {
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
      * excluding vowels and 'y' (to avoid accidentally generating any random words).
      */
-    export const newTunnelIdChars: string = '0123456789abcdefghijklmnopqrstuvwxyz';
+    export const newTunnelIdChars: string = '0123456789abcdefghijklmnopqrstuvwxyz-';
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -159,7 +159,7 @@ namespace TunnelConstraints {
      * Tunnel IDs are fixed-length and have a limited character set of numbers and
      * lowercase letters (minus vowels and y).
      */
-    export const newTunnelIdPattern: string = '[' + TunnelConstraints.newTunnelIdChars + ']{3,60}';
+    export const newTunnelIdPattern: string = '[a-z0-9][a-z0-9-]{1,58}[a-z0-9]';
 
     /**
      * Regular expression that can match or validate tunnel ID strings.

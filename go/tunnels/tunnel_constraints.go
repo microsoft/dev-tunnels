@@ -90,13 +90,13 @@ const (
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
-	TunnelConstraintsNewTunnelIDChars = "0123456789abcdefghijklmnopqrstuvwxyz"
+	TunnelConstraintsNewTunnelIDChars = "0123456789abcdefghijklmnopqrstuvwxyz-"
 
 	// Regular expression that can match or validate tunnel ID strings.
 	//
 	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
 	// letters (minus vowels and y).
-	TunnelConstraintsNewTunnelIDPattern = "[" + TunnelConstraintsNewTunnelIDChars + "]{3,60}"
+	TunnelConstraintsNewTunnelIDPattern = "[a-z0-9][a-z0-9-]{1,58}[a-z0-9]"
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
