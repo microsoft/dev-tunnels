@@ -70,7 +70,7 @@ public class TunnelPortV2
     [MaxLength(MaxTags)]
     [ArrayStringLength(TagMaxLength, MinimumLength = TagMinLength)]
     [ArrayRegularExpression(TagPattern)]
-    public string[]? Tags { get; set; }
+    public string[]? Labels { get; set; }
 
     /// <summary>
     /// Gets or sets the protocol of the tunnel port.

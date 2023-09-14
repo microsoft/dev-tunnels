@@ -24,7 +24,7 @@ type TunnelPortV2 struct {
 	Description        string `json:"description,omitempty"`
 
 	// Gets or sets the tags of the port.
-	Tags               []string `json:"tags,omitempty"`
+	Labels             []string `json:"labels,omitempty"`
 
 	// Gets or sets the protocol of the tunnel port.
 	//
