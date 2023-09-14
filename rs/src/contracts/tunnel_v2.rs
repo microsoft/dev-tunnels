@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use crate::contracts::TunnelAccessControl;
 use crate::contracts::TunnelEndpoint;
 use crate::contracts::TunnelOptions;
-use crate::contracts::TunnelPort;
+use crate::contracts::TunnelPortV2;
 use crate::contracts::TunnelStatus;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -65,7 +65,7 @@ pub struct TunnelV2 {
     // tunnel properties. (For the latter, use APIs to create/update/delete individual
     // ports instead.)
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub ports: Vec<TunnelPort>,
+    pub ports: Vec<TunnelPortV2>,
 
     // Gets or sets the time in UTC of tunnel creation.
     pub created: Option<DateTime<Utc>>,
