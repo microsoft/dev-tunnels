@@ -6,7 +6,7 @@
 import { TunnelAccessControl } from './tunnelAccessControl';
 import { TunnelEndpoint } from './tunnelEndpoint';
 import { TunnelOptions } from './tunnelOptions';
-import { TunnelPort } from './tunnelPort';
+import { TunnelPortV2 } from './tunnelPortV2';
 import { TunnelStatus } from './tunnelStatus';
 
 /**
@@ -85,7 +85,7 @@ export interface TunnelV2 {
      * tunnel properties. (For the latter, use APIs to create/update/delete individual
      * ports instead.)
      */
-    ports?: TunnelPort[];
+    ports?: TunnelPortV2[];
 
     /**
      * Gets or sets the time in UTC of tunnel creation.

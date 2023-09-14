@@ -96,7 +96,7 @@ public class TunnelV2 {
      * ports instead.)
      */
     @Expose
-    public TunnelPort[] ports;
+    public TunnelPortV2[] ports;
 
     /**
      * Gets or sets the time in UTC of tunnel creation.

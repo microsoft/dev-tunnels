@@ -57,7 +57,7 @@ type TunnelV2 struct {
 	// creating a tunnel. It is omitted when listing (multiple) tunnels, or when updating
 	// tunnel properties. (For the latter, use APIs to create/update/delete individual ports
 	// instead.)
-	Ports            []TunnelPort `json:"ports,omitempty"`
+	Ports            []TunnelPortV2 `json:"ports,omitempty"`
 
 	// Gets or sets the time in UTC of tunnel creation.
 	Created          *time.Time `json:"created,omitempty"`
