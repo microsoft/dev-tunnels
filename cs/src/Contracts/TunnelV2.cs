@@ -125,7 +125,7 @@ public class TunnelV2
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [MaxLength(TunnelMaxPorts)]
-    public TunnelPort[]? Ports { get; set; }
+    public TunnelPortV2[]? Ports { get; set; }
 
     /// <summary>
     /// Gets or sets the time in UTC of tunnel creation.
