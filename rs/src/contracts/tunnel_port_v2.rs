@@ -31,7 +31,7 @@ pub struct TunnelPortV2 {
 
     // Gets or sets the tags of the port.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub tags: Vec<String>,
+    pub labels: Vec<String>,
 
     // Gets or sets the protocol of the tunnel port.
     //
