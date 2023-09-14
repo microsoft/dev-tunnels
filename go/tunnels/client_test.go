@@ -178,7 +178,11 @@ func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 }
 
 func TestPortForwarding(t *testing.T) {
-	listen, err := net.Listen("tcp", "127.0.0.1:8000")
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8000")
+	if err != nil {
+		t.Fatal(fmt.Errorf("failed to listen: %v", err))
+	}
+	listen, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		t.Fatal(fmt.Errorf("failed to listen: %v", err))
 	}
@@ -229,23 +233,17 @@ func TestPortForwarding(t *testing.T) {
 			done <- fmt.Errorf("forward port failed: %v", err)
 			return
 		}
-
 		if err := c.WaitForForwardedPort(ctx, streamPort); err != nil {
 			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
 			return
 		}
-
-		if err := c.WaitForForwardedPort(ctx, streamPort); err != nil {
-			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
+		err = c.ConnectToForwardedPort(ctx, listen, streamPort)
+		if err != nil {
+			done <- fmt.Errorf("connect to forwarded port failed: %v", err)
 			return
 		}
-		_, errc := c.ConnectToForwardedPort(ctx, &listen, streamPort)
-		select {
-		case err := <-errc:
-			done <- err
-		default:
-			done <- nil
-		}
+
+		done <- nil
 	}()
 
 	go func() {
