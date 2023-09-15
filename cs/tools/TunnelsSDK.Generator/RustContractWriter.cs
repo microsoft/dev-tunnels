@@ -407,13 +407,21 @@ internal class RustContractWriter : ContractWriter
         var ignoreWhenDefault = property.GetAttributes().Any(ad =>
             ad.AttributeClass?.Name == "JsonIgnoreAttribute" && ad.NamedArguments.Any(arg => arg.Value.Value is int i && i == 2));
 
+        var serdeDeclarations = new List<string>();
+
+        if (property.TryGetJsonPropertyName(out var jsonPropertyName))
+        {
+            serdeDeclarations.Add($"rename = \"{jsonPropertyName}\"");
+        }
+
         var isArray = csType.EndsWith("[]");
         if (isArray)
         {
             csType = csType.Substring(0, csType.Length - 2);
             if (isNullable || ignoreWhenDefault)
             {
-                s.AppendLine("    #[serde(skip_serializing_if = \"Vec::is_empty\", default)]");
+                serdeDeclarations.Add("skip_serializing_if = \"Vec::is_empty\"");
+                serdeDeclarations.Add("default");
                 isNullable = false;
                 ignoreWhenDefault = false;
             }
@@ -421,7 +429,12 @@ internal class RustContractWriter : ContractWriter
 
         if (ignoreWhenDefault)
         {
-            s.AppendLine("    #[serde(default)]");
+            serdeDeclarations.Add("default");
+        }
+
+        if (serdeDeclarations.Count > 0)
+        {
+            s.AppendLine($"    #[serde({string.Join(", ", serdeDeclarations)})]");
         }
 
         // todo@connor4312: the service currently returns a non-standard format

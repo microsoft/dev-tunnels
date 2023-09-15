@@ -15,17 +15,18 @@ namespace Microsoft.DevTunnels.Generator;
 
 internal class JavaContractWriter : ContractWriter
 {
-    public const String JavaDateTimeType = "java.util.Date";
-    public const String PackageName = "com.microsoft.tunnels.contracts";
-    public const String RegexPatternType = "java.util.regex.Pattern";
-    public const String SerializedNameTag = "@SerializedName";
-    public const String SerializedNameType = $"com.google.gson.annotations.SerializedName";
-    public const String ClassDeclarationHeader = "public class";
-    public const String StaticClassDeclarationHeader = "public static class";
-    public const String EnumDeclarationHeader = "public enum";
-    public const String GsonExposeType = "com.google.gson.annotations.Expose";
-    public const String GsonExposeTag = "@Expose";
-    public const String DeprecatedTag = "@Deprecated";
+    public const string JavaDateTimeType = "java.util.Date";
+    public const string PackageName = "com.microsoft.tunnels.contracts";
+    public const string RegexPatternType = "java.util.regex.Pattern";
+    public const string SerializedNameTag = "@SerializedName";
+    public const string SerializedNameType = $"com.google.gson.annotations.SerializedName";
+    public const string ClassDeclarationHeader = "public class";
+    public const string StaticClassDeclarationHeader = "public static class";
+    public const string EnumDeclarationHeader = "public enum";
+    public const string GsonExposeType = "com.google.gson.annotations.Expose";
+    public const string GsonExposeTag = "@Expose";
+    public const string GsonSerializedNameTagFormat = "@SerializedName(\"{0}\")";
+    public const string DeprecatedTag = "@Deprecated";
 
     public JavaContractWriter(string repoRoot, string csNamespace) : base(repoRoot, csNamespace)
     {
@@ -184,6 +185,11 @@ internal class JavaContractWriter : ContractWriter
                 $"{type.Name}Statics.{javaName}" : GetMemberInitializer(member);
 
             if (!member.IsStatic && field?.IsConst != true) {
+                if (property.TryGetJsonPropertyName(out var jsonPropertyName))
+                {
+                    s.AppendLine($"{indent}    {string.Format(GsonSerializedNameTagFormat, jsonPropertyName)}");
+                }
+
                 s.AppendLine($"{indent}    {GsonExposeTag}");
             }
 

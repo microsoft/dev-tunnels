@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Microsoft.DevTunnels.Generator;
 
@@ -386,6 +387,10 @@ internal class GoContractWriter : ContractWriter
     private string GetJsonTagForProperty(IPropertySymbol property)
     {
         var tag = TSContractWriter.ToCamelCase(property.Name);
+        if (property.TryGetJsonPropertyName(out var jsonPropertyName))
+        {
+            tag = jsonPropertyName!;
+        }
 
         var jsonIgnoreAttribute = property.GetAttributes()
             .SingleOrDefault((a) => a.AttributeClass!.Name == "JsonIgnoreAttribute");

@@ -134,6 +134,11 @@ internal class TSContractWriter : ContractWriter
             isNullable |= propertyType == "bool";
 
             var tsName = ToCamelCase(property.Name);
+            if (property.TryGetJsonPropertyName(out var jsonPropertyName))
+            {
+                tsName = jsonPropertyName!;
+            }
+
             var tsType = GetTSTypeForCSType(propertyType, tsName, imports);
 
             s.AppendLine($"{indent}    {tsName}{(isNullable ? "?" : "")}: {tsType};");

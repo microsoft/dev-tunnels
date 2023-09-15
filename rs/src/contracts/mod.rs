@@ -3,6 +3,9 @@
 // Generated from RustContractWriter.cs
 
 mod cluster_details;
+mod error_codes;
+mod error_detail;
+mod inner_error_detail;
 mod local_network_tunnel_endpoint;
 mod named_rate_status;
 mod problem_details;
@@ -21,6 +24,8 @@ mod tunnel_constraints;
 mod tunnel_endpoint;
 mod tunnel_environments;
 mod tunnel_header_names;
+mod tunnel_list_by_region;
+mod tunnel_list_by_region_response;
 mod tunnel_list_response;
 mod tunnel_options;
 mod tunnel_port;
@@ -34,6 +39,9 @@ mod tunnel_status;
 mod tunnel_v2;
 
 pub use cluster_details::*;
+pub use error_codes::*;
+pub use error_detail::*;
+pub use inner_error_detail::*;
 pub use local_network_tunnel_endpoint::*;
 pub use named_rate_status::*;
 pub use problem_details::*;
@@ -52,6 +60,8 @@ pub use tunnel_constraints::*;
 pub use tunnel_endpoint::*;
 pub use tunnel_environments::*;
 pub use tunnel_header_names::*;
+pub use tunnel_list_by_region::*;
+pub use tunnel_list_by_region_response::*;
 pub use tunnel_list_response::*;
 pub use tunnel_options::*;
 pub use tunnel_port::*;
