@@ -5,6 +5,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 /**
  * An object containing more specific information than the current object about the error.

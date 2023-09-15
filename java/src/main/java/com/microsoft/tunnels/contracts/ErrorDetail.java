@@ -5,6 +5,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 /**
  * The top-level error object whose code matches the x-ms-error-code response header

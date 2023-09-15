@@ -18,14 +18,13 @@ internal class JavaContractWriter : ContractWriter
     public const string JavaDateTimeType = "java.util.Date";
     public const string PackageName = "com.microsoft.tunnels.contracts";
     public const string RegexPatternType = "java.util.regex.Pattern";
-    public const string SerializedNameTag = "@SerializedName";
+    public const string SerializedNameTagFormat = "@SerializedName(\"{0}\")";
     public const string SerializedNameType = $"com.google.gson.annotations.SerializedName";
     public const string ClassDeclarationHeader = "public class";
     public const string StaticClassDeclarationHeader = "public static class";
     public const string EnumDeclarationHeader = "public enum";
     public const string GsonExposeType = "com.google.gson.annotations.Expose";
     public const string GsonExposeTag = "@Expose";
-    public const string GsonSerializedNameTagFormat = "@SerializedName(\"{0}\")";
     public const string DeprecatedTag = "@Deprecated";
 
     public JavaContractWriter(string repoRoot, string csNamespace) : base(repoRoot, csNamespace)
@@ -143,6 +142,7 @@ internal class JavaContractWriter : ContractWriter
 
         CopyConstructor(s, indent + "    ", type, imports);
 
+        var serializedNameTagImportAdded = false;
         foreach (var member in type.GetMembers()
             .Where((m) => m is IPropertySymbol || m is IFieldSymbol field))
         {
@@ -187,7 +187,12 @@ internal class JavaContractWriter : ContractWriter
             if (!member.IsStatic && field?.IsConst != true) {
                 if (property.TryGetJsonPropertyName(out var jsonPropertyName))
                 {
-                    s.AppendLine($"{indent}    {string.Format(GsonSerializedNameTagFormat, jsonPropertyName)}");
+                    s.AppendLine($"{indent}    {string.Format(SerializedNameTagFormat, jsonPropertyName)}");
+                    if (!serializedNameTagImportAdded)
+                    {
+                        imports.Add(SerializedNameType);
+                        serializedNameTagImportAdded = true;
+                    }
                 }
 
                 s.AppendLine($"{indent}    {GsonExposeTag}");
@@ -260,7 +265,7 @@ internal class JavaContractWriter : ContractWriter
                 s.AppendLine($"{indent}    {DeprecatedTag}");
             }
 
-            s.AppendLine($"{indent}    {SerializedNameTag}(\"{field.Name}\")");
+            s.AppendLine($"{indent}    {string.Format(SerializedNameTagFormat, field.Name)}");
             s.AppendLine($"{indent}    {field.Name},");
         }
         s.AppendLine($"{indent}}}");
