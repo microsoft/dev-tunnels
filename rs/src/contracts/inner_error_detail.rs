@@ -15,5 +15,5 @@ pub struct InnerErrorDetail {
     // An object containing more specific information than the current object about the
     // error.
     #[serde(rename = "innererror")]
-    pub inner_error: Option<InnerErrorDetail>,
+    pub inner_error: Option<Box<InnerErrorDetail>>,
 }

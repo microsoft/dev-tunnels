@@ -448,8 +448,16 @@ internal class RustContractWriter : ContractWriter
         if (csType.StartsWith(this.csNamespace + "."))
         {
             rsType = csType.Substring(csNamespace.Length + 1);
-            if (rsType != parentType.Name) {
+            if (rsType != parentType.Name)
+            {
                 imports.Add($"crate::contracts::{rsType}");
+            }
+            else if (!isArray)
+            {
+                // Use box for a recursive type
+                // https://doc.rust-lang.org/book/ch15-01-box.html#enabling-recursive-types-with-boxes
+                // Serde supports boxes, fixed in https://github.com/serde-rs/serde/issues/45
+                rsType = $"Box<{rsType}>";
             }
         }
         else
