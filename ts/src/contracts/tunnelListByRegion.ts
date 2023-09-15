@@ -23,7 +23,7 @@ export interface TunnelListByRegion {
     /**
      * List of tunnels.
      */
-    value: Tunnel[];
+    value?: Tunnel[];
 
     /**
      * Error detail if getting list of tunnels in the region failed.

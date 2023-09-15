@@ -17,6 +17,7 @@ pub struct TunnelListByRegion {
     pub cluster_id: Option<String>,
 
     // List of tunnels.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub value: Vec<Tunnel>,
 
     // Error detail if getting list of tunnels in the region failed.

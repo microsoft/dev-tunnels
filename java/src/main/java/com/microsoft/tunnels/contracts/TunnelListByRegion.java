@@ -26,7 +26,7 @@ public class TunnelListByRegion {
      * List of tunnels.
      */
     @Expose
-    public Tunnel[] value = Array.Empty<Tunnel>();
+    public Tunnel[] value;
 
     /**
      * Error detail if getting list of tunnels in the region failed.

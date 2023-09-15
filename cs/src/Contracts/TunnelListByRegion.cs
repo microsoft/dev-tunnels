@@ -29,7 +29,7 @@ public  class TunnelListByRegion
     /// List of tunnels.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Tunnel[] Value { get; set; } = Array.Empty<Tunnel>();
+    public Tunnel[]? Value { get; set; }
 
     /// <summary>
     /// Error detail if getting list of tunnels in the region failed.

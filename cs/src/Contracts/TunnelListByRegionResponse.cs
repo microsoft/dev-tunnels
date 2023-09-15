@@ -16,7 +16,8 @@ public class TunnelListByRegionResponse
     /// <summary>
     /// List of tunnels
     /// </summary>
-    public TunnelListByRegion[] Value { get; set; } = Array.Empty<TunnelListByRegion>();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TunnelListByRegion[]? Value { get; set; }
 
     /// <summary>
     /// Link to get next page of results.

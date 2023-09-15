@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelListByRegionResponse {
     // List of tunnels
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub value: Vec<TunnelListByRegion>,
 
     // Link to get next page of results.

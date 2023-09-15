@@ -14,7 +14,7 @@ public class TunnelListByRegionResponse {
      * List of tunnels
      */
     @Expose
-    public TunnelListByRegion[] value = Array.Empty<TunnelListByRegion>();
+    public TunnelListByRegion[] value;
 
     /**
      * Link to get next page of results.

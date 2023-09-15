@@ -12,7 +12,7 @@ export interface TunnelListByRegionResponse {
     /**
      * List of tunnels
      */
-    value: TunnelListByRegion[];
+    value?: TunnelListByRegion[];
 
     /**
      * Link to get next page of results.
