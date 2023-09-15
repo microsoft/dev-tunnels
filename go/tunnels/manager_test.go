@@ -128,6 +128,62 @@ func TestListTunnels(t *testing.T) {
 	}
 }
 
+func TestGetAccessToken(t *testing.T) {
+	url, err := url.Parse(serviceUrl)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	tunnel := &Tunnel{
+		AccessTokens: map[TunnelAccessScope]string{
+			TunnelAccessScopeConnect: "connect_token",
+			TunnelAccessScopeManage:  "manage_token",
+		},
+	}
+
+	// Test that the connect scope returns the connect token
+	token := managementClient.getAccessToken(tunnel, &TunnelRequestOptions{}, []TunnelAccessScope{TunnelAccessScopeConnect})
+	if token != "Tunnel connect_token" {
+		t.Errorf("connect token was not successfully retrieved, got %s", token)
+	}
+
+	// Test that the manage scope returns the manage token
+	token = managementClient.getAccessToken(tunnel, &TunnelRequestOptions{}, []TunnelAccessScope{TunnelAccessScopeManage})
+	if token != "Tunnel manage_token" {
+		t.Errorf("manage token was not successfully retrieved, got %s", token)
+	}
+
+	// Test that when providing multiple scopes (manage:ports, connect, manage), either of the tokens is returned (since maps don't guarantee iteration order)
+	token = managementClient.getAccessToken(tunnel, &TunnelRequestOptions{}, []TunnelAccessScope{TunnelAccessScopeManagePorts, TunnelAccessScopeConnect, TunnelAccessScopeManage})
+	if token != "Tunnel connect_token" && token != "Tunnel manage_token" {
+		t.Errorf("token was not successfully retrieved, got %s", token)
+	}
+
+	// Update the tunnel to use a space delimited string for the access token type
+	tunnel = &Tunnel{
+		AccessTokens: map[TunnelAccessScope]string{
+			"connect manage": "connect_and_manage_token",
+		},
+	}
+
+	// Test that the connect scope returns the token
+	token = managementClient.getAccessToken(tunnel, &TunnelRequestOptions{}, []TunnelAccessScope{TunnelAccessScopeConnect})
+	if token != "Tunnel connect_and_manage_token" {
+		t.Errorf("token was not successfully retrieved, got %s", token)
+	}
+
+	// Test that the manage scope returns the token
+	token = managementClient.getAccessToken(tunnel, &TunnelRequestOptions{}, []TunnelAccessScope{TunnelAccessScopeManage})
+	if token != "Tunnel connect_and_manage_token" {
+		t.Errorf("token was not successfully retrieved, got %s", token)
+	}
+}
+
 func TestTunnelCreateUpdateDelete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -717,7 +773,6 @@ func TestTunnelEndpoints(t *testing.T) {
 	}
 }
 
-
 func TestResourceStatusUnmarshal(t *testing.T) {
 	var test1 = []byte("{ \"current\": 3, \"limit\": 10 }")
 	var result1 ResourceStatus
@@ -726,7 +781,7 @@ func TestResourceStatusUnmarshal(t *testing.T) {
 		t.Error(err)
 	}
 
-	if (result1.Limit == 0) {
+	if result1.Limit == 0 {
 		t.Errorf("Limit was not deserialized")
 	}
 
@@ -743,9 +798,9 @@ func TestResourceStatusUnmarshal(t *testing.T) {
 }
 
 func TestValidTokenScopes(t *testing.T) {
-	var validScopes = TunnelAccessScopes{ "host", "connect" }
-	var invalidScopes = TunnelAccessScopes{ "invalid", "connect" }
-	var multiScopes = TunnelAccessScopes{ "host connect", "manage" }
+	var validScopes = TunnelAccessScopes{"host", "connect"}
+	var invalidScopes = TunnelAccessScopes{"invalid", "connect"}
+	var multiScopes = TunnelAccessScopes{"host connect", "manage"}
 
 	if err := validScopes.valid(nil, false); err != nil {
 		t.Error(err)
