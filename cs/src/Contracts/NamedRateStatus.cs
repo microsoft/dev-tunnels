@@ -9,7 +9,6 @@ namespace Microsoft.DevTunnels.Contracts;
 /// </summary>
 public class NamedRateStatus : RateStatus
 {
-
     /// <summary>
     /// The name of the rate status.
     /// </summary>
