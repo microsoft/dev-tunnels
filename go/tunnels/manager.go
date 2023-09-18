@@ -661,17 +661,12 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 		tokensLoop:
 			for tokenScope, token := range tunnel.AccessTokens {
 				// Each key may be either a single scope or space-delimited list of scopes.
-				if strings.Contains(string(tokenScope), " ") {
-					var scopes = strings.Split(string(tokenScope), " ")
-					for _, s := range scopes {
-						if s == string(scope) {
-							accessToken = token
-							break tokensLoop
-						}
+				var scopes = strings.Split(string(tokenScope), " ")
+				for _, s := range scopes {
+					if s == string(scope) {
+						accessToken = token
+						break tokensLoop
 					}
-				} else {
-					accessToken = token
-					break
 				}
 			}
 
