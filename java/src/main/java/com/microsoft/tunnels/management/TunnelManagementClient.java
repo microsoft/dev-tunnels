@@ -385,6 +385,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.tags = tunnel.tags;
     converted.options = tunnel.options;
     converted.accessControl = tunnel.accessControl;
+    converted.customExpiration = tunnel.customExpiration;
     converted.endpoints = tunnel.endpoints;
     if (tunnel.accessControl != null && tunnel.accessControl.entries != null) {
       List<TunnelAccessControlEntry> entries = Arrays.asList(tunnel.accessControl.entries);
