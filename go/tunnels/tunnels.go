@@ -20,6 +20,7 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 		Tags:        tunnel.Tags,
 		Options:     tunnel.Options,
 		Endpoints:   tunnel.Endpoints,
+		CustomExpiration: tunnel.CustomExpiration,
 	}
 	if tunnel.AccessControl != nil {
 		var newEntries []TunnelAccessControlEntry
