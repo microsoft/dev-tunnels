@@ -10,7 +10,7 @@ import (
 	"github.com/rodaine/table"
 )
 
-const PackageVersion = "0.0.21"
+const PackageVersion = "0.0.22"
 
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	convertedTunnel := &Tunnel{
@@ -20,6 +20,7 @@ func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 		Tags:        tunnel.Tags,
 		Options:     tunnel.Options,
 		Endpoints:   tunnel.Endpoints,
+		CustomExpiration: tunnel.CustomExpiration,
 	}
 	if tunnel.AccessControl != nil {
 		var newEntries []TunnelAccessControlEntry

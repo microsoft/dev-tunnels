@@ -740,6 +740,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             description: tunnel.description,
             tags: tunnel.tags,
             options: tunnel.options,
+            customExpiration: tunnel.customExpiration,
             accessControl: !tunnel.accessControl
                 ? undefined
                 : { entries: tunnel.accessControl.entries.filter((ace) => !ace.isInherited) },
