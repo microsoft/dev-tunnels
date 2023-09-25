@@ -66,7 +66,7 @@ namespace Microsoft.DevTunnels.Management
         /// </summary>
         public string[] TunnelsApiVersions =
         {
-            "2023-05-23-preview"
+            "2023-09-27-preview"
         };
 
 
@@ -924,7 +924,7 @@ namespace Microsoft.DevTunnels.Management
                path: null,
                query: GetApiQuery(),
                options,
-               ConvertTunnelForRequest(tunnel),
+               ConvertTunnelForRequest(tunnel, true),
                cancellation,
                true);
             PreserveAccessTokens(tunnel, result);
@@ -944,7 +944,7 @@ namespace Microsoft.DevTunnels.Management
                 path: null,
                 query: GetApiQuery(),
                 options,
-                ConvertTunnelForRequest(tunnel),
+                ConvertTunnelForRequest(tunnel, false),
                 cancellation);
             PreserveAccessTokens(tunnel, result);
             return result!;
@@ -1177,10 +1177,11 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Removes read-only properties like tokens and status from create/update requests.
         /// </summary>
-        private Tunnel ConvertTunnelForRequest(Tunnel tunnel)
+        private Tunnel ConvertTunnelForRequest(Tunnel tunnel, bool isCreate)
         {
             return new Tunnel
             {
+                TunnelId = isCreate ? tunnel.TunnelId : null,
                 Name = tunnel.Name,
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,
