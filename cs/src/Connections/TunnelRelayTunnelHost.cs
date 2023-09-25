@@ -50,6 +50,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
     private SshClientSession? hostSession;
     private Uri? relayUri;
+    private string endpointId { get { return hostId + "-relay"; } }
 
     /// <summary>
     /// Creates a new instance of a host that connects to a tunnel via a tunnel relay.
@@ -92,7 +93,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
 
         if (Tunnel != null)
         {
-            tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, this.hostId, TunnelConnectionMode.TunnelRelay));
+            tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, endpointId));
         }
 
         foreach (RemotePortForwarder forwarder in RemoteForwarders.Values)
@@ -123,6 +124,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         var endpoint = new TunnelRelayTunnelEndpoint
         {
             HostId = this.hostId,
+            Id = this.endpointId,
             HostPublicKeys = hostPublicKeys,
         };
         List<KeyValuePair<string, string>>? additionalQueryParams = null;

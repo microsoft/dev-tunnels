@@ -37,8 +37,8 @@ public class Tunnel
     /// Gets or sets the generated ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(OldTunnelIdPattern)]
-    [StringLength(OldTunnelIdLength, MinimumLength = OldTunnelIdLength)]
+    [RegularExpression(NewTunnelIdPattern)]
+    [StringLength(NewTunnelIdMaxLength, MinimumLength = NewTunnelIdMinLength)]
     public string? TunnelId { get; set; }
 
     /// <summary>
@@ -64,10 +64,10 @@ public class Tunnel
     /// Gets or sets the tags of the tunnel.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [MaxLength(MaxTags)]
-    [ArrayStringLength(TagMaxLength, MinimumLength = TagMinLength)]
-    [ArrayRegularExpression(TagPattern)]
-    public string[]? Tags { get; set; }
+    [MaxLength(MaxLabels)]
+    [ArrayStringLength(LabelMaxLength, MinimumLength = LabelMinLength)]
+    [ArrayRegularExpression(LabelPattern)]
+    public string[]? Labels { get; set; }
 
     /// <summary>
     /// Gets or sets the optional parent domain of the tunnel, if it is not using

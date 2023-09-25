@@ -341,6 +341,7 @@ namespace Microsoft.DevTunnels.Management
         /// <param name="options">Request options.</param>
         /// <param name="body">Request body object.</param>
         /// <param name="cancellation">Cancellation token.</param>
+        /// <param name="isCreate">Whether the request is a create operation.</param>
         /// <typeparam name="TRequest">The request body type.</typeparam>
         /// <typeparam name="TResult">The expected result type.</typeparam>
         /// <returns>Result of the request.</returns>
@@ -367,59 +368,11 @@ namespace Microsoft.DevTunnels.Management
             string? query,
             TunnelRequestOptions? options,
             TRequest? body,
-            CancellationToken cancellation)
+            CancellationToken cancellation,
+            bool isCreate = false)
             where TRequest : class
         {
-            var uri = BuildTunnelUri(tunnel, path, query, options);
-            var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
-            return await SendRequestAsync<TRequest, TResult>(
-                method, uri, options, authHeader, body, cancellation);
-        }
-
-        /// <summary>
-        /// Sends an HTTP request with body content to the tunnel management API, targeting a
-        /// specific tunnel.
-        /// </summary>
-        /// <param name="method">HTTP request method.</param>
-        /// <param name="tunnel">Tunnel that the request is targeting.</param>
-        /// <param name="accessTokenScopes">Required list of access scopes for tokens in
-        /// <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that could be used to
-        /// authorize the request.</param>
-        /// <param name="path">Optional request sub-path relative to the tunnel.</param>
-        /// <param name="query">Optional query string to append to the request.</param>
-        /// <param name="options">Request options.</param>
-        /// <param name="body">Request body object.</param>
-        /// <param name="cancellation">Cancellation token.</param>
-        /// <typeparam name="TRequest">The request body type.</typeparam>
-        /// <typeparam name="TResult">The expected result type.</typeparam>
-        /// <returns>Result of the request.</returns>
-        /// <exception cref="ArgumentException">The request parameters were invalid.</exception>
-        /// <exception cref="UnauthorizedAccessException">The request was unauthorized or forbidden.
-        /// The WWW-Authenticate response header may be captured in the exception data.</exception>
-        /// <exception cref="InvalidOperationException">The request would have caused a conflict
-        /// or exceeded a limit.</exception>
-        /// <exception cref="HttpRequestException">The request failed for some other
-        /// reason.</exception>
-        /// <remarks>
-        /// This protected method enables subclasses to support additional tunnel management APIs.
-        /// Authentication will use one of the following, if available, in order of preference:
-        ///   - <see cref="TunnelRequestOptions.AccessToken"/> on <paramref name="options"/>
-        ///   - token provided by the user token callback
-        ///   - token in <paramref name="tunnel"/> <see cref="Tunnel.AccessTokens"/> that matches
-        ///     one of the scopes in <paramref name="accessTokenScopes"/>
-        /// </remarks>
-        protected async Task<TResult?> SendTunnelRequestAsync<TRequest, TResult>(
-            HttpMethod method,
-            TunnelV2 tunnel,
-            string[] accessTokenScopes,
-            string? path,
-            string? query,
-            TunnelRequestOptions? options,
-            TRequest? body,
-            CancellationToken cancellation)
-            where TRequest : class
-        {
-            var uri = BuildTunnelUri(tunnel, path, query, options);
+            var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
             return await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
@@ -804,53 +757,14 @@ namespace Microsoft.DevTunnels.Management
             Tunnel tunnel,
             string? path,
             string? query,
-            TunnelRequestOptions? options)
+            TunnelRequestOptions? options,
+            bool isCreate = false)
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
             string tunnelPath;
             var pathBase = TunnelsPath;
-            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
-            {
-                tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
-            }
-            else
-            {
-                Requires.Argument(
-                    !string.IsNullOrEmpty(tunnel.Name),
-                    nameof(tunnel),
-                    "Tunnel object must include either a name or tunnel ID and cluster ID.");
-
-                if (string.IsNullOrEmpty(tunnel.Domain))
-                {
-
-                    tunnelPath = $"{pathBase}/{tunnel.Name}";
-                }
-                else
-                {
-                    // Append the domain to the tunnel name.
-                    tunnelPath = $"{pathBase}/{tunnel.Name}.{tunnel.Domain}";
-                }
-            }
-
-            return BuildUri(
-                tunnel.ClusterId,
-                tunnelPath + (!string.IsNullOrEmpty(path) ? path : string.Empty),
-                query,
-                options);
-        }
-
-        private Uri BuildTunnelUri(
-            TunnelV2 tunnel,
-            string? path,
-            string? query,
-            TunnelRequestOptions? options)
-        {
-            Requires.NotNull(tunnel, nameof(tunnel));
-
-            string tunnelPath;
-            var pathBase = TunnelsPath;
-            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId))
+            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId) || isCreate)
             {
                 tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
             }
@@ -882,41 +796,6 @@ namespace Microsoft.DevTunnels.Management
 
         private async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
             Tunnel? tunnel,
-            string[]? accessTokenScopes,
-            TunnelRequestOptions? options)
-        {
-            AuthenticationHeaderValue? authHeader = null;
-
-            if (!string.IsNullOrEmpty(options?.AccessToken))
-            {
-                TunnelAccessTokenProperties.ValidateTokenExpiration(options.AccessToken);
-                authHeader = new AuthenticationHeaderValue(
-                    TunnelAuthenticationScheme, options.AccessToken);
-            }
-
-            if (authHeader == null)
-            {
-                authHeader = await this.userTokenCallback();
-            }
-
-            if (authHeader == null && tunnel?.AccessTokens != null && accessTokenScopes != null)
-            {
-                foreach (var scope in accessTokenScopes)
-                {
-                    if (tunnel.TryGetValidAccessToken(scope, out string? accessToken))
-                    {
-                        authHeader = new AuthenticationHeaderValue(
-                            TunnelAuthenticationScheme, accessToken);
-                        break;
-                    }
-                }
-            }
-
-            return authHeader;
-        }
-
-        private async Task<AuthenticationHeaderValue?> GetAuthenticationHeaderAsync(
-            TunnelV2? tunnel,
             string[]? accessTokenScopes,
             TunnelRequestOptions? options)
         {
@@ -1032,20 +911,22 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(tunnel, nameof(tunnel));
 
             var tunnelId = tunnel.TunnelId;
-            if (tunnelId != null)
+            if (string.IsNullOrEmpty(tunnelId))
             {
                 throw new ArgumentException(
-                    "An ID may not be specified when creating a tunnel.", nameof(tunnelId));
+                    "An ID must be specified when creating a tunnel.", nameof(tunnelId));
             }
 
-            var result = await this.SendRequestAsync<Tunnel, Tunnel>(
-                HttpMethod.Post,
-                tunnel.ClusterId,
-                TunnelsPath,
-                query: GetApiQuery(),
-                options,
-                ConvertTunnelForRequest(tunnel),
-                cancellation);
+            var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+               HttpMethod.Put,
+               tunnel,
+               ManageAccessTokenScope,
+               path: null,
+               query: GetApiQuery(),
+               options,
+               ConvertTunnelForRequest(tunnel),
+               cancellation,
+               true);
             PreserveAccessTokens(tunnel, result);
             return result!;
         }
@@ -1096,16 +977,19 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(endpoint, nameof(endpoint));
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
 
-            var path = $"{EndpointsApiSubPath}/{endpoint.HostId}/{endpoint.ConnectionMode}";
+            var path = $"{EndpointsApiSubPath}/{endpoint.Id}";
+            var query = GetApiQuery();
+            query += "&connectionMode=" + endpoint.ConnectionMode;
             var result = (await this.SendTunnelRequestAsync<TunnelEndpoint, TunnelEndpoint>(
                 HttpMethod.Put,
                 tunnel,
                 HostAccessTokenScope,
                 path,
-                query: GetApiQuery(),
+                query: query,
                 options,
                 endpoint,
                 cancellation))!;
+
 
             if (tunnel.Endpoints != null)
             {
@@ -1123,15 +1007,13 @@ namespace Microsoft.DevTunnels.Management
         /// <inheritdoc />
         public async Task<bool> DeleteTunnelEndpointsAsync(
             Tunnel tunnel,
-            string hostId,
-            TunnelConnectionMode? connectionMode,
+            string id,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default)
         {
-            Requires.NotNullOrEmpty(hostId, nameof(hostId));
+            Requires.NotNullOrEmpty(id, nameof(id));
 
-            var path = connectionMode == null ? $"{EndpointsApiSubPath}/{hostId}" :
-                    $"{EndpointsApiSubPath}/{hostId}/{connectionMode}";
+            var path = $"{EndpointsApiSubPath}/{id}";
             var result = await this.SendTunnelRequestAsync<bool>(
                 HttpMethod.Delete,
                 tunnel,
@@ -1145,7 +1027,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 // Also delete the endpoint in the local tunnel object.
                 tunnel.Endpoints = tunnel.Endpoints
-                    .Where((e) => e.HostId != hostId || e.ConnectionMode != connectionMode)
+                    .Where((e) => e.Id != id)
                     .ToArray();
             }
 
@@ -1302,7 +1184,7 @@ namespace Microsoft.DevTunnels.Management
                 Name = tunnel.Name,
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,
-                Tags = tunnel.Tags,
+                Labels = tunnel.Labels,
                 CustomExpiration = tunnel.CustomExpiration,
                 Options = tunnel.Options,
                 AccessControl = tunnel.AccessControl == null ? null : new TunnelAccessControl(
@@ -1339,7 +1221,7 @@ namespace Microsoft.DevTunnels.Management
                 Protocol = tunnelPort.Protocol,
                 IsDefault = tunnelPort.IsDefault,
                 Description = tunnelPort.Description,
-                Tags = tunnelPort.Tags,
+                Labels = tunnelPort.Labels,
                 Options = tunnelPort.Options,
                 AccessControl = tunnelPort.AccessControl == null ? null : new TunnelAccessControl(
                     tunnelPort.AccessControl.Where((ace) => !ace.IsInherited)),

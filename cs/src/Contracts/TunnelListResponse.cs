@@ -19,14 +19,14 @@ public class TunnelListResponse
     /// </summary>
     public TunnelListResponse()
     {
-        Value = Array.Empty<TunnelV2>();
+        Value = Array.Empty<Tunnel>();
     }
 
     /// <summary>
     /// List of tunnels
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public TunnelV2[] Value { get; set; }
+    public Tunnel[] Value { get; set; }
 
     /// <summary>
     /// Link to get next page of results

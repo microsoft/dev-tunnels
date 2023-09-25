@@ -152,12 +152,11 @@ public class MockTunnelManagementClient : ITunnelManagementClient
 
     public Task<bool> DeleteTunnelEndpointsAsync(
         Tunnel tunnel,
-        string hostId,
-        TunnelConnectionMode? connectionMode,
+        string Id,
         TunnelRequestOptions options = null,
         CancellationToken cancellation = default)
     {
-        Requires.NotNullOrEmpty(hostId, nameof(hostId));
+        Requires.NotNullOrEmpty(Id, nameof(Id));
 
         if (tunnel.Endpoints == null)
         {
@@ -166,8 +165,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
 
         var initialLength = tunnel.Endpoints.Length;
         tunnel.Endpoints = tunnel.Endpoints
-            .Where((ep) => ep.HostId == hostId &&
-                (connectionMode == null || ep.ConnectionMode == connectionMode))
+            .Where((ep) => ep.Id != Id)
             .ToArray();
         return Task.FromResult(tunnel.Endpoints.Length < initialLength);
     }
@@ -239,21 +237,21 @@ public class MockTunnelManagementClient : ITunnelManagementClient
 
     public Task<Tunnel[]> SearchTunnelsAsync(
         string[] tags,
-        bool requireAllTags,
+        bool requireAllLabels,
         string clusterId,
         string domain,
         TunnelRequestOptions options,
         CancellationToken cancellation)
     {
         IEnumerable<Tunnel> tunnels;
-        if (!requireAllTags)
+        if (!requireAllLabels)
         {
-            tunnels = Tunnels.Where(tunnel => (tunnel.Tags != null) && (tunnel.Tags.Intersect(tags).Count() > 0));
+            tunnels = Tunnels.Where(tunnel => (tunnel.Labels != null) && (tunnel.Labels.Intersect(tags).Count() > 0));
         }
         else
         {
-            var numTags = tags.Length;
-            tunnels = Tunnels.Where(tunnel => (tunnel.Tags != null) && (tunnel.Tags.Intersect(tags).Count() == numTags));
+            var numLabels = tags.Length;
+            tunnels = Tunnels.Where(tunnel => (tunnel.Labels != null) && (tunnel.Labels.Intersect(tags).Count() == numLabels));
         }
 
         domain ??= string.Empty;

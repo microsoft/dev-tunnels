@@ -170,9 +170,7 @@ namespace Microsoft.DevTunnels.Management
         /// </summary>
         /// <param name="tunnel">Tunnel object including at least either a tunnel name
         /// (globally unique, if configured) or tunnel ID and cluster ID.</param>
-        /// <param name="hostId">Required ID of the host for endpoint(s) to be deleted.</param>
-        /// <param name="connectionMode">Optional connection mode for endpoint(s) to be deleted,
-        /// or null to delete endpoints for all connection modes.</param>
+        /// <param name="Id">Required ID of the endpoint to be deleted.</param>
         /// <param name="options">Request options.</param>
         /// <param name="cancellation">Cancellation token.</param>
         /// <returns>True if one or more endpoints were deleted, false if none were found.</returns>
@@ -186,8 +184,7 @@ namespace Microsoft.DevTunnels.Management
         /// </remarks>
         Task<bool> DeleteTunnelEndpointsAsync(
             Tunnel tunnel,
-            string hostId,
-            TunnelConnectionMode? connectionMode,
+            string Id,
             TunnelRequestOptions? options = null,
             CancellationToken cancellation = default);
 
