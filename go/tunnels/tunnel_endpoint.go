@@ -13,7 +13,7 @@ package tunnels
 // environment or client capabilities.
 type TunnelEndpoint struct {
 	// Gets or sets the ID of this endpoint.
-	ID                   string `json:"id"`
+	ID                   string `json:"id,omitempty"`
 
 	// Gets or sets the connection mode of the endpoint.
 	//
