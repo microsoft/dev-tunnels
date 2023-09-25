@@ -28,7 +28,8 @@ public abstract class TunnelEndpoint
     /// <summary>
     /// Gets or sets the ID of this endpoint.
     /// </summary>
-    public string Id { get; set; } = null!;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Id { get; set; }
 
     /// <summary>
     /// Gets or sets the connection mode of the endpoint.

@@ -18,7 +18,7 @@ export interface TunnelEndpoint {
     /**
      * Gets or sets the ID of this endpoint.
      */
-    id: string;
+    id?: string;
 
     /**
      * Gets or sets the connection mode of the endpoint.
