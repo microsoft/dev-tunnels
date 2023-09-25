@@ -13,7 +13,7 @@ type TunnelListByRegion struct {
 	ClusterID  string `json:"clusterId,omitempty"`
 
 	// List of tunnels.
-	Value      []Tunnel `json:"value,omitempty"`
+	Value      []TunnelV2 `json:"value,omitempty"`
 
 	// Error detail if getting list of tunnels in the region failed.
 	Error      *ErrorDetail `json:"error,omitempty"`

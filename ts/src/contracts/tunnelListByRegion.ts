@@ -4,7 +4,7 @@
 /* eslint-disable */
 
 import { ErrorDetail } from './errorDetail';
-import { Tunnel } from './tunnel';
+import { TunnelV2 } from './tunnelV2';
 
 /**
  * Tunnel list by region.
@@ -23,7 +23,7 @@ export interface TunnelListByRegion {
     /**
      * List of tunnels.
      */
-    value?: Tunnel[];
+    value?: TunnelV2[];
 
     /**
      * Error detail if getting list of tunnels in the region failed.
