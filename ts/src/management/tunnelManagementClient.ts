@@ -86,14 +86,12 @@ export interface TunnelManagementClient {
     /**
      * Deletes a tunnel endpoint.
      * @param tunnel
-     * @param hostId
-     * @param connectionMode
+     * @param id
      * @param options
      */
     deleteTunnelEndpoints(
         tunnel: Tunnel,
-        hostId: string,
-        connectionMode?: TunnelConnectionMode,
+        id: string,
         options?: TunnelRequestOptions,
     ): Promise<boolean>;
 

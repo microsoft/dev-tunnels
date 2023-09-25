@@ -43,6 +43,7 @@ async function main() {
 async function startTunnelRelayHost() {
     let tunnelManagementClient = new TunnelManagementHttpClient(
         userAgent,
+        "2023-09-27-preview",
         () => Promise.resolve('Bearer'),
         'http://localhost:9900/', //'https://ci.dev.tunnels.vsengsaas.visualstudio.com/',
         new https.Agent({

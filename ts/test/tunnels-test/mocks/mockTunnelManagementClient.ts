@@ -28,11 +28,11 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         if (options?.tags) {
             if (!options.requireAllTags) {
                 tunnels = this.tunnels.filter(
-                    (tunnel) => tunnel.tags && options.tags!.some((t) => tunnel.tags!.includes(t)),
+                    (tunnel) => tunnel.labels && options.tags!.some((t) => tunnel.labels!.includes(t)),
                 );
             } else {
                 tunnels = this.tunnels.filter(
-                    (tunnel) => tunnel.tags && options.tags!.every((t) => tunnel.tags!.includes(t)),
+                    (tunnel) => tunnel.labels && options.tags!.every((t) => tunnel.labels!.includes(t)),
                 );
             }
         }
@@ -144,12 +144,11 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
 
     deleteTunnelEndpoints(
         tunnel: Tunnel,
-        hostId: string,
-        connectionMode?: TunnelConnectionMode,
+        id: string,
         options?: TunnelRequestOptions,
     ): Promise<boolean> {
-        if (!hostId) {
-            throw new Error('Host ID cannot be empty');
+        if (!id) {
+            throw new Error('ID cannot be empty');
         }
 
         if (!tunnel.endpoints) {
@@ -161,8 +160,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         let initialLength = tunnel.endpoints.length;
         tunnel.endpoints = tunnel.endpoints.filter(
             (ep) =>
-                ep.hostId == hostId &&
-                (connectionMode == null || ep.connectionMode == connectionMode),
+                ep.id == id,
         );
         return Promise.resolve(tunnel.endpoints!.length < initialLength);
     }

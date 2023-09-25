@@ -517,8 +517,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         if (this.tunnel) {
             const promise = this.managementClient!.deleteTunnelEndpoints(
                 this.tunnel,
-                this.hostId,
-                TunnelConnectionMode.TunnelRelay,
+                this.id,
             );
             promises.push(promise);
         }

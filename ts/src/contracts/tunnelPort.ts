@@ -41,7 +41,7 @@ export interface TunnelPort {
     /**
      * Gets or sets the tags of the port.
      */
-    tags?: string[];
+    labels?: string[];
 
     /**
      * Gets or sets the protocol of the tunnel port.

@@ -58,6 +58,7 @@ async function connect(port: number, options: { [name: string]: string }) {
 async function startTunnelRelayConnection() {
     let tunnelManagementClient = new TunnelManagementHttpClient(
         userAgent,
+        "2023-09-27-preview",
         () => Promise.resolve('Bearer'),
         'http://localhost:9900/');
     const tunnel: Tunnel = {

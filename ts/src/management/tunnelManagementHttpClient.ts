@@ -27,12 +27,11 @@ import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
-const apiV1Path = `/api/v1`;
-const tunnelsApiPath = apiV1Path + '/tunnels';
-const limitsApiPath = apiV1Path + '/userlimits';
+const tunnelsApiPath = '/tunnels';
+const limitsApiPath = '/userlimits';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
-const clustersApiPath = apiV1Path + '/clusters';
+const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = '/checkAvailability';
 
@@ -101,9 +100,11 @@ const readAccessTokenScopes = [
     TunnelAccessScopes.Host,
     TunnelAccessScopes.Connect,
 ];
+const apiVersions = ["2023-09-27-preview"]
 
 export class TunnelManagementHttpClient implements TunnelManagementClient {
     public additionalRequestHeaders?: { [header: string]: string };
+    public apiVersion: string;
 
     private readonly baseAddress: string;
     private readonly userTokenCallback: () => Promise<string | null>;
@@ -128,11 +129,17 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      */
     public constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
+        apiVersion: string,
         userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
         private readonly adapter?: AxiosAdapter
     ) {
+        if (apiVersions.indexOf(apiVersion) === -1) {
+            throw new TypeError(`Invalid API version: ${apiVersion}, must be one of ${apiVersions}`);
+        }
+        this.apiVersion = apiVersion;
+
         if (!userAgents) {
             throw new TypeError('User agent must be provided.');
         }
@@ -233,14 +240,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             throw new Error('An ID may not be specified when creating a tunnel.');
         }
 
-        tunnel = this.convertTunnelForRequest(tunnel);
-        const result = (await this.sendRequest<Tunnel>(
-            'POST',
-            tunnel.clusterId,
-            tunnelsApiPath,
+        const result = (await this.sendTunnelRequest<Tunnel>(
+            'PUT',
+            tunnel,
+            manageAccessTokenScope,
+            undefined,
             undefined,
             options,
-            tunnel,
+            this.convertTunnelForRequest(tunnel, true),
         ))!;
         preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
@@ -255,7 +262,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             undefined,
             options,
-            this.convertTunnelForRequest(tunnel),
+            this.convertTunnelForRequest(tunnel, false),
         ))!;
         preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
@@ -280,7 +287,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         endpoint: TunnelEndpoint,
         options?: TunnelRequestOptions,
     ): Promise<TunnelEndpoint> {
-        const path = `${endpointsApiSubPath}/${endpoint.hostId}/${endpoint.connectionMode}`;
+        if (endpoint.id == null) {
+            throw new Error('Endpoint ID must be specified when updating an endpoint.');
+        }
+        const path = `${endpointsApiSubPath}/${endpoint.id}`;
         const result = (await this.sendTunnelRequest<TunnelEndpoint>(
             'PUT',
             tunnel,
@@ -307,14 +317,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async deleteTunnelEndpoints(
         tunnel: Tunnel,
-        hostId: string,
-        connectionMode?: TunnelConnectionMode,
+        id: string,
         options?: TunnelRequestOptions,
     ): Promise<boolean> {
-        const path =
-            connectionMode == null
-                ? `${endpointsApiSubPath}/${hostId}`
-                : `${endpointsApiSubPath}/${hostId}/${connectionMode}`;
+        const path = `${endpointsApiSubPath}/${id}`;
         const result = await this.sendTunnelRequest<boolean>(
             'DELETE',
             tunnel,
@@ -329,7 +335,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (result && tunnel.endpoints) {
             // Also delete the endpoint in the local tunnel object.
             tunnel.endpoints = tunnel.endpoints.filter(
-                (e) => e.hostId !== hostId || e.connectionMode !== connectionMode,
+                (e) => e.id !== id,
             );
         }
 
@@ -733,12 +739,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return config;
     }
 
-    private convertTunnelForRequest(tunnel: Tunnel): Tunnel {
+    private convertTunnelForRequest(tunnel: Tunnel, isCreate: boolean): Tunnel {
         const convertedTunnel: Tunnel = {
+            tunnelId: isCreate ? tunnel.tunnelId : undefined,
             name: tunnel.name,
             domain: tunnel.domain,
             description: tunnel.description,
-            tags: tunnel.tags,
+            labels: tunnel.labels,
             options: tunnel.options,
             customExpiration: tunnel.customExpiration,
             accessControl: !tunnel.accessControl
@@ -765,7 +772,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             protocol: tunnelPort.protocol,
             isDefault: tunnelPort.isDefault,
             description: tunnelPort.description,
-            tags: tunnelPort.tags,
+            labels: tunnelPort.labels,
             sshUser: tunnelPort.sshUser,
             options: tunnelPort.options,
             accessControl: !tunnelPort.accessControl
@@ -821,6 +828,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (additionalQuery) {
             queryItems.push(additionalQuery);
         }
+        queryItems.push(`api-version=${this.apiVersion}`)
 
         const queryString = queryItems.join('&');
         return queryString;
