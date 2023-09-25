@@ -26,7 +26,7 @@ public class TunnelListByRegion {
      * List of tunnels.
      */
     @Expose
-    public Tunnel[] value;
+    public TunnelV2[] value;
 
     /**
      * Error detail if getting list of tunnels in the region failed.
