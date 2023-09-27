@@ -6,7 +6,7 @@
 /**
  * Tunnel constraints.
  */
-namespace TunnelConstraints {
+export namespace TunnelConstraints {
     /**
      * Min length of tunnel cluster ID.
      */
