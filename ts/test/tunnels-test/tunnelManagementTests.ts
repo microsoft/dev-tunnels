@@ -47,6 +47,7 @@ export class TunnelManagementTests {
         assert(this.lastRequest && this.lastRequest.uri);
         assert(this.lastRequest.uri.startsWith('http://' + testClusterId + '.'));
         assert(!this.lastRequest.uri.includes('global=true'));
+        assert(this.lastRequest.uri.includes('api-version=2023-09-27-preview'));
     }
 
     @test
@@ -56,6 +57,7 @@ export class TunnelManagementTests {
         assert(this.lastRequest && this.lastRequest.uri);
         assert(this.lastRequest.uri.startsWith('http://global.'));
         assert(this.lastRequest.uri.includes('global=true'));
+        assert(this.lastRequest.uri.includes('api-version=2023-09-27-preview'));
     }
 
     @test
@@ -65,6 +67,7 @@ export class TunnelManagementTests {
         assert(this.lastRequest && this.lastRequest.uri);
         assert(this.lastRequest.uri.startsWith('http://global.'));
         assert(this.lastRequest.uri.includes('includePorts=true&global=true'));
+        assert(this.lastRequest.uri.includes('api-version=2023-09-27-preview'));
     }
 
     @test
@@ -73,7 +76,8 @@ export class TunnelManagementTests {
         await this.managementClient.listUserLimits();
         assert(this.lastRequest && this.lastRequest.uri);
         assert.equal(this.lastRequest.method, 'GET');
-        assert(this.lastRequest.uri.endsWith('/api/v1/userlimits'));
+        assert(this.lastRequest.uri.includes('/userlimits'));
+        assert(this.lastRequest.uri.includes('api-version=2023-09-27-preview'));
     }
 
     @test

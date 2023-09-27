@@ -845,14 +845,25 @@ namespace Microsoft.DevTunnels.Management
                 ownedTunnelsOnly == true ? "ownedTunnelsOnly=true" : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));
-            var result = await this.SendRequestAsync<Tunnel[]>(
+            var result = await this.SendRequestAsync<TunnelListByRegionResponse>(
                 HttpMethod.Get,
                 clusterId,
                 TunnelsPath,
                 query,
                 options,
                 cancellation);
-            return result!;
+            var tunnels = new List<Tunnel>();
+            if (result?.Value != null)
+            {
+                foreach (var region in result.Value)
+                {
+                    if (region.Value != null)
+                    {
+                        tunnels.AddRange(region.Value);
+                    }
+                }
+            }
+            return tunnels.ToArray();
         }
 
         /// <inheritdoc />
@@ -1040,7 +1051,7 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            var result = await this.SendTunnelRequestAsync<TunnelPort[]>(
+            var result = await this.SendTunnelRequestAsync<TunnelPortListResponse>(
                 HttpMethod.Get,
                 tunnel,
                 ReadAccessTokenScopes,
@@ -1048,7 +1059,7 @@ namespace Microsoft.DevTunnels.Management
                 query: GetApiQuery(),
                 options,
                 cancellation);
-            return result!;
+            return result!.Value!;
         }
 
         /// <inheritdoc />

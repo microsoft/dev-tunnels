@@ -12,6 +12,8 @@ import {
     TunnelServiceProperties,
     ClusterDetails,
     NamedRateStatus,
+    TunnelListByRegionResponse,
+    TunnelPortListResponse,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -209,15 +211,23 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): Promise<Tunnel[]> {
         const queryParams = [clusterId ? null : 'global=true', domain ? `domain=${domain}` : null];
         const query = queryParams.filter((p) => !!p).join('&');
-        const results = (await this.sendRequest<Tunnel[]>(
+        const results = (await this.sendRequest<TunnelListByRegionResponse>(
             'GET',
             clusterId,
             tunnelsApiPath,
             query,
             options,
         ))!;
-        results.forEach(parseTunnelDates);
-        return results;
+        let tunnels = new Array<Tunnel>();
+        if (results.value) {
+            for (const region of results.value) {
+                if (region.value) {
+                    tunnels = tunnels.concat(region.value);
+                }
+            }
+        }
+        tunnels.forEach(parseTunnelDates);
+        return tunnels;
     }
 
     public async getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null> {
@@ -357,7 +367,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort[]> {
-        const results = (await this.sendTunnelRequest<TunnelPort[]>(
+        const results = (await this.sendTunnelRequest<TunnelPortListResponse>(
             'GET',
             tunnel,
             readAccessTokenScopes,
@@ -365,8 +375,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
         ))!;
-        results.forEach(parseTunnelPortDates);
-        return results;
+        if (results.value){
+            results.value.forEach(parseTunnelPortDates);
+        }
+        return results.value;
     }
 
     public async getTunnelPort(
