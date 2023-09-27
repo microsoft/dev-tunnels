@@ -764,7 +764,7 @@ namespace Microsoft.DevTunnels.Management
 
             string tunnelPath;
             var pathBase = TunnelsPath;
-            if (!string.IsNullOrEmpty(tunnel.ClusterId) && !string.IsNullOrEmpty(tunnel.TunnelId) || isCreate)
+            if (!string.IsNullOrEmpty(tunnel.TunnelId) && (!string.IsNullOrEmpty(tunnel.ClusterId) || isCreate))
             {
                 tunnelPath = $"{pathBase}/{tunnel.TunnelId}";
             }
@@ -855,13 +855,8 @@ namespace Microsoft.DevTunnels.Management
             var tunnels = new List<Tunnel>();
             if (result?.Value != null)
             {
-                foreach (var region in result.Value)
-                {
-                    if (region.Value != null)
-                    {
-                        tunnels.AddRange(region.Value);
-                    }
-                }
+                result.Value = result.Value.Where(t => t.Value != null).ToArray();
+                tunnels = result.Value.SelectMany(t => t.Value!).ToList();
             }
             return tunnels.ToArray();
         }
