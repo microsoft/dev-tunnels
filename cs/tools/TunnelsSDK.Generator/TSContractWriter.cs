@@ -204,7 +204,7 @@ internal class TSContractWriter : ContractWriter
     {
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
-        s.Append($"namespace {type.Name} {{");
+        s.Append($"export namespace {type.Name} {{");
 
         foreach (var member in type.GetMembers())
         {
