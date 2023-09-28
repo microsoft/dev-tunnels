@@ -26,6 +26,7 @@ import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
+import { IdGeneration } from './idGeneration';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -246,22 +247,39 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
-        if (tunnelId) {
-            throw new Error('An ID may not be specified when creating a tunnel.');
+        var idGenerated = tunnelId == undefined;
+        if (idGenerated) {
+            tunnel.tunnelId = IdGeneration.generateTunnelId();
+        }
+        for (let i = 0;i<=3; i++){
+            try {
+                const result = (await this.sendTunnelRequest<Tunnel>(
+                    'PUT',
+                    tunnel,
+                    manageAccessTokenScope,
+                    undefined,
+                    undefined,
+                    options,
+                    this.convertTunnelForRequest(tunnel, true),
+                ))!;
+                preserveAccessTokens(tunnel, result);
+                parseTunnelDates(result);
+                return result;
+            }
+            catch (error) {
+                if (idGenerated && i < 3) {
+                    // The tunnel ID was generated and there was a conflict.
+                    // Try again with a new ID.
+                    tunnel.tunnelId = IdGeneration.generateTunnelId();
+                }
+                else{
+                    throw error;
+                }
+            }
         }
 
-        const result = (await this.sendTunnelRequest<Tunnel>(
-            'PUT',
-            tunnel,
-            manageAccessTokenScope,
-            undefined,
-            undefined,
-            options,
-            this.convertTunnelForRequest(tunnel, true),
-        ))!;
-        preserveAccessTokens(tunnel, result);
-        parseTunnelDates(result);
-        return result;
+        // This should never happen but is here to satisfy the compiler.
+        throw new Error("Failed to create tunnel");
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {

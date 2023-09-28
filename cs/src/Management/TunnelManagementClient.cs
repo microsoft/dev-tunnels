@@ -917,24 +917,36 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(tunnel, nameof(tunnel));
 
             var tunnelId = tunnel.TunnelId;
-            if (string.IsNullOrEmpty(tunnelId))
+            var idGenerated = string.IsNullOrEmpty(tunnelId);
+            if (idGenerated)
             {
-                throw new ArgumentException(
-                    "An ID must be specified when creating a tunnel.", nameof(tunnelId));
+                tunnel.TunnelId = IdGeneration.GenerateTunnelId();
+            }
+            for (int retries = 0; retries <= 3; retries++)
+            {
+                try
+                {
+                    var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+                       HttpMethod.Put,
+                       tunnel,
+                       ManageAccessTokenScope,
+                       path: null,
+                       query: GetApiQuery(),
+                       options,
+                       ConvertTunnelForRequest(tunnel, true),
+                       cancellation,
+                       true);
+                    PreserveAccessTokens(tunnel, result);
+                    return result!;
+                }
+                catch (UnauthorizedAccessException) when (idGenerated && retries < 3) // The tunnel ID was already taken.
+                {
+                    tunnel.TunnelId = IdGeneration.GenerateTunnelId();
+                }
             }
 
-            var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-               HttpMethod.Put,
-               tunnel,
-               ManageAccessTokenScope,
-               path: null,
-               query: GetApiQuery(),
-               options,
-               ConvertTunnelForRequest(tunnel, true),
-               cancellation,
-               true);
-            PreserveAccessTokens(tunnel, result);
-            return result!;
+            // This code is unreachable, but the compiler still requires it.
+            throw new UnauthorizedAccessException();
         }
 
         /// <inheritdoc />
