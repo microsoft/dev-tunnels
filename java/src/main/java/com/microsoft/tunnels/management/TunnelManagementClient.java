@@ -374,20 +374,35 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Tunnel> createTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    if (tunnel.tunnelId == null) {
-      throw new IllegalArgumentException("Tunnel ID must be specified when creating a tunnel.");
+    var generatedId = tunnel.tunnelId == null;
+    if (generatedId) {
+      tunnel.tunnelId = IdGeneration.generateTunnelId();
     }
     var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
-    return requestAsync(
-        tunnel,
-        options,
-        HttpMethod.PUT,
-        uri,
-        ManageAccessTokenScope,
-        convertTunnelForRequest(tunnel, true),
-        responseType);
+    for (int i = 0; i <= 3; i++){
+      try {
+        return requestAsync(
+          tunnel,
+          options,
+          HttpMethod.PUT,
+          uri,
+          ManageAccessTokenScope,
+          convertTunnelForRequest(tunnel, true),
+          responseType);
+      }
+      catch (Exception e) {
+        if (generatedId && i < 3) {
+          tunnel.tunnelId = IdGeneration.generateTunnelId();;
+        }
+        else{
+          throw e;
+        }
+      }
+    }
+
+    throw new Error("Error creating tunnel");
   }
 
   private Tunnel convertTunnelForRequest(Tunnel tunnel, boolean isTunnelCreate) {

@@ -176,7 +176,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
 	if tunnel.TunnelID == "" {
-		return nil, fmt.Errorf("tunnelId must be set for creating a tunnel")
+		tunnel.TunnelID = generateTunnelId()
 	}
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
 	if err != nil {
@@ -187,7 +187,15 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+	var response []byte
+
+	for i := 0; i < 3; i++ {
+		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+		if err != nil {
+			convertedTunnel.TunnelID = generateTunnelId()
+			tunnel.TunnelID = convertedTunnel.TunnelID
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
 	}
