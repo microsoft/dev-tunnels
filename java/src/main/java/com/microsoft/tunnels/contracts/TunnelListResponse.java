@@ -14,7 +14,7 @@ public class TunnelListResponse {
      * List of tunnels
      */
     @Expose
-    public TunnelV2[] value;
+    public Tunnel[] value;
 
     /**
      * Link to get next page of results

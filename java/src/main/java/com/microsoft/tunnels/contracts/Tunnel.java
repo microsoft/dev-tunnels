@@ -43,7 +43,7 @@ public class Tunnel {
      * Gets or sets the tags of the tunnel.
      */
     @Expose
-    public String[] tags;
+    public String[] labels;
 
     /**
      * Gets or sets the optional parent domain of the tunnel, if it is not using the

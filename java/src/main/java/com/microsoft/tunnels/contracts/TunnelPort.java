@@ -47,7 +47,7 @@ public class TunnelPort {
      * Gets or sets the tags of the port.
      */
     @Expose
-    public String[] tags;
+    public String[] labels;
 
     /**
      * Gets or sets the protocol of the tunnel port.
