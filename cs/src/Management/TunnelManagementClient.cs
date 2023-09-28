@@ -946,7 +946,18 @@ namespace Microsoft.DevTunnels.Management
             }
 
             // This code is unreachable, but the compiler still requires it.
-            throw new UnauthorizedAccessException();
+            var result2 = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+                       HttpMethod.Put,
+                       tunnel,
+                       ManageAccessTokenScope,
+                       path: null,
+                       query: GetApiQuery(),
+                       options,
+                       ConvertTunnelForRequest(tunnel, true),
+                       cancellation,
+                       true);
+            PreserveAccessTokens(tunnel, result2);
+            return result2!;
         }
 
         /// <inheritdoc />

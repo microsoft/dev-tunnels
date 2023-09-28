@@ -393,7 +393,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           responseType);
       }
       catch (Exception e) {
-        if (generatedId && i < 3) {
+        if (generatedId) {
           tunnel.tunnelId = IdGeneration.generateTunnelId();;
         }
         else{
@@ -402,7 +402,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       }
     }
 
-    throw new Error("Error creating tunnel");
+    return requestAsync(
+          tunnel,
+          options,
+          HttpMethod.PUT,
+          uri,
+          ManageAccessTokenScope,
+          convertTunnelForRequest(tunnel, true),
+          responseType);
   }
 
   private Tunnel convertTunnelForRequest(Tunnel tunnel, boolean isTunnelCreate) {

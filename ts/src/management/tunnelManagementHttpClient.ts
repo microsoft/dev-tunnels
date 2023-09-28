@@ -267,7 +267,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 return result;
             }
             catch (error) {
-                if (idGenerated && i < 3) {
+                if (idGenerated) {
                     // The tunnel ID was generated and there was a conflict.
                     // Try again with a new ID.
                     tunnel.tunnelId = IdGeneration.generateTunnelId();
@@ -278,8 +278,18 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
         }
 
-        // This should never happen but is here to satisfy the compiler.
-        throw new Error("Failed to create tunnel");
+        const result = (await this.sendTunnelRequest<Tunnel>(
+            'PUT',
+            tunnel,
+            manageAccessTokenScope,
+            undefined,
+            undefined,
+            options,
+            this.convertTunnelForRequest(tunnel, true),
+        ))!;
+        preserveAccessTokens(tunnel, result);
+        parseTunnelDates(result);
+        return result;
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
