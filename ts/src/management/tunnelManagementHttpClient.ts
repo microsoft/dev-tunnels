@@ -35,7 +35,7 @@ const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
 const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
-const checkAvailablePath = ':checkAvailability';
+const checkAvailablePath = ':checkNameAvailability';
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
