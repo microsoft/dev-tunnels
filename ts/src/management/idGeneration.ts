@@ -9,7 +9,7 @@ export class IdGeneration {
         tunnelId += this.adjectives[Math.floor(Math.random() * this.adjectives.length)] + "-";
         tunnelId += this.nouns[Math.floor(Math.random() * this.nouns.length)] + "-";
         for (let i = 0; i < 7; i++) {
-            tunnelId += TunnelConstraints.newTunnelIdChars[Math.floor(Math.random() * TunnelConstraints.newTunnelIdChars.length)];
+            tunnelId += TunnelConstraints.newTunnelIdChars[Math.floor(Math.random() * (TunnelConstraints.newTunnelIdChars.length-1))];
         }
         return tunnelId;
     }
