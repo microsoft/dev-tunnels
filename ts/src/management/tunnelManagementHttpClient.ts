@@ -35,7 +35,7 @@ const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
 const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
-const checkAvailablePath = '/checkAvailability';
+const checkAvailablePath = ':checkAvailability';
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
@@ -405,11 +405,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort> {
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
+        const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
         const result = (await this.sendTunnelRequest<TunnelPort>(
-            'POST',
+            'PUT',
             tunnel,
             managePortsAccessTokenScopes,
-            portsApiSubPath,
+            path,
             undefined,
             options,
             tunnelPort,

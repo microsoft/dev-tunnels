@@ -41,7 +41,7 @@ namespace Microsoft.DevTunnels.Management
         private const string ClustersV1ApiPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
-        private const string CheckAvailableSubPath = "/checkNameAvailability";
+        private const string CheckAvailableSubPath = ":checkNameAvailability";
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
@@ -1084,12 +1084,13 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
+            var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
 
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
-                HttpMethod.Post,
+                HttpMethod.Put,
                 tunnel,
                 ManagePortsAccessTokenScopes,
-                PortsApiSubPath,
+                path,
                 query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
