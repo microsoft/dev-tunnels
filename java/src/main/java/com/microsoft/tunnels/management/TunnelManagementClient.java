@@ -494,7 +494,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var uri = buildUri(
         tunnel,
         options,
-        path);
+        path,
+        "connectionMode=" + endpoint.connectionMode.toString(),
+        false);
 
     final Type responseType = new TypeToken<TunnelEndpoint>() {
     }.getType();

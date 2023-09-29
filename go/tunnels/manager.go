@@ -265,7 +265,7 @@ func (m *Manager) UpdateTunnelEndpoint(
 	if endpoint.HostID == "" {
 		return nil, fmt.Errorf("endpoint hostId must be provided and must not be nil")
 	}
-	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%s", endpointsApiSubPath, endpoint.ID), options, "", false)
+	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%s", endpointsApiSubPath, endpoint.ID), options, fmt.Sprintf("connectionMode=%s", endpoint.ConnectionMode), false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
