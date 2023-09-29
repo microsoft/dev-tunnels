@@ -260,7 +260,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                     undefined,
                     undefined,
                     options,
-                    this.convertTunnelForRequest(tunnel, true),
+                    this.convertTunnelForRequest(tunnel),
                     undefined,
                     true,
                 ))!;
@@ -285,7 +285,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             undefined,
             options,
-            this.convertTunnelForRequest(tunnel, true),
+            this.convertTunnelForRequest(tunnel),
         ))!;
         preserveAccessTokens(tunnel, result2);
         parseTunnelDates(result2);
@@ -300,7 +300,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             undefined,
             options,
-            this.convertTunnelForRequest(tunnel, false),
+            this.convertTunnelForRequest(tunnel),
         ))!;
         preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
@@ -779,7 +779,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return config;
     }
 
-    private convertTunnelForRequest(tunnel: Tunnel, isCreate: boolean): Tunnel {
+    private convertTunnelForRequest(tunnel: Tunnel): Tunnel {
         const convertedTunnel: Tunnel = {
             tunnelId: tunnel.tunnelId,
             name: tunnel.name,

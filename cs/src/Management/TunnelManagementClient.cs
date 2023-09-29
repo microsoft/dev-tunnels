@@ -933,7 +933,7 @@ namespace Microsoft.DevTunnels.Management
                        path: null,
                        query: GetApiQuery(),
                        options,
-                       ConvertTunnelForRequest(tunnel, true),
+                       ConvertTunnelForRequest(tunnel),
                        cancellation,
                        true);
                     PreserveAccessTokens(tunnel, result);
@@ -953,7 +953,7 @@ namespace Microsoft.DevTunnels.Management
                        path: null,
                        query: GetApiQuery(),
                        options,
-                       ConvertTunnelForRequest(tunnel, true),
+                       ConvertTunnelForRequest(tunnel),
                        cancellation,
                        true);
             PreserveAccessTokens(tunnel, result2);
@@ -973,7 +973,7 @@ namespace Microsoft.DevTunnels.Management
                 path: null,
                 query: GetApiQuery(),
                 options,
-                ConvertTunnelForRequest(tunnel, false),
+                ConvertTunnelForRequest(tunnel),
                 cancellation);
             PreserveAccessTokens(tunnel, result);
             return result!;
@@ -1207,11 +1207,11 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Removes read-only properties like tokens and status from create/update requests.
         /// </summary>
-        private Tunnel ConvertTunnelForRequest(Tunnel tunnel, bool isCreate)
+        private Tunnel ConvertTunnelForRequest(Tunnel tunnel)
         {
             return new Tunnel
             {
-                TunnelId = isCreate ? tunnel.TunnelId : null,
+                TunnelId = tunnel.TunnelId,
                 Name = tunnel.Name,
                 Domain = tunnel.Domain,
                 Description = tunnel.Description,

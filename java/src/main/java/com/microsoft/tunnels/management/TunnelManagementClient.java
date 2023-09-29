@@ -389,7 +389,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           HttpMethod.PUT,
           uri,
           ManageAccessTokenScope,
-          convertTunnelForRequest(tunnel, true),
+          convertTunnelForRequest(tunnel),
           responseType);
       }
       catch (Exception e) {
@@ -408,15 +408,13 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           HttpMethod.PUT,
           uri,
           ManageAccessTokenScope,
-          convertTunnelForRequest(tunnel, true),
+          convertTunnelForRequest(tunnel),
           responseType);
   }
 
-  private Tunnel convertTunnelForRequest(Tunnel tunnel, boolean isTunnelCreate) {
+  private Tunnel convertTunnelForRequest(Tunnel tunnel) {
     Tunnel converted = new Tunnel();
-    if (isTunnelCreate) {
-      converted.tunnelId = tunnel.tunnelId;
-    }
+    converted.tunnelId = tunnel.tunnelId;
     converted.name = tunnel.name;
     converted.domain = tunnel.domain;
     converted.description = tunnel.description;
@@ -455,7 +453,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         HttpMethod.PUT,
         uri,
         ManageAccessTokenScope,
-        convertTunnelForRequest(tunnel, false),
+        convertTunnelForRequest(tunnel),
         responseType);
   }
 
@@ -474,7 +472,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         HttpMethod.DELETE,
         uri,
         ManageAccessTokenScope,
-        convertTunnelForRequest(tunnel, false),
+        convertTunnelForRequest(tunnel),
         responseType);
   }
 
@@ -542,7 +540,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         HttpMethod.DELETE,
         uri,
         ManageAccessTokenScope,
-        convertTunnelForRequest(tunnel, false),
+        convertTunnelForRequest(tunnel),
         responseType);
 
     if (tunnel.endpoints != null) {
