@@ -18,7 +18,7 @@ func generateTunnelId() string {
 	sb.WriteString("-")
 
 	for i := 0; i < 7; i++ {
-		sb.WriteByte(TunnelConstraintsNewTunnelIDChars[rand.Intn(len(TunnelConstraintsNewTunnelIDChars)-1)])
+		sb.WriteByte(TunnelConstraintsOldTunnelIDChars[rand.Intn(len(TunnelConstraintsOldTunnelIDChars))])
 	}
 	return sb.String()
 }

@@ -24,7 +24,7 @@ public static class IdGeneration
 
         for (int i = 0; i < 7; i++)
         {
-            sb.Append(TunnelConstraints.NewTunnelIdChars[ThreadSafeRandom.Next(TunnelConstraints.NewTunnelIdChars.Length)-1]);
+            sb.Append(TunnelConstraints.OldTunnelIdChars[ThreadSafeRandom.Next(TunnelConstraints.OldTunnelIdChars.Length)]);
         }
         return sb.ToString();
     }

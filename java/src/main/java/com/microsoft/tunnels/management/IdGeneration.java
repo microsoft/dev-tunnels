@@ -13,7 +13,7 @@ public class IdGeneration {
         tunnelId += adjectives[rand.nextInt(adjectives.length)] + "-";
         tunnelId += nouns[rand.nextInt(nouns.length)] + "-";
         for (int i = 0; i < 7; i++) {
-            tunnelId += TunnelConstraints.newTunnelIdChars.charAt(rand.nextInt(TunnelConstraints.newTunnelIdChars.length()-1));
+            tunnelId += TunnelConstraints.oldTunnelIdChars.charAt(rand.nextInt(TunnelConstraints.oldTunnelIdChars.length()));
         }
         return tunnelId;
     }
