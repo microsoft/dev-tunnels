@@ -247,7 +247,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
-        var idGenerated = tunnelId == undefined;
+        const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
         }
@@ -261,24 +261,24 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                     undefined,
                     options,
                     this.convertTunnelForRequest(tunnel, true),
+                    undefined,
+                    true,
                 ))!;
                 preserveAccessTokens(tunnel, result);
                 parseTunnelDates(result);
                 return result;
-            }
-            catch (error) {
+            } catch (error) {
                 if (idGenerated) {
                     // The tunnel ID was generated and there was a conflict.
                     // Try again with a new ID.
                     tunnel.tunnelId = IdGeneration.generateTunnelId();
-                }
-                else{
+                } else {
                     throw error;
                 }
             }
         }
 
-        const result = (await this.sendTunnelRequest<Tunnel>(
+        const result2 = (await this.sendTunnelRequest<Tunnel>(
             'PUT',
             tunnel,
             manageAccessTokenScope,
@@ -287,9 +287,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             this.convertTunnelForRequest(tunnel, true),
         ))!;
-        preserveAccessTokens(tunnel, result);
-        parseTunnelDates(result);
-        return result;
+        preserveAccessTokens(tunnel, result2);
+        parseTunnelDates(result2);
+        return result2;
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
@@ -334,7 +334,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnel,
             hostAccessTokenScope,
             path,
-            undefined,
+            "connectionMode=" + endpoint.connectionMode,
             options,
             endpoint,
         ))!;
@@ -554,8 +554,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
         body?: object,
         allowNotFound?: boolean,
+        isCreate: boolean = false
     ): Promise<NullableIfNotBoolean<TResult>> {
-        const uri = await this.buildUriForTunnel(tunnel, path, query, options);
+        const uri = await this.buildUriForTunnel(tunnel, path, query, options, isCreate);
         const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
@@ -692,17 +693,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         path?: string,
         query?: string,
         options?: TunnelRequestOptions,
+        isCreate: boolean = false,
     ) {
         let tunnelPath = '';
-        if (tunnel.clusterId && tunnel.tunnelId) {
+        if ((tunnel.clusterId || isCreate) && tunnel.tunnelId) {
             tunnelPath = `${tunnelsApiPath}/${tunnel.tunnelId}`;
         } else {
-            if (!tunnel.name) {
-                throw new Error(
-                    'Tunnel object must include either a name or tunnel ID and cluster ID.',
-                );
-            }
-            tunnelPath = `${tunnelsApiPath}/${tunnel.name}`;
+              throw new Error(
+                  'Tunnel object must include a tunnel ID always and cluster ID for non creates.',
+              );
         }
 
         if (options?.additionalQueryParameters) {
@@ -782,7 +781,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     private convertTunnelForRequest(tunnel: Tunnel, isCreate: boolean): Tunnel {
         const convertedTunnel: Tunnel = {
-            tunnelId: isCreate ? tunnel.tunnelId : undefined,
+            tunnelId: tunnel.tunnelId,
             name: tunnel.name,
             domain: tunnel.domain,
             description: tunnel.description,
