@@ -390,6 +390,7 @@ impl RelayTunnelHost {
                 &self.locator,
                 &TunnelRelayTunnelEndpoint {
                     base: TunnelEndpoint {
+                        id: Some(uuid::Uuid::new_v4().to_string()),
                         connection_mode: TunnelConnectionMode::TunnelRelay,
                         host_id: self.host_id.to_string(),
                         host_public_keys: vec![],
