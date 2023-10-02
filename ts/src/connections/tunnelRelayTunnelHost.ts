@@ -84,7 +84,7 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
         super(managementClient, trace);
         this.hostId = MultiModeTunnelHost.hostId;
-        this.id = uuidv4();
+        this.id = uuidv4() + "-relay";
     }
 
     /**
