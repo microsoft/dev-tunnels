@@ -1,8 +1,8 @@
 import { TunnelConstraints } from "../contracts/tunnelConstraints"
 
 export class IdGeneration {
-    private static nouns: string[] = ["pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "rabbit", "shoe", "campsite", "plane", "cake", "sofa", "chair", "library", "book", "ocean", "lake", "river", "horse"];
-    private static adjectives: string[] = ["silly", "fun", "happy", "interesting", "neat", "peaceful", "puzzeled", "thoughtful", "kind", "joyful", "overjoyed", "new", "giant", "sneaky", "quick", "majestic", "gleaming", "jolly", "fancy", "tidy", "marvelous", "glamorous", "swift", "silent", "amusing", "spiffy"];
+    private static nouns: string[] = ["pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "rabbit", "shoe", "campsite", "plane", "sofa", "chair", "library", "book", "ocean", "lake", "river", "horse"];
+    private static adjectives: string[] = ["fun", "happy", "interesting", "neat", "peaceful", "puzzeled", "thoughtful", "kind", "joyful", "overjoyed", "new", "giant", "sneaky", "quick", "majestic", "gleaming", "jolly", "fancy", "tidy", "marvelous", "glamorous", "swift", "silent", "amusing", "spiffy"];
 
     public static generateTunnelId(): string {
         let tunnelId = "";

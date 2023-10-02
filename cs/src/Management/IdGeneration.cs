@@ -8,8 +8,8 @@ namespace Microsoft.DevTunnels.Management;
 /// </summary>
 public static class IdGeneration
 {
-    private static string[] nouns = { "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "rabbit", "shoe", "campsite", "plane", "cake", "sofa", "chair", "library", "book", "ocean", "lake", "river" , "horse" };
-    private static string[] adjectives = { "silly", "fun", "happy", "interesting", "neat", "peaceful", "puzzeled", "thoughtful", "kind", "joyful", "overjoyed", "new", "giant", "sneaky", "quick", "majestic", "gleaming", "jolly" , "fancy", "tidy", "marvelous", "glamorous", "swift", "silent", "amusing", "spiffy",  };
+    private static string[] nouns = { "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "rabbit", "shoe", "campsite", "plane", "sofa", "chair", "library", "book", "ocean", "lake", "river" , "horse" };
+    private static string[] adjectives = { "fun", "happy", "interesting", "neat", "peaceful", "puzzeled", "thoughtful", "kind", "joyful", "overjoyed", "new", "giant", "sneaky", "quick", "majestic", "gleaming", "jolly" , "fancy", "tidy", "marvelous", "glamorous", "swift", "silent", "amusing", "spiffy",  };
     /// <summary>
     /// Generate valid tunnelIds
     /// </summary>
