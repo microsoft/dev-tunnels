@@ -136,10 +136,15 @@ func (m *Manager) ListTunnels(
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel request: %w", err)
 	}
-
-	err = json.Unmarshal(response, &ts)
+	var tunnelResponse *TunnelListByRegionResponse
+	err = json.Unmarshal(response, &tunnelResponse)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
+	}
+	for _, region := range tunnelResponse.Value {
+		for _, tunnel := range region.Value {
+			ts = append(ts, &tunnel)
+		}
 	}
 
 	return ts, nil
@@ -338,11 +343,17 @@ func (m *Manager) ListTunnelPorts(
 		return nil, fmt.Errorf("error sending list tunnel ports request: %w", err)
 	}
 
+	var tunnelPortsResponse *TunnelPortListResponse
 	// Read response into a tunnel port
-	err = json.Unmarshal(response, &tp)
+	err = json.Unmarshal(response, &tunnelPortsResponse)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel ports: %w", err)
 	}
+
+	for _, port := range tunnelPortsResponse.Value {
+		tp = append(tp, &port)
+	}
+
 	return tp, nil
 }
 
