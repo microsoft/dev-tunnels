@@ -28,14 +28,14 @@ type TunnelRequestOptions struct {
 	// Flag that requests tunnel access control details when listing or searching tunnels.
 	IncludeAccessControl bool
 
-	// Optional list of tags to filter the requested tunnels or ports.
-	// By default, an item is included if ANY tag matches; set `requireAllTags` to match
-	// ALL tags instead.
-	Tags []string
+	// Optional list of labels to filter the requested tunnels or ports.
+	// By default, an item is included if ANY label matches; set `requireAllLabels` to match
+	// ALL labels instead.
+	Labels []string
 
-	// Flag that indicates whether listed items must match all tags specified in `tags`.
+	// Flag that indicates whether listed items must match all labels specified in `labels`.
 	// If false, an item is included if any tag matches.
-	RequireAllTags bool
+	RequireAllLabels bool
 
 	// List of token scopes that are requested when retrieving a tunnel or tunnel port object.
 	TokenScopes TunnelAccessScopes
@@ -66,13 +66,13 @@ func (options *TunnelRequestOptions) queryString() string {
 	if options.ForceRename {
 		queryOptions.Set("forceRename", "true")
 	}
-	if options.Tags != nil {
-		for _, tag := range options.Tags {
-			queryOptions.Add("tags", string(tag))
+	if options.Labels != nil {
+		for _, label := range options.Labels {
+			queryOptions.Add("labels", string(label))
 		}
 
-		if options.RequireAllTags {
-			queryOptions.Set("allTags", "true")
+		if options.RequireAllLabels {
+			queryOptions.Set("allLabels", "true")
 		}
 	}
 

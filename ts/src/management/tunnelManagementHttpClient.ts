@@ -846,10 +846,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 queryOptions.forceRename = ['true'];
             }
 
-            if (options.tags) {
-                queryOptions.tags = options.tags;
-                if (options.requireAllTags) {
-                    queryOptions.allTags = ['true'];
+            if (options.labels) {
+                queryOptions.labels = options.labels;
+                if (options.requireAllLabels) {
+                    queryOptions.allLabels = ['true'];
                 }
             }
 
