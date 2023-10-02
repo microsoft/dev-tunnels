@@ -72,7 +72,7 @@ func (t *Tunnel) Table() table.Table {
 	tbl.AddRow("TunnelId", t.TunnelID)
 	tbl.AddRow("Name", t.Name)
 	tbl.AddRow("Description", t.Description)
-	tbl.AddRow("Tags", fmt.Sprintf("%v", t.Labels))
+	tbl.AddRow("Labels", fmt.Sprintf("%v", t.Labels))
 	if t.AccessControl != nil {
 		tbl.AddRow("Access Control", fmt.Sprintf("%v", *t.AccessControl))
 	}

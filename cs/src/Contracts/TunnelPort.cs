@@ -64,7 +64,7 @@ public class TunnelPort
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the tags of the port.
+    /// Gets or sets the labels of the port.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [MaxLength(MaxLabels)]

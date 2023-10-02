@@ -29,7 +29,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
         /// <remarks>
-        /// The list can be filtered by setting <see cref="TunnelRequestOptions.Tags"/>.
+        /// The list can be filtered by setting <see cref="TunnelRequestOptions.Labels"/>.
         /// Ports will not be included in the returned tunnels unless
         /// <see cref="TunnelRequestOptions.IncludePorts"/> is set to true.
         /// </remarks>
@@ -41,10 +41,10 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation = default);
 
         /// <summary>
-        /// Search for all tunnels with matching tags.
+        /// Search for all tunnels with matching labels.
         /// </summary>
-        /// <param name="tags">The tags that will be searched for</param>
-        /// <param name="requireAllTags">If a tunnel must have all tags that are being searched for.</param>
+        /// <param name="labels">The labels that will be searched for</param>
+        /// <param name="requireAllLabels">If a tunnel must have all labels that are being searched for.</param>
         /// <param name="clusterId">A tunnel cluster ID, or null to list tunnels globally.</param>
         /// <param name="domain">Tunnel domain, or null for the default domain.</param>
         /// <param name="options">Request options.</param>
@@ -52,10 +52,10 @@ namespace Microsoft.DevTunnels.Management
         /// <returns>Array of tunnel objects.</returns>
         /// <exception cref="UnauthorizedAccessException">The client access token was missing,
         /// invalid, or unauthorized.</exception>
-        [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Tags instead.")]
+        [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Labels instead.")]
         Task<Tunnel[]> SearchTunnelsAsync(
-            string[] tags,
-            bool requireAllTags,
+            string[] labels,
+            bool requireAllLabels,
             string? clusterId = null,
             string? domain = null,
             TunnelRequestOptions? options = null,
@@ -201,7 +201,7 @@ namespace Microsoft.DevTunnels.Management
         /// <exception cref="InvalidOperationException">The tunnel ID or name was not found.
         /// </exception>
         /// <remarks>
-        /// The list can be filtered by setting <see cref="TunnelRequestOptions.Tags"/>.
+        /// The list can be filtered by setting <see cref="TunnelRequestOptions.Labels"/>.
         /// </remarks>
         Task<TunnelPort[]> ListTunnelPortsAsync(
             Tunnel tunnel,

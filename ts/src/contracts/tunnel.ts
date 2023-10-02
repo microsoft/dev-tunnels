@@ -37,7 +37,7 @@ export interface Tunnel {
     description?: string;
 
     /**
-     * Gets or sets the tags of the tunnel.
+     * Gets or sets the labels of the tunnel.
      */
     labels?: string[];
 

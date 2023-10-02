@@ -40,7 +40,7 @@ public class Tunnel {
     public String description;
 
     /**
-     * Gets or sets the tags of the tunnel.
+     * Gets or sets the labels of the tunnel.
      */
     @Expose
     public String[] labels;

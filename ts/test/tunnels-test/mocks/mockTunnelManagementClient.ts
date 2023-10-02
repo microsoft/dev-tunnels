@@ -25,14 +25,14 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
     ): Promise<Tunnel[]> {
         let tunnels = this.tunnels;
 
-        if (options?.tags) {
-            if (!options.requireAllTags) {
+        if (options?.labels) {
+            if (!options.requireAllLabels) {
                 tunnels = this.tunnels.filter(
-                    (tunnel) => tunnel.labels && options.tags!.some((t) => tunnel.labels!.includes(t)),
+                    (tunnel) => tunnel.labels && options.labels!.some((t) => tunnel.labels!.includes(t)),
                 );
             } else {
                 tunnels = this.tunnels.filter(
-                    (tunnel) => tunnel.labels && options.tags!.every((t) => tunnel.labels!.includes(t)),
+                    (tunnel) => tunnel.labels && options.labels!.every((t) => tunnel.labels!.includes(t)),
                 );
             }
         }

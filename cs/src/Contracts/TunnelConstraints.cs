@@ -84,7 +84,7 @@ public static class TunnelConstraints
     public const int LabelMaxLength = 50;
 
     /// <summary>
-    /// Maximum number of tags that can be applied to a tunnel or port.
+    /// Maximum number of labels that can be applied to a tunnel or port.
     /// </summary>
     /// <seealso cref="Tunnel.Labels"/>
     /// <seealso cref="TunnelPort.Labels"/>
@@ -265,13 +265,13 @@ public static class TunnelConstraints
     public static Regex TunnelNameRegex { get; } = new Regex(TunnelNamePattern);
 
     /// <summary>
-    /// Regular expression that can match or validate tunnel or port tags.
+    /// Regular expression that can match or validate tunnel or port labels.
     /// </summary>
     /// <seealso cref="TunnelPort.Labels"/>
     public const string LabelPattern = "[\\w-=]{1,50}";
 
     /// <summary>
-    /// Regular expression that can match or validate tunnel or port tags.
+    /// Regular expression that can match or validate tunnel or port labels.
     /// </summary>
     /// <seealso cref="Tunnel.Labels"/>
     /// <seealso cref="TunnelPort.Labels"/>

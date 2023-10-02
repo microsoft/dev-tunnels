@@ -61,7 +61,7 @@ public class Tunnel
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the tags of the tunnel.
+    /// Gets or sets the labels of the tunnel.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [MaxLength(MaxLabels)]

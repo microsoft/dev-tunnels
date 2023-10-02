@@ -236,7 +236,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public Task<Tunnel[]> SearchTunnelsAsync(
-        string[] tags,
+        string[] labels,
         bool requireAllLabels,
         string clusterId,
         string domain,
@@ -246,12 +246,12 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         IEnumerable<Tunnel> tunnels;
         if (!requireAllLabels)
         {
-            tunnels = Tunnels.Where(tunnel => (tunnel.Labels != null) && (tunnel.Labels.Intersect(tags).Count() > 0));
+            tunnels = Tunnels.Where(tunnel => (tunnel.Labels != null) && (tunnel.Labels.Intersect(labels).Count() > 0));
         }
         else
         {
-            var numLabels = tags.Length;
-            tunnels = Tunnels.Where(tunnel => (tunnel.Labels != null) && (tunnel.Labels.Intersect(tags).Count() == numLabels));
+            var numLabels = labels.Length;
+            tunnels = Tunnels.Where(tunnel => (tunnel.Labels != null) && (tunnel.Labels.Intersect(labels).Count() == numLabels));
         }
 
         domain ??= string.Empty;

@@ -89,20 +89,20 @@ namespace Microsoft.DevTunnels.Management
         public bool IncludeAccessControl { get; set; }
 
         /// <summary>
-        /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
+        /// Gets or sets an optional list of labels to filter the requested tunnels or ports.
         /// </summary>
         /// <remarks>
-        /// Requested tags are compared to the <see cref="Tunnel.Labels"/> or
+        /// Requested labels are compared to the <see cref="Tunnel.Labels"/> or
         /// <see cref="TunnelPort.Labels"/> when calling
         /// <see cref="ITunnelManagementClient.ListTunnelsAsync"/> or
         /// <see cref="ITunnelManagementClient.ListTunnelPortsAsync"/> respectively. By default, an
         /// item is included if ANY tag matches; set <see cref="RequireAllLabels" /> to match ALL
-        /// tags instead.
+        /// labels instead.
         /// </remarks>
         public string[]? Labels { get; set; }
 
         /// <summary>
-        /// Gets or sets a flag that indicates whether listed items must match all tags
+        /// Gets or sets a flag that indicates whether listed items must match all labels
         /// specified in <see cref="Labels"/>. If false, an item is included if any tag matches.
         /// </summary>
         public bool RequireAllLabels { get; set; }

@@ -91,7 +91,7 @@ export interface TunnelAccessControlEntry {
     scopes: string[];
 }
 
-export namespace TunnelAccessControlEntry {
+namespace TunnelAccessControlEntry {
     /**
      * Constants for well-known identity providers.
      */

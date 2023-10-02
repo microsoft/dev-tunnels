@@ -862,10 +862,10 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc />
-        [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Tags instead.")]
+        [Obsolete("Use ListTunnelsAsync() method with TunnelRequestOptions.Labels instead.")]
         public async Task<Tunnel[]> SearchTunnelsAsync(
-            string[] tags,
-            bool requireAllTags,
+            string[] labels,
+            bool requireAllLabels,
             string? clusterId,
             string? domain,
             TunnelRequestOptions? options,
@@ -875,8 +875,8 @@ namespace Microsoft.DevTunnels.Management
             {
                 string.IsNullOrEmpty(clusterId) ? "global=true" : null,
                 !string.IsNullOrEmpty(domain) ? $"domain={HttpUtility.UrlEncode(domain)}" : null,
-                $"tags={string.Join(",", tags.Select(HttpUtility.UrlEncode))}",
-                $"allTags={requireAllTags}",
+                $"labels={string.Join(",", labels.Select(HttpUtility.UrlEncode))}",
+                $"allLabels={requireAllLabels}",
                 !string.IsNullOrEmpty(ApiVersion) ? GetApiQuery() : null,
             };
             var query = string.Join("&", queryParams.Where((p) => p != null));

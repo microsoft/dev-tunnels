@@ -25,7 +25,7 @@ type Tunnel struct {
 	// Gets or sets the description of the tunnel.
 	Description      string `json:"description,omitempty"`
 
-	// Gets or sets the tags of the tunnel.
+	// Gets or sets the labels of the tunnel.
 	Labels           []string `json:"labels,omitempty"`
 
 	// Gets or sets the optional parent domain of the tunnel, if it is not using the default
