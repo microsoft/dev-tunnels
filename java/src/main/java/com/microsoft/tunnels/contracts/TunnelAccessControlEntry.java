@@ -5,6 +5,7 @@
 package com.microsoft.tunnels.contracts;
 
 import com.google.gson.annotations.Expose;
+import java.util.Date;
 
 /**
  * Data contract for an access control entry on a {@link Tunnel} or {@link TunnelPort}.
@@ -98,6 +99,14 @@ public class TunnelAccessControlEntry {
      */
     @Expose
     public String[] scopes;
+
+    /**
+     * Gets or sets the expiration for an access control.
+     *
+     * If no value is set then this value is null.
+     */
+    @Expose
+    public Date expiration;
 
     /**
      * Constants for well-known identity providers.
