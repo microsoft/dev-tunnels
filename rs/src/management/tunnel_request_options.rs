@@ -28,17 +28,17 @@ pub struct TunnelRequestOptions {
     /// including access controls for all tunnels returned by a list or search query.
     pub include_access_control: bool,
 
-    /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
+    /// Gets or sets an optional list of labels to filter the requested tunnels or ports.
     ///
-    /// Requested tags are compared to the `Tunnel.tags` or `TunnelPort.tags` when calling
+    /// Requested labels are compared to the `Tunnel.labels` or `TunnelPort.labels` when calling
     /// `TunnelManagementClient.list_all_tunnels` or `TunnelManagementClient.list_tunnel_ports`
-    /// respectively. By default, an item is included if ANY tag matches; set `require_all_tags`
-    /// to match ALL tags instead.
-    pub tags: Vec<String>,
+    /// respectively. By default, an item is included if ANY label matches; set `require_all_labels`
+    /// to match ALL labels instead.
+    pub labels: Vec<String>,
 
-    /// Gets or sets a flag that indicates whether listed items must match all tags
-    /// specified in `tags`. If false, an item is included if any tag matches.
-    pub require_all_tags: bool,
+    /// Gets or sets a flag that indicates whether listed items must match all labels
+    /// specified in `labels`. If false, an item is included if any labels matches.
+    pub require_all_labels: bool,
 
     /// Gets or sets an optional list of token scopes that
     /// are requested when retrieving a tunnel or tunnel port object.
@@ -57,8 +57,8 @@ pub const NO_REQUEST_OPTIONS: &TunnelRequestOptions = &TunnelRequestOptions {
     headers: Vec::new(),
     include_ports: false,
     include_access_control: false,
-    tags: Vec::new(),
-    require_all_tags: false,
+    labels: Vec::new(),
+    require_all_labels: false,
     token_scopes: Vec::new(),
     force_rename: false,
     limit: 0,

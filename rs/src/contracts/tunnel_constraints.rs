@@ -32,13 +32,13 @@ pub const TUNNEL_NAME_MAX_LENGTH: i32 = 60;
 pub const DESCRIPTION_MAX_LENGTH: i32 = 400;
 
 // Min length of a single tunnel or port tag.
-pub const TAG_MIN_LENGTH: i32 = 1;
+pub const LABEL_MIN_LENGTH: i32 = 1;
 
 // Max length of a single tunnel or port tag.
-pub const TAG_MAX_LENGTH: i32 = 50;
+pub const LABEL_MAX_LENGTH: i32 = 50;
 
-// Maximum number of tags that can be applied to a tunnel or port.
-pub const MAX_TAGS: i32 = 100;
+// Maximum number of labels that can be applied to a tunnel or port.
+pub const MAX_LABELS: i32 = 100;
 
 // Min length of a tunnel domain.
 pub const TUNNEL_DOMAIN_MIN_LENGTH: i32 = 4;
@@ -109,8 +109,8 @@ pub const TUNNEL_ALIAS_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{3,60}
 // string because tunnels may be unnamed.
 pub const TUNNEL_NAME_PATTERN: &str = r#"([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)"#;
 
-// Regular expression that can match or validate tunnel or port tags.
-pub const TAG_PATTERN: &str = r#"[\w-=]{1,50}"#;
+// Regular expression that can match or validate tunnel or port labels.
+pub const LABEL_PATTERN: &str = r#"[\w-=]{1,50}"#;
 
 // Regular expression that can match or validate tunnel domains.
 //

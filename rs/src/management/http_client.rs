@@ -28,11 +28,11 @@ pub struct TunnelManagementClient {
     environment: TunnelServiceProperties,
 }
 
-const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
-const USER_LIMITS_API_PATH: &str = "/api/v1/userlimits";
+const TUNNELS_API_PATH: &str = "/tunnels";
+const USER_LIMITS_API_PATH: &str = "/userlimits";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
-const CHECK_TUNNEL_NAME_SUB_PATH: &str = "/checkNameAvailability";
+const CHECK_TUNNEL_NAME_SUB_PATH: &str = ":checkNameAvailability";
 const PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
 
 impl TunnelManagementClient {

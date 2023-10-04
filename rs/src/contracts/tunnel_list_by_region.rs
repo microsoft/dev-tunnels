@@ -3,7 +3,7 @@
 // Generated from ../../../cs/src/Contracts/TunnelListByRegion.cs
 
 use crate::contracts::ErrorDetail;
-use crate::contracts::TunnelV2;
+use crate::contracts::Tunnel;
 use serde::{Deserialize, Serialize};
 
 // Tunnel list by region.
@@ -18,7 +18,7 @@ pub struct TunnelListByRegion {
 
     // List of tunnels.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub value: Vec<TunnelV2>,
+    pub value: Vec<Tunnel>,
 
     // Error detail if getting list of tunnels in the region failed.
     pub error: Option<ErrorDetail>,
