@@ -89,13 +89,6 @@ export interface TunnelAccessControlEntry {
      * These must be one or more values from {@link TunnelAccessScopes}.
      */
     scopes: string[];
-
-    /**
-     * Gets or sets the expiration for an access control.
-     *
-     * If no value is set then this value is null.
-     */
-    expiration?: Date;
 }
 
 namespace TunnelAccessControlEntry {

@@ -4,10 +4,6 @@
 
 package tunnels
 
-import (
-	"time"
-)
-
 // Data contract for an access control entry on a `Tunnel` or `TunnelPort`.
 //
 // An access control entry (ACE) grants or denies one or more access scopes to one or more
@@ -72,11 +68,6 @@ type TunnelAccessControlEntry struct {
 	//
 	// These must be one or more values from `TunnelAccessScopes`.
 	Scopes       []string `json:"scopes"`
-
-	// Gets or sets the expiration for an access control.
-	//
-	// If no value is set then this value is null.
-	Expiration   *time.Time `json:"expiration,omitempty"`
 }
 
 // Constants for well-known identity providers.
