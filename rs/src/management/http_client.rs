@@ -12,7 +12,7 @@ use url::Url;
 
 use crate::contracts::{
     env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelRelayTunnelEndpoint, TunnelServiceProperties, NamedRateStatus,
+    TunnelRelayTunnelEndpoint, TunnelServiceProperties, NamedRateStatus, TunnelPortListResponse, TunnelListByRegionResponse,
 };
 
 use super::{
@@ -54,7 +54,7 @@ impl TunnelManagementClient {
     pub async fn list_all_tunnels(
         &self,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<Vec<Tunnel>> {
+    ) -> HttpResult<Vec<TunnelListByRegionResponse>> {
         let mut url = self.build_uri(None, TUNNELS_API_PATH);
         url.query_pairs_mut().append_pair("global", "true");
 
@@ -90,8 +90,12 @@ impl TunnelManagementClient {
         tunnel: &Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
+
+        if tunnel.tunnel_id.is_none() || tunnel.tunnel_id.as_ref().unwrap().is_empty() {
+            tunnel.tunnel_id = Some(super::IdGeneration::generate_tunnel_id());
+        }
         let url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
-        let mut request = self.make_tunnel_request(Method::POST, url, options).await?;
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, tunnel);
         self.execute_json("create_tunnel", request).await
     }
@@ -201,7 +205,7 @@ impl TunnelManagementClient {
         &self,
         locator: &TunnelLocator,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<Vec<TunnelPort>> {
+    ) -> HttpResult<TunnelPortListResponse> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
         self.execute_json("list_tunnel_ports", request).await
@@ -230,7 +234,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelPort> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
-        let mut request = self.make_tunnel_request(Method::POST, url, options).await?;
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, port);
         self.execute_json("create_tunnel_port", request).await
     }
@@ -413,7 +417,7 @@ impl TunnelManagementClient {
         mut url: Url,
         tunnel_opts: &TunnelRequestOptions,
     ) -> HttpResult<Request> {
-        add_query(&mut url, tunnel_opts);
+        add_query(self,&mut url, &self.api_version);
         let mut request = self.make_request(method, url).await?;
 
         let headers = request.headers_mut();
@@ -520,7 +524,7 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
     }
 }
 
-fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions) {
+fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &str) {
     if tunnel_opts.include_ports {
         url.query_pairs_mut().append_pair("includePorts", "true");
     }
@@ -542,6 +546,7 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions) {
             url.query_pairs_mut().append_pair("allTags", "true");
         }
     }
+    url.query_pairs_mut().append_pair("api-version", api_version);
     if tunnel_opts.limit > 0 {
         url.query_pairs_mut()
             .append_pair("limit", &tunnel_opts.limit.to_string());
@@ -702,7 +707,7 @@ mod tests {
         let mut url = Url::parse("https://tunnels.api.visualstudio.com/api/v1/tunnels").unwrap();
         let options = NO_REQUEST_OPTIONS;
 
-        super::add_query(&mut url, options);
+        super::add_query(&mut url, options, "2023-09-27-preview");
 
         assert!(!url.to_string().ends_with("?"));
     }
@@ -713,7 +718,7 @@ mod tests {
         let mut options = NO_REQUEST_OPTIONS.clone();
         options.include_ports = true;
 
-        super::add_query(&mut url, &options);
+        super::add_query(&mut url, &options, "2023-09-27-preview");
 
         assert!(url.query().unwrap().contains("includePorts=true"));
     }
