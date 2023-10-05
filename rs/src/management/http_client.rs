@@ -26,6 +26,7 @@ pub struct TunnelManagementClient {
     authorization: Arc<Box<dyn AuthorizationProvider>>,
     pub(crate) user_agent: HeaderValue,
     environment: TunnelServiceProperties,
+    api_version: String,
 }
 
 const TUNNELS_API_PATH: &str = "/tunnels";
@@ -34,6 +35,7 @@ const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
 const CHECK_TUNNEL_NAME_SUB_PATH: &str = ":checkNameAvailability";
 const PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+const API_VERSIONS: &[&str] = &["2023-09-27-preview"];
 
 impl TunnelManagementClient {
     /// Returns a builder that creates a new client, starting with the current
@@ -44,6 +46,7 @@ impl TunnelManagementClient {
             client: Some(self.client.clone()),
             user_agent: self.user_agent.clone(),
             environment: self.environment.clone(),
+            api_version: self.api_version.clone(),
         }
     }
 
@@ -458,6 +461,7 @@ pub struct TunnelClientBuilder {
     client: Option<Client>,
     user_agent: HeaderValue,
     environment: TunnelServiceProperties,
+    api_version: String,
 }
 
 /// Creates a new tunnel client builder. You can set options, then use `into()`
@@ -475,6 +479,7 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
         client: None,
         user_agent: HeaderValue::from_str(&full_user_agent).unwrap(),
         environment: env_production(),
+        api_version: API_VERSIONS[0].to_owned(),
     }
 }
 
@@ -510,6 +515,7 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
             client: builder.client.unwrap_or_else(Client::new),
             user_agent: builder.user_agent,
             environment: builder.environment,
+            api_version: builder.api_version,
         }
     }
 }
