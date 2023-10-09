@@ -852,13 +852,12 @@ namespace Microsoft.DevTunnels.Management
                 query,
                 options,
                 cancellation);
-            var tunnels = new List<Tunnel>();
             if (result?.Value != null)
             {
-                result.Value = result.Value.Where(t => t.Value != null).ToArray();
-                tunnels = result.Value.SelectMany(t => t.Value!).ToList();
+                return result.Value.Where(t => t.Value != null).SelectMany(t => t.Value!).ToArray();
             }
-            return tunnels.ToArray();
+            
+            return Array.Empty<Tunnel>();
         }
 
         /// <inheritdoc />
