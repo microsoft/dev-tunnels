@@ -237,7 +237,22 @@ func TestPortForwarding(t *testing.T) {
 			done <- fmt.Errorf("wait for forwarded port failed: %v", err)
 			return
 		}
-		err = c.ConnectToForwardedPort(ctx, listen, streamPort)
+
+		// Test connecting with a listener
+		err = c.ConnectListenerToForwardedPort(ctx, listen, streamPort)
+		if err != nil {
+			done <- fmt.Errorf("connect to forwarded port failed: %v", err)
+			return
+		}
+
+		// Connect to the listener and and test connecting with the given connection
+		conn, err := listen.Accept()
+		if err != nil {
+			done <- fmt.Errorf("accept connection failed: %v", err)
+			return
+		}
+
+		err = c.ConnectToForwardedPort(ctx, conn, streamPort)
 		if err != nil {
 			done <- fmt.Errorf("connect to forwarded port failed: %v", err)
 			return
