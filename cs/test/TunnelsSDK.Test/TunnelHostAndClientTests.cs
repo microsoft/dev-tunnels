@@ -774,6 +774,8 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
         var tunnel = CreateRelayTunnel();
         using var serverSshSession = await ConnectRelayHostAsync(relayHost, tunnel);
+        Assert.Equal(1, managementClient.TunnelEndpointsUpdated);
+        Assert.Equal(0, managementClient.TunnelEndpointsDeleted);
 
         var disconnectCompletion = new TaskCompletionSource();
         relayHost.ConnectionStatusChanged += (_, e) =>
@@ -797,6 +799,12 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         // Dispose doesn't clean up disconnect exception and reason.
         await relayHost.DisposeAsync();
         AssertDisconnectException();
+
+        Assert.Equal(1, managementClient.TunnelEndpointsUpdated);
+        // If the host was closed with "too many connections" reason, it means another host has connected
+        // to that tunnel. That other host, when connecting, has overwritten the endpoint.
+        // So no point in deleting it when the first host is disposed.
+        Assert.Equal(0, managementClient.TunnelEndpointsDeleted);
 
         void AssertDisconnectException()
         {

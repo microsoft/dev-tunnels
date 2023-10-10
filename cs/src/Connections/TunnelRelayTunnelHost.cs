@@ -66,6 +66,23 @@ public class TunnelRelayTunnelHost : TunnelHost
     /// </summary>
     private string? EndpointId { get; set; }
 
+    /// <inheritdoc/>
+    public override Task ConnectAsync(Tunnel tunnel, TunnelConnectionOptions? options, CancellationToken cancellation = default)
+    {
+        // If another host for the same tunnel connects, the first connection is disconnected
+        // with "too many connections" reason. Reconnecting it again would cause the second host to
+        // be kicked out, and then it would try to reconnect, kicking out this one.
+        // To prevent this tug of war, do not allow reconnection in this case.
+        if (DisconnectReason == SshDisconnectReason.TooManyConnections)
+        {
+            throw new TunnelConnectionException(
+                "Cannot retry connection because another host for this tunnel has connected. " +
+                "Only one host connection at a time is supported.");
+        }
+
+        return base.ConnectAsync(tunnel, options, cancellation);
+    }
+
     /// <inheritdoc />
     protected override async Task DisposeConnectionAsync()
     {
@@ -78,7 +95,13 @@ public class TunnelRelayTunnelHost : TunnelHost
             this.clientSessionTasks.Clear();
         }
 
-        if (Tunnel != null && !string.IsNullOrEmpty(EndpointId))
+        // If the tunnel is present, the endpoint was created, and this host was not closed because of
+        // too many connections, delete the endpoint.
+        // Too many connections closure means another host has connected, and that other host, while
+        // connecting, would have updated the endpoint. So this host won't be able to delete it anyway.
+        if (Tunnel != null &&
+            !string.IsNullOrEmpty(EndpointId) &&
+            DisconnectReason != SshDisconnectReason.TooManyConnections)
         {
             tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, endpointId));
         }
@@ -627,23 +650,6 @@ public class TunnelRelayTunnelHost : TunnelHost
         }
 
         await Task.WhenAll(forwardTasks);
-    }
-
-    /// <inheritdoc/>
-    protected override void StartConnecting()
-    {
-        // If another host for the same tunnel connects, the first connection is disconnected
-        // with "too many connections" reason. Reconnecting it again would cause the second host to
-        // be kicked out, and then it would try to reconnect, kicking out this one.
-        // To prevent this tug of war, do not allow reconnection in this case.
-        if (DisconnectReason == SshDisconnectReason.TooManyConnections)
-        {
-            throw new TunnelConnectionException(
-                "Cannot retry connection because another host for this tunnel has connected. " +
-                "Only one host connection at a time is supported.");
-        }
-
-        base.StartConnecting();
     }
 
     /// <inheritdoc/>
