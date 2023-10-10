@@ -18,8 +18,7 @@ namespace Microsoft.DevTunnels.Connections
     /// different factory class may be used to customize the connection (or mock the connection
     /// for testing).
     /// </remarks>
-    /// <seealso cref="TunnelRelayTunnelHost.StreamFactory" />
-    /// <seealso cref="TunnelRelayTunnelClient.StreamFactory" />
+    /// <seealso cref="TunnelRelayConnection.StreamFactory" />
     public interface ITunnelRelayStreamFactory
     {
         /// <summary>

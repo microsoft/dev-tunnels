@@ -105,9 +105,9 @@ public class MultiModeTunnelClient : TunnelConnection, ITunnelClient
     }
 
     /// <inheritdoc />
-    public override async ValueTask DisposeAsync()
+    protected override async Task DisposeConnectionAsync()
     {
-        await base.DisposeAsync();
+        await base.DisposeConnectionAsync();
 
         var disposeTasks = new List<Task>();
 
@@ -121,12 +121,6 @@ public class MultiModeTunnelClient : TunnelConnection, ITunnelClient
 
     /// <inheritdoc />
     public Task<Stream?> ConnectToForwardedPortAsync(int forwardedPort, CancellationToken cancellation)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <inheritdoc />
-    protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
     {
         throw new NotImplementedException();
     }

@@ -23,7 +23,7 @@ namespace Microsoft.DevTunnels.Connections;
 /// <summary>
 /// Base class for Hosts that host one tunnel
 /// </summary>
-public abstract class TunnelHost : TunnelConnection, ITunnelHost
+public abstract class TunnelHost : TunnelRelayConnection, ITunnelHost
 {
     internal const string RefreshPortsRequestType = "RefreshPorts";
     private bool forwardConnectionsToLocalPorts = true;
@@ -56,9 +56,6 @@ public abstract class TunnelHost : TunnelConnection, ITunnelHost
             }
         }
     }
-
-    /// <inheritdoc/>
-    public string? ConnectionProtocol { get; protected set; }
 
     /// <summary>
     /// Port Forwarders between host and clients
