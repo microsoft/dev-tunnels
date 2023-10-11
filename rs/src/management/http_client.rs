@@ -10,6 +10,9 @@ use reqwest::{
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
+extern crate rand;
+use rand::Rng;
+
 use crate::contracts::{
     env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
     TunnelRelayTunnelEndpoint, TunnelServiceProperties, NamedRateStatus, TunnelPortListResponse, TunnelListByRegionResponse,
@@ -87,12 +90,12 @@ impl TunnelManagementClient {
     /// Creates a new tunnel.
     pub async fn create_tunnel(
         &self,
-        tunnel: &Tunnel,
+        mut tunnel: Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
 
         if tunnel.tunnel_id.is_none() || tunnel.tunnel_id.as_ref().unwrap().is_empty() {
-            tunnel.tunnel_id = Some(super::IdGeneration::generate_tunnel_id());
+            tunnel.tunnel_id = Some(TunnelManagementClient::generate_tunnel_id());
         }
         let url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
@@ -447,6 +450,24 @@ impl TunnelManagementClient {
         }
 
         Ok(request)
+    }
+
+    fn generate_tunnel_id() -> String {
+        const NOUNS: [&'static str; 16] = [ "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "shoe", "plane", "chair", "book", "ocean", "lake", "river" , "horse"];
+        const ADJECTIVES: [&'static str; 20] = ["fun", "happy", "interesting", "neat", "peaceful", "puzzled", "kind", "joyful", "new", "giant", "sneaky", "quick", "majestic", "jolly" , "fancy", "tidy", "swift", "silent", "amusing", "spiffy"];
+        const TUNNEL_ID_CHARS: &'static str = "bcdfghjklmnpqrstvwxz0123456789";
+
+        let mut rng = rand::thread_rng();
+        let mut tunnel_id = String::new();
+        tunnel_id.push_str(ADJECTIVES[rng.gen_range(0..ADJECTIVES.len())]);
+        tunnel_id.push('-');
+        tunnel_id.push_str(NOUNS[rng.gen_range(0..NOUNS.len())]);
+        tunnel_id.push('-');
+
+        for _ in 0..7 {
+            tunnel_id.push(TUNNEL_ID_CHARS.chars().nth(rng.gen_range(0..TUNNEL_ID_CHARS.len())).unwrap());
+        }
+        tunnel_id
     }
 }
 
