@@ -37,13 +37,13 @@ const (
 	TunnelConstraintsDescriptionMaxLength = 400
 
 	// Min length of a single tunnel or port tag.
-	TunnelConstraintsTagMinLength = 1
+	TunnelConstraintsLabelMinLength = 1
 
 	// Max length of a single tunnel or port tag.
-	TunnelConstraintsTagMaxLength = 50
+	TunnelConstraintsLabelMaxLength = 50
 
-	// Maximum number of tags that can be applied to a tunnel or port.
-	TunnelConstraintsMaxTags = 100
+	// Maximum number of labels that can be applied to a tunnel or port.
+	TunnelConstraintsMaxLabels = 100
 
 	// Min length of a tunnel domain.
 	TunnelConstraintsTunnelDomainMinLength = 4
@@ -114,8 +114,8 @@ const (
 	// empty string because tunnels may be unnamed.
 	TunnelConstraintsTunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)"
 
-	// Regular expression that can match or validate tunnel or port tags.
-	TunnelConstraintsTagPattern = "[\\w-=]{1,50}"
+	// Regular expression that can match or validate tunnel or port labels.
+	TunnelConstraintsLabelPattern = "[\\w-=]{1,50}"
 
 	// Regular expression that can match or validate tunnel domains.
 	//
@@ -169,8 +169,8 @@ var (
 	// empty string because tunnels may be unnamed.
 	TunnelConstraintsTunnelNameRegex = regexp.MustCompile(TunnelConstraintsTunnelNamePattern)
 
-	// Regular expression that can match or validate tunnel or port tags.
-	TunnelConstraintsTagRegex = regexp.MustCompile(TunnelConstraintsTagPattern)
+	// Regular expression that can match or validate tunnel or port labels.
+	TunnelConstraintsLabelRegex = regexp.MustCompile(TunnelConstraintsLabelPattern)
 
 	// Regular expression that can match or validate tunnel domains.
 	//

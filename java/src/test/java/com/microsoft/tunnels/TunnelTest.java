@@ -36,7 +36,8 @@ public abstract class TunnelTest {
 
   protected static TunnelManagementClient tunnelManagementClient = new TunnelManagementClient(
       new ProductHeaderValue[] { userAgent },
-      userTokenCallback);
+      userTokenCallback,
+      "2023-09-27-preview");
 
   protected static final Logger logger = LoggerFactory.getLogger(TunnelTest.class);
 

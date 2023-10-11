@@ -40,12 +40,11 @@ var DevServiceProperties = TunnelServiceProperties{
 type tokenProviderfn func() string
 
 const (
-	apiV1Path                  = "/api/v1"
-	tunnelsApiPath             = apiV1Path + "/tunnels"
-	userLimitsApiPath          = apiV1Path + "/userlimits"
-	subjectsApiPath            = apiV1Path + "/subjects"
-	clustersApiPath            = apiV1Path + "/clusters"
-	checkNameAvailabilityPath  = "/checkNameAvailability"
+	tunnelsApiPath             = "/tunnels"
+	userLimitsApiPath          = "/userlimits"
+	subjectsApiPath            = "/subjects"
+	clustersApiPath            = "/clusters"
+	checkNameAvailabilityPath  = ":checkNameAvailability"
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
@@ -63,6 +62,8 @@ var (
 	readAccessTokenScopes        = []TunnelAccessScope{TunnelAccessScopeManage, TunnelAccessScopeManagePorts, TunnelAccessScopeHost, TunnelAccessScopeConnect}
 )
 
+var apiVersions = []string{"2023-09-27-preview"}
+
 // UserAgent contains the name and version of the client.
 type UserAgent struct {
 	Name    string
@@ -76,13 +77,17 @@ type Manager struct {
 	uri               *url.URL
 	additionalHeaders map[string]string
 	userAgents        []UserAgent
+	apiVersion        string
 }
 
 // Creates a new Manager used for interacting with the Tunnels APIs.
 // tokenProvider is an optional paramater containing a function that returns the access token to use for the request.
 // If no tunnelServiceUrl or httpClient is provided, the default values will be used.
 // Can return error if userAgent is empty or url is invalid.
-func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client) (*Manager, error) {
+func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *url.URL, httpHandler *http.Client, apiVersion string) (*Manager, error) {
+	if !contains(apiVersions, apiVersion) {
+		return nil, fmt.Errorf("api version must be in %v", apiVersions)
+	}
 	if len(userAgents) == 0 {
 		return nil, fmt.Errorf("user agents cannot be empty")
 	}
@@ -111,7 +116,7 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 		client = httpHandler
 	}
 
-	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents}, nil
+	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents, apiVersion: apiVersion}, nil
 }
 
 // Lists tunnels owned by the authenticated user.
@@ -131,10 +136,15 @@ func (m *Manager) ListTunnels(
 	if err != nil {
 		return nil, fmt.Errorf("error sending list tunnel request: %w", err)
 	}
-
-	err = json.Unmarshal(response, &ts)
+	var tunnelResponse *TunnelListByRegionResponse
+	err = json.Unmarshal(response, &tunnelResponse)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
+	}
+	for _, region := range tunnelResponse.Value {
+		for _, tunnel := range region.Value {
+			ts = append(ts, &tunnel)
+		}
 	}
 
 	return ts, nil
@@ -144,7 +154,7 @@ func (m *Manager) ListTunnels(
 // If getting a tunnel by name the domain must be provided if the tunnel is not in the default domain.
 // Returns the requested tunnel or an error if the tunnel is not found.
 func (m *Manager) GetTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
-	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -170,15 +180,27 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
-	if tunnel.TunnelID != "" {
-		return nil, fmt.Errorf("tunnelId cannot be set for creating a tunnel")
+	if tunnel.TunnelID == "" {
+		tunnel.TunnelID = generateTunnelId()
 	}
-	url := m.buildUri(tunnel.ClusterID, tunnelsApiPath, options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request url: %w", err)
+	}
 	convertedTunnel, err := tunnel.requestObject()
+	convertedTunnel.TunnelID = tunnel.TunnelID
 	if err != nil {
 		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
 	}
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedTunnel, nil, manageAccessTokenScope, false)
+	var response []byte
+
+	for i := 0; i < 3; i++ {
+		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+		if err != nil {
+			convertedTunnel.TunnelID = generateTunnelId()
+			tunnel.TunnelID = convertedTunnel.TunnelID
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
 	}
@@ -199,7 +221,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
 
-	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request url: %w", err)
 	}
@@ -225,7 +247,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 // Deletes a tunnel.
 // Returns error if delete fails.
 func (m *Manager) DeleteTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) error {
-	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -248,7 +270,7 @@ func (m *Manager) UpdateTunnelEndpoint(
 	if endpoint.HostID == "" {
 		return nil, fmt.Errorf("endpoint hostId must be provided and must not be nil")
 	}
-	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%s/%s", endpointsApiSubPath, endpoint.HostID, endpoint.ConnectionMode), options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%s", endpointsApiSubPath, endpoint.ID), options, fmt.Sprintf("connectionMode=%s", endpoint.ConnectionMode), false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -279,16 +301,14 @@ func (m *Manager) UpdateTunnelEndpoint(
 // Deletes endpoints on a tunnel.
 // Returns error if the delete fails.
 func (m *Manager) DeleteTunnelEndpoints(
-	ctx context.Context, tunnel *Tunnel, hostID string, connectionMode TunnelConnectionMode, options *TunnelRequestOptions,
+	ctx context.Context, tunnel *Tunnel, Id string, options *TunnelRequestOptions,
 ) error {
-	if hostID == "" {
-		return fmt.Errorf("hostId must be provided and must not be nil")
+	if Id == "" {
+		return fmt.Errorf("Id must be provided and must not be nil")
 	}
-	path := fmt.Sprintf("%s/%s/%s", endpointsApiSubPath, hostID, connectionMode)
-	if connectionMode == "" {
-		path = fmt.Sprintf("%s/%s", endpointsApiSubPath, hostID)
-	}
-	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "")
+	path := fmt.Sprintf("%s/%s", endpointsApiSubPath, Id)
+
+	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -300,7 +320,7 @@ func (m *Manager) DeleteTunnelEndpoints(
 
 	var newEndpoints []TunnelEndpoint
 	for _, ep := range tunnel.Endpoints {
-		if ep.HostID != hostID || ep.ConnectionMode != connectionMode {
+		if ep.ID != Id {
 			newEndpoints = append(newEndpoints, ep)
 		}
 	}
@@ -313,7 +333,7 @@ func (m *Manager) DeleteTunnelEndpoints(
 func (m *Manager) ListTunnelPorts(
 	ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions,
 ) (tp []*TunnelPort, err error) {
-	url, err := m.buildTunnelSpecificUri(tunnel, portsApiSubPath, options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, portsApiSubPath, options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -323,18 +343,24 @@ func (m *Manager) ListTunnelPorts(
 		return nil, fmt.Errorf("error sending list tunnel ports request: %w", err)
 	}
 
+	var tunnelPortsResponse *TunnelPortListResponse
 	// Read response into a tunnel port
-	err = json.Unmarshal(response, &tp)
+	err = json.Unmarshal(response, &tunnelPortsResponse)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response json to tunnel ports: %w", err)
 	}
+
+	for _, port := range tunnelPortsResponse.Value {
+		tp = append(tp, &port)
+	}
+
 	return tp, nil
 }
 
 func (m *Manager) GetTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port int, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
-	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%d", portsApiSubPath, port), options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, fmt.Sprintf("%s/%d", portsApiSubPath, port), options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -357,7 +383,8 @@ func (m *Manager) GetTunnelPort(
 func (m *Manager) CreateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
-	url, err := m.buildTunnelSpecificUri(tunnel, portsApiSubPath, options, "")
+	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
+	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -367,7 +394,7 @@ func (m *Manager) CreateTunnelPort(
 		return nil, fmt.Errorf("error converting port for request: %w", err)
 	}
 
-	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPost, url, convertedPort, nil, managePortsAccessTokenScopes, true)
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedPort, nil, managePortsAccessTokenScopes, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel port request: %w", err)
 	}
@@ -400,7 +427,7 @@ func (m *Manager) UpdateTunnelPort(
 		return nil, fmt.Errorf("cluster ids do not match")
 	}
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
-	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -441,7 +468,7 @@ func (m *Manager) DeleteTunnelPort(
 ) error {
 
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port)
-	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "")
+	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
 		return fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -699,18 +726,24 @@ func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequest
 			}
 		}
 	}
+
+	if query != "" {
+		query = fmt.Sprintf("%s&api-version=%s", query, m.apiVersion)
+	} else {
+		query = fmt.Sprintf("api-version=%s", m.apiVersion)
+	}
 	baseAddress.Path = path
 	baseAddress.RawQuery = query
 	return baseAddress
 }
 
-func (m *Manager) buildTunnelSpecificUri(tunnel *Tunnel, path string, options *TunnelRequestOptions, query string) (*url.URL, error) {
+func (m *Manager) buildTunnelSpecificUri(tunnel *Tunnel, path string, options *TunnelRequestOptions, query string, isCreate bool) (*url.URL, error) {
 	var tunnelPath string
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel cannot be nil to make uri")
 	}
 	switch {
-	case tunnel.ClusterID != "" && tunnel.TunnelID != "":
+	case (tunnel.ClusterID != "" || isCreate) && tunnel.TunnelID != "":
 		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID)
 	case tunnel.Name != "":
 		tunnelPath = fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.Name)
@@ -748,4 +781,13 @@ func partialMarshal(value interface{}, fields []string) ([]byte, error) {
 	}
 
 	return json.Marshal(m)
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

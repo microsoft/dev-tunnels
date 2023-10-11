@@ -50,15 +50,14 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   // Api strings
   private static final String prodServiceUri = "https://global.rel.tunnels.api.visualstudio.com";
-  private static final String apiV1Path = "/api/v1";
-  private static final String tunnelsApiPath = apiV1Path + "/tunnels";
-  private static final String userLimitsApiPath = apiV1Path + "/userlimits";
-  private static final String subjectsApiPath = apiV1Path + "/subjects";
+  private static final String tunnelsApiPath = "/tunnels";
+  private static final String userLimitsApiPath =  "/userlimits";
+  private static final String subjectsApiPath = "/subjects";
   private static final String endpointsApiSubPath = "/endpoints";
   private static final String portsApiSubPath = "/ports";
-  private String clustersApiPath = apiV1Path + "/clusters";
+  private String clustersApiPath = "/clusters";
   private static final String tunnelAuthenticationScheme = "Tunnel";
-  private static final String checkTunnelNamePath = "/checkNameAvailability";
+  private static final String checkTunnelNamePath = ":checkNameAvailability";
 
   // Access Scopes
   private static final String[] ManageAccessTokenScope = {
@@ -85,15 +84,21 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private final ProductHeaderValue[] userAgents;
   private final Supplier<CompletableFuture<String>> userTokenCallback;
   private final String baseAddress;
+  private final String apiVersion;
 
-  public TunnelManagementClient(ProductHeaderValue[] userAgents) {
-    this(userAgents, null, null);
+  public static final String[] ApiVersions = {
+    "2023-09-27-preview"
+  };
+
+  public TunnelManagementClient(ProductHeaderValue[] userAgents, String apiVersion) {
+    this(userAgents, null, apiVersion);
   }
 
   public TunnelManagementClient(
       ProductHeaderValue[] userAgents,
-      Supplier<CompletableFuture<String>> userTokenCallback) {
-    this(userAgents, userTokenCallback, null);
+      Supplier<CompletableFuture<String>> userTokenCallback,
+      String apiVersion) {
+    this(userAgents, userTokenCallback, null, apiVersion);
   }
 
   /**
@@ -109,15 +114,20 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   public TunnelManagementClient(
       ProductHeaderValue[] userAgents,
       Supplier<CompletableFuture<String>> userTokenCallback,
-      String tunnelServiceUri) {
+      String tunnelServiceUri,
+      String apiVersion) {
     if (userAgents.length == 0) {
       throw new IllegalArgumentException("user agents cannot be empty");
+    }
+    if (!Arrays.asList(ApiVersions).contains(apiVersion))  {
+      throw new IllegalArgumentException("apiVersion must be one of: " + Arrays.toString(ApiVersions));
     }
     this.userAgents = userAgents;
     this.userTokenCallback = userTokenCallback != null ? userTokenCallback :
         () -> CompletableFuture.completedFuture(null);
     this.baseAddress = tunnelServiceUri != null ? tunnelServiceUri : prodServiceUri;
     this.httpClient = HttpClient.newHttpClient();
+    this.apiVersion = apiVersion;
   }
 
   private <T, U> CompletableFuture<U> requestAsync(
@@ -243,21 +253,21 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     return gson.fromJson(response.body(), typeOfT);
   }
 
-  private URI buildUri(Tunnel tunnel, TunnelRequestOptions options) {
-    return buildUri(tunnel, options, null, null);
+  private URI buildUri(Tunnel tunnel, TunnelRequestOptions options, boolean isTunnelCreate) {
+    return buildUri(tunnel, options, null, null, isTunnelCreate);
   }
 
   private URI buildUri(Tunnel tunnel, TunnelRequestOptions options, String path) {
-    return buildUri(tunnel, options, path, null);
+    return buildUri(tunnel, options, path, null, false);
   }
 
-  private URI buildUri(Tunnel tunnel, TunnelRequestOptions options, String path, String query) {
+  private URI buildUri(Tunnel tunnel, TunnelRequestOptions options, String path, String query, boolean isTunnelCreate) {
     if (tunnel == null) {
       throw new Error("Tunnel must be specified");
     }
 
     String tunnelPath;
-    if (StringUtils.isNotBlank(tunnel.clusterId) && StringUtils.isNotBlank(tunnel.tunnelId)) {
+    if ((StringUtils.isNotBlank(tunnel.clusterId) || isTunnelCreate) && StringUtils.isNotBlank(tunnel.tunnelId)) {
       tunnelPath = tunnelsApiPath + "/" + tunnel.tunnelId;
     } else {
       if (tunnel.name == null) {
@@ -310,6 +320,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       queryString += StringUtils.isBlank(queryString) ? query : "&" + query;
     }
 
+    queryString += StringUtils.isBlank(queryString) ? "api-version="+this.apiVersion : "&api-version="+this.apiVersion;
+
+
     try {
       return new URI(
           baseAddress.getScheme(),
@@ -346,7 +359,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Tunnel> getTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    var requestUri = buildUri(tunnel, options, null, null);
+    var requestUri = buildUri(tunnel, options, null, null, false);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
     return requestAsync(
@@ -361,28 +374,51 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Tunnel> createTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    if (tunnel.tunnelId != null) {
-      throw new IllegalArgumentException("Tunnel ID may not be specified when creating a tunnel.");
+    var generatedId = tunnel.tunnelId == null;
+    if (generatedId) {
+      tunnel.tunnelId = IdGeneration.generateTunnelId();
     }
-    var uri = buildUri(tunnel.clusterId, tunnelsApiPath, options, null);
+    var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
+    for (int i = 0; i <= 3; i++){
+      try {
+        return requestAsync(
+          tunnel,
+          options,
+          HttpMethod.PUT,
+          uri,
+          ManageAccessTokenScope,
+          convertTunnelForRequest(tunnel),
+          responseType);
+      }
+      catch (Exception e) {
+        if (generatedId) {
+          tunnel.tunnelId = IdGeneration.generateTunnelId();;
+        }
+        else{
+          throw e;
+        }
+      }
+    }
+
     return requestAsync(
-        tunnel,
-        options,
-        HttpMethod.POST,
-        uri,
-        ManageAccessTokenScope,
-        convertTunnelForRequest(tunnel),
-        responseType);
+          tunnel,
+          options,
+          HttpMethod.PUT,
+          uri,
+          ManageAccessTokenScope,
+          convertTunnelForRequest(tunnel),
+          responseType);
   }
 
   private Tunnel convertTunnelForRequest(Tunnel tunnel) {
     Tunnel converted = new Tunnel();
+    converted.tunnelId = tunnel.tunnelId;
     converted.name = tunnel.name;
     converted.domain = tunnel.domain;
     converted.description = tunnel.description;
-    converted.tags = tunnel.tags;
+    converted.labels = tunnel.labels;
     converted.options = tunnel.options;
     converted.accessControl = tunnel.accessControl;
     converted.customExpiration = tunnel.customExpiration;
@@ -408,7 +444,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Tunnel> updateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    var uri = buildUri(tunnel, options);
+    var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
     return requestAsync(
@@ -427,7 +463,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Boolean> deleteTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    var uri = buildUri(tunnel, options);
+    var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Boolean>() {
     }.getType();
     return requestAsync(
@@ -448,15 +484,17 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (endpoint == null) {
       throw new IllegalArgumentException("Endpoint must not be null.");
     }
-    if (StringUtils.isBlank(endpoint.hostId)) {
-      throw new IllegalArgumentException("Endpoint hostId must not be null.");
+    if (StringUtils.isBlank(endpoint.id)) {
+      throw new IllegalArgumentException("Endpoint id must not be null.");
     }
 
-    var path = endpointsApiSubPath + "/" + endpoint.hostId + "/" + endpoint.connectionMode;
+    var path = endpointsApiSubPath + "/" + endpoint.id;
     var uri = buildUri(
         tunnel,
         options,
-        path);
+        path,
+        "connectionMode=" + endpoint.connectionMode.toString(),
+        false);
 
     final Type responseType = new TypeToken<TunnelEndpoint>() {
     }.getType();
@@ -472,7 +510,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (tunnel.endpoints != null) {
       var updatedEndpoints = new ArrayList<TunnelEndpoint>();
       for (TunnelEndpoint e : tunnel.endpoints) {
-        if (e.hostId != endpoint.hostId || e.connectionMode != endpoint.connectionMode) {
+        if (e.id != endpoint.id) {
           updatedEndpoints.add(e);
         }
       }
@@ -486,16 +524,12 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   @Override
   public CompletableFuture<Boolean> deleteTunnelEndpointsAsync(
       Tunnel tunnel,
-      String hostId,
-      TunnelConnectionMode connectionMode,
+      String id,
       TunnelRequestOptions options) {
-    if (hostId == null) {
-      throw new IllegalArgumentException("hostId must not be null");
+    if (id == null) {
+      throw new IllegalArgumentException("id must not be null");
     }
-    var path = endpointsApiSubPath + "/" + hostId;
-    if (connectionMode != null) {
-      path += "/" + connectionMode;
-    }
+    var path = endpointsApiSubPath + "/" + id;
     var uri = buildUri(tunnel, options, path);
 
     final Type responseType = new TypeToken<Boolean>() {
@@ -512,7 +546,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (tunnel.endpoints != null) {
       var updatedEndpoints = new ArrayList<TunnelEndpoint>();
       for (TunnelEndpoint e : tunnel.endpoints) {
-        if (e.hostId != hostId || e.connectionMode != connectionMode) {
+        if (e.id != id) {
           updatedEndpoints.add(e);
         }
       }
@@ -569,13 +603,17 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (tunnelPort == null) {
       throw new IllegalArgumentException("Tunnel port must be specified");
     }
-    var uri = buildUri(tunnel, options, portsApiSubPath);
+    var path = portsApiSubPath + "/" + tunnelPort.portNumber;
+    var uri = buildUri(
+        tunnel,
+        options,
+        path);
     final Type responseType = new TypeToken<TunnelPort>() {
     }.getType();
     CompletableFuture<TunnelPort> result = requestAsync(
         tunnel,
         options,
-        HttpMethod.POST,
+        HttpMethod.PUT,
         uri,
         ManagePortsAccessTokenScopes,
         convertTunnelPortForRequest(tunnel, tunnelPort),
@@ -615,7 +653,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     converted.protocol = tunnelPort.protocol;
     converted.isDefault = tunnelPort.isDefault;
     converted.description = tunnelPort.description;
-    converted.tags = tunnelPort.tags;
+    converted.labels = tunnelPort.labels;
     converted.sshUser = tunnelPort.sshUser;
     converted.options = tunnelPort.options;
     if (tunnelPort.accessControl != null && tunnelPort.accessControl.entries != null) {

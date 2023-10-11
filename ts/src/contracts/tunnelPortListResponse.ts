@@ -3,7 +3,7 @@
 // Generated from ../../../cs/src/Contracts/TunnelPortListResponse.cs
 /* eslint-disable */
 
-import { TunnelPortV2 } from './tunnelPortV2';
+import { TunnelPort } from './tunnelPort';
 
 /**
  * Data contract for response of a list tunnel ports call.
@@ -12,7 +12,7 @@ export interface TunnelPortListResponse {
     /**
      * List of tunnels
      */
-    value: TunnelPortV2[];
+    value: TunnelPort[];
 
     /**
      * Link to get next page of results

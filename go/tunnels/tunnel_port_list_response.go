@@ -7,7 +7,7 @@ package tunnels
 // Data contract for response of a list tunnel ports call.
 type TunnelPortListResponse struct {
 	// List of tunnels
-	Value    []TunnelPortV2 `json:"value,omitempty"`
+	Value    []TunnelPort `json:"value,omitempty"`
 
 	// Link to get next page of results
 	NextLink string `json:"nextLink,omitempty"`

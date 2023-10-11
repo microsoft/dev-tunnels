@@ -58,17 +58,17 @@ public class TunnelConstraints {
     /**
      * Min length of a single tunnel or port tag.
      */
-    public static final int tagMinLength = 1;
+    public static final int labelMinLength = 1;
 
     /**
      * Max length of a single tunnel or port tag.
      */
-    public static final int tagMaxLength = 50;
+    public static final int labelMaxLength = 50;
 
     /**
-     * Maximum number of tags that can be applied to a tunnel or port.
+     * Maximum number of labels that can be applied to a tunnel or port.
      */
-    public static final int maxTags = 100;
+    public static final int maxLabels = 100;
 
     /**
      * Min length of a tunnel domain.
@@ -211,14 +211,14 @@ public class TunnelConstraints {
     public static final Pattern tunnelNameRegex = java.util.regex.Pattern.compile(TunnelConstraints.tunnelNamePattern);
 
     /**
-     * Regular expression that can match or validate tunnel or port tags.
+     * Regular expression that can match or validate tunnel or port labels.
      */
-    public static final String tagPattern = "[\\w-=]{1,50}";
+    public static final String labelPattern = "[\\w-=]{1,50}";
 
     /**
-     * Regular expression that can match or validate tunnel or port tags.
+     * Regular expression that can match or validate tunnel or port labels.
      */
-    public static final Pattern tagRegex = java.util.regex.Pattern.compile(TunnelConstraints.tagPattern);
+    public static final Pattern labelRegex = java.util.regex.Pattern.compile(TunnelConstraints.labelPattern);
 
     /**
      * Regular expression that can match or validate tunnel domains.

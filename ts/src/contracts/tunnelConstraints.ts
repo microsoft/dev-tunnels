@@ -6,7 +6,7 @@
 /**
  * Tunnel constraints.
  */
-namespace TunnelConstraints {
+export namespace TunnelConstraints {
     /**
      * Min length of tunnel cluster ID.
      */
@@ -55,17 +55,17 @@ namespace TunnelConstraints {
     /**
      * Min length of a single tunnel or port tag.
      */
-    export const tagMinLength: number = 1;
+    export const labelMinLength: number = 1;
 
     /**
      * Max length of a single tunnel or port tag.
      */
-    export const tagMaxLength: number = 50;
+    export const labelMaxLength: number = 50;
 
     /**
-     * Maximum number of tags that can be applied to a tunnel or port.
+     * Maximum number of labels that can be applied to a tunnel or port.
      */
-    export const maxTags: number = 100;
+    export const maxLabels: number = 100;
 
     /**
      * Min length of a tunnel domain.
@@ -208,14 +208,14 @@ namespace TunnelConstraints {
     export const tunnelNameRegex: RegExp = new RegExp(TunnelConstraints.tunnelNamePattern);
 
     /**
-     * Regular expression that can match or validate tunnel or port tags.
+     * Regular expression that can match or validate tunnel or port labels.
      */
-    export const tagPattern: string = '[\\w-=]{1,50}';
+    export const labelPattern: string = '[\\w-=]{1,50}';
 
     /**
-     * Regular expression that can match or validate tunnel or port tags.
+     * Regular expression that can match or validate tunnel or port labels.
      */
-    export const tagRegex: RegExp = new RegExp(TunnelConstraints.tagPattern);
+    export const labelRegex: RegExp = new RegExp(TunnelConstraints.labelPattern);
 
     /**
      * Regular expression that can match or validate tunnel domains.

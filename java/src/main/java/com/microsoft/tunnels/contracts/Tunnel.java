@@ -40,10 +40,10 @@ public class Tunnel {
     public String description;
 
     /**
-     * Gets or sets the tags of the tunnel.
+     * Gets or sets the labels of the tunnel.
      */
     @Expose
-    public String[] tags;
+    public String[] labels;
 
     /**
      * Gets or sets the optional parent domain of the tunnel, if it is not using the

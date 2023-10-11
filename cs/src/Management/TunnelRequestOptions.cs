@@ -89,23 +89,23 @@ namespace Microsoft.DevTunnels.Management
         public bool IncludeAccessControl { get; set; }
 
         /// <summary>
-        /// Gets or sets an optional list of tags to filter the requested tunnels or ports.
+        /// Gets or sets an optional list of labels to filter the requested tunnels or ports.
         /// </summary>
         /// <remarks>
-        /// Requested tags are compared to the <see cref="Tunnel.Tags"/> or
-        /// <see cref="TunnelPort.Tags"/> when calling
+        /// Requested labels are compared to the <see cref="Tunnel.Labels"/> or
+        /// <see cref="TunnelPort.Labels"/> when calling
         /// <see cref="ITunnelManagementClient.ListTunnelsAsync"/> or
         /// <see cref="ITunnelManagementClient.ListTunnelPortsAsync"/> respectively. By default, an
-        /// item is included if ANY tag matches; set <see cref="RequireAllTags" /> to match ALL
-        /// tags instead.
+        /// item is included if ANY tag matches; set <see cref="RequireAllLabels" /> to match ALL
+        /// labels instead.
         /// </remarks>
-        public string[]? Tags { get; set; }
+        public string[]? Labels { get; set; }
 
         /// <summary>
-        /// Gets or sets a flag that indicates whether listed items must match all tags
-        /// specified in <see cref="Tags"/>. If false, an item is included if any tag matches.
+        /// Gets or sets a flag that indicates whether listed items must match all labels
+        /// specified in <see cref="Labels"/>. If false, an item is included if any tag matches.
         /// </summary>
-        public bool RequireAllTags { get; set; }
+        public bool RequireAllLabels { get; set; }
 
         /// <summary>
         /// Gets or sets an optional list of token scopes that are requested when retrieving
@@ -163,12 +163,12 @@ namespace Microsoft.DevTunnels.Management
                 queryOptions["forceRename"] = TrueOption;
             }
 
-            if (Tags != null && Tags.Length > 0)
+            if (Labels != null && Labels.Length > 0)
             {
-                queryOptions["tags"] = Tags;
-                if (RequireAllTags)
+                queryOptions["labels"] = Labels;
+                if (RequireAllLabels)
                 {
-                    queryOptions["allTags"] = TrueOption;
+                    queryOptions["allLabels"] = TrueOption;
                 }
             }
 

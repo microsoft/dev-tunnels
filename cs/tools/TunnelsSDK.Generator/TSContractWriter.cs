@@ -81,7 +81,7 @@ internal class TSContractWriter : ContractWriter
         if (nestedTypes.Length > 0)
         {
             s.AppendLine();
-            s.Append($"{indent}namespace {type.Name} {{");
+            s.Append($"{indent}export namespace {type.Name} {{");
 
             foreach (var nestedType in nestedTypes.Where(
                 (t) => !ContractsGenerator.ExcludedContractTypes.Contains(t.Name)))
@@ -204,7 +204,7 @@ internal class TSContractWriter : ContractWriter
     {
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), indent));
 
-        s.Append($"namespace {type.Name} {{");
+        s.Append($"export namespace {type.Name} {{");
 
         foreach (var member in type.GetMembers())
         {

@@ -65,7 +65,7 @@ public class TunnelManagementClientTests extends TunnelTest {
     assertNotNull(createdTunnel.options);
     assertNotNull(createdTunnel.ports);
     assertNotNull(createdTunnel.status);
-    assertNotNull(createdTunnel.tags);
+    assertNotNull(createdTunnel.labels);
     assertNotNull(createdTunnel.tunnelId);
 
     tunnelManagementClient.deleteTunnelAsync(createdTunnel).join();

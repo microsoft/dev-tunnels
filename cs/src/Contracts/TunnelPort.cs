@@ -36,8 +36,8 @@ public class TunnelPort
     /// Gets or sets the generated ID of the tunnel, unique within the cluster.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [RegularExpression(OldTunnelIdPattern)]
-    [StringLength(OldTunnelIdLength, MinimumLength = OldTunnelIdLength)]
+    [RegularExpression(NewTunnelIdPattern)]
+    [StringLength(NewTunnelIdMaxLength, MinimumLength = NewTunnelIdMinLength)]
     public string? TunnelId { get; set; }
 
     /// <summary>
@@ -64,13 +64,13 @@ public class TunnelPort
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the tags of the port.
+    /// Gets or sets the labels of the port.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [MaxLength(MaxTags)]
-    [ArrayStringLength(TagMaxLength, MinimumLength = TagMinLength)]
-    [ArrayRegularExpression(TagPattern)]
-    public string[]? Tags { get; set; }
+    [MaxLength(MaxLabels)]
+    [ArrayStringLength(LabelMaxLength, MinimumLength = LabelMinLength)]
+    [ArrayRegularExpression(LabelPattern)]
+    public string[]? Labels { get; set; }
 
     /// <summary>
     /// Gets or sets the protocol of the tunnel port.

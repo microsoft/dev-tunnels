@@ -111,19 +111,14 @@ public interface ITunnelManagementClient {
    *                             name
    *                             (globally unique, if configured) or tunnel ID and
    *                             cluster ID.
-   * @param hostId               Required ID of the host for endpoint(s) to be
+   * @param id               Required ID of the endpoint to be
    *                             deleted.
-   * @param tunnelConnectionMode Optional connection mode for endpoint(s) to be
-   *                             deleted,
-   *                             or null to delete endpoints for all connection
-   *                             modes.
    * @param options              Request options.
    * @return True if one or more endpoints were deleted, false if none were found.
    */
   public CompletableFuture<Boolean> deleteTunnelEndpointsAsync(
       Tunnel tunnel,
-      String hostId,
-      TunnelConnectionMode tunnelConnectionMode,
+      String id,
       TunnelRequestOptions options);
 
   /**

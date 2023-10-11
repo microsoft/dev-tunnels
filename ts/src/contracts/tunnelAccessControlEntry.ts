@@ -98,7 +98,7 @@ export interface TunnelAccessControlEntry {
     expiration?: Date;
 }
 
-namespace TunnelAccessControlEntry {
+export namespace TunnelAccessControlEntry {
     /**
      * Constants for well-known identity providers.
      */

@@ -19,3 +19,5 @@ export { TunnelRelayTunnelEndpoint } from './tunnelRelayTunnelEndpoint';
 export { TunnelServiceProperties } from './tunnelServiceProperties';
 export { TunnelStatus } from './tunnelStatus';
 export { ClusterDetails } from './clusterDetails';
+export { TunnelListByRegionResponse } from './tunnelListByRegionResponse';
+export { TunnelPortListResponse } from './tunnelPortListResponse';

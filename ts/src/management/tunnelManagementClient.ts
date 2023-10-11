@@ -25,7 +25,7 @@ export interface TunnelManagementClient {
     /**
      * Lists tunnels that are owned by the caller.
      *
-     * The list can be filtered by setting `TunnelRequestOptions.tags`. Ports will not be
+     * The list can be filtered by setting `TunnelRequestOptions.labels`. Ports will not be
      * included in the returned tunnels unless `TunnelRequestOptions.includePorts` is set to true.
      *
      * @param clusterId A tunnel cluster ID, or null to list tunnels globally.
@@ -86,21 +86,19 @@ export interface TunnelManagementClient {
     /**
      * Deletes a tunnel endpoint.
      * @param tunnel
-     * @param hostId
-     * @param connectionMode
+     * @param id
      * @param options
      */
     deleteTunnelEndpoints(
         tunnel: Tunnel,
-        hostId: string,
-        connectionMode?: TunnelConnectionMode,
+        id: string,
         options?: TunnelRequestOptions,
     ): Promise<boolean>;
 
     /**
      * Lists ports on a tunnel.
      *
-     * The list can be filtered by setting `TunnelRequestOptions.tags`.
+     * The list can be filtered by setting `TunnelRequestOptions.labels`.
      *
      * @param tunnel Tunnel object including at least either a tunnel name (globally unique,
      * if configured) or tunnel ID and cluster ID.

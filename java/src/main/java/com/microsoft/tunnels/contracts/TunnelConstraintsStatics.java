@@ -58,7 +58,7 @@ class TunnelConstraintsStatics {
       return false;
     }
 
-    var matcher = TunnelConstraints.tagRegex.matcher(tag);
+    var matcher = TunnelConstraints.labelRegex.matcher(tag);
     return matcher.find() && matcher.start() == 0 && matcher.end() == tag.length();
   }
 

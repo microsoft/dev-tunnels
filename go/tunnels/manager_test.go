@@ -41,7 +41,7 @@ func TestTunnelCreateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -80,7 +80,7 @@ func TestListTunnels(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -134,7 +134,7 @@ func TestGetAccessToken(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -195,7 +195,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -246,7 +246,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -310,7 +310,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -361,7 +361,7 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -425,7 +425,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -508,7 +508,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -608,7 +608,7 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -695,7 +695,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil)
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -719,6 +719,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	// Create and add endpoint
 	endpoint := &TunnelEndpoint{
 		HostID:         "test",
+		ID:             "test",
 		ConnectionMode: TunnelConnectionModeTunnelRelay,
 	}
 
@@ -744,7 +745,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf("endpoint was not successfully updated")
 	}
 
-	err = managementClient.DeleteTunnelEndpoints(ctx, createdTunnel, "test", TunnelConnectionModeTunnelRelay, options)
+	err = managementClient.DeleteTunnelEndpoints(ctx, createdTunnel, "test", options)
 	if err != nil {
 		t.Errorf(err.Error())
 		return

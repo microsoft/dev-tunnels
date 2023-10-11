@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// create manager to get tunnel
-	managementClient, err := tunnels.NewManager(userAgent, getAccessToken, url, nil)
+	managementClient, err := tunnels.NewManager(userAgent, getAccessToken, url, nil, "2023-09-27-preview")
 	if err != nil {
 		fmt.Println(fmt.Errorf(err.Error()))
 		return

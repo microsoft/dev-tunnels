@@ -72,23 +72,23 @@ public static class TunnelConstraints
     /// <summary>
     /// Min length of a single tunnel or port tag.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
-    /// <seealso cref="TunnelPort.Tags"/>
-    public const int TagMinLength = 1;
+    /// <seealso cref="Tunnel.Labels"/>
+    /// <seealso cref="TunnelPort.Labels"/>
+    public const int LabelMinLength = 1;
 
     /// <summary>
     /// Max length of a single tunnel or port tag.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
-    /// <seealso cref="TunnelPort.Tags"/>
-    public const int TagMaxLength = 50;
+    /// <seealso cref="Tunnel.Labels"/>
+    /// <seealso cref="TunnelPort.Labels"/>
+    public const int LabelMaxLength = 50;
 
     /// <summary>
-    /// Maximum number of tags that can be applied to a tunnel or port.
+    /// Maximum number of labels that can be applied to a tunnel or port.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
-    /// <seealso cref="TunnelPort.Tags"/>
-    public const int MaxTags = 100;
+    /// <seealso cref="Tunnel.Labels"/>
+    /// <seealso cref="TunnelPort.Labels"/>
+    public const int MaxLabels = 100;
 
     /// <summary>
     /// Min length of a tunnel domain.
@@ -265,17 +265,17 @@ public static class TunnelConstraints
     public static Regex TunnelNameRegex { get; } = new Regex(TunnelNamePattern);
 
     /// <summary>
-    /// Regular expression that can match or validate tunnel or port tags.
+    /// Regular expression that can match or validate tunnel or port labels.
     /// </summary>
-    /// <seealso cref="TunnelPort.Tags"/>
-    public const string TagPattern = "[\\w-=]{1,50}";
+    /// <seealso cref="TunnelPort.Labels"/>
+    public const string LabelPattern = "[\\w-=]{1,50}";
 
     /// <summary>
-    /// Regular expression that can match or validate tunnel or port tags.
+    /// Regular expression that can match or validate tunnel or port labels.
     /// </summary>
-    /// <seealso cref="Tunnel.Tags"/>
-    /// <seealso cref="TunnelPort.Tags"/>
-    public static Regex TagRegex { get; } = new Regex(TagPattern);
+    /// <seealso cref="Tunnel.Labels"/>
+    /// <seealso cref="TunnelPort.Labels"/>
+    public static Regex LabelRegex { get; } = new Regex(LabelPattern);
 
     /// <summary>
     /// Regular expression that can match or validate tunnel domains.
@@ -422,7 +422,7 @@ public static class TunnelConstraints
             return false;
         }
 
-        var m = TagRegex.Match(tag);
+        var m = LabelRegex.Match(tag);
         return m.Index == 0 && m.Length == tag.Length;
     }
 

@@ -12,6 +12,8 @@ import {
     TunnelServiceProperties,
     ClusterDetails,
     NamedRateStatus,
+    TunnelListByRegionResponse,
+    TunnelPortListResponse,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -24,17 +26,17 @@ import { tunnelSdkUserAgent } from './version';
 import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
+import { IdGeneration } from './idGeneration';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
-const apiV1Path = `/api/v1`;
-const tunnelsApiPath = apiV1Path + '/tunnels';
-const limitsApiPath = apiV1Path + '/userlimits';
+const tunnelsApiPath = '/tunnels';
+const limitsApiPath = '/userlimits';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
-const clustersApiPath = apiV1Path + '/clusters';
+const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
-const checkAvailablePath = '/checkAvailability';
+const checkAvailablePath = ':checkNameAvailability';
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
@@ -101,9 +103,11 @@ const readAccessTokenScopes = [
     TunnelAccessScopes.Host,
     TunnelAccessScopes.Connect,
 ];
+const apiVersions = ["2023-09-27-preview"]
 
 export class TunnelManagementHttpClient implements TunnelManagementClient {
     public additionalRequestHeaders?: { [header: string]: string };
+    public apiVersion: string;
 
     private readonly baseAddress: string;
     private readonly userTokenCallback: () => Promise<string | null>;
@@ -128,11 +132,17 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      */
     public constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
+        apiVersion: string,
         userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
         private readonly adapter?: AxiosAdapter
     ) {
+        if (apiVersions.indexOf(apiVersion) === -1) {
+            throw new TypeError(`Invalid API version: ${apiVersion}, must be one of ${apiVersions}`);
+        }
+        this.apiVersion = apiVersion;
+
         if (!userAgents) {
             throw new TypeError('User agent must be provided.');
         }
@@ -202,15 +212,23 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): Promise<Tunnel[]> {
         const queryParams = [clusterId ? null : 'global=true', domain ? `domain=${domain}` : null];
         const query = queryParams.filter((p) => !!p).join('&');
-        const results = (await this.sendRequest<Tunnel[]>(
+        const results = (await this.sendRequest<TunnelListByRegionResponse>(
             'GET',
             clusterId,
             tunnelsApiPath,
             query,
             options,
         ))!;
-        results.forEach(parseTunnelDates);
-        return results;
+        let tunnels = new Array<Tunnel>();
+        if (results.value) {
+            for (const region of results.value) {
+                if (region.value) {
+                    tunnels = tunnels.concat(region.value);
+                }
+            }
+        }
+        tunnels.forEach(parseTunnelDates);
+        return tunnels;
     }
 
     public async getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null> {
@@ -229,22 +247,49 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
-        if (tunnelId) {
-            throw new Error('An ID may not be specified when creating a tunnel.');
+        const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
+        if (idGenerated) {
+            tunnel.tunnelId = IdGeneration.generateTunnelId();
+        }
+        for (let i = 0;i<=3; i++){
+            try {
+                const result = (await this.sendTunnelRequest<Tunnel>(
+                    'PUT',
+                    tunnel,
+                    manageAccessTokenScope,
+                    undefined,
+                    undefined,
+                    options,
+                    this.convertTunnelForRequest(tunnel),
+                    undefined,
+                    true,
+                ))!;
+                preserveAccessTokens(tunnel, result);
+                parseTunnelDates(result);
+                return result;
+            } catch (error) {
+                if (idGenerated) {
+                    // The tunnel ID was generated and there was a conflict.
+                    // Try again with a new ID.
+                    tunnel.tunnelId = IdGeneration.generateTunnelId();
+                } else {
+                    throw error;
+                }
+            }
         }
 
-        tunnel = this.convertTunnelForRequest(tunnel);
-        const result = (await this.sendRequest<Tunnel>(
-            'POST',
-            tunnel.clusterId,
-            tunnelsApiPath,
+        const result2 = (await this.sendTunnelRequest<Tunnel>(
+            'PUT',
+            tunnel,
+            manageAccessTokenScope,
+            undefined,
             undefined,
             options,
-            tunnel,
+            this.convertTunnelForRequest(tunnel),
         ))!;
-        preserveAccessTokens(tunnel, result);
-        parseTunnelDates(result);
-        return result;
+        preserveAccessTokens(tunnel, result2);
+        parseTunnelDates(result2);
+        return result2;
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
@@ -280,13 +325,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         endpoint: TunnelEndpoint,
         options?: TunnelRequestOptions,
     ): Promise<TunnelEndpoint> {
-        const path = `${endpointsApiSubPath}/${endpoint.hostId}/${endpoint.connectionMode}`;
+        if (endpoint.id == null) {
+            throw new Error('Endpoint ID must be specified when updating an endpoint.');
+        }
+        const path = `${endpointsApiSubPath}/${endpoint.id}`;
         const result = (await this.sendTunnelRequest<TunnelEndpoint>(
             'PUT',
             tunnel,
             hostAccessTokenScope,
             path,
-            undefined,
+            "connectionMode=" + endpoint.connectionMode,
             options,
             endpoint,
         ))!;
@@ -307,14 +355,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     public async deleteTunnelEndpoints(
         tunnel: Tunnel,
-        hostId: string,
-        connectionMode?: TunnelConnectionMode,
+        id: string,
         options?: TunnelRequestOptions,
     ): Promise<boolean> {
-        const path =
-            connectionMode == null
-                ? `${endpointsApiSubPath}/${hostId}`
-                : `${endpointsApiSubPath}/${hostId}/${connectionMode}`;
+        const path = `${endpointsApiSubPath}/${id}`;
         const result = await this.sendTunnelRequest<boolean>(
             'DELETE',
             tunnel,
@@ -329,7 +373,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (result && tunnel.endpoints) {
             // Also delete the endpoint in the local tunnel object.
             tunnel.endpoints = tunnel.endpoints.filter(
-                (e) => e.hostId !== hostId || e.connectionMode !== connectionMode,
+                (e) => e.id !== id,
             );
         }
 
@@ -351,7 +395,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort[]> {
-        const results = (await this.sendTunnelRequest<TunnelPort[]>(
+        const results = (await this.sendTunnelRequest<TunnelPortListResponse>(
             'GET',
             tunnel,
             readAccessTokenScopes,
@@ -359,8 +403,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
         ))!;
-        results.forEach(parseTunnelPortDates);
-        return results;
+        if (results.value){
+            results.value.forEach(parseTunnelPortDates);
+        }
+        return results.value;
     }
 
     public async getTunnelPort(
@@ -387,11 +433,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort> {
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
+        const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
         const result = (await this.sendTunnelRequest<TunnelPort>(
-            'POST',
+            'PUT',
             tunnel,
             managePortsAccessTokenScopes,
-            portsApiSubPath,
+            path,
             undefined,
             options,
             tunnelPort,
@@ -507,8 +554,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
         body?: object,
         allowNotFound?: boolean,
+        isCreate: boolean = false
     ): Promise<NullableIfNotBoolean<TResult>> {
-        const uri = await this.buildUriForTunnel(tunnel, path, query, options);
+        const uri = await this.buildUriForTunnel(tunnel, path, query, options, isCreate);
         const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         return result;
@@ -645,17 +693,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         path?: string,
         query?: string,
         options?: TunnelRequestOptions,
+        isCreate: boolean = false,
     ) {
         let tunnelPath = '';
-        if (tunnel.clusterId && tunnel.tunnelId) {
+        if ((tunnel.clusterId || isCreate) && tunnel.tunnelId) {
             tunnelPath = `${tunnelsApiPath}/${tunnel.tunnelId}`;
         } else {
-            if (!tunnel.name) {
-                throw new Error(
-                    'Tunnel object must include either a name or tunnel ID and cluster ID.',
-                );
-            }
-            tunnelPath = `${tunnelsApiPath}/${tunnel.name}`;
+              throw new Error(
+                  'Tunnel object must include a tunnel ID always and cluster ID for non creates.',
+              );
         }
 
         if (options?.additionalQueryParameters) {
@@ -735,10 +781,11 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
     private convertTunnelForRequest(tunnel: Tunnel): Tunnel {
         const convertedTunnel: Tunnel = {
+            tunnelId: tunnel.tunnelId,
             name: tunnel.name,
             domain: tunnel.domain,
             description: tunnel.description,
-            tags: tunnel.tags,
+            labels: tunnel.labels,
             options: tunnel.options,
             customExpiration: tunnel.customExpiration,
             accessControl: !tunnel.accessControl
@@ -765,7 +812,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             protocol: tunnelPort.protocol,
             isDefault: tunnelPort.isDefault,
             description: tunnelPort.description,
-            tags: tunnelPort.tags,
+            labels: tunnelPort.labels,
             sshUser: tunnelPort.sshUser,
             options: tunnelPort.options,
             accessControl: !tunnelPort.accessControl
@@ -799,10 +846,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 queryOptions.forceRename = ['true'];
             }
 
-            if (options.tags) {
-                queryOptions.tags = options.tags;
-                if (options.requireAllTags) {
-                    queryOptions.allTags = ['true'];
+            if (options.labels) {
+                queryOptions.labels = options.labels;
+                if (options.requireAllLabels) {
+                    queryOptions.allLabels = ['true'];
                 }
             }
 
@@ -821,6 +868,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (additionalQuery) {
             queryItems.push(additionalQuery);
         }
+        queryItems.push(`api-version=${this.apiVersion}`)
 
         const queryString = queryItems.join('&');
         return queryString;

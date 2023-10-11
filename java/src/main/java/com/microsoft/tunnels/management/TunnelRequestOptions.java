@@ -79,20 +79,20 @@ public class TunnelRequestOptions {
   public boolean includeAccessControl;
 
   /**
-   * Gets or sets an optional list of tags to filter the requested tunnels or ports.
+   * Gets or sets an optional list of labels to filter the requested tunnels or ports.
    *
-   * Requested tags are compared to the `Tunnel.tags` or `TunnelPort.tags` when calling
+   * Requested labels are compared to the `Tunnel.labels` or `TunnelPort.labels` when calling
    * `TunnelManagementClient.listTunnels` or `TunnelManagementClient.listTunnelPorts` respectively.
-   * By default, an item is included if ANY tag matches; set `requireAllTags` to match
-   * ALL tags instead.
+   * By default, an item is included if ANY tag matches; set `requireAllLabels` to match
+   * ALL labels instead.
    */
-  public Collection<String> tags;
+  public Collection<String> labels;
 
   /*
-   * Gets or sets a flag that indicates whether listed items must match all tags
-   * specified in `tags`. If false, an item is included if any tag matches.
+   * Gets or sets a flag that indicates whether listed items must match all labels
+   * specified in `labels`. If false, an item is included if any tag matches.
    */
-  public boolean requireAllTags;
+  public boolean requireAllLabels;
 
   /**
     * Gets or sets an optional list of token scopes that are requested when retrieving a
@@ -144,10 +144,10 @@ public class TunnelRequestOptions {
       queryOptions.put("forceRename", Arrays.asList("true"));
     }
 
-    if (this.tags != null) {
-      queryOptions.put("tags", this.tags);
-      if (this.requireAllTags) {
-        queryOptions.put("allTags", Arrays.asList("true"));
+    if (this.labels != null) {
+      queryOptions.put("labels", this.labels);
+      if (this.requireAllLabels) {
+        queryOptions.put("allLabels", Arrays.asList("true"));
       }
     }
 
