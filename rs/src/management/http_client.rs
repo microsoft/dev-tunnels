@@ -417,7 +417,7 @@ impl TunnelManagementClient {
         mut url: Url,
         tunnel_opts: &TunnelRequestOptions,
     ) -> HttpResult<Request> {
-        add_query(self,&mut url, &self.api_version);
+        add_query(&mut url, tunnel_opts, &self.api_version);
         let mut request = self.make_request(method, url).await?;
 
         let headers = request.headers_mut();
@@ -539,11 +539,11 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &st
     if tunnel_opts.force_rename {
         url.query_pairs_mut().append_pair("forceRename", "true");
     }
-    if !tunnel_opts.tags.is_empty() {
+    if !tunnel_opts.labels.is_empty() {
         url.query_pairs_mut()
-            .append_pair("tags", &tunnel_opts.tags.join(","));
-        if tunnel_opts.require_all_tags {
-            url.query_pairs_mut().append_pair("allTags", "true");
+            .append_pair("labels", &tunnel_opts.labels.join(","));
+        if tunnel_opts.require_all_labels {
+            url.query_pairs_mut().append_pair("allLabels", "true");
         }
     }
     url.query_pairs_mut().append_pair("api-version", api_version);
