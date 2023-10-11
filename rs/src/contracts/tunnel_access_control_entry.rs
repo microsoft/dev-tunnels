@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntry.cs
 
+use chrono::{DateTime, Utc};
 use crate::contracts::TunnelAccessControlEntryType;
 use serde::{Deserialize, Serialize};
 
@@ -77,6 +78,11 @@ pub struct TunnelAccessControlEntry {
     //
     // These must be one or more values from `TunnelAccessScopes`.
     pub scopes: Vec<String>,
+
+    // Gets or sets the expiration for an access control entry.
+    //
+    // If no value is set then this value is null.
+    pub expiration: Option<DateTime<Utc>>,
 }
 
 // Constants for well-known identity providers.

@@ -4,8 +4,8 @@ import com.microsoft.tunnels.contracts.TunnelConstraints;
 import java.util.Random;
 
 public class IdGeneration {
-    private static String[] nouns = {"pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "rabbit", "shoe", "campsite", "plane", "sofa", "chair", "library", "book", "ocean", "lake", "river", "horse"};
-    private static String[] adjectives = {"fun", "happy", "interesting", "neat", "peaceful", "puzzeled", "thoughtful", "kind", "joyful", "overjoyed", "new", "giant", "sneaky", "quick", "majestic", "gleaming", "jolly", "fancy", "tidy", "marvelous", "glamorous", "swift", "silent", "amusing", "spiffy"};
+    private static String[] nouns = { "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "shoe", "plane", "chair", "book", "ocean", "lake", "river" , "horse" };
+    private static String[] adjectives = {"fun", "happy", "interesting", "neat", "peaceful", "puzzled", "kind", "joyful", "new", "giant", "sneaky", "quick", "majestic", "jolly" , "fancy", "tidy", "swift", "silent", "amusing", "spiffy"};
     private static Random rand = new Random();
 
     public static String generateTunnelId() {

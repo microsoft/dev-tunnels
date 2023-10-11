@@ -158,6 +158,15 @@ public class TunnelAccessControlEntry
     public string[] Scopes { get; set; }
 
     /// <summary>
+    /// Gets or sets the expiration for an access control entry.
+    /// </summary>
+    /// <remarks>
+    /// If no value is set then this value is null.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? Expiration { get; set; }
+
+    /// <summary>
     /// Gets a compact textual representation of the access control entry.
     /// </summary>
     public override string ToString()

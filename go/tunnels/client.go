@@ -136,35 +136,46 @@ func (c *Client) Connect(ctx context.Context, hostID string) error {
 	return nil
 }
 
-// Opens a stream connected to a remote port for clients which cannot or do not want to forward local TCP ports.
-// Returns a readWriteCloser which can be used to read and write to the remote port.
-// Set AcceptLocalConnectionsForForwardedPorts to false in ConnectAsync to ensure TCP listeners are not created
-// This will return an error if the port is not yet forwarded,
-// the caller should first call WaitForForwardedPort.
-func (c *Client) ConnectToForwardedPort(ctx context.Context, listenerIn *net.TCPListener, port uint16) error {
+// ConnectListenerToForwardedPort opens a stream to a remote port and connects it to a given listener.
+//
+// Ensure that the port is already forwarded before calling this function
+// by calling WaitForForwardedPort. Otherwise, this will return an error.
+//
+// Set acceptLocalConnectionsForForwardedPorts to false when creating the client to ensure
+// TCP listeners are not created for all ports automatically when the client connects.
+func (c *Client) ConnectListenerToForwardedPort(ctx context.Context, listenerIn net.Listener, port uint16) error {
 	errc := make(chan error, 1)
-	sendError := func(err error) {
-		// Use non-blocking send, to avoid goroutines getting
-		// stuck in case of concurrent or sequential errors.
-		select {
-		case errc <- err:
-		default:
-		}
-	}
-
 	go func() {
 		for {
-			conn, err := listenerIn.AcceptTCP()
+			conn, err := listenerIn.Accept()
 			if err != nil {
-				sendError(err)
+				sendError(err, errc)
 				return
 			}
 
 			go func() {
-				if err := c.handleConnection(ctx, conn, port); err != nil {
-					sendError(err)
+				if err := c.ConnectToForwardedPort(ctx, conn, port); err != nil {
+					sendError(err, errc)
 				}
 			}()
+		}
+	}()
+
+	return awaitError(ctx, errc)
+}
+
+// ConnectToForwardedPort opens a stream to a remote port and connects it to a given connection.
+//
+// Ensure that the port is already forwarded before calling this function
+// by calling WaitForForwardedPort. Otherwise, this will return an error.
+//
+// Set acceptLocalConnectionsForForwardedPorts to false when creating the client to ensure
+// TCP listeners are not created for all ports automatically when the client connects.
+func (c *Client) ConnectToForwardedPort(ctx context.Context, conn io.ReadWriteCloser, port uint16) error {
+	errc := make(chan error, 1)
+	go func() {
+		if err := c.handleConnection(ctx, conn, port); err != nil {
+			sendError(err, errc)
 		}
 	}()
 
@@ -205,6 +216,15 @@ func (c *Client) RefreshPorts(ctx context.Context) error {
 	}
 
 	return err
+}
+
+func sendError(err error, errc chan error) {
+	// Use non-blocking send, to avoid goroutines getting
+	// stuck in case of concurrent or sequential errors.
+	select {
+	case errc <- err:
+	default:
+	}
 }
 
 func awaitError(ctx context.Context, errc chan error) error {
