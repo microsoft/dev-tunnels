@@ -222,8 +222,7 @@ impl TunnelManagementClient {
     ) -> HttpResult<Vec<TunnelPort>> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        let response: TunnelPortListResponse = self.execute_json("list_tunnel_ports", request).await?;
-        Ok(response.value)
+        self.execute_json("list_tunnel_ports", request).await.map(|r| r.value)
     }
 
     /// Gets info about a specific tunnel port.
