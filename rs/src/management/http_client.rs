@@ -106,7 +106,9 @@ impl TunnelManagementClient {
         if tunnel.tunnel_id.is_none() || tunnel.tunnel_id.as_ref().unwrap().is_empty() {
             tunnel.tunnel_id = Some(TunnelManagementClient::generate_tunnel_id());
         }
-        let url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
+        let mut url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
+        let new_path = url.path().to_owned() + "/" + tunnel.tunnel_id.as_ref().unwrap();
+        url.set_path(&new_path);
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, tunnel);
         self.execute_json("create_tunnel", request).await
