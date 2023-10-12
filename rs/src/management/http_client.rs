@@ -58,12 +58,17 @@ impl TunnelManagementClient {
     pub async fn list_all_tunnels(
         &self,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<Vec<TunnelListByRegionResponse>> {
+    ) -> HttpResult<Vec<Tunnel>> {
         let mut url = self.build_uri(None, TUNNELS_API_PATH);
         url.query_pairs_mut().append_pair("global", "true");
 
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("list_all_tunnels", request).await
+        let response: TunnelListByRegionResponse = self.execute_json("list_all_tunnels", request).await?;
+        let mut tunnels = Vec::new();
+        for region in response.value {
+            tunnels.extend(region.value);
+        }
+        Ok(tunnels)
     }
 
     /// Lists tunnels owned by the user in a specific cluster.
@@ -74,8 +79,12 @@ impl TunnelManagementClient {
     ) -> HttpResult<Vec<Tunnel>> {
         let url = self.build_uri(Some(cluster_id), TUNNELS_API_PATH);
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("list_cluster_tunnels", request).await
-    }
+        let response: TunnelListByRegionResponse = self.execute_json("list_cluster_tunnels", request).await?;
+        let mut tunnels = Vec::new();
+        for region in response.value {
+            tunnels.extend(region.value);
+        }
+        Ok(tunnels)    }
 
     /// Looks up a tunnel by ID or name.
     pub async fn get_tunnel(
@@ -208,10 +217,11 @@ impl TunnelManagementClient {
         &self,
         locator: &TunnelLocator,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<TunnelPortListResponse> {
+    ) -> HttpResult<Vec<TunnelPort>> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("list_tunnel_ports", request).await
+        let response: TunnelPortListResponse = self.execute_json("list_tunnel_ports", request).await?;
+        Ok(response.value)
     }
 
     /// Gets info about a specific tunnel port.
@@ -630,7 +640,7 @@ mod test_end_to_end {
 
         // create tunnel
         let tunnel = c
-            .create_tunnel(&Tunnel::default(), NO_REQUEST_OPTIONS)
+            .create_tunnel(Tunnel::default(), NO_REQUEST_OPTIONS)
             .await
             .unwrap();
         assert!(tunnel.tunnel_id.is_some());
