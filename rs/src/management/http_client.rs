@@ -103,11 +103,12 @@ impl TunnelManagementClient {
         mut tunnel: Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
-        if tunnel.tunnel_id.is_none() || tunnel.tunnel_id.as_ref().unwrap().is_empty() {
-            tunnel.tunnel_id = Some(TunnelManagementClient::generate_tunnel_id());
-        }
         let mut url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
-        let new_path = url.path().to_owned() + "/" + tunnel.tunnel_id.as_ref().unwrap();
+        let tunnel_id = match tunnel.tunnel_id.as_ref() {
+            None | Some("") => TunnelManagementClient::generate_tunnel_id(),
+            Some(tunnel_id) => tunnel_id.to_owned(),
+        };
+        let new_path = url.path().to_owned() + "/" + tunnel_id;
         url.set_path(&new_path);
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, tunnel);
