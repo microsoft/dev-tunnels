@@ -14,8 +14,9 @@ extern crate rand;
 use rand::Rng;
 
 use crate::contracts::{
-    env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelRelayTunnelEndpoint, TunnelServiceProperties, NamedRateStatus, TunnelPortListResponse, TunnelListByRegionResponse,
+    env_production, NamedRateStatus, Tunnel, TunnelConnectionMode, TunnelEndpoint,
+    TunnelListByRegionResponse, TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint,
+    TunnelServiceProperties,
 };
 
 use super::{
@@ -93,7 +94,6 @@ impl TunnelManagementClient {
         mut tunnel: Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
-
         if tunnel.tunnel_id.is_none() || tunnel.tunnel_id.as_ref().unwrap().is_empty() {
             tunnel.tunnel_id = Some(TunnelManagementClient::generate_tunnel_id());
         }
@@ -453,8 +453,32 @@ impl TunnelManagementClient {
     }
 
     fn generate_tunnel_id() -> String {
-        const NOUNS: [&'static str; 16] = [ "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "shoe", "plane", "chair", "book", "ocean", "lake", "river" , "horse"];
-        const ADJECTIVES: [&'static str; 20] = ["fun", "happy", "interesting", "neat", "peaceful", "puzzled", "kind", "joyful", "new", "giant", "sneaky", "quick", "majestic", "jolly" , "fancy", "tidy", "swift", "silent", "amusing", "spiffy"];
+        const NOUNS: [&'static str; 16] = [
+            "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "shoe", "plane",
+            "chair", "book", "ocean", "lake", "river", "horse",
+        ];
+        const ADJECTIVES: [&'static str; 20] = [
+            "fun",
+            "happy",
+            "interesting",
+            "neat",
+            "peaceful",
+            "puzzled",
+            "kind",
+            "joyful",
+            "new",
+            "giant",
+            "sneaky",
+            "quick",
+            "majestic",
+            "jolly",
+            "fancy",
+            "tidy",
+            "swift",
+            "silent",
+            "amusing",
+            "spiffy",
+        ];
         const TUNNEL_ID_CHARS: &'static str = "bcdfghjklmnpqrstvwxz0123456789";
 
         let mut rng = rand::thread_rng();
@@ -465,7 +489,12 @@ impl TunnelManagementClient {
         tunnel_id.push('-');
 
         for _ in 0..7 {
-            tunnel_id.push(TUNNEL_ID_CHARS.chars().nth(rng.gen_range(0..TUNNEL_ID_CHARS.len())).unwrap());
+            tunnel_id.push(
+                TUNNEL_ID_CHARS
+                    .chars()
+                    .nth(rng.gen_range(0..TUNNEL_ID_CHARS.len()))
+                    .unwrap(),
+            );
         }
         tunnel_id
     }
@@ -567,7 +596,8 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &st
             url.query_pairs_mut().append_pair("allLabels", "true");
         }
     }
-    url.query_pairs_mut().append_pair("api-version", api_version);
+    url.query_pairs_mut()
+        .append_pair("api-version", api_version);
     if tunnel_opts.limit > 0 {
         url.query_pairs_mut()
             .append_pair("limit", &tunnel_opts.limit.to_string());
@@ -715,10 +745,8 @@ mod tests {
         let builder = super::new_tunnel_management("test-caller");
 
         // verify
-        let re = Regex::new(
-            r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$",
-        )
-        .unwrap();
+        let re = Regex::new(r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$")
+            .unwrap();
         let full_agent = builder.user_agent.to_str().unwrap();
         assert!(re.is_match(full_agent));
     }
