@@ -10,7 +10,6 @@ use reqwest::{
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
-extern crate rand;
 use rand::Rng;
 
 use crate::contracts::{
@@ -63,7 +62,8 @@ impl TunnelManagementClient {
         url.query_pairs_mut().append_pair("global", "true");
 
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        let response: TunnelListByRegionResponse = self.execute_json("list_all_tunnels", request).await?;
+        let response: TunnelListByRegionResponse =
+            self.execute_json("list_all_tunnels", request).await?;
         let mut tunnels = Vec::new();
         for region in response.value {
             tunnels.extend(region.value);
@@ -79,12 +79,14 @@ impl TunnelManagementClient {
     ) -> HttpResult<Vec<Tunnel>> {
         let url = self.build_uri(Some(cluster_id), TUNNELS_API_PATH);
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        let response: TunnelListByRegionResponse = self.execute_json("list_cluster_tunnels", request).await?;
+        let response: TunnelListByRegionResponse =
+            self.execute_json("list_cluster_tunnels", request).await?;
         let mut tunnels = Vec::new();
         for region in response.value {
             tunnels.extend(region.value);
         }
-        Ok(tunnels)    }
+        Ok(tunnels)
+    }
 
     /// Looks up a tunnel by ID or name.
     pub async fn get_tunnel(
@@ -222,7 +224,8 @@ impl TunnelManagementClient {
     ) -> HttpResult<Vec<TunnelPort>> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        let response: TunnelPortListResponse = self.execute_json("list_tunnel_ports", request).await?;
+        let response: TunnelPortListResponse =
+            self.execute_json("list_tunnel_ports", request).await?;
         Ok(response.value)
     }
 
