@@ -62,7 +62,8 @@ impl TunnelManagementClient {
         url.query_pairs_mut().append_pair("global", "true");
 
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        let response: TunnelListByRegionResponse = self.execute_json("list_all_tunnels", request).await?;
+        let response: TunnelListByRegionResponse =
+            self.execute_json("list_all_tunnels", request).await?;
         Ok(response.value.into_iter().flat_map(|v| v.value).collect())
     }
 
@@ -100,12 +101,12 @@ impl TunnelManagementClient {
         mut tunnel: Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
-        let mut url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
-        let tunnel_id = match tunnel.tunnel_id.as_ref() {
-            None | Some("") => TunnelManagementClient::generate_tunnel_id(),
-            Some(tunnel_id) => tunnel_id.to_owned(),
+        tunnel.tunnel_id = match tunnel.tunnel_id {
+            None => Some(TunnelManagementClient::generate_tunnel_id().to_owned()),
+            Some(tunnel_id) => Some(tunnel_id.to_owned()),
         };
-        let new_path = url.path().to_owned() + "/" + tunnel_id;
+        let mut url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
+        let new_path = url.path().to_owned() + "/" + tunnel.tunnel_id.to_owned().unwrap().as_str();
         url.set_path(&new_path);
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, tunnel);
@@ -220,7 +221,9 @@ impl TunnelManagementClient {
     ) -> HttpResult<Vec<TunnelPort>> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("list_tunnel_ports", request).await.map(|r| r.value)
+        self.execute_json("list_tunnel_ports", request)
+            .await
+            .map(|r: TunnelPortListResponse| r.value)
     }
 
     /// Gets info about a specific tunnel port.
