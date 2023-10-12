@@ -60,11 +60,11 @@ public class TunnelRelayTunnelHost : TunnelHost
     }
 
     /// <summary>
-    /// Get or set synthetic endpoint id for the endpoint created for the host
+    /// Get or set synthetic endpoint signature for the endpoint created for the host
     /// when connecting.
     /// <c>null</c> if the endpoint has not been created yet.
     /// </summary>
-    private string? EndpointId { get; set; }
+    private string? EndpointSignature { get; set; }
 
     /// <inheritdoc/>
     public override Task ConnectAsync(Tunnel tunnel, TunnelConnectionOptions? options, CancellationToken cancellation = default)
@@ -100,7 +100,7 @@ public class TunnelRelayTunnelHost : TunnelHost
         // Too many connections closure means another host has connected, and that other host, while
         // connecting, would have updated the endpoint. So this host won't be able to delete it anyway.
         if (Tunnel != null &&
-            !string.IsNullOrEmpty(EndpointId) &&
+            !string.IsNullOrEmpty(EndpointSignature) &&
             DisconnectReason != SshDisconnectReason.TooManyConnections)
         {
             tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, endpointId));
@@ -129,12 +129,12 @@ public class TunnelRelayTunnelHost : TunnelHost
         var hostPublicKey = HostPrivateKey.GetPublicKeyBytes(HostPrivateKey.KeyAlgorithmName).ToBase64();
         var tunnelHasSshPort = Tunnel.Ports != null &&
             Tunnel.Ports.Any((p) => p.Protocol == TunnelProtocol.Ssh);
-        var endpointId =
+        var endpointSignature =
             $"{Tunnel.TunnelId}.{Tunnel.ClusterId}:" +
             $"{Tunnel.Name}.{Tunnel.Domain}:" +
             $"{tunnelHasSshPort}:{this.hostId}:{hostPublicKey}";
 
-        if (!string.Equals(endpointId, EndpointId, StringComparison.OrdinalIgnoreCase) ||
+        if (!string.Equals(endpointSignature, EndpointSignature, StringComparison.OrdinalIgnoreCase) ||
             RelayUri == null)
         {
             var endpoint = new TunnelRelayTunnelEndpoint
@@ -159,7 +159,7 @@ public class TunnelRelayTunnelHost : TunnelHost
                 },
                 cancellation);
 
-            EndpointId = endpointId;
+            EndpointSignature = endpointSignature;
             Requires.Argument(
                 !string.IsNullOrEmpty(endpoint?.HostRelayUri),
                 nameof(Tunnel),
