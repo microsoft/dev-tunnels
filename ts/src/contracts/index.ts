@@ -21,3 +21,4 @@ export { TunnelStatus } from './tunnelStatus';
 export { ClusterDetails } from './clusterDetails';
 export { TunnelListByRegionResponse } from './tunnelListByRegionResponse';
 export { TunnelPortListResponse } from './tunnelPortListResponse';
+export { TunnelConstraints } from './tunnelConstraints';
