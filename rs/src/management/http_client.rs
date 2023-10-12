@@ -64,11 +64,7 @@ impl TunnelManagementClient {
 
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
         let response: TunnelListByRegionResponse = self.execute_json("list_all_tunnels", request).await?;
-        let mut tunnels = Vec::new();
-        for region in response.value {
-            tunnels.extend(region.value);
-        }
-        Ok(tunnels)
+        Ok(response.value.into_iter().flat_map(|v| v.value).collect())
     }
 
     /// Lists tunnels owned by the user in a specific cluster.
