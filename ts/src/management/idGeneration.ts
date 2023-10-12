@@ -1,4 +1,4 @@
-import { TunnelConstraints } from "../contracts/tunnelConstraints"
+import { TunnelConstraints } from "@microsoft/dev-tunnels-contracts"
 
 export class IdGeneration {
     private static nouns: string[] = [ "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "shoe", "plane", "chair", "book", "ocean", "lake", "river" , "horse"];
