@@ -151,7 +151,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                                     attemptDelayMs <<= 1;
                                 }
 
-                                if (!IsRetryAllowed(exception) || attempt > 4)
+                                if (!IsRetryAllowed(exception, SshDisconnectReason.ServiceNotAvailable) || attempt > 4)
                                 {
                                     throw exception;
                                 }
@@ -160,11 +160,16 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                                 break;
 
                             case HttpStatusCode.ServiceUnavailable:
-                                // Normally nginx choses another healthy pod when it encounters 503.
-                                // However, if there are no other pods, it returns 503 to the client.
+                            case HttpStatusCode.BadGateway:
+                                // Normally nginx choses another healthy pod when it encounters 502.
+                                // However, if there are no other pods, it returns 502 to the client.
                                 // This rare case may happen when the cluster recovers from a failure
                                 // and the nginx controller has started but Relay service has not yet.
-                                exception = new TunnelConnectionException("Service temporarily unavailable (503).", wse);
+                                // 503 can happen when Relay calls control plane to authenticate the request,
+                                // control plane hits 429s from Cosmos DB and replies back with 503.
+                                exception = new TunnelConnectionException(
+                                    $"Service temporarily unavailable ({statusCode}).",
+                                    wse);
                                 ThrowIfRetryNotAllowed(exception, SshDisconnectReason.ServiceNotAvailable);
                                 break;
 

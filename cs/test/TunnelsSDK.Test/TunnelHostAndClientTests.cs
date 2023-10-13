@@ -155,6 +155,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         TunnelRelayTunnelHost relayHost,
         Tunnel tunnel,
         Func<string, Task<Stream>> hostStreamFactory = null,
+        TunnelConnectionOptions connectionOptions = null,
         CancellationToken cancellation = default)
     {
         var multiChannelStream = new TestMultiChannelStream(this.serverStream);
@@ -168,7 +169,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         }
 
         relayHost.StreamFactory = mockTunnelRelayStreamFactory;
-        await relayHost.ConnectAsync(tunnel, cancellation).WithTimeout(Timeout);
+        await relayHost.ConnectAsync(tunnel, connectionOptions, cancellation).WithTimeout(Timeout);
 
         await serverConnectTask.WithTimeout(Timeout);
 
@@ -305,9 +306,13 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task ConnectRelayClientRetriesOn429(bool enableRetry)
+    [InlineData(true, HttpStatusCode.TooManyRequests)]
+    [InlineData(false, HttpStatusCode.TooManyRequests)]
+    [InlineData(true, HttpStatusCode.BadGateway)]
+    [InlineData(false, HttpStatusCode.BadGateway)]
+    [InlineData(true, HttpStatusCode.ServiceUnavailable)]
+    [InlineData(false, HttpStatusCode.ServiceUnavailable)]
+    public async Task ConnectRelayClientRetriesOnErrorStatusCode(bool enableRetry, HttpStatusCode statusCode)
     {
         var connectionOptions = new TunnelConnectionOptions
         {
@@ -323,7 +328,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             if (firstAttempt)
             {
                 firstAttempt = false;
-                await ThrowNotAWebSocket(HttpStatusCode.TooManyRequests);
+                await ThrowNotAWebSocket(statusCode);
             }
 
             return this.clientStream;
@@ -334,10 +339,16 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         if (enableRetry)
         {
             using var serverSshSession = await serverSessionTask;
+            Assert.Equal(ConnectionStatus.Connected, relayClient.ConnectionStatus);
+            Assert.Null(relayClient.DisconnectException);
+            Assert.Equal(SshDisconnectReason.None, relayClient.DisconnectReason);
         }
         else
         {
             await Assert.ThrowsAsync<TunnelConnectionException>(() => serverSessionTask);
+            Assert.IsType<TunnelConnectionException>(relayClient.DisconnectException);
+            Assert.Equal(ConnectionStatus.Disconnected, relayClient.ConnectionStatus);
+            Assert.Equal(SshDisconnectReason.ServiceNotAvailable, relayClient.DisconnectReason);
         }
     }
 
@@ -766,6 +777,56 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(SshDisconnectReason.None, relayHost.DisconnectReason);
     }
 
+    [Theory]
+    [InlineData(true, HttpStatusCode.TooManyRequests)]
+    [InlineData(false, HttpStatusCode.TooManyRequests)]
+    [InlineData(true, HttpStatusCode.BadGateway)]
+    [InlineData(false, HttpStatusCode.BadGateway)]
+    [InlineData(true, HttpStatusCode.ServiceUnavailable)]
+    [InlineData(false, HttpStatusCode.ServiceUnavailable)]
+    public async Task ConnectRelayHostRetriesOnErrorStatusCode(bool enableRetry, HttpStatusCode statusCode)
+    {
+        var connectionOptions = new TunnelConnectionOptions
+        {
+            EnableRetry = enableRetry,
+        };
+        var managementClient = new MockTunnelManagementClient();
+        managementClient.HostRelayUri = MockHostRelayUri;
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        var tunnel = CreateRelayTunnel();
+        bool firstAttempt = true;
+
+        async Task<Stream> ConnectToRelayAsync(string accessToken)
+        {
+            await Task.Yield();
+            if (firstAttempt)
+            {
+                firstAttempt = false;
+                await ThrowNotAWebSocket(statusCode);
+            }
+
+            return this.clientStream;
+        }
+
+        var serverSessionTask = ConnectRelayHostAsync(
+            relayHost, tunnel, ConnectToRelayAsync, connectionOptions);
+        if (enableRetry)
+        {
+            using var serverSshSession = await serverSessionTask;
+            Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
+            Assert.Null(relayHost.DisconnectException);
+            Assert.Equal(SshDisconnectReason.None, relayHost.DisconnectReason);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<TunnelConnectionException>(() => serverSessionTask);
+            Assert.IsType<TunnelConnectionException>(relayHost.DisconnectException);
+            Assert.Equal(ConnectionStatus.Disconnected, relayHost.ConnectionStatus);
+            Assert.Equal(SshDisconnectReason.ServiceNotAvailable, relayHost.DisconnectReason);
+        }
+    }
+
+
     [Fact]
     public async Task ConnectRelayHostAfterTooManyConnectionsDisconnect()
     {
@@ -833,7 +894,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         }
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => ConnectRelayHostAsync(
-            relayHost, tunnel, ConnectToRelayAsync, cancellationSource.Token));
+            relayHost, tunnel, ConnectToRelayAsync, cancellation: cancellationSource.Token));
 
         Assert.Equal(ConnectionStatus.Disconnected, relayHost.ConnectionStatus);
         (this.serverStream, this.clientStream) = FullDuplexStream.CreatePair();
