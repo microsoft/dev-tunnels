@@ -559,7 +559,7 @@ namespace Microsoft.DevTunnels.Management
             // because empty array was expected instead.
             // PUT/POST/PATCH requests should also throw an error for not-found.
             bool allowNotFound = typeof(T) == typeof(bool) ||
-                ((method == HttpMethod.Get || method == HttpMethod.Head) && !typeof(T).IsArray);
+                ((method == HttpMethod.Get || method == HttpMethod.Head) && !typeof(T).IsArray && typeof(T) != typeof(TunnelPortListResponse) && typeof(T) != typeof(TunnelListByRegionResponse));
 
             string? errorMessage = null;
             Exception? innerException = null;
