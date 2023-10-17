@@ -856,7 +856,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 return result.Value.Where(t => t.Value != null).SelectMany(t => t.Value!).ToArray();
             }
-
+            
             return Array.Empty<Tunnel>();
         }
 
