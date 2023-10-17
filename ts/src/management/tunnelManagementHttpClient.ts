@@ -283,7 +283,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnel,
             manageAccessTokenScope,
             undefined,
-            undefined,
+            "forceCreate=true",
             options,
             this.convertTunnelForRequest(tunnel),
         ))!;
