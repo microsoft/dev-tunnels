@@ -856,7 +856,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 return result.Value.Where(t => t.Value != null).SelectMany(t => t.Value!).ToArray();
             }
-            
+
             return Array.Empty<Tunnel>();
         }
 
@@ -1004,6 +1004,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(endpoint, nameof(endpoint));
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
+            Requires.NotNullOrEmpty(endpoint.Id!, nameof(TunnelEndpoint.Id));
 
             var path = $"{EndpointsApiSubPath}/{endpoint.Id}";
             var query = GetApiQuery();
