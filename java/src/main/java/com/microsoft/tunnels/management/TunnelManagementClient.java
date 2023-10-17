@@ -378,7 +378,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (generatedId) {
       tunnel.tunnelId = IdGeneration.generateTunnelId();
     }
-    var uri = buildUri(tunnel, options, true);
+    var uri = buildUri(tunnel, options,null, "forceCreate=true", true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
     for (int i = 0; i <= 3; i++){
@@ -444,7 +444,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Tunnel> updateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
-    var uri = buildUri(tunnel, options, true);
+    var uri = buildUri(tunnel, options,null, "forceUpdate=true", true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
     return requestAsync(
@@ -607,7 +607,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var uri = buildUri(
         tunnel,
         options,
-        path);
+        path,
+        "forceCreate=true",
+        false);
     final Type responseType = new TypeToken<TunnelPort>() {
     }.getType();
     CompletableFuture<TunnelPort> result = requestAsync(
@@ -689,7 +691,9 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var uri = buildUri(
         tunnel,
         options,
-        path);
+        path,
+        "forceUpdate=true",
+        false);
 
     final Type responseType = new TypeToken<TunnelPort>() {
     }.getType();
