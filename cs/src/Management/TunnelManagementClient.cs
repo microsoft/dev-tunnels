@@ -91,7 +91,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string? apiVersion = null)
+            string apiVersion = "2023-09-27-preview")
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -112,7 +112,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string? apiVersion = null)
+            string apiVersion = "2023-09-27-preview")
             : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -140,7 +140,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string? apiVersion = null)
+            string apiVersion = "2023-09-27-preview")
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler, apiVersion)
         {
         }
@@ -170,7 +170,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string? apiVersion = null)
+            string apiVersion = "2023-09-27-preview")
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
@@ -856,7 +856,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 return result.Value.Where(t => t.Value != null).SelectMany(t => t.Value!).ToArray();
             }
-            
+
             return Array.Empty<Tunnel>();
         }
 
