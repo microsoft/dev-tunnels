@@ -69,7 +69,10 @@ namespace Microsoft.DevTunnels.Management
             "2023-09-27-preview"
         };
 
-
+        /// <summary>
+        /// ApiVersion that will be used if one is not specified
+        /// </summary>
+        public const string DefaultApiVersion = "2023-09-27-preview";
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
             TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
@@ -91,7 +94,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -112,7 +115,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
             : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -140,7 +143,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler, apiVersion)
         {
         }
@@ -170,7 +173,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
@@ -856,7 +859,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 return result.Value.Where(t => t.Value != null).SelectMany(t => t.Value!).ToArray();
             }
-            
+
             return Array.Empty<Tunnel>();
         }
 
@@ -1004,6 +1007,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(endpoint, nameof(endpoint));
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
+            Requires.NotNullOrEmpty(endpoint.Id!, nameof(TunnelEndpoint.Id));
 
             var path = $"{EndpointsApiSubPath}/{endpoint.Id}";
             var query = GetApiQuery();
