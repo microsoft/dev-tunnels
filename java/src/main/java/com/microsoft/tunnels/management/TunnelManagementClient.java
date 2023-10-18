@@ -457,6 +457,21 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         responseType);
   }
 
+  @Override
+  public CompletableFuture<Tunnel> createOrUpdateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
+    var uri = buildUri(tunnel, options, null, null, true);
+    final Type responseType = new TypeToken<Tunnel>() {
+    }.getType();
+    return requestAsync(
+        tunnel,
+        options,
+        HttpMethod.PUT,
+        uri,
+        ManageAccessTokenScope,
+        convertTunnelForRequest(tunnel),
+        responseType);
+  }
+
   public CompletableFuture<Boolean> deleteTunnelAsync(Tunnel tunnel) {
     return deleteTunnelAsync(tunnel, null);
   }
@@ -695,6 +710,49 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         "forceUpdate=true",
         false);
 
+    final Type responseType = new TypeToken<TunnelPort>() {
+    }.getType();
+    CompletableFuture<TunnelPort> result = requestAsync(
+        tunnel,
+        options,
+        HttpMethod.PUT,
+        uri,
+        ManagePortsAccessTokenScopes,
+        convertTunnelPortForRequest(tunnel, tunnelPort),
+        responseType);
+
+    if (tunnel.ports != null) {
+      var updatedPorts = new ArrayList<TunnelPort>();
+      for (TunnelPort p : tunnel.ports) {
+        if (p.portNumber != tunnelPort.portNumber) {
+          updatedPorts.add(p);
+        }
+      }
+      updatedPorts.add(result.join());
+      updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
+      tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
+    }
+    return result;
+  }
+
+  @Override
+  public CompletableFuture<TunnelPort> createOrUpdateTunnelPortAsync(
+      Tunnel tunnel,
+      TunnelPort tunnelPort,
+      TunnelRequestOptions options) {
+    if (tunnel == null) {
+      throw new IllegalArgumentException("Tunnel must not be null.");
+    }
+    if (tunnelPort == null) {
+      throw new IllegalArgumentException("Tunnel port must be specified");
+    }
+    var path = portsApiSubPath + "/" + tunnelPort.portNumber;
+    var uri = buildUri(
+        tunnel,
+        options,
+        path,
+        null,
+        false);
     final Type responseType = new TypeToken<TunnelPort>() {
     }.getType();
     CompletableFuture<TunnelPort> result = requestAsync(
