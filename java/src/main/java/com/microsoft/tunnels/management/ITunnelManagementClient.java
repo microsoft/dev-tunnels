@@ -63,19 +63,6 @@ public interface ITunnelManagementClient {
    */
   public CompletableFuture<Tunnel> updateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options);
 
-    /**
-   * Updates properties of a tunnel or creates it if it does not exist.
-   *
-   * @param tunnel  Tunnel object including at least either a tunnel name
-   *                (globally unique, if configured) or tunnel ID and cluster ID.
-   *                Any non-null properties on the object will be updated;
-   *                null properties will not be modified.
-   * @param options Request options.
-   * @return Updated tunnel object, including both updated and unmodified
-   *         properties.
-   */
-  public CompletableFuture<Tunnel> createOrUpdateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options);
-
   /**
    * Deletes a tunnel.
    *
@@ -192,25 +179,6 @@ public interface ITunnelManagementClient {
    *         properties.
    */
   public CompletableFuture<TunnelPort> updateTunnelPortAsync(
-      Tunnel tunnel,
-      TunnelPort tunnelPort,
-      TunnelRequestOptions options);
-
-  /**
-   * Updates properties of a tunnel port or creates it if it does not exist.
-   *
-   * @param tunnel     Tunnel object including at least either a tunnel name
-   *                   (globally unique, if configured) or tunnel ID and cluster
-   *                   ID.
-   * @param tunnelPort Tunnel port object including at least a port number.
-   *                   Any additional non-null properties on the object will be
-   *                   updated; null properties
-   *                   will not be modified.
-   * @param options    Request options.
-   * @return Updated tunnel port object, including both updated and unmodified
-   *         properties.
-   */
-  public CompletableFuture<TunnelPort> createOrUpdateTunnelPortAsync(
       Tunnel tunnel,
       TunnelPort tunnelPort,
       TunnelRequestOptions options);

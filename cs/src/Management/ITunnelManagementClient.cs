@@ -123,26 +123,6 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation = default);
 
         /// <summary>
-        /// Updates a tunnel or creates it if it does not exist.
-        /// </summary>
-        /// <param name="tunnel">Tunnel object including all required properties.</param>
-        /// <param name="options">Request options.</param>
-        /// <param name="cancellation">Cancellation token.</param>
-        /// <returns>The created tunnel object.</returns>
-        /// <remarks>
-        /// Ports may be created at the same time as creating the tunnel by supplying
-        /// items in the <see cref="Tunnel.Ports" /> array.
-        /// </remarks>
-        /// <exception cref="UnauthorizedAccessException">The client access token was missing,
-        /// invalid, or unauthorized.</exception>
-        /// <exception cref="ArgumentException">A required property was missing, or a property
-        /// value was invalid.</exception>
-        Task<Tunnel> CreateOrUpdateTunnelAsync(
-            Tunnel tunnel,
-            TunnelRequestOptions? options = null,
-            CancellationToken cancellation = default);
-
-        /// <summary>
         /// Deletes a tunnel.
         /// </summary>
         /// <param name="tunnel">Tunnel object including at least either a tunnel name
@@ -291,29 +271,6 @@ namespace Microsoft.DevTunnels.Management
         /// </exception>
         /// <exception cref="ArgumentException">An updated property value was invalid.</exception>
         Task<TunnelPort> UpdateTunnelPortAsync(
-            Tunnel tunnel,
-            TunnelPort tunnelPort,
-            TunnelRequestOptions? options = null,
-            CancellationToken cancellation = default);
-
-        /// <summary>
-        /// Updates a port or creates it if it does not exist.
-        /// </summary>
-        /// <param name="tunnel">Tunnel object including at least either a tunnel name
-        /// (globally unique, if configured) or tunnel ID and cluster ID.</param>
-        /// <param name="tunnelPort">Tunnel port object including all required properties.</param>
-        /// <param name="options">Request options.</param>
-        /// <param name="cancellation">Cancellation token.</param>
-        /// <returns>The created tunnel port object.</returns>
-        /// <exception cref="UnauthorizedAccessException">The client access token was missing,
-        /// invalid, or unauthorized.</exception>
-        /// <exception cref="InvalidOperationException">The tunnel ID or name was not found,
-        /// or a port with the specified port number already exists. (The inner
-        /// <see cref="HttpRequestException" /> status code may distinguish between these cases.)
-        /// </exception>
-        /// <exception cref="ArgumentException">A required property was missing, or a property
-        /// value was invalid.</exception>
-        Task<TunnelPort> CreateOrUpdateTunnelPortAsync(
             Tunnel tunnel,
             TunnelPort tunnelPort,
             TunnelRequestOptions? options = null,

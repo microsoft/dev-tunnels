@@ -962,58 +962,6 @@ namespace Microsoft.DevTunnels.Management
             return result2!;
         }
 
-                /// <inheritdoc />
-        public async Task<Tunnel> CreateOrUpdateTunnelAsync(
-            Tunnel tunnel,
-            TunnelRequestOptions? options,
-            CancellationToken cancellation)
-        {
-            Requires.NotNull(tunnel, nameof(tunnel));
-
-            var tunnelId = tunnel.TunnelId;
-            var idGenerated = string.IsNullOrEmpty(tunnelId);
-            if (idGenerated)
-            {
-                tunnel.TunnelId = IdGeneration.GenerateTunnelId();
-            }
-            for (int retries = 0; retries <= 3; retries++)
-            {
-                try
-                {
-                    var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-                       HttpMethod.Put,
-                       tunnel,
-                       ManageAccessTokenScope,
-                       path: null,
-                       query: GetApiQuery(),
-                       options,
-                       ConvertTunnelForRequest(tunnel),
-                       cancellation,
-                       true);
-                    PreserveAccessTokens(tunnel, result);
-                    return result!;
-                }
-                catch (UnauthorizedAccessException) when (idGenerated && retries < 3) // The tunnel ID was already taken.
-                {
-                    tunnel.TunnelId = IdGeneration.GenerateTunnelId();
-                }
-            }
-
-            // This code is unreachable, but the compiler still requires it.
-            var result2 = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-                       HttpMethod.Put,
-                       tunnel,
-                       ManageAccessTokenScope,
-                       path: null,
-                       query: GetApiQuery(),
-                       options,
-                       ConvertTunnelForRequest(tunnel),
-                       cancellation,
-                       true);
-            PreserveAccessTokens(tunnel, result2);
-            return result2!;
-        }
-
         /// <inheritdoc />
         public async Task<Tunnel> UpdateTunnelAsync(
             Tunnel tunnel,
@@ -1212,48 +1160,6 @@ namespace Microsoft.DevTunnels.Management
                 ManagePortsAccessTokenScopes,
                 path,
                 query: GetApiQuery() + "&forceUpdate=true",
-                options,
-                ConvertTunnelPortForRequest(tunnel, tunnelPort),
-                cancellation))!;
-            PreserveAccessTokens(tunnelPort, result);
-
-            if (tunnel.Ports != null)
-            {
-                // Also update the port in the local tunnel object.
-                tunnel.Ports = tunnel.Ports
-                    .Where((p) => p.PortNumber != tunnelPort.PortNumber)
-                    .Append(result)
-                    .OrderBy((p) => p.PortNumber)
-                    .ToArray();
-            }
-
-            return result;
-        }
-
-                /// <inheritdoc />
-        public async Task<TunnelPort> CreateOrUpdateTunnelPortAsync(
-            Tunnel tunnel,
-            TunnelPort tunnelPort,
-            TunnelRequestOptions? options,
-            CancellationToken cancellation)
-        {
-            Requires.NotNull(tunnelPort, nameof(tunnelPort));
-
-            if (tunnelPort.ClusterId != null && tunnel.ClusterId != null &&
-                tunnelPort.ClusterId != tunnel.ClusterId)
-            {
-                throw new ArgumentException(
-                    "Tunnel port cluster ID is not consistent.", nameof(tunnelPort));
-            }
-
-            var portNumber = tunnelPort.PortNumber;
-            var path = $"{PortsApiSubPath}/{portNumber}";
-            var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
-                HttpMethod.Put,
-                tunnel,
-                ManagePortsAccessTokenScopes,
-                path,
-                query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
