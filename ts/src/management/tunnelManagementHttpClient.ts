@@ -258,7 +258,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                     tunnel,
                     manageAccessTokenScope,
                     undefined,
-                    undefined,
+                    "forceCreate=true",
                     options,
                     this.convertTunnelForRequest(tunnel),
                     undefined,
@@ -283,9 +283,11 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnel,
             manageAccessTokenScope,
             undefined,
-            undefined,
+            "forceCreate=true",
             options,
             this.convertTunnelForRequest(tunnel),
+            undefined,
+            true,
         ))!;
         preserveAccessTokens(tunnel, result2);
         parseTunnelDates(result2);
@@ -298,7 +300,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnel,
             manageAccessTokenScope,
             undefined,
-            undefined,
+            "forceUpdate=true",
             options,
             this.convertTunnelForRequest(tunnel),
         ))!;
@@ -439,7 +441,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnel,
             managePortsAccessTokenScopes,
             path,
-            undefined,
+            "forceCreate=true",
             options,
             tunnelPort,
         ))!;
@@ -473,7 +475,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnel,
             managePortsAccessTokenScopes,
             path,
-            undefined,
+            "forceUpdate=true",
             options,
             tunnelPort,
         ))!;
