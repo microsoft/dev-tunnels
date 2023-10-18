@@ -77,11 +77,7 @@ impl TunnelManagementClient {
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
         let response: TunnelListByRegionResponse =
             self.execute_json("list_cluster_tunnels", request).await?;
-        let mut tunnels = Vec::new();
-        for region in response.value {
-            tunnels.extend(region.value);
-        }
-        Ok(tunnels)
+        Ok(response.value.into_iter().flat_map(|v| v.value).collect())
     }
 
     /// Looks up a tunnel by ID or name.
