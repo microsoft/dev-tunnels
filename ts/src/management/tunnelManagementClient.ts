@@ -149,7 +149,7 @@ export interface TunnelManagementClient {
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort>;
 
-        /**
+    /**
      * Updates properties of a tunnel port or creates it if it does not exist.
      * @param tunnel
      * @param tunnelPort
