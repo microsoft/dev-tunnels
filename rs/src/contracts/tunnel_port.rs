@@ -29,9 +29,9 @@ pub struct TunnelPort {
     // Gets or sets the optional description of the port.
     pub description: Option<String>,
 
-    // Gets or sets the tags of the port.
+    // Gets or sets the labels of the port.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub tags: Vec<String>,
+    pub labels: Vec<String>,
 
     // Gets or sets the protocol of the tunnel port.
     //

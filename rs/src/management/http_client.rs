@@ -10,9 +10,12 @@ use reqwest::{
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
+use rand::Rng;
+
 use crate::contracts::{
-    env_production, Tunnel, TunnelConnectionMode, TunnelEndpoint, TunnelPort,
-    TunnelRelayTunnelEndpoint, TunnelServiceProperties, NamedRateStatus,
+    env_production, NamedRateStatus, Tunnel, TunnelConnectionMode, TunnelEndpoint,
+    TunnelListByRegionResponse, TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint,
+    TunnelServiceProperties,
 };
 
 use super::{
@@ -26,14 +29,16 @@ pub struct TunnelManagementClient {
     authorization: Arc<Box<dyn AuthorizationProvider>>,
     pub(crate) user_agent: HeaderValue,
     environment: TunnelServiceProperties,
+    api_version: String,
 }
 
-const TUNNELS_API_PATH: &str = "/api/v1/tunnels";
-const USER_LIMITS_API_PATH: &str = "/api/v1/userlimits";
+const TUNNELS_API_PATH: &str = "/tunnels";
+const USER_LIMITS_API_PATH: &str = "/userlimits";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
-const CHECK_TUNNEL_NAME_SUB_PATH: &str = "/checkNameAvailability";
+const CHECK_TUNNEL_NAME_SUB_PATH: &str = ":checkNameAvailability";
 const PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+const API_VERSIONS: &[&str] = &["2023-09-27-preview"];
 
 impl TunnelManagementClient {
     /// Returns a builder that creates a new client, starting with the current
@@ -44,6 +49,7 @@ impl TunnelManagementClient {
             client: Some(self.client.clone()),
             user_agent: self.user_agent.clone(),
             environment: self.environment.clone(),
+            api_version: self.api_version.clone(),
         }
     }
 
@@ -56,7 +62,9 @@ impl TunnelManagementClient {
         url.query_pairs_mut().append_pair("global", "true");
 
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("list_all_tunnels", request).await
+        let response: TunnelListByRegionResponse =
+            self.execute_json("list_all_tunnels", request).await?;
+        Ok(response.value.into_iter().flat_map(|v| v.value).collect())
     }
 
     /// Lists tunnels owned by the user in a specific cluster.
@@ -67,7 +75,9 @@ impl TunnelManagementClient {
     ) -> HttpResult<Vec<Tunnel>> {
         let url = self.build_uri(Some(cluster_id), TUNNELS_API_PATH);
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("list_cluster_tunnels", request).await
+        let response: TunnelListByRegionResponse =
+            self.execute_json("list_cluster_tunnels", request).await?;
+        Ok(response.value.into_iter().flat_map(|v| v.value).collect())
     }
 
     /// Looks up a tunnel by ID or name.
@@ -84,11 +94,20 @@ impl TunnelManagementClient {
     /// Creates a new tunnel.
     pub async fn create_tunnel(
         &self,
-        tunnel: &Tunnel,
+        mut tunnel: Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
-        let url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
-        let mut request = self.make_tunnel_request(Method::POST, url, options).await?;
+        let tunnel_id = tunnel
+            .tunnel_id
+            .take()
+            .unwrap_or_else(TunnelManagementClient::generate_tunnel_id);
+
+        let mut url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
+        let new_path = url.path().to_owned() + "/" + &tunnel_id;
+        url.set_path(&new_path);
+        tunnel.tunnel_id = Some(tunnel_id);
+
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, tunnel);
         self.execute_json("create_tunnel", request).await
     }
@@ -201,7 +220,9 @@ impl TunnelManagementClient {
     ) -> HttpResult<Vec<TunnelPort>> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
         let request = self.make_tunnel_request(Method::GET, url, options).await?;
-        self.execute_json("list_tunnel_ports", request).await
+        self.execute_json("list_tunnel_ports", request)
+            .await
+            .map(|r: TunnelPortListResponse| r.value)
     }
 
     /// Gets info about a specific tunnel port.
@@ -227,7 +248,7 @@ impl TunnelManagementClient {
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelPort> {
         let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
-        let mut request = self.make_tunnel_request(Method::POST, url, options).await?;
+        let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, port);
         self.execute_json("create_tunnel_port", request).await
     }
@@ -410,7 +431,7 @@ impl TunnelManagementClient {
         mut url: Url,
         tunnel_opts: &TunnelRequestOptions,
     ) -> HttpResult<Request> {
-        add_query(&mut url, tunnel_opts);
+        add_query(&mut url, tunnel_opts, &self.api_version);
         let mut request = self.make_request(method, url).await?;
 
         let headers = request.headers_mut();
@@ -441,6 +462,53 @@ impl TunnelManagementClient {
 
         Ok(request)
     }
+
+    fn generate_tunnel_id() -> String {
+        const NOUNS: [&str; 16] = [
+            "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "shoe", "plane",
+            "chair", "book", "ocean", "lake", "river", "horse",
+        ];
+        const ADJECTIVES: [&str; 20] = [
+            "fun",
+            "happy",
+            "interesting",
+            "neat",
+            "peaceful",
+            "puzzled",
+            "kind",
+            "joyful",
+            "new",
+            "giant",
+            "sneaky",
+            "quick",
+            "majestic",
+            "jolly",
+            "fancy",
+            "tidy",
+            "swift",
+            "silent",
+            "amusing",
+            "spiffy",
+        ];
+        const TUNNEL_ID_CHARS: &str = "bcdfghjklmnpqrstvwxz0123456789";
+
+        let mut rng = rand::thread_rng();
+        let mut tunnel_id = String::new();
+        tunnel_id.push_str(ADJECTIVES[rng.gen_range(0..ADJECTIVES.len())]);
+        tunnel_id.push('-');
+        tunnel_id.push_str(NOUNS[rng.gen_range(0..NOUNS.len())]);
+        tunnel_id.push('-');
+
+        for _ in 0..7 {
+            tunnel_id.push(
+                TUNNEL_ID_CHARS
+                    .chars()
+                    .nth(rng.gen_range(0..TUNNEL_ID_CHARS.len()))
+                    .unwrap(),
+            );
+        }
+        tunnel_id
+    }
 }
 
 fn json_body<T>(request: &mut Request, body: T)
@@ -458,6 +526,7 @@ pub struct TunnelClientBuilder {
     client: Option<Client>,
     user_agent: HeaderValue,
     environment: TunnelServiceProperties,
+    api_version: String,
 }
 
 /// Creates a new tunnel client builder. You can set options, then use `into()`
@@ -475,6 +544,7 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
         client: None,
         user_agent: HeaderValue::from_str(&full_user_agent).unwrap(),
         environment: env_production(),
+        api_version: API_VERSIONS[0].to_owned(),
     }
 }
 
@@ -507,14 +577,15 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
     fn from(builder: TunnelClientBuilder) -> Self {
         TunnelManagementClient {
             authorization: builder.authorization,
-            client: builder.client.unwrap_or_else(Client::new),
+            client: builder.client.unwrap_or_default(),
             user_agent: builder.user_agent,
             environment: builder.environment,
+            api_version: builder.api_version,
         }
     }
 }
 
-fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions) {
+fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &str) {
     if tunnel_opts.include_ports {
         url.query_pairs_mut().append_pair("includePorts", "true");
     }
@@ -529,13 +600,15 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions) {
     if tunnel_opts.force_rename {
         url.query_pairs_mut().append_pair("forceRename", "true");
     }
-    if !tunnel_opts.tags.is_empty() {
+    if !tunnel_opts.labels.is_empty() {
         url.query_pairs_mut()
-            .append_pair("tags", &tunnel_opts.tags.join(","));
-        if tunnel_opts.require_all_tags {
-            url.query_pairs_mut().append_pair("allTags", "true");
+            .append_pair("labels", &tunnel_opts.labels.join(","));
+        if tunnel_opts.require_all_labels {
+            url.query_pairs_mut().append_pair("allLabels", "true");
         }
     }
+    url.query_pairs_mut()
+        .append_pair("api-version", api_version);
     if tunnel_opts.limit > 0 {
         url.query_pairs_mut()
             .append_pair("limit", &tunnel_opts.limit.to_string());
@@ -568,7 +641,7 @@ mod test_end_to_end {
 
         // create tunnel
         let tunnel = c
-            .create_tunnel(&Tunnel::default(), NO_REQUEST_OPTIONS)
+            .create_tunnel(Tunnel::default(), NO_REQUEST_OPTIONS)
             .await
             .unwrap();
         assert!(tunnel.tunnel_id.is_some());
@@ -683,10 +756,8 @@ mod tests {
         let builder = super::new_tunnel_management("test-caller");
 
         // verify
-        let re = Regex::new(
-            r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$",
-        )
-        .unwrap();
+        let re = Regex::new(r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$")
+            .unwrap();
         let full_agent = builder.user_agent.to_str().unwrap();
         assert!(re.is_match(full_agent));
     }
@@ -696,9 +767,9 @@ mod tests {
         let mut url = Url::parse("https://tunnels.api.visualstudio.com/api/v1/tunnels").unwrap();
         let options = NO_REQUEST_OPTIONS;
 
-        super::add_query(&mut url, options);
+        super::add_query(&mut url, options, "2023-09-27-preview");
 
-        assert!(!url.to_string().ends_with("?"));
+        assert!(!url.to_string().ends_with('?'));
     }
 
     #[test]
@@ -707,7 +778,7 @@ mod tests {
         let mut options = NO_REQUEST_OPTIONS.clone();
         options.include_ports = true;
 
-        super::add_query(&mut url, &options);
+        super::add_query(&mut url, &options, "2023-09-27-preview");
 
         assert!(url.query().unwrap().contains("includePorts=true"));
     }
