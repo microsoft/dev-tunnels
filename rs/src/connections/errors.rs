@@ -34,5 +34,5 @@ pub enum TunnelError {
     ProxyHandshakeFailed(hyper::Error),
 
     #[error("proxy connect request failed: {0}")]
-    ProxyConnectRequestFailed(hyper::Error)
+    ProxyConnectRequestFailed(hyper::Error),
 }
