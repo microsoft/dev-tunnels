@@ -464,11 +464,11 @@ impl TunnelManagementClient {
     }
 
     fn generate_tunnel_id() -> String {
-        const NOUNS: [&'static str; 16] = [
+        const NOUNS: [&str; 16] = [
             "pond", "hill", "mountain", "field", "fog", "ant", "dog", "cat", "shoe", "plane",
             "chair", "book", "ocean", "lake", "river", "horse",
         ];
-        const ADJECTIVES: [&'static str; 20] = [
+        const ADJECTIVES: [&str; 20] = [
             "fun",
             "happy",
             "interesting",
@@ -490,7 +490,7 @@ impl TunnelManagementClient {
             "amusing",
             "spiffy",
         ];
-        const TUNNEL_ID_CHARS: &'static str = "bcdfghjklmnpqrstvwxz0123456789";
+        const TUNNEL_ID_CHARS: &str = "bcdfghjklmnpqrstvwxz0123456789";
 
         let mut rng = rand::thread_rng();
         let mut tunnel_id = String::new();
@@ -577,7 +577,7 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
     fn from(builder: TunnelClientBuilder) -> Self {
         TunnelManagementClient {
             authorization: builder.authorization,
-            client: builder.client.unwrap_or_else(Client::new),
+            client: builder.client.unwrap_or_default(),
             user_agent: builder.user_agent,
             environment: builder.environment,
             api_version: builder.api_version,
@@ -769,7 +769,7 @@ mod tests {
 
         super::add_query(&mut url, options, "2023-09-27-preview");
 
-        assert!(!url.to_string().ends_with("?"));
+        assert!(!url.to_string().ends_with('?'));
     }
 
     #[test]
