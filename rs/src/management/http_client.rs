@@ -97,13 +97,16 @@ impl TunnelManagementClient {
         mut tunnel: Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
-        tunnel.tunnel_id = match tunnel.tunnel_id {
-            None => Some(TunnelManagementClient::generate_tunnel_id().to_owned()),
-            Some(tunnel_id) => Some(tunnel_id.to_owned()),
-        };
+        let tunnel_id = tunnel
+            .tunnel_id
+            .take()
+            .unwrap_or_else(TunnelManagementClient::generate_tunnel_id);
+
         let mut url = self.build_uri(tunnel.cluster_id.as_deref(), TUNNELS_API_PATH);
-        let new_path = url.path().to_owned() + "/" + tunnel.tunnel_id.to_owned().unwrap().as_str();
+        let new_path = url.path().to_owned() + "/" + &tunnel_id;
         url.set_path(&new_path);
+        tunnel.tunnel_id = Some(tunnel_id);
+
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, tunnel);
         self.execute_json("create_tunnel", request).await
