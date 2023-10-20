@@ -510,12 +510,14 @@ namespace Microsoft.DevTunnels.Management
                 request.Headers.UserAgent.Add(userAgent);
             }
 
-            var windowsPartnerId = TunnelUserAgent.GetWindowsPartnerId();
-            if (windowsPartnerId != null)
+            var localMachineHeaders = TunnelUserAgent.GetMachineHeaders();
+            if(localMachineHeaders != null)
             {
-                request.Headers.UserAgent.Add(windowsPartnerId);
+                foreach (ProductInfoHeaderValue userAgent in localMachineHeaders)
+                {
+                    request.Headers.UserAgent.Add(userAgent);
+                }
             }
-
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
             if (body != null)

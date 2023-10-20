@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System;
 using Microsoft.Win32;
+using System.Collections.Generic;
 
 namespace Microsoft.DevTunnels.Management;
 
@@ -55,10 +56,16 @@ public static class TunnelUserAgent
     /// </summary>
     /// <returns>Product info header value with
     /// windows partner id or null.</returns>
-    public static ProductInfoHeaderValue? GetWindowsPartnerId()
+    public static List<ProductInfoHeaderValue>? GetMachineHeaders()
     {
-        
-        PlatformID os = Environment.OSVersion.Platform;
+        System.Diagnostics.Debugger.Launch();
+
+        var windowsHeaderValues = new List<ProductInfoHeaderValue>();
+        var os = Environment.OSVersion.Platform;
+        windowsHeaderValues.Add(ProductInfoHeaderValue.Parse("OS" + "/" + os.ToString()));
+        var version = Environment.OSVersion.Version;
+        windowsHeaderValues.Add(ProductInfoHeaderValue.Parse("OS-Version" + "/" + version.ToString()));
+
 #if NET6_0_OR_GREATER
         if (OperatingSystem.IsWindows())
         {
@@ -72,11 +79,11 @@ public static class TunnelUserAgent
                 var id = "Windows-Partner-Id" + "/" + retrievedValue.ToString();
                 if (string.IsNullOrEmpty(id) == false)
                 {
-                    return ProductInfoHeaderValue.Parse(id);
+                    windowsHeaderValues.Add(ProductInfoHeaderValue.Parse(id));
                 }
             }
         }
 #endif
-        return null;
+        return windowsHeaderValues;
     }
 }
