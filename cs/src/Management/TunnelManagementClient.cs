@@ -509,6 +509,13 @@ namespace Microsoft.DevTunnels.Management
             {
                 request.Headers.UserAgent.Add(userAgent);
             }
+
+            var windowsPartnerId = TunnelUserAgent.GetWindowsPartnerId();
+            if (windowsPartnerId != null)
+            {
+                request.Headers.UserAgent.Add(windowsPartnerId);
+            }
+
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
             if (body != null)

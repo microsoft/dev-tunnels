@@ -5,6 +5,8 @@
 
 using System.Net.Http.Headers;
 using System.Reflection;
+using System;
+using Microsoft.Win32;
 
 namespace Microsoft.DevTunnels.Management;
 
@@ -30,7 +32,6 @@ public static class TunnelUserAgent
             {
                 productName = assembly.GetName().Name?.Replace('.', '-');
             }
-
             if (productName == null)
             {
                 return null;
@@ -46,5 +47,36 @@ public static class TunnelUserAgent
         }
 
         return new ProductInfoHeaderValue(productName, productVersion ?? "unknown");
+    }
+
+    /// <summary>
+    /// Gets the windows partner id through the registry
+    /// value
+    /// </summary>
+    /// <returns>Product info header value with
+    /// windows partner id or null.</returns>
+    public static ProductInfoHeaderValue? GetWindowsPartnerId()
+    {
+        
+        PlatformID os = Environment.OSVersion.Platform;
+#if NET6_0_OR_GREATER
+        if (OperatingSystem.IsWindows())
+        {
+            string registryKeyName = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows365";
+            string valueName = "PartnerId";
+
+            object? retrievedValue = Registry.GetValue(registryKeyName, valueName, RegistryOptions.None);
+
+            if (retrievedValue != null)
+            {
+                var id = "Windows-Partner-Id" + "/" + retrievedValue.ToString();
+                if (string.IsNullOrEmpty(id) == false)
+                {
+                    return ProductInfoHeaderValue.Parse(id);
+                }
+            }
+        }
+#endif
+        return null;
     }
 }
