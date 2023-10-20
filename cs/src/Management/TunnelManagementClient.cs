@@ -511,13 +511,11 @@ namespace Microsoft.DevTunnels.Management
             }
 
             var localMachineHeaders = TunnelUserAgent.GetMachineHeaders();
-            if(localMachineHeaders != null)
+            foreach (ProductInfoHeaderValue userAgent in localMachineHeaders)
             {
-                foreach (ProductInfoHeaderValue userAgent in localMachineHeaders)
-                {
-                    request.Headers.UserAgent.Add(userAgent);
-                }
+                request.Headers.UserAgent.Add(userAgent);
             }
+
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
             if (body != null)

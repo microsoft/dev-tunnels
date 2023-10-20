@@ -51,15 +51,14 @@ public static class TunnelUserAgent
     }
 
     /// <summary>
-    /// Gets the windows partner id through the registry
-    /// value
+    /// Gets machine properties and adds them to the user agent.
+    /// Properties include os, os version, and windows
+    /// partner id if applicable
     /// </summary>
-    /// <returns>Product info header value with
-    /// windows partner id or null.</returns>
-    public static List<ProductInfoHeaderValue>? GetMachineHeaders()
+    /// <returns>List of product info header values with
+    /// machine properties.</returns>
+    public static List<ProductInfoHeaderValue> GetMachineHeaders()
     {
-        System.Diagnostics.Debugger.Launch();
-
         var windowsHeaderValues = new List<ProductInfoHeaderValue>();
         var os = Environment.OSVersion.Platform;
         windowsHeaderValues.Add(ProductInfoHeaderValue.Parse("OS" + "/" + os.ToString()));
