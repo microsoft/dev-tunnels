@@ -511,9 +511,9 @@ namespace Microsoft.DevTunnels.Management
             }
 
             var localMachineHeaders = TunnelUserAgent.GetMachineHeaders();
-            foreach (ProductInfoHeaderValue userAgent in localMachineHeaders)
+            if(localMachineHeaders != null)
             {
-                request.Headers.UserAgent.Add(userAgent);
+                request.Headers.UserAgent.Add(localMachineHeaders);
             }
 
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);

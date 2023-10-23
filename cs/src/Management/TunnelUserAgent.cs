@@ -8,6 +8,8 @@ using System.Reflection;
 using System;
 using Microsoft.Win32;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.DevTunnels.Management;
 
@@ -57,13 +59,11 @@ public static class TunnelUserAgent
     /// </summary>
     /// <returns>List of product info header values with
     /// machine properties.</returns>
-    public static List<ProductInfoHeaderValue> GetMachineHeaders()
+    public static ProductInfoHeaderValue? GetMachineHeaders()
     {
-        var windowsHeaderValues = new List<ProductInfoHeaderValue>();
-        var os = Environment.OSVersion.Platform;
-        windowsHeaderValues.Add(ProductInfoHeaderValue.Parse("OS" + "/" + os.ToString()));
-        var version = Environment.OSVersion.Version;
-        windowsHeaderValues.Add(ProductInfoHeaderValue.Parse("OS-Version" + "/" + version.ToString()));
+        var headerComments = new List<string>();
+        var os = RuntimeInformation.OSDescription;
+        headerComments.Add("OS" + "/" + os.ToString());
 
 #if NET6_0_OR_GREATER
         if (OperatingSystem.IsWindows())
@@ -75,14 +75,18 @@ public static class TunnelUserAgent
 
             if (retrievedValue != null)
             {
-                var id = "Windows-Partner-Id" + "/" + retrievedValue.ToString();
-                if (string.IsNullOrEmpty(id) == false)
-                {
-                    windowsHeaderValues.Add(ProductInfoHeaderValue.Parse(id));
-                }
+                headerComments.Add("Windows-Partner-Id" + "/" + retrievedValue.ToString());
             }
         }
 #endif
-        return windowsHeaderValues;
+        if (headerComments.Any())
+        {
+            string headerCommentValue = "(" + string.Join(" ", headerComments) + ")";
+            return new ProductInfoHeaderValue(headerCommentValue);
+        }
+        else
+        {
+            return null;
+        }
     }
 }
