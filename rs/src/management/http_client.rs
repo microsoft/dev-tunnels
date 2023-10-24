@@ -12,6 +12,9 @@ use url::Url;
 
 use rand::Rng;
 
+use winreg::enums::*;
+use winreg::RegKey;
+
 use crate::contracts::{
     env_production, NamedRateStatus, Tunnel, TunnelConnectionMode, TunnelEndpoint,
     TunnelListByRegionResponse, TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint,
@@ -533,10 +536,32 @@ pub struct TunnelClientBuilder {
 /// to get the client instance (or cast automatically).
 pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
     let pkg_version = PKG_VERSION.unwrap_or("unknown");
-    let full_user_agent = format!(
-        "{}{}{}",
-        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version
+    let os = os_info::get();
+    let os_info = format!("{}: {} {}", "OS", os.os_type(), os.version());
+    let mut windows_partner_id = String::default();
+    #[cfg(windows)]
+    {
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let key = hklm.open_subkey("SOFTWARE\\Microsoft\\Windows365");
+        windows_partner_id = key
+            .expect("No value found for key")
+            .get_value::<String, _>("PartnerId")
+            .unwrap_or_default();
+    }
+
+    let mut full_user_agent = format!(
+        "{}{}{} ({})",
+        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version, os_info
     );
+
+    if windows_partner_id != String::default() {
+        windows_partner_id = format!("Windows-Partner-Id: {}", windows_partner_id);
+        full_user_agent = format!(
+            "{}{}{} ({}; {})",
+            user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version, os_info, windows_partner_id
+        );
+    }
+
     TunnelClientBuilder {
         authorization: Arc::new(Box::new(super::StaticAuthorizationProvider(
             Authorization::Anonymous,
@@ -756,7 +781,7 @@ mod tests {
         let builder = super::new_tunnel_management("test-caller");
 
         // verify
-        let re = Regex::new(r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+$")
+        let re = Regex::new(r"^test-caller Dev-Tunnels-Service-Rust-SDK/[0-9]+\.[0-9]+\.[0-9]+.*$")
             .unwrap();
         let full_agent = builder.user_agent.to_str().unwrap();
         assert!(re.is_match(full_agent));
