@@ -63,7 +63,7 @@ public static class TunnelUserAgent
     {
         var headerComments = new List<string>();
         var os = RuntimeInformation.OSDescription;
-        headerComments.Add("OS" + "/" + os.ToString());
+        headerComments.Add("OS" + ":" + os.ToString());
 
 #if NET6_0_OR_GREATER
         if (OperatingSystem.IsWindows())
@@ -75,13 +75,13 @@ public static class TunnelUserAgent
 
             if (retrievedValue != null)
             {
-                headerComments.Add("Windows-Partner-Id" + "/" + retrievedValue.ToString());
+                headerComments.Add("Windows-Partner-Id" + ":" + retrievedValue.ToString());
             }
         }
 #endif
         if (headerComments.Any())
         {
-            string headerCommentValue = "(" + string.Join(" ", headerComments) + ")";
+            string headerCommentValue = "(" + string.Join("; ", headerComments) + ")";
             return new ProductInfoHeaderValue(headerCommentValue);
         }
         else
