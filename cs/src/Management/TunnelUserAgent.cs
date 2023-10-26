@@ -5,6 +5,11 @@
 
 using System.Net.Http.Headers;
 using System.Reflection;
+using System;
+using Microsoft.Win32;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.DevTunnels.Management;
 
@@ -30,7 +35,6 @@ public static class TunnelUserAgent
             {
                 productName = assembly.GetName().Name?.Replace('.', '-');
             }
-
             if (productName == null)
             {
                 return null;
@@ -46,5 +50,43 @@ public static class TunnelUserAgent
         }
 
         return new ProductInfoHeaderValue(productName, productVersion ?? "unknown");
+    }
+
+    /// <summary>
+    /// Gets machine properties and adds them to the user agent.
+    /// Properties include os details and windows
+    /// partner id if applicable
+    /// </summary>
+    /// <returns>Product info header values with
+    /// machine properties.</returns>
+    public static ProductInfoHeaderValue? GetMachineHeaders()
+    {
+        var headerComments = new List<string>();
+        var os = RuntimeInformation.OSDescription;
+        headerComments.Add("OS" + ":" + os.ToString());
+
+#if NET6_0_OR_GREATER
+        if (OperatingSystem.IsWindows())
+        {
+            string registryKeyName = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows365";
+            string valueName = "PartnerId";
+
+            object? retrievedValue = Registry.GetValue(registryKeyName, valueName, RegistryOptions.None);
+
+            if (retrievedValue != null)
+            {
+                headerComments.Add("Windows-Partner-Id" + ":" + retrievedValue.ToString());
+            }
+        }
+#endif
+        if (headerComments.Any())
+        {
+            string headerCommentValue = "(" + string.Join("; ", headerComments) + ")";
+            return new ProductInfoHeaderValue(headerCommentValue);
+        }
+        else
+        {
+            return null;
+        }
     }
 }

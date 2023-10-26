@@ -509,6 +509,13 @@ namespace Microsoft.DevTunnels.Management
             {
                 request.Headers.UserAgent.Add(userAgent);
             }
+
+            var localMachineHeaders = TunnelUserAgent.GetMachineHeaders();
+            if(localMachineHeaders != null)
+            {
+                request.Headers.UserAgent.Add(localMachineHeaders);
+            }
+
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
             if (body != null)
