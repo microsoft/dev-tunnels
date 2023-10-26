@@ -933,7 +933,7 @@ namespace Microsoft.DevTunnels.Management
                        tunnel,
                        ManageAccessTokenScope,
                        path: null,
-                       query: GetApiQuery() + "&forceCreate=true",
+                       query: GetApiQuery(),
                        options,
                        ConvertTunnelForRequest(tunnel),
                        cancellation,
@@ -1025,7 +1025,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManageAccessTokenScope,
                 path: null,
-                query: GetApiQuery() + "&forceUpdate=true",
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelForRequest(tunnel),
                 cancellation);
@@ -1169,7 +1169,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 path,
-                query: GetApiQuery() + "&forceCreate=true",
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;
@@ -1211,7 +1211,7 @@ namespace Microsoft.DevTunnels.Management
                 tunnel,
                 ManagePortsAccessTokenScopes,
                 path,
-                query: GetApiQuery() + "&forceUpdate=true",
+                query: GetApiQuery(),
                 options,
                 ConvertTunnelPortForRequest(tunnel, tunnelPort),
                 cancellation))!;

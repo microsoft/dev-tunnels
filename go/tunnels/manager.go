@@ -183,7 +183,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnel.TunnelID == "" {
 		tunnel.TunnelID = generateTunnelId()
 	}
-	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "forceCreate=true", true)
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request url: %w", err)
 	}
@@ -221,7 +221,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
 
-	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "forceUpdate=true", false)
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request url: %w", err)
 	}
@@ -425,7 +425,7 @@ func (m *Manager) CreateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
-	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "forceCreate=true", false)
+	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
@@ -468,7 +468,7 @@ func (m *Manager) UpdateTunnelPort(
 		return nil, fmt.Errorf("cluster ids do not match")
 	}
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
-	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "forceUpdate=true", false)
+	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tunnel url: %w", err)
 	}
