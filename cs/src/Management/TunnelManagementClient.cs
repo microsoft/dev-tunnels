@@ -917,7 +917,9 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnel, nameof(tunnel));
-
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
             var tunnelId = tunnel.TunnelId;
             var idGenerated = string.IsNullOrEmpty(tunnelId);
             if (idGenerated)
@@ -1020,6 +1022,9 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
+            options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-Match", "*"));
             var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
                 HttpMethod.Put,
                 tunnel,
