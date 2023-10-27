@@ -248,6 +248,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
         const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Not-Match'] = "*";
+
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
         }
@@ -342,6 +346,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Match'] = "*";
         const result = (await this.sendTunnelRequest<Tunnel>(
             'PUT',
             tunnel,
@@ -483,6 +490,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): Promise<TunnelPort> {
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
         const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Not-Match'] = "*";
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'PUT',
             tunnel,
@@ -514,6 +524,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             throw new Error('Tunnel port cluster ID is not consistent.');
         }
 
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Match'] = "*";
         const portNumber = tunnelPort.portNumber;
         const path = `${portsApiSubPath}/${portNumber}`;
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
