@@ -1192,7 +1192,7 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            tunnnel.Ports ??= new List<TunnelPort>();
+            tunnel.Ports ??= new TunnelPort[1];
 
             // Also add the port to the local tunnel object.
             tunnel.Ports = tunnel.Ports
@@ -1236,7 +1236,7 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            tunnnel.Ports ??= new List<TunnelPort>();
+            tunnel.Ports ??= new TunnelPort[1];
 
             // Also add the port to the local tunnel object.
             tunnel.Ports = tunnel.Ports
@@ -1278,7 +1278,7 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            tunnnel.Ports ??= new List<TunnelPort>();
+            tunnel.Ports ??= new TunnelPort[1];
 
             // Also add the port to the local tunnel object.
             tunnel.Ports = tunnel.Ports

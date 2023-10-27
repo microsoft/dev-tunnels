@@ -37,7 +37,7 @@ const portsApiSubPath = '/ports';
 const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
-const CreateNameRetries = 3;
+const createNameRetries = 3;
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
@@ -256,7 +256,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
         }
-        for (let i = 0;i<=CreateNameRetries; i++){
+        for (let i = 0;i<=createNameRetries; i++){
             try {
                 const result = (await this.sendTunnelRequest<Tunnel>(
                     'PUT',
@@ -303,7 +303,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
         }
-        for (let i = 0;i<=3; i++){
+        for (let i = 0;i<=createNameRetries; i++){
             try {
                 const result = (await this.sendTunnelRequest<Tunnel>(
                     'PUT',
