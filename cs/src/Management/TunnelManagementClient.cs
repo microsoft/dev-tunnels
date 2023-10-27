@@ -987,7 +987,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 tunnel.TunnelId = IdGeneration.GenerateTunnelId();
             }
-            for (int retries = 0; retries <= 3; retries++)
+            for (int retries = 0; retries <= CreateNameRetries; retries++)
             {
                 try
                 {
