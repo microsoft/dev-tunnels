@@ -49,6 +49,7 @@ const (
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
 	goUserAgent                = "Dev-Tunnels-Service-Go-SDK/" + PackageVersion
+	createNameRetries          = 3
 )
 
 var (
@@ -203,7 +204,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	}
 	var response []byte
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < createNameRetries; i++ {
 		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
 		if err != nil {
 			convertedTunnel.TunnelID = generateTunnelId()
@@ -282,7 +283,7 @@ func (m *Manager) CreateOrUpdateTunnel(ctx context.Context, tunnel *Tunnel, opti
 	}
 	var response []byte
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < createNameRetries; i++ {
 		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
 		if err != nil {
 			convertedTunnel.TunnelID = generateTunnelId()

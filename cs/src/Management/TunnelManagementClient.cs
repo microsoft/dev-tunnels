@@ -42,6 +42,7 @@ namespace Microsoft.DevTunnels.Management
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
         private const string CheckAvailableSubPath = ":checkNameAvailability";
+        private const int CreateNameRetries = 3;
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
@@ -934,7 +935,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 tunnel.TunnelId = IdGeneration.GenerateTunnelId();
             }
-            for (int retries = 0; retries <= 3; retries++)
+            for (int retries = 0; retries <= CreateNameRetries; retries++)
             {
                 try
                 {
@@ -951,7 +952,7 @@ namespace Microsoft.DevTunnels.Management
                     PreserveAccessTokens(tunnel, result);
                     return result!;
                 }
-                catch (UnauthorizedAccessException) when (idGenerated && retries < 3) // The tunnel ID was already taken.
+                catch (UnauthorizedAccessException) when (idGenerated && retries < CreateNameRetries) // The tunnel ID was already taken.
                 {
                     tunnel.TunnelId = IdGeneration.GenerateTunnelId();
                 }

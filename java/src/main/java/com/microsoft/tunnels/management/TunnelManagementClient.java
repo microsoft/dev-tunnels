@@ -59,6 +59,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private String clustersApiPath = "/clusters";
   private static final String tunnelAuthenticationScheme = "Tunnel";
   private static final String checkTunnelNamePath = ":checkNameAvailability";
+  private static final int CreateNameRetries = 3;
 
   // Access Scopes
   private static final String[] ManageAccessTokenScope = {
@@ -388,7 +389,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
-    for (int i = 0; i <= 3; i++){
+    for (int i = 0; i <= CreateNameRetries; i++){
       try {
         return requestAsync(
           tunnel,
