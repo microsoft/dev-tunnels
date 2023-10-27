@@ -27,6 +27,7 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -378,6 +379,12 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (generatedId) {
       tunnel.tunnelId = IdGeneration.generateTunnelId();
     }
+
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Not-Match", "*");
+
     var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
@@ -444,6 +451,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Tunnel> updateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Match", "*");
     var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
@@ -618,6 +629,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (tunnelPort == null) {
       throw new IllegalArgumentException("Tunnel port must be specified");
     }
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Not-Match", "*");
+
     var path = portsApiSubPath + "/" + tunnelPort.portNumber;
     var uri = buildUri(
         tunnel,
@@ -693,6 +709,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (tunnelPort == null) {
       throw new IllegalArgumentException("Tunnel port must not be null.");
     }
+
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Match", "*");
 
     if (StringUtils.isNotBlank(tunnelPort.clusterId)
         && StringUtils.isNotBlank(tunnel.clusterId)

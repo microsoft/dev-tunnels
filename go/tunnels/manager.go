@@ -183,6 +183,15 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnel.TunnelID == "" {
 		tunnel.TunnelID = generateTunnelId()
 	}
+
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Not-Match"] = "*"
+
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request url: %w", err)
@@ -220,6 +229,14 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
+
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Match"] = "*"
 
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
@@ -424,6 +441,14 @@ func (m *Manager) GetTunnelPort(
 func (m *Manager) CreateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Not-Match"] = "*"
+
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
@@ -467,6 +492,15 @@ func (m *Manager) UpdateTunnelPort(
 	if port.ClusterID != "" && tunnel.ClusterID != "" && port.ClusterID != tunnel.ClusterID {
 		return nil, fmt.Errorf("cluster ids do not match")
 	}
+
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Match"] = "*"
+
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
