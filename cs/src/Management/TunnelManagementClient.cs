@@ -1192,15 +1192,14 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            if (tunnel.Ports != null)
-            {
-                // Also add the port to the local tunnel object.
-                tunnel.Ports = tunnel.Ports
-                    .Where((p) => p.PortNumber != tunnelPort.PortNumber)
-                    .Append(result)
-                    .OrderBy((p) => p.PortNumber)
-                    .ToArray();
-            }
+            tunnnel.Ports ??= new List<TunnelPort>();
+
+            // Also add the port to the local tunnel object.
+            tunnel.Ports = tunnel.Ports
+                .Where((p) => p.PortNumber != tunnelPort.PortNumber)
+                .Append(result)
+                .OrderBy((p) => p.PortNumber)
+                .ToArray();
 
             return result;
         }
@@ -1237,15 +1236,15 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            if (tunnel.Ports != null)
-            {
-                // Also update the port in the local tunnel object.
-                tunnel.Ports = tunnel.Ports
-                    .Where((p) => p.PortNumber != tunnelPort.PortNumber)
-                    .Append(result)
-                    .OrderBy((p) => p.PortNumber)
-                    .ToArray();
-            }
+            tunnnel.Ports ??= new List<TunnelPort>();
+
+            // Also add the port to the local tunnel object.
+            tunnel.Ports = tunnel.Ports
+                .Where((p) => p.PortNumber != tunnelPort.PortNumber)
+                .Append(result)
+                .OrderBy((p) => p.PortNumber)
+                .ToArray();
+
 
             return result;
         }
@@ -1279,15 +1278,15 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            if (tunnel.Ports != null)
-            {
-                // Also update the port in the local tunnel object.
-                tunnel.Ports = tunnel.Ports
-                    .Where((p) => p.PortNumber != tunnelPort.PortNumber)
-                    .Append(result)
-                    .OrderBy((p) => p.PortNumber)
-                    .ToArray();
-            }
+            tunnnel.Ports ??= new List<TunnelPort>();
+
+            // Also add the port to the local tunnel object.
+            tunnel.Ports = tunnel.Ports
+                .Where((p) => p.PortNumber != tunnelPort.PortNumber)
+                .Append(result)
+                .OrderBy((p) => p.PortNumber)
+                .ToArray();
+
 
             return result;
         }

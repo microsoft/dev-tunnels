@@ -503,14 +503,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             tunnelPort,
         ))!;
-
-        if (tunnel.ports) {
-            // Also add the port to the local tunnel object.
-            tunnel.ports = tunnel.ports
-                .filter((p) => p.portNumber !== tunnelPort.portNumber)
-                .concat(result)
-                .sort(comparePorts);
-        }
+        
+        tunnel.ports = tunnel.ports || [];
+        // Also add the port to the local tunnel object.
+        tunnel.ports = tunnel.ports
+            .filter((p) => p.portNumber !== tunnelPort.portNumber)
+            .concat(result)
+            .sort(comparePorts);
 
         parseTunnelPortDates(result);
         return result;
@@ -543,13 +542,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         preserveAccessTokens(tunnelPort, result);
         parseTunnelPortDates(result);
 
-        if (tunnel.ports) {
-            // Also update the port in the local tunnel object.
-            tunnel.ports = tunnel.ports
-                .filter((p) => p.portNumber !== tunnelPort.portNumber)
-                .concat(result)
-                .sort(comparePorts);
-        }
+        tunnel.ports = tunnel.ports || [];
+        // Also add the port to the local tunnel object.
+        tunnel.ports = tunnel.ports
+            .filter((p) => p.portNumber !== tunnelPort.portNumber)
+            .concat(result)
+            .sort(comparePorts);
 
         return result;
     }
@@ -571,13 +569,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnelPort,
         ))!;
 
-        if (tunnel.ports) {
-            // Also add the port to the local tunnel object.
-            tunnel.ports = tunnel.ports
-                .filter((p) => p.portNumber !== tunnelPort.portNumber)
-                .concat(result)
-                .sort(comparePorts);
-        }
+        tunnel.ports = tunnel.ports || [];
+        // Also add the port to the local tunnel object.
+        tunnel.ports = tunnel.ports
+            .filter((p) => p.portNumber !== tunnelPort.portNumber)
+            .concat(result)
+            .sort(comparePorts);
 
         parseTunnelPortDates(result);
         return result;
