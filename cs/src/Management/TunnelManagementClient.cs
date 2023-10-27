@@ -669,6 +669,7 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.NotFound:
                     case HttpStatusCode.Conflict:
+                    case HttpStatusCode.PreconditionFailed:
                     case HttpStatusCode.TooManyRequests:
                         throw new InvalidOperationException(errorMessage, hrex);
 
