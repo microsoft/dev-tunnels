@@ -1168,6 +1168,9 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
 
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
                 HttpMethod.Put,
@@ -1201,6 +1204,9 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-Match", "*"));
 
             if (tunnelPort.ClusterId != null && tunnel.ClusterId != null &&
                 tunnelPort.ClusterId != tunnel.ClusterId)
