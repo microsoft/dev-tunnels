@@ -65,6 +65,13 @@ export interface TunnelManagementClient {
     updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel>;
 
     /**
+     * Updates properties of a tunnel or creates it if it does not exist.
+     * @param tunnel
+     * @param options
+     */
+    createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel>;
+
+    /**
      * Deletes a tunnel.
      * @param tunnel
      * @param options
@@ -137,6 +144,18 @@ export interface TunnelManagementClient {
      * @param options
      */
     updateTunnelPort(
+        tunnel: Tunnel,
+        tunnelPort: TunnelPort,
+        options?: TunnelRequestOptions,
+    ): Promise<TunnelPort>;
+
+    /**
+     * Updates properties of a tunnel port or creates it if it does not exist.
+     * @param tunnel
+     * @param tunnelPort
+     * @param options
+     */
+    createOrUpdateTunnelPort(
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,

@@ -342,4 +342,47 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     {
         throw new NotImplementedException();
     }
+
+    public async Task<Tunnel> CreateOrUpdateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options = null, CancellationToken cancellation = default)
+    {
+        if ((await GetTunnelAsync(tunnel, options, cancellation)) != null)
+        {
+            foreach (var t in Tunnels)
+            {
+                if (t.ClusterId == tunnel.ClusterId && t.TunnelId == tunnel.TunnelId)
+                {
+                    if (tunnel.Name != null)
+                    {
+                        t.Name = tunnel.Name;
+                    }
+
+                    if (tunnel.Options != null)
+                    {
+                        t.Options = tunnel.Options;
+                    }
+
+                    if (tunnel.AccessControl != null)
+                    {
+                        t.AccessControl = tunnel.AccessControl;
+                    }
+                }
+            }
+
+            IssueMockTokens(tunnel, options);
+
+            return tunnel;
+        }
+
+        tunnel.TunnelId = "tunnel" + (++this.idCounter);
+        tunnel.ClusterId = "localhost";
+        Tunnels.Add(tunnel);
+
+        IssueMockTokens(tunnel, options);
+        return tunnel;
+    }
+
+    public Task<TunnelPort> CreateOrUpdateTunnelPortAsync(Tunnel tunnel, TunnelPort tunnelPort, TunnelRequestOptions options = null, CancellationToken cancellation = default)
+    {
+        throw new NotImplementedException();
+    }
 }

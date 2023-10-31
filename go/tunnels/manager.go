@@ -49,6 +49,7 @@ const (
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
 	goUserAgent                = "Dev-Tunnels-Service-Go-SDK/" + PackageVersion
+	createNameRetries          = 3
 )
 
 var (
@@ -183,6 +184,15 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnel.TunnelID == "" {
 		tunnel.TunnelID = generateTunnelId()
 	}
+
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Not-Match"] = "*"
+
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request url: %w", err)
@@ -194,7 +204,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	}
 	var response []byte
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < createNameRetries; i++ {
 		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
 		if err != nil {
 			convertedTunnel.TunnelID = generateTunnelId()
@@ -221,6 +231,14 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
 
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Match"] = "*"
+
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request url: %w", err)
@@ -233,6 +251,47 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, updateFields, manageAccessTokenScope, false)
 	if err != nil {
 		return nil, fmt.Errorf("error sending update tunnel request: %w", err)
+	}
+
+	// Read response into a tunnel
+	err = json.Unmarshal(response, &t)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to tunnel: %w", err)
+	}
+
+	return t, err
+}
+
+// Updates a tunnel's properties or creates a tunnel if it does not exist.
+// To update a field the field name must be included in updateFields.
+// Returns the updated tunnel or an error if the update fails.
+func (m *Manager) CreateOrUpdateTunnel(ctx context.Context, tunnel *Tunnel, options *TunnelRequestOptions) (t *Tunnel, err error) {
+	if tunnel == nil {
+		return nil, fmt.Errorf("tunnel must be provided")
+	}
+	if tunnel.TunnelID == "" {
+		tunnel.TunnelID = generateTunnelId()
+	}
+	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request url: %w", err)
+	}
+	convertedTunnel, err := tunnel.requestObject()
+	convertedTunnel.TunnelID = tunnel.TunnelID
+	if err != nil {
+		return nil, fmt.Errorf("error converting tunnel for request: %w", err)
+	}
+	var response []byte
+
+	for i := 0; i < createNameRetries; i++ {
+		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+		if err != nil {
+			convertedTunnel.TunnelID = generateTunnelId()
+			tunnel.TunnelID = convertedTunnel.TunnelID
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
 	}
 
 	// Read response into a tunnel
@@ -383,6 +442,14 @@ func (m *Manager) GetTunnelPort(
 func (m *Manager) CreateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Not-Match"] = "*"
+
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
@@ -426,6 +493,15 @@ func (m *Manager) UpdateTunnelPort(
 	if port.ClusterID != "" && tunnel.ClusterID != "" && port.ClusterID != tunnel.ClusterID {
 		return nil, fmt.Errorf("cluster ids do not match")
 	}
+
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+	if options.AdditionalHeaders == nil {
+		options.AdditionalHeaders = map[string]string{}
+	}
+	options.AdditionalHeaders["If-Match"] = "*"
+
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
 	if err != nil {
@@ -440,6 +516,46 @@ func (m *Manager) UpdateTunnelPort(
 	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedPort, updateFields, managePortsAccessTokenScopes, true)
 	if err != nil {
 		return nil, fmt.Errorf("error sending update tunnel port request: %w", err)
+	}
+
+	// Read response into a tunnel port
+	err = json.Unmarshal(response, &tp)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to tunnel port: %w", err)
+	}
+
+	// Updated local tunnel ports
+	var newPorts []TunnelPort
+	for _, p := range tunnel.Ports {
+		if p.PortNumber != tp.PortNumber {
+			newPorts = append(newPorts, p)
+		}
+	}
+	newPorts = append(newPorts, *tp)
+	tunnel.Ports = newPorts
+
+	return tp, nil
+}
+
+// Updates a tunnel port or creates it if it does not exist.
+// Returns the updated port or an error if the update fails.
+func (m *Manager) CreateOrUpdateTunnelPort(
+	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
+) (tp *TunnelPort, err error) {
+	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
+	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
+	if err != nil {
+		return nil, fmt.Errorf("error creating tunnel url: %w", err)
+	}
+
+	convertedPort, err := port.requestObject(tunnel)
+	if err != nil {
+		return nil, fmt.Errorf("error converting port for request: %w", err)
+	}
+
+	response, err := m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedPort, nil, managePortsAccessTokenScopes, true)
+	if err != nil {
+		return nil, fmt.Errorf("error sending create tunnel port request: %w", err)
 	}
 
 	// Read response into a tunnel port

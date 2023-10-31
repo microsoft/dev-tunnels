@@ -37,6 +37,7 @@ const portsApiSubPath = '/ports';
 const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
+const createNameRetries = 3;
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
@@ -248,10 +249,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
         const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Not-Match'] = "*";
+
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
         }
-        for (let i = 0;i<=3; i++){
+        for (let i = 0;i<=createNameRetries; i++){
             try {
                 const result = (await this.sendTunnelRequest<Tunnel>(
                     'PUT',
@@ -292,7 +297,59 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return result2;
     }
 
+    public async createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
+        const tunnelId = tunnel.tunnelId;
+        const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
+        if (idGenerated) {
+            tunnel.tunnelId = IdGeneration.generateTunnelId();
+        }
+        for (let i = 0;i<=createNameRetries; i++){
+            try {
+                const result = (await this.sendTunnelRequest<Tunnel>(
+                    'PUT',
+                    tunnel,
+                    manageAccessTokenScope,
+                    undefined,
+                    undefined,
+                    options,
+                    this.convertTunnelForRequest(tunnel),
+                    undefined,
+                    true,
+                ))!;
+                preserveAccessTokens(tunnel, result);
+                parseTunnelDates(result);
+                return result;
+            } catch (error) {
+                if (idGenerated) {
+                    // The tunnel ID was generated and there was a conflict.
+                    // Try again with a new ID.
+                    tunnel.tunnelId = IdGeneration.generateTunnelId();
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        const result2 = (await this.sendTunnelRequest<Tunnel>(
+            'PUT',
+            tunnel,
+            manageAccessTokenScope,
+            undefined,
+            "forceCreate=true",
+            options,
+            this.convertTunnelForRequest(tunnel),
+            undefined,
+            true,
+        ))!;
+        preserveAccessTokens(tunnel, result2);
+        parseTunnelDates(result2);
+        return result2;
+    }
+
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Match'] = "*";
         const result = (await this.sendTunnelRequest<Tunnel>(
             'PUT',
             tunnel,
@@ -434,6 +491,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): Promise<TunnelPort> {
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
         const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Not-Match'] = "*";
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'PUT',
             tunnel,
@@ -443,14 +503,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             tunnelPort,
         ))!;
-
-        if (tunnel.ports) {
-            // Also add the port to the local tunnel object.
-            tunnel.ports = tunnel.ports
-                .filter((p) => p.portNumber !== tunnelPort.portNumber)
-                .concat(result)
-                .sort(comparePorts);
-        }
+        
+        tunnel.ports = tunnel.ports || [];
+        // Also add the port to the local tunnel object.
+        tunnel.ports = tunnel.ports
+            .filter((p) => p.portNumber !== tunnelPort.portNumber)
+            .concat(result)
+            .sort(comparePorts);
 
         parseTunnelPortDates(result);
         return result;
@@ -465,6 +524,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             throw new Error('Tunnel port cluster ID is not consistent.');
         }
 
+        options = options || {};
+        options.additionalHeaders = options.additionalHeaders || {};
+        options.additionalHeaders['If-Match'] = "*";
         const portNumber = tunnelPort.portNumber;
         const path = `${portsApiSubPath}/${portNumber}`;
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
@@ -480,14 +542,41 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         preserveAccessTokens(tunnelPort, result);
         parseTunnelPortDates(result);
 
-        if (tunnel.ports) {
-            // Also update the port in the local tunnel object.
-            tunnel.ports = tunnel.ports
-                .filter((p) => p.portNumber !== tunnelPort.portNumber)
-                .concat(result)
-                .sort(comparePorts);
-        }
+        tunnel.ports = tunnel.ports || [];
+        // Also add the port to the local tunnel object.
+        tunnel.ports = tunnel.ports
+            .filter((p) => p.portNumber !== tunnelPort.portNumber)
+            .concat(result)
+            .sort(comparePorts);
 
+        return result;
+    }
+
+    public async createOrUpdateTunnelPort(
+        tunnel: Tunnel,
+        tunnelPort: TunnelPort,
+        options?: TunnelRequestOptions,
+    ): Promise<TunnelPort> {
+        tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
+        const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
+        const result = (await this.sendTunnelRequest<TunnelPort>(
+            'PUT',
+            tunnel,
+            managePortsAccessTokenScopes,
+            path,
+            undefined,
+            options,
+            tunnelPort,
+        ))!;
+
+        tunnel.ports = tunnel.ports || [];
+        // Also add the port to the local tunnel object.
+        tunnel.ports = tunnel.ports
+            .filter((p) => p.portNumber !== tunnelPort.portNumber)
+            .concat(result)
+            .sort(comparePorts);
+
+        parseTunnelPortDates(result);
         return result;
     }
 

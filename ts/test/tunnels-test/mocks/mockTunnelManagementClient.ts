@@ -94,6 +94,37 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         return Promise.resolve(tunnel);
     }
 
+    async createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
+        if (await this.getTunnel(tunnel, options)) {
+            this.tunnels.forEach((t) => {
+                if (t.clusterId == tunnel.clusterId && t.tunnelId == tunnel.tunnelId) {
+                    if (tunnel.name) {
+                        t.name = tunnel.name;
+                    }
+    
+                    if (tunnel.options) {
+                        t.options = tunnel.options;
+                    }
+    
+                    if (tunnel.accessControl) {
+                        t.accessControl = tunnel.accessControl;
+                    }
+                }
+            });
+    
+            this.issueMockTokens(tunnel, options);
+    
+            return Promise.resolve(tunnel);
+        }
+
+        tunnel.tunnelId = 'tunnel' + ++this.idCounter;
+        tunnel.clusterId = 'localhost';
+        this.tunnels.push(tunnel);
+
+        this.issueMockTokens(tunnel, options);
+        return tunnel;
+    }
+
     deleteTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<boolean> {
         for (let i = 0; i < this.tunnels.length; i++) {
             let t = this.tunnels[i];
@@ -201,6 +232,14 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
     }
 
     updateTunnelPort(
+        tunnel: Tunnel,
+        tunnelPort: TunnelPort,
+        options?: TunnelRequestOptions,
+    ): Promise<TunnelPort> {
+        throw new Error('Method not implemented.');
+    }
+
+    createOrUpdateTunnelPort(
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,

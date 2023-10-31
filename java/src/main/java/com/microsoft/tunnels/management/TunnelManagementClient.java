@@ -27,6 +27,7 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -58,6 +59,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private String clustersApiPath = "/clusters";
   private static final String tunnelAuthenticationScheme = "Tunnel";
   private static final String checkTunnelNamePath = ":checkNameAvailability";
+  private static final int CreateNameRetries = 3;
 
   // Access Scopes
   private static final String[] ManageAccessTokenScope = {
@@ -378,10 +380,16 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (generatedId) {
       tunnel.tunnelId = IdGeneration.generateTunnelId();
     }
+
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Not-Match", "*");
+
     var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
-    for (int i = 0; i <= 3; i++){
+    for (int i = 0; i <= CreateNameRetries; i++){
       try {
         return requestAsync(
           tunnel,
@@ -444,6 +452,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
   @Override
   public CompletableFuture<Tunnel> updateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Match", "*");
     var uri = buildUri(tunnel, options, true);
     final Type responseType = new TypeToken<Tunnel>() {
     }.getType();
@@ -455,6 +467,47 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         ManageAccessTokenScope,
         convertTunnelForRequest(tunnel),
         responseType);
+  }
+
+  @Override
+  public CompletableFuture<Tunnel> createOrUpdateTunnelAsync(Tunnel tunnel, TunnelRequestOptions options) {
+    var generatedId = tunnel.tunnelId == null;
+    if (generatedId) {
+      tunnel.tunnelId = IdGeneration.generateTunnelId();
+    }
+
+    var uri = buildUri(tunnel, options, true);
+    final Type responseType = new TypeToken<Tunnel>() {
+    }.getType();
+    for (int i = 0; i <= CreateNameRetries; i++){
+      try {
+        return requestAsync(
+          tunnel,
+          options,
+          HttpMethod.PUT,
+          uri,
+          ManageAccessTokenScope,
+          convertTunnelForRequest(tunnel),
+          responseType);
+      }
+      catch (Exception e) {
+        if (generatedId) {
+          tunnel.tunnelId = IdGeneration.generateTunnelId();;
+        }
+        else{
+          throw e;
+        }
+      }
+    }
+
+    return requestAsync(
+          tunnel,
+          options,
+          HttpMethod.PUT,
+          uri,
+          ManageAccessTokenScope,
+          convertTunnelForRequest(tunnel),
+          responseType);
   }
 
   public CompletableFuture<Boolean> deleteTunnelAsync(Tunnel tunnel) {
@@ -603,6 +656,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     if (tunnelPort == null) {
       throw new IllegalArgumentException("Tunnel port must be specified");
     }
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Not-Match", "*");
+
     var path = portsApiSubPath + "/" + tunnelPort.portNumber;
     var uri = buildUri(
         tunnel,
@@ -619,17 +677,18 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
-    if (tunnel.ports != null) {
-      var updatedPorts = new ArrayList<TunnelPort>();
-      for (TunnelPort p : tunnel.ports) {
-        if (p.portNumber != tunnelPort.portNumber) {
-          updatedPorts.add(p);
-        }
-      }
-      updatedPorts.add(result.join());
-      updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
-      tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
+    if (tunnel.ports == null){
+      tunnel.ports = new TunnelPort[0];
     }
+    var updatedPorts = new ArrayList<TunnelPort>();
+    for (TunnelPort p : tunnel.ports) {
+      if (p.portNumber != tunnelPort.portNumber) {
+        updatedPorts.add(p);
+      }
+    }
+    updatedPorts.add(result.join());
+    updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
+    tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     return result;
   }
 
@@ -679,6 +738,11 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       throw new IllegalArgumentException("Tunnel port must not be null.");
     }
 
+    options = options == null ? new TunnelRequestOptions() : options;
+    options.additionalHeaders = options.additionalHeaders == null
+        ? new HashMap<>() : options.additionalHeaders;
+    options.additionalHeaders.put("If-Match", "*");
+
     if (StringUtils.isNotBlank(tunnelPort.clusterId)
         && StringUtils.isNotBlank(tunnel.clusterId)
         && tunnelPort.clusterId != tunnel.clusterId) {
@@ -702,17 +766,62 @@ public class TunnelManagementClient implements ITunnelManagementClient {
         convertTunnelPortForRequest(tunnel, tunnelPort),
         responseType);
 
-    if (tunnel.ports != null) {
-      var updatedPorts = new ArrayList<TunnelPort>();
-      for (TunnelPort p : tunnel.ports) {
-        if (p.portNumber != tunnelPort.portNumber) {
-          updatedPorts.add(p);
-        }
-      }
-      updatedPorts.add(result.join());
-      updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
-      tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
+    if (tunnel.ports == null){
+      tunnel.ports = new TunnelPort[0];
     }
+    var updatedPorts = new ArrayList<TunnelPort>();
+    for (TunnelPort p : tunnel.ports) {
+      if (p.portNumber != tunnelPort.portNumber) {
+        updatedPorts.add(p);
+      }
+    }
+    updatedPorts.add(result.join());
+    updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
+    tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
+    return result;
+  }
+
+  @Override
+  public CompletableFuture<TunnelPort> createOrUpdateTunnelPortAsync(
+      Tunnel tunnel,
+      TunnelPort tunnelPort,
+      TunnelRequestOptions options) {
+    if (tunnel == null) {
+      throw new IllegalArgumentException("Tunnel must not be null.");
+    }
+    if (tunnelPort == null) {
+      throw new IllegalArgumentException("Tunnel port must be specified");
+    }
+    var path = portsApiSubPath + "/" + tunnelPort.portNumber;
+    var uri = buildUri(
+        tunnel,
+        options,
+        path,
+        null,
+        false);
+    final Type responseType = new TypeToken<TunnelPort>() {
+    }.getType();
+    CompletableFuture<TunnelPort> result = requestAsync(
+        tunnel,
+        options,
+        HttpMethod.PUT,
+        uri,
+        ManagePortsAccessTokenScopes,
+        convertTunnelPortForRequest(tunnel, tunnelPort),
+        responseType);
+
+    if (tunnel.ports == null){
+      tunnel.ports = new TunnelPort[0];
+    }
+    var updatedPorts = new ArrayList<TunnelPort>();
+    for (TunnelPort p : tunnel.ports) {
+      if (p.portNumber != tunnelPort.portNumber) {
+        updatedPorts.add(p);
+      }
+    }
+    updatedPorts.add(result.join());
+    updatedPorts.sort((p1, p2) -> Integer.compare(p1.portNumber, p2.portNumber));
+    tunnel.ports = updatedPorts.toArray(new TunnelPort[updatedPorts.size()]);
     return result;
   }
 

@@ -42,6 +42,7 @@ namespace Microsoft.DevTunnels.Management
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
         private const string CheckAvailableSubPath = ":checkNameAvailability";
+        private const int CreateNameRetries = 3;
 
         private static readonly string[] ManageAccessTokenScope =
             new[] { TunnelAccessScopes.Manage };
@@ -69,7 +70,10 @@ namespace Microsoft.DevTunnels.Management
             "2023-09-27-preview"
         };
 
-
+        /// <summary>
+        /// ApiVersion that will be used if one is not specified
+        /// </summary>
+        public const string DefaultApiVersion = "2023-09-27-preview";
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
             TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
@@ -91,7 +95,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -112,7 +116,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
             : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -140,7 +144,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler, apiVersion)
         {
         }
@@ -170,7 +174,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string? apiVersion = null)
+            string apiVersion = DefaultApiVersion)
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
@@ -506,6 +510,13 @@ namespace Microsoft.DevTunnels.Management
             {
                 request.Headers.UserAgent.Add(userAgent);
             }
+
+            var localMachineHeaders = TunnelUserAgent.GetMachineHeaders();
+            if(localMachineHeaders != null)
+            {
+                request.Headers.UserAgent.Add(localMachineHeaders);
+            }
+
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
             if (body != null)
@@ -556,7 +567,7 @@ namespace Microsoft.DevTunnels.Management
             // because empty array was expected instead.
             // PUT/POST/PATCH requests should also throw an error for not-found.
             bool allowNotFound = typeof(T) == typeof(bool) ||
-                ((method == HttpMethod.Get || method == HttpMethod.Head) && !typeof(T).IsArray);
+                ((method == HttpMethod.Get || method == HttpMethod.Head) && !typeof(T).IsArray && typeof(T) != typeof(TunnelPortListResponse) && typeof(T) != typeof(TunnelListByRegionResponse));
 
             string? errorMessage = null;
             Exception? innerException = null;
@@ -666,6 +677,7 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.NotFound:
                     case HttpStatusCode.Conflict:
+                    case HttpStatusCode.PreconditionFailed:
                     case HttpStatusCode.TooManyRequests:
                         throw new InvalidOperationException(errorMessage, hrex);
 
@@ -856,7 +868,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 return result.Value.Where(t => t.Value != null).SelectMany(t => t.Value!).ToArray();
             }
-            
+
             return Array.Empty<Tunnel>();
         }
 
@@ -914,6 +926,60 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnel, nameof(tunnel));
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
+            var tunnelId = tunnel.TunnelId;
+            var idGenerated = string.IsNullOrEmpty(tunnelId);
+            if (idGenerated)
+            {
+                tunnel.TunnelId = IdGeneration.GenerateTunnelId();
+            }
+            for (int retries = 0; retries <= CreateNameRetries; retries++)
+            {
+                try
+                {
+                    var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+                       HttpMethod.Put,
+                       tunnel,
+                       ManageAccessTokenScope,
+                       path: null,
+                       query: GetApiQuery(),
+                       options,
+                       ConvertTunnelForRequest(tunnel),
+                       cancellation,
+                       true);
+                    PreserveAccessTokens(tunnel, result);
+                    return result!;
+                }
+                catch (UnauthorizedAccessException) when (idGenerated && retries < CreateNameRetries) // The tunnel ID was already taken.
+                {
+                    tunnel.TunnelId = IdGeneration.GenerateTunnelId();
+                }
+            }
+
+            // This code is unreachable, but the compiler still requires it.
+            var result2 = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+                       HttpMethod.Put,
+                       tunnel,
+                       ManageAccessTokenScope,
+                       path: null,
+                       query: GetApiQuery(),
+                       options,
+                       ConvertTunnelForRequest(tunnel),
+                       cancellation,
+                       true);
+            PreserveAccessTokens(tunnel, result2);
+            return result2!;
+        }
+
+                /// <inheritdoc />
+        public async Task<Tunnel> CreateOrUpdateTunnelAsync(
+            Tunnel tunnel,
+            TunnelRequestOptions? options,
+            CancellationToken cancellation)
+        {
+            Requires.NotNull(tunnel, nameof(tunnel));
 
             var tunnelId = tunnel.TunnelId;
             var idGenerated = string.IsNullOrEmpty(tunnelId);
@@ -921,7 +987,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 tunnel.TunnelId = IdGeneration.GenerateTunnelId();
             }
-            for (int retries = 0; retries <= 3; retries++)
+            for (int retries = 0; retries <= CreateNameRetries; retries++)
             {
                 try
                 {
@@ -965,6 +1031,9 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-Match", "*"));
             var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
                 HttpMethod.Put,
                 tunnel,
@@ -1004,6 +1073,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(endpoint, nameof(endpoint));
             Requires.NotNullOrEmpty(endpoint.HostId!, nameof(TunnelEndpoint.HostId));
+            Requires.NotNullOrEmpty(endpoint.Id!, nameof(TunnelEndpoint.Id));
 
             var path = $"{EndpointsApiSubPath}/{endpoint.Id}";
             var query = GetApiQuery();
@@ -1107,6 +1177,9 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
 
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
                 HttpMethod.Put,
@@ -1119,21 +1192,65 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            if (tunnel.Ports != null)
-            {
-                // Also add the port to the local tunnel object.
-                tunnel.Ports = tunnel.Ports
-                    .Where((p) => p.PortNumber != tunnelPort.PortNumber)
-                    .Append(result)
-                    .OrderBy((p) => p.PortNumber)
-                    .ToArray();
-            }
+            tunnel.Ports ??= new TunnelPort[0];
+
+            // Also add the port to the local tunnel object.
+            tunnel.Ports = tunnel.Ports
+                .Where((p) => p.PortNumber != tunnelPort.PortNumber)
+                .Append(result)
+                .OrderBy((p) => p.PortNumber)
+                .ToArray();
 
             return result;
         }
 
         /// <inheritdoc />
         public async Task<TunnelPort> UpdateTunnelPortAsync(
+            Tunnel tunnel,
+            TunnelPort tunnelPort,
+            TunnelRequestOptions? options,
+            CancellationToken cancellation)
+        {
+            Requires.NotNull(tunnelPort, nameof(tunnelPort));
+            options ??= new TunnelRequestOptions();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-Match", "*"));
+
+            if (tunnelPort.ClusterId != null && tunnel.ClusterId != null &&
+                tunnelPort.ClusterId != tunnel.ClusterId)
+            {
+                throw new ArgumentException(
+                    "Tunnel port cluster ID is not consistent.", nameof(tunnelPort));
+            }
+
+            var portNumber = tunnelPort.PortNumber;
+            var path = $"{PortsApiSubPath}/{portNumber}";
+            var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
+                HttpMethod.Put,
+                tunnel,
+                ManagePortsAccessTokenScopes,
+                path,
+                query: GetApiQuery(),
+                options,
+                ConvertTunnelPortForRequest(tunnel, tunnelPort),
+                cancellation))!;
+            PreserveAccessTokens(tunnelPort, result);
+
+            tunnel.Ports ??= new TunnelPort[0];
+
+            // Also add the port to the local tunnel object.
+            tunnel.Ports = tunnel.Ports
+                .Where((p) => p.PortNumber != tunnelPort.PortNumber)
+                .Append(result)
+                .OrderBy((p) => p.PortNumber)
+                .ToArray();
+
+
+            return result;
+        }
+
+                /// <inheritdoc />
+        public async Task<TunnelPort> CreateOrUpdateTunnelPortAsync(
             Tunnel tunnel,
             TunnelPort tunnelPort,
             TunnelRequestOptions? options,
@@ -1161,15 +1278,15 @@ namespace Microsoft.DevTunnels.Management
                 cancellation))!;
             PreserveAccessTokens(tunnelPort, result);
 
-            if (tunnel.Ports != null)
-            {
-                // Also update the port in the local tunnel object.
-                tunnel.Ports = tunnel.Ports
-                    .Where((p) => p.PortNumber != tunnelPort.PortNumber)
-                    .Append(result)
-                    .OrderBy((p) => p.PortNumber)
-                    .ToArray();
-            }
+            tunnel.Ports ??= new TunnelPort[0];
+
+            // Also add the port to the local tunnel object.
+            tunnel.Ports = tunnel.Ports
+                .Where((p) => p.PortNumber != tunnelPort.PortNumber)
+                .Append(result)
+                .OrderBy((p) => p.PortNumber)
+                .ToArray();
+
 
             return result;
         }
