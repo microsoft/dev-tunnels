@@ -319,6 +319,15 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             EnableRetry = enableRetry,
         };
         var relayClient = new TunnelRelayTunnelClient(TestTS);
+        var isRetryAttempted = false;
+        relayClient.RetryingTunnelConnection += (_, e) =>
+        {
+            Assert.IsAssignableFrom<TunnelConnectionException>(e.Exception);
+            Assert.Equal(TunnelRelayConnection.RetryMaxDelayMs / 2, e.Delay.TotalMilliseconds);
+            e.Delay = TimeSpan.FromMilliseconds(100);
+            isRetryAttempted = true;
+        };
+
         var tunnel = CreateRelayTunnel();
         bool firstAttempt = true;
 
@@ -342,6 +351,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             Assert.Equal(ConnectionStatus.Connected, relayClient.ConnectionStatus);
             Assert.Null(relayClient.DisconnectException);
             Assert.Equal(SshDisconnectReason.None, relayClient.DisconnectReason);
+            Assert.True(isRetryAttempted);
         }
         else
         {
@@ -349,6 +359,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             Assert.IsType<TunnelConnectionException>(relayClient.DisconnectException);
             Assert.Equal(ConnectionStatus.Disconnected, relayClient.ConnectionStatus);
             Assert.Equal(SshDisconnectReason.ServiceNotAvailable, relayClient.DisconnectReason);
+            Assert.False(isRetryAttempted);
         }
     }
 
@@ -793,6 +804,15 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var managementClient = new MockTunnelManagementClient();
         managementClient.HostRelayUri = MockHostRelayUri;
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        var isRetryAttempted = false;
+        relayHost.RetryingTunnelConnection += (_, e) =>
+        {
+            Assert.IsAssignableFrom<TunnelConnectionException>(e.Exception);
+            Assert.Equal(TunnelRelayConnection.RetryMaxDelayMs / 2, e.Delay.TotalMilliseconds);
+            e.Delay = TimeSpan.FromMilliseconds(100);
+            isRetryAttempted = true;
+        };
+
         var tunnel = CreateRelayTunnel();
         bool firstAttempt = true;
 
@@ -816,6 +836,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
             Assert.Null(relayHost.DisconnectException);
             Assert.Equal(SshDisconnectReason.None, relayHost.DisconnectReason);
+            Assert.True(isRetryAttempted);
         }
         else
         {
@@ -823,6 +844,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             Assert.IsType<TunnelConnectionException>(relayHost.DisconnectException);
             Assert.Equal(ConnectionStatus.Disconnected, relayHost.ConnectionStatus);
             Assert.Equal(SshDisconnectReason.ServiceNotAvailable, relayHost.DisconnectReason);
+            Assert.False(isRetryAttempted);
         }
     }
 

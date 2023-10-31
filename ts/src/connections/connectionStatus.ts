@@ -31,8 +31,7 @@ export enum ConnectionStatus {
     Disconnected = 'disconnected',
 
     /**
-     * Refreshing tunnel host public key. 
-     * This may happen when a client is connecting to a tunnel with a stale host public key. SDK client will try to fetch a fresh tunnel from the tunnelManagementClient.
+     * @deprecated Use {@link TunnelConnection.refreshingTunnel} instead.
      */
     RefreshingTunnelHostPublicKey = 'refreshingTunnelHostPublicKey',
 }

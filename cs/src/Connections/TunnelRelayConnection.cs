@@ -49,6 +49,12 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
 
     #endregion
 
+    /// <summary>
+    /// Maximum retry delay, ms.
+    /// After the 6th attempt the delay will reach 2^7 * 100ms = 12.8s and stop doubling
+    /// </summary>
+    public const int RetryMaxDelayMs = 12_800;
+
     private TunnelConnectionOptions? connectionOptions;
     private Task? reconnectTask;
 

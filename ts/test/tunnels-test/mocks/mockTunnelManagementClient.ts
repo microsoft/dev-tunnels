@@ -108,11 +108,14 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         return Promise.resolve(false);
     }
 
+    public tunnelEndpointsUpdated: number = 0;
+
     updateTunnelEndpoint(
         tunnel: Tunnel,
         endpoint: TunnelEndpoint,
         options?: TunnelRequestOptions,
     ): Promise<TunnelEndpoint> {
+        this.tunnelEndpointsUpdated++;
         if (!tunnel.endpoints) {
             tunnel.endpoints = [];
         }
@@ -142,6 +145,8 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         return Promise.resolve(endpoint);
     }
 
+    public tunnelEndpointsDeleted: number = 0;
+
     deleteTunnelEndpoints(
         tunnel: Tunnel,
         id: string,
@@ -151,6 +156,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
             throw new Error('ID cannot be empty');
         }
 
+        this.tunnelEndpointsDeleted++;
         if (!tunnel.endpoints) {
             return new Promise<boolean>((resolve) => {
                 resolve(false);

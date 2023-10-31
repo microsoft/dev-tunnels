@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { CancellationError, ObjectDisposedError } from '@microsoft/dev-tunnels-ssh';
+import { ObjectDisposedError } from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken, CancellationTokenSource, Emitter } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEventArgs';
@@ -10,6 +10,7 @@ import { RefreshingTunnelAccessTokenEventArgs } from './refreshingTunnelAccessTo
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
 import { ForwardedPortConnectingEventArgs } from '@microsoft/dev-tunnels-ssh-tcp';
+import { TrackingEmitter } from './utils';
 
 /**
  * Tunnel connection base class.
@@ -18,13 +19,8 @@ export class TunnelConnectionBase implements TunnelConnection {
     private readonly disposeCts = new CancellationTokenSource();
     private status = ConnectionStatus.None;
     private error?: Error;
-    protected isRefreshingTunnelAccessTokenEventHandled = false;
-    private readonly refreshingTunnelAccessTokenEmitter = new Emitter<
-        RefreshingTunnelAccessTokenEventArgs
-    >({
-        onFirstListenerAdd: () => (this.isRefreshingTunnelAccessTokenEventHandled = true),
-        onLastListenerRemove: () => (this.isRefreshingTunnelAccessTokenEventHandled = false),
-    });
+    private readonly refreshingTunnelAccessTokenEmitter = 
+        new TrackingEmitter<RefreshingTunnelAccessTokenEventArgs>();
     private readonly connectionStatusChangedEmitter =
         new Emitter<ConnectionStatusChangedEventArgs>();
     private readonly retryingTunnelConnectionEmitter =
@@ -44,6 +40,10 @@ export class TunnelConnectionBase implements TunnelConnection {
      */
     public get isDisposed() {
         return this.disposeCts.token.isCancellationRequested;
+    }
+
+    protected get isRefreshingTunnelAccessTokenEventHandled() {
+        return this.refreshingTunnelAccessTokenEmitter.isSubscribed;
     }
 
     /**
@@ -69,12 +69,13 @@ export class TunnelConnectionBase implements TunnelConnection {
             this.throwIfDisposed();
         }
 
+        if (value === ConnectionStatus.RefreshingTunnelAccessToken && this.status !== ConnectionStatus.Connecting) {
+            throw new Error('Refreshing tunnel access token is allowed only when connecting.');
+        }
+
         if (value !== this.status) {
             const previousStatus = this.connectionStatus;
             this.status = value;
-            if (value === ConnectionStatus.Connected) {
-                this.error = undefined;
-            }
             this.onConnectionStatusChanged(previousStatus, value);
         }
     }
@@ -161,11 +162,10 @@ export class TunnelConnectionBase implements TunnelConnection {
         previousStatus: ConnectionStatus,
         status: ConnectionStatus,
     ) {
-        const event = new ConnectionStatusChangedEventArgs(
-            previousStatus,
-            status,
-            this.disconnectError,
-        );
+        // Disconnect error is provided only during disconnection, not disposal.
+        const disconnectError = this.connectionStatus === ConnectionStatus.Disconnected && !this.isDisposed ? this.disconnectError : undefined;
+        
+        const event = new ConnectionStatusChangedEventArgs(previousStatus, status, disconnectError);
         this.connectionStatusChangedEmitter.fire(event);
     }
 

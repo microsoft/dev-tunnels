@@ -1,16 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { Event } from 'vscode-jsonrpc';
 import { Tunnel } from '@microsoft/dev-tunnels-contracts';
-import { Stream, Trace, CancellationToken } from '@microsoft/dev-tunnels-ssh';
+import { Stream, Trace, CancellationToken, SshDisconnectReason } from '@microsoft/dev-tunnels-ssh';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 import * as http from 'http';
+import { RefreshingTunnelEventArgs } from './refreshingTunnelEventArgs';
+import { TunnelConnection } from './tunnelConnection';
 
 /**
  * Tunnel session.
  */
-export interface TunnelSession {
+export interface TunnelSession extends TunnelConnection {
 
     /**
      * Gets the tunnel.
@@ -33,6 +36,15 @@ export interface TunnelSession {
     httpAgent?: http.Agent;
 
     /**
+     * Gets the disconnection reason.
+     * {@link SshDisconnectReason.none} or undefined if not yet disconnected.
+     * {@link SshDisconnectReason.connectionLost} if network connection was lost and reconnects are not enabled or unsuccesfull.
+     * {@link SshDisconnectReason.byApplication} if connection was disposed.
+     * {@link SshDisconnectReason.tooManyConnections} if host connection was disconnected because another host connected for the same tunnel.
+     */
+    readonly disconnectReason: SshDisconnectReason | undefined;
+
+    /**
      * Validates tunnel access token if it's present. Returns the token.
      */
     validateAccessToken(): string | undefined;
@@ -49,7 +61,7 @@ export interface TunnelSession {
     onConnectingToTunnel(): Promise<void>;
 
     /**
-     * Connect to the tunnel session by running the provided {@link action}.
+     * @internal Connect to the tunnel session by running the provided {@link action}.
      */
     connectSession(action: () => Promise<void>): Promise<void>;
 
@@ -66,7 +78,7 @@ export interface TunnelSession {
     ): Promise<void>;
 
     /**
-     * Creates a stream to the tunnel for the tunnel session.
+     * @internal Creates a stream to the tunnel for the tunnel session.
      */
     createSessionStream(
         options?: TunnelConnectionOptions,
@@ -74,7 +86,7 @@ export interface TunnelSession {
     ): Promise<{ stream: Stream, protocol: string }>;
 
     /**
-     * Configures the tunnel session with the given stream.
+     * @internal Configures the tunnel session with the given stream.
      */
     configureSession(
         stream: Stream,
@@ -84,12 +96,27 @@ export interface TunnelSession {
     ): Promise<void>;
 
     /**
-     * Closes the tunnel session.
+     * @internal Closes the tunnel session.
      */
-    closeSession(error?: Error): Promise<void>;
+    closeSession(reason?: SshDisconnectReason, error?: Error): Promise<void>;
 
     /**
-     * Refreshes the tunnel access token. This may be useful when the tunnel service responds with 401 Unauthorized.
+     * @internal Refreshes the tunnel access token. This may be useful when the tunnel service responds with 401 Unauthorized.
      */
     refreshTunnelAccessToken(cancellation?: CancellationToken): Promise<boolean>;
+
+    /**
+     * An event which fires when tunnel connection refreshes tunnel.
+     */
+    readonly refreshingTunnel: Event<RefreshingTunnelEventArgs>;
+
+    /**
+     * @internal Start connecting relay client.
+     */
+    startConnecting(): void;
+
+    /**
+     * @internal Finish connecting relay client.
+     */
+    finishConnecting(reason?: SshDisconnectReason, disconnectError?: Error): void;
 }

@@ -2,7 +2,8 @@
 // Licensed under the MIT license.
 
 import { CancellationToken, CancellationError } from '@microsoft/dev-tunnels-ssh';
-import { Disposable } from 'vscode-jsonrpc';
+import { EventEmitter } from 'stream';
+import { Disposable, Event, Emitter } from 'vscode-jsonrpc';
 
 export class List {
     public static groupBy<T, K>(
@@ -91,4 +92,24 @@ export function withCancellation<T>(
             }
         }),
     ]);
+}
+
+/**
+ * Tracking event emitter.
+ */
+export class TrackingEmitter<T> extends Emitter<T> {
+    private subscribed = false;
+    public constructor () {
+        super({
+            onFirstListenerAdd: () => this.subscribed = true,
+            onLastListenerRemove: () => this.subscribed = false,
+        }); 
+    }
+
+    /**
+     * A value indicating whether there event handlers subscribed to the event emitter.
+     */
+    public get isSubscribed(): boolean {
+        return this.subscribed; 
+    }
 }

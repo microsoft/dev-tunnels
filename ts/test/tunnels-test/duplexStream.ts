@@ -5,12 +5,12 @@
 import * as http from 'http';
 import {
     server as WebSocketServer,
-    client as WebSocketClient,
     request as WebSocketRequest,
     connection as WebSocketConnection,
     w3cwebsocket as W3CWebSocket,
 } from 'websocket';
 import { BaseStream, Stream, WebSocketStream } from '@microsoft/dev-tunnels-ssh';
+import { AddressInfo } from 'net';
 
 /**
  * Creates a pair of connected stream adapters for testing purposes.
@@ -63,12 +63,10 @@ export class DuplexStream extends BaseStream {
 }
 
 let wsServer: WebSocketServer;
-const wsPort = 8080;
+let wsPort: number;
 
 async function createWebSocketStreams(): Promise<[Stream, Stream]> {
-    if (!wsServer) {
-        wsServer = await createWebSocketServer();
-    }
+    await createWebSocketServer();
 
     const serverConnectionPromise = new Promise<WebSocketConnection>((resolve) => {
         wsServer.once('request', (request: WebSocketRequest) => {
@@ -93,18 +91,23 @@ async function createWebSocketStreams(): Promise<[Stream, Stream]> {
     return [new WebSocketServerStream(serverConnection), new WebSocketStream(clientSocket)];
 }
 
-async function createWebSocketServer(): Promise<WebSocketServer> {
+async function createWebSocketServer() {
+    if (wsServer) {
+        return;
+    }
+
     const httpServer = await new Promise<http.Server>((resolve) => {
         const s = http.createServer((request, response) => {
             response.writeHead(404);
             response.end();
         });
-        s.listen(wsPort, () => {
+        s.listen(0, () => {
             resolve(s);
         });
     });
 
-    return new WebSocketServer({
+    wsPort = (<AddressInfo>httpServer.address()).port;
+    wsServer = new WebSocketServer({
         httpServer,
         autoAcceptConnections: false,
     });

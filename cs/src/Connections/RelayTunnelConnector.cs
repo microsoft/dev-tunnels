@@ -20,7 +20,7 @@ namespace Microsoft.DevTunnels.Connections;
 /// </summary>
 internal sealed class RelayTunnelConnector : ITunnelConnector
 {
-    private const int RetryMaxDelayMs = 12_800; // After the 6th attempt the delay will reach 2^7 * 100ms = 12.8s and stop doubling
+    private const int RetryMaxDelayMs = TunnelRelayConnection.RetryMaxDelayMs;
     private const int RetryInitialDelayMs = 100;
 
     private readonly IRelayClient relayClient;
@@ -143,34 +143,35 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                                 throw new TunnelConnectionException($"The tunnel or port is not found (404).", wse);
 
                             case HttpStatusCode.TooManyRequests:
+                            case HttpStatusCode.ServiceUnavailable:
+                            case HttpStatusCode.BadGateway:
+                                // Normally nginx choses another healthy pod when it cannot establish connection to a pod.
+                                // However, if there are no other pods, it may returns 502 (Bad Gateway) to the client.
+                                // This rare case may happen when the cluster recovers from a failure
+                                // and the nginx controller has started but Relay service has not yet.
+
+                                // 503 (Service Unavailable) can happen when Relay calls control plane to authenticate the request,
+                                // control plane hits 429s from Cosmos DB and replies back with 503.
+
+                                // 429 (Too Many Requests) can happen if client exceeds request rate limits.
                                 exception = new TunnelConnectionException(
-                                    "Rate limit exceeded (429). Too many requests in a given amount of time.",
+                                    statusCode == HttpStatusCode.TooManyRequests ?
+                                    "Rate limit exceeded (429). Too many requests in a given amount of time." :
+                                    $"Service temporarily unavailable ({statusCode}).",
                                     wse);
-                                if (attemptDelayMs < RetryMaxDelayMs)
+
+                                // Increase the attempt delay to reduce load on the service and let it recover.
+                                if (attemptDelayMs < RetryMaxDelayMs / 2)
                                 {
-                                    attemptDelayMs <<= 1;
+                                    attemptDelayMs = RetryMaxDelayMs / 2;
                                 }
 
-                                if (!IsRetryAllowed(exception, SshDisconnectReason.ServiceNotAvailable) || attempt > 4)
+                                if (!IsRetryAllowed(exception, SshDisconnectReason.ServiceNotAvailable) ||
+                                    attempt > 3)
                                 {
                                     throw exception;
                                 }
 
-                                Trace.Info($"Rate limit exceeded. Delaying for {attemptDelayMs / 1000.0}s before retrying.");
-                                break;
-
-                            case HttpStatusCode.ServiceUnavailable:
-                            case HttpStatusCode.BadGateway:
-                                // Normally nginx choses another healthy pod when it encounters 502.
-                                // However, if there are no other pods, it returns 502 to the client.
-                                // This rare case may happen when the cluster recovers from a failure
-                                // and the nginx controller has started but Relay service has not yet.
-                                // 503 can happen when Relay calls control plane to authenticate the request,
-                                // control plane hits 429s from Cosmos DB and replies back with 503.
-                                exception = new TunnelConnectionException(
-                                    $"Service temporarily unavailable ({statusCode}).",
-                                    wse);
-                                ThrowIfRetryNotAllowed(exception, SshDisconnectReason.ServiceNotAvailable);
                                 break;
 
                             default:
@@ -180,7 +181,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                     }
 
                     // Other web socket errors may be recoverable
-                    if (!IsRetryAllowed(wse))
+                    else if (!IsRetryAllowed(wse))
                     {
                         throw;
                     }

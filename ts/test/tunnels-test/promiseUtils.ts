@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { Event } from 'vscode-jsonrpc';
+
 
 /**
  * Error thrown by `withTimeout()` when the promise does not resolve before the timeout duration.
@@ -72,4 +74,16 @@ export async function expectError<T>(
             throw e;
         }
     }
+}
+
+/**
+ * Subscribe and wait for event.
+ */
+export async function waitForEvent<T>(event: Event<T>) {
+    return await new Promise<T>((resolve) => {
+        const disposable = event((e) => {
+            disposable.dispose();
+            resolve(e);
+        })
+    });
 }
