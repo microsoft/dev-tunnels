@@ -7,13 +7,13 @@ import {
     TunnelManagementClient,
     TunnelRequestOptions,
 } from '@microsoft/dev-tunnels-management';
-import { CancellationError, ObjectDisposedError, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
-import { CancellationToken, CancellationTokenSource, Disposable } from 'vscode-jsonrpc';
+import { CancellationError, ObjectDisposedError, SshClientSession, SshDisconnectReason, SshSessionClosedEventArgs, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
+import { CancellationToken, CancellationTokenSource, Disposable, Emitter, Event } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';
 import { TunnelConnector } from './tunnelConnector';
 import { TunnelSession } from './tunnelSession';
-import { withCancellation } from './utils';
+import { TrackingEmitter, withCancellation } from './utils';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
 import {
     PortForwardChannelOpenMessage,
@@ -24,6 +24,10 @@ import { PortRelayRequestMessage } from './messages/portRelayRequestMessage';
 import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 import * as http from 'http';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
+import { RefreshingTunnelEventArgs } from './refreshingTunnelEventArgs';
+import { TunnelRelayStreamFactory } from './tunnelRelayStreamFactory';
+import { DefaultTunnelRelayStreamFactory } from './defaultTunnelRelayStreamFactory';
+import { IClientConfig } from 'websocket';
 
 /**
  * Tunnel connection session.
@@ -34,8 +38,23 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;
     private connectionProtocolValue?: string;
+    private disconnectionReason?: SshDisconnectReason;
+
+    private readonly refreshingTunnelEmitter =
+        new TrackingEmitter<RefreshingTunnelEventArgs>();
 
     public httpAgent?: http.Agent;
+
+    /**
+     * Tunnel relay URI.
+     * @internal
+     */
+    public relayUri?: string;
+
+    /**
+     * Gets or sets a factory for creating relay streams.
+     */
+    public streamFactory: TunnelRelayStreamFactory = new DefaultTunnelRelayStreamFactory();
 
     /**
      * Name of the protocol used to connect to the tunnel.
@@ -48,12 +67,34 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
+     * A value indicating if this is a client tunnel connection (as opposed to host connection).
+     */
+    protected get isClientConnection(): boolean {
+        return this.tunnelAccessScope === TunnelAccessScopes.Connect;
+    }
+
+    /**
+     * tunnel connection role, either "client", or "host", depending on @link tunnelAccessScope.
+     */
+    protected get connectionRole(): string {
+        return this.isClientConnection ? 'client' : 'host';
+    }
+
+    /**
      * Tunnel access token.
      */
     protected accessToken?: string;
 
+    /**
+     * SSH session that is used to connect to the tunnel.
+     * @internal
+     */
+    protected sshSession?: SshClientSession;
+    protected sshSessionDisposables: Disposable[] = [];
+
     public constructor(
         tunnelAccessScope: string,
+        protected readonly connectionProtocols: string[],        
         trace?: Trace,
         /**
          * Gets the management client used for the connection.
@@ -83,6 +124,11 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             this.tunnelChanged();
         }
     }
+
+    /**
+     * An event which fires when tunnel connection refreshes tunnel.
+     */
+    public readonly refreshingTunnel = this.refreshingTunnelEmitter.event;
 
     /**
      * Tunnel has been assigned to or changed.
@@ -119,17 +165,66 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
-     * Creates a stream to the tunnel.
+     * Gets the disconnection reason.
+     * {@link SshDisconnectReason.none } if not yet disconnected.
+     * {@link SshDisconnectReason.connectionLost} if network connection was lost and reconnects are not enabled or unsuccesfull.
+     * {@link SshDisconnectReason.byApplication} if connection was disposed.
+     * {@link SshDisconnectReason.tooManyConnections} if host connection was disconnected because another host connected for the same tunnel.
      */
-    public createSessionStream(
-        options?: TunnelConnectionOptions,
-        cancellation?: CancellationToken,
-    ): Promise<{ stream: Stream, protocol: string }> {
-        throw new Error('Not implemented');
+    public get disconnectReason(): SshDisconnectReason | undefined {
+        return this.disconnectionReason;
     }
 
     /**
-     * Configures the tunnel session with the given stream.
+     * Sets the disconnect reason that caused disconnection.
+     */
+    protected set disconnectReason(reason: SshDisconnectReason | undefined) {
+        this.disconnectionReason = reason;
+    }
+
+    /**
+     * @internal Creates a stream to the tunnel.
+     */
+    public async createSessionStream(
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
+    ): Promise<{ stream: Stream, protocol: string }> {
+        if (!this.relayUri) {
+            throw new Error(
+                'Cannot create tunnel session stream. Tunnel relay endpoint URI is missing',
+            );
+        }
+
+        const accessToken = this.validateAccessToken();
+        this.trace(TraceLevel.Info, 0, `Connecting to ${this.connectionRole} tunnel relay ${this.relayUri}`);
+        this.trace(TraceLevel.Verbose, 0, `Sec-WebSocket-Protocol: ${this.connectionProtocols.join(', ')}`);
+        if (accessToken) {
+            const tokenTrace = TunnelAccessTokenProperties.getTokenTrace(accessToken);
+            this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${tokenTrace}>`);
+        }
+
+        const clientConfig: IClientConfig = {
+            tlsOptions: {
+                agent: this.httpAgent,
+            },
+        };
+
+        const streamAndProtocol = await this.streamFactory.createRelayStream(
+            this.relayUri,
+            this.connectionProtocols,
+            accessToken,
+            clientConfig
+        );
+
+        this.trace(
+            TraceLevel.Verbose,
+            0,
+            `Connected with subprotocol '${streamAndProtocol.protocol}'`);
+        return streamAndProtocol;
+    }
+
+    /**
+     * @internal Configures the tunnel session with the given stream.
      */
     public configureSession(
         stream: Stream,
@@ -141,16 +236,49 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
-     * Closes the tunnel session due to an error.
+     * @internal Closes the tunnel session due to an error.
      */
-    public closeSession(error?: Error): Promise<void> {
-        this.disconnectError = error;
-        return Promise.resolve();
+    public async closeSession(reason?: SshDisconnectReason, error?: Error): Promise<void> {
+        this.unsubscribeSessionEvents();
+
+        const session = this.sshSession;
+        if (!session) {
+            return;
+        }
+
+        if (!session.isClosed) {
+            await session.close(reason || SshDisconnectReason.none, undefined, error);
+        } else {
+            this.sshSession = undefined;
+        }
+
+        // Closing the SSH session does nothing if the session is in disconnected state,
+        // which may happen for a reconnectable session when the connection drops.
+        // Disposing of the session forces closing and frees up the resources.
+        session.dispose();
+    }
+
+    /**
+     * Disposes this tunnel session, closing the SSH session used for it.
+     */
+    public async dispose(): Promise<void> {
+        if (this.disconnectReason === SshDisconnectReason.none ||
+            this.disconnectReason === undefined) {
+            this.disconnectReason = SshDisconnectReason.byApplication;
+        }
+
+        await super.dispose();
+        try {
+            await this.closeSession(this.disconnectReason, this.disconnectError);
+        } catch (e) {
+            if (!(e instanceof ObjectDisposedError)) throw e;
+        }
     }
 
     /**
      * Refreshes the tunnel access token. This may be useful when the Relay service responds with 401 Unauthorized.
      * Does nothing if the object is disposed, or there is no way to refresh the token.
+     * @internal
      */
     public async refreshTunnelAccessToken(cancellation: CancellationToken): Promise<boolean> {
         if (this.isDisposed) {
@@ -161,7 +289,6 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             return false;
         }
 
-        const previousStatus = this.connectionStatus;
         this.connectionStatus = ConnectionStatus.RefreshingTunnelAccessToken;
         try {
             this.traceVerbose(
@@ -173,7 +300,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             if (this.isRefreshingTunnelAccessTokenEventHandled) {
                 this.accessToken = await this.getFreshTunnelAccessToken(cancellation) ?? undefined;
             } else {
-                await this.refreshTunnel(cancellation);
+                await this.refreshTunnel(false, cancellation);
             }
 
             if (this.accessToken) {
@@ -188,10 +315,39 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
 
             return true;
         } finally {
-            this.connectionStatus = previousStatus;
+            this.connectionStatus = ConnectionStatus.Connecting;
         }
+    }
 
-        return false;
+    /**
+     * @internal Start connecting relay client.
+     */
+    public startConnecting(): void {
+        this.connectionStatus = ConnectionStatus.Connecting;
+    }
+
+    /**
+     * @internal Finish connecting relay client.
+     */
+    public finishConnecting(reason?: SshDisconnectReason, disconnectError?: Error): void {
+        if (reason === undefined || reason === SshDisconnectReason.none) {
+            if (this.connectionStatus === ConnectionStatus.Connecting) {
+                // If there were temporary connection issue, disconnectError may contain the old error.
+                // Since we have successfully connected after all, clean it up.
+                this.disconnectError = undefined;
+                this.disconnectReason = undefined;
+            }
+
+            this.connectionStatus = ConnectionStatus.Connected;
+        } else if (this.connectionStatus !== ConnectionStatus.Disconnected) {
+            // Do not overwrite disconnect error and reason if already disconnected.
+            this.disconnectReason = reason;
+            if (disconnectError) {
+                this.disconnectError = disconnectError;
+            }
+
+            this.connectionStatus = ConnectionStatus.Disconnected;
+        }
     }
 
     /**
@@ -200,30 +356,50 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      * tunnel access has changed, or tunnel access token has expired.
      */
     protected get canRefreshTunnel() {
-        return this.tunnel && this.managementClient;
+        return (this.tunnel && this.managementClient) || this.refreshingTunnelEmitter.isSubscribed;
     }
 
     /**
      * Fetch the tunnel from the service if {@link managementClient} and {@link tunnel} are set.
      */
-    protected async refreshTunnel(cancellation?: CancellationToken) {
-        if (this.canRefreshTunnel) {
-            this.traceInfo('Refreshing tunnel.');
+    protected async refreshTunnel(
+        includePorts?: boolean,
+        cancellation?: CancellationToken
+        ): Promise<boolean> {
+
+        this.traceInfo('Refreshing tunnel.');
+        let isRefreshed = false;
+
+        const e = new RefreshingTunnelEventArgs(this.tunnelAccessScope, this.tunnel, !!includePorts, this.managementClient, cancellation);
+        this.refreshingTunnelEmitter.fire(e);
+        if (e.tunnelPromise) {
+            this.tunnel = await e.tunnelPromise;
+            isRefreshed = true;
+        }
+
+        if (!isRefreshed && this.tunnel && this.managementClient) {
             const options: TunnelRequestOptions = {
                 tokenScopes: [this.tunnelAccessScope],
+                includePorts,
             };
-
+    
             this.tunnel = await withCancellation(
                 this.managementClient!.getTunnel(this.tunnel!, options),
                 cancellation,
             );
-
+    
+            isRefreshed = true;
+        }
+        
+        if (isRefreshed) {
             if (this.tunnel) {
                 this.traceInfo('Refreshed tunnel.');
             } else {
                 this.traceInfo('Tunnel not found.');
             }
         }
+
+        return true;
     }
 
     /**
@@ -262,13 +438,44 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
+     * SSH session closed event handler. Child classes may use it unsubscribe session events and maybe start reconnecting.
+     */
+    protected onSshSessionClosed(e: SshSessionClosedEventArgs) {
+        this.unsubscribeSessionEvents();
+        this.sshSession = undefined;
+        this.maybeStartReconnecting(e.reason, e.message, e.error);
+    }
+
+    /**
      * Start reconnecting if the tunnel connection is not yet disposed.
      */
-    protected startReconnectingIfNotDisposed() {
-        if (!this.isDisposed &&
-            (this.connectionOptions?.enableReconnect ?? true) &&
-            !this.reconnectPromise
-        ) {
+    protected maybeStartReconnecting(reason?: SshDisconnectReason, message?: string, error?: Error|null) {
+        const traceMessage = `Connection to ${this.connectionRole} tunnel relay closed.${this.getDisconnectReason(reason, message, error)}`;
+        if (this.isDisposed || this.connectionStatus === ConnectionStatus.Disconnected) {
+            // Disposed or disconnected already.
+            // This reconnection attempt may be caused by closing SSH session on dispose.
+            this.traceInfo(traceMessage);
+            return;
+        }
+
+        if (error) {
+            this.disconnectError = error;
+            this.disconnectReason = reason;
+        }
+
+        if (this.connectionStatus !== ConnectionStatus.Connected || this.reconnectPromise) {
+            // Not connected or already connecting.
+            this.traceInfo(traceMessage);
+            return;
+        }
+
+        // Reconnect if connection is lost, reconnect is enabled, and connector exists.
+        // The connector may be undefined if the tunnel client/host was created directly from a stream.
+        if ((this.connectionOptions?.enableReconnect ?? true) &&
+            reason === SshDisconnectReason.connectionLost &&
+            this.connector) {
+
+            this.traceInfo(`${traceMessage} Reconnecting.`);
             this.reconnectPromise = (async () => {
                 try {
                     await this.connectTunnelSession();
@@ -281,7 +488,34 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 this.reconnectPromise = undefined;
             })();
         } else {
+            this.traceInfo(traceMessage);
             this.connectionStatus = ConnectionStatus.Disconnected;
+        }
+    }
+
+    /**
+     * Get a user-readable reason for SSH session disconnection, or an empty string.
+     */
+    protected getDisconnectReason(reason?: SshDisconnectReason, message?: string, error?: Error|null): string {
+        switch (reason) {
+            case SshDisconnectReason.connectionLost:
+                return ` ${message || error?.message || 'Connection lost.'}`;
+            case SshDisconnectReason.authCancelledByUser:
+            case SshDisconnectReason.noMoreAuthMethodsAvailable:
+            case SshDisconnectReason.hostNotAllowedToConnect:
+            case SshDisconnectReason.illegalUserName:
+                return ' Not authorized.';
+            case SshDisconnectReason.serviceNotAvailable:
+                return ' Service not available.';
+            case SshDisconnectReason.compressionError:
+            case SshDisconnectReason.keyExchangeFailed:
+            case SshDisconnectReason.macError:
+            case SshDisconnectReason.protocolError:
+                return ' Protocol error.';
+            case SshDisconnectReason.tooManyConnections:
+                return this.isClientConnection ? ' Too many client connections.' : ' Another host for the tunnel has connected.';
+            default:
+                return '';                
         }
     }
 
@@ -289,24 +523,17 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      * Connect to the tunnel session by running the provided {@link action}.
      */
     public async connectSession(action: () => Promise<void>): Promise<void> {
-        this.connectionStatus = ConnectionStatus.Connecting;
         try {
             await action();
-            this.connectionStatus = ConnectionStatus.Connected;
         } catch (e) {
             if (!(e instanceof CancellationError)) {
-                const name =
-                    this.tunnelAccessScope === TunnelAccessScopes.Connect ? 'client' : 'host';
                 if (e instanceof Error) {
-                    this.traceError(`Error connecting ${name} tunnel session: ${e.message}`, e);
-                    this.disconnectError = e;
+                    this.traceError(`Error connecting ${this.connectionRole} tunnel session: ${e.message}`, e);
                 } else {
-                    const message = `Error connecting ${name} tunnel session: ${e}`;
+                    const message = `Error connecting ${this.connectionRole} tunnel session: ${e}`;
                     this.traceError(message);
-                    this.disconnectError = new Error(message);
                 }
             }
-            this.connectionStatus = ConnectionStatus.Disconnected;
             throw e;
         }
     }
@@ -400,5 +627,13 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
         message.accessToken = this.accessToken;
         message.isE2EEncryptionRequested = this.enableE2EEncryption;
         return Promise.resolve(message);
+    }
+
+    /**
+     * Unsubscribe SSH session events in @link TunnelSshConnectionSession.sshSessionDisposables
+     */
+    protected unsubscribeSessionEvents() {
+        this.sshSessionDisposables.forEach((d) => d.dispose());
+        this.sshSessionDisposables = [];
     }
 }

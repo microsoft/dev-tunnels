@@ -23,6 +23,7 @@ import {
     TunnelConnection,
     TunnelRelayTunnelClient,
     TunnelRelayTunnelHost,
+    maxReconnectDelayMs,
 } from '@microsoft/dev-tunnels-connections';
 import {
     CancellationError,
@@ -34,6 +35,7 @@ import {
     SshAuthenticationType,
     SshClientCredentials,
     SshClientSession,
+    SshConnectionError,
     SshDisconnectReason,
     SshServerCredentials,
     SshServerSession,
@@ -41,7 +43,7 @@ import {
     SshStream,
     Stream,
 } from '@microsoft/dev-tunnels-ssh';
-import { DuplexStream } from './duplexStream';
+import { DuplexStream, shutdownWebSocketServer } from './duplexStream';
 import * as net from 'net';
 import { MockTunnelRelayStreamFactory } from './mocks/mockTunnelRelayStreamFactory';
 import { TestTunnelRelayTunnelClient } from './testTunnelRelayTunnelClient';
@@ -55,8 +57,46 @@ interface TestConnection {
     managementClient: MockTunnelManagementClient;
     clientMultiChannelStream: TestMultiChannelStream;
     clientStream: SshStream | undefined;
-    dispose(): Promise<void>;
+    dispose(clientDisconnectReason?: SshDisconnectReason): Promise<void>;
     addPortOnHostAndValidateOnClient(portNumber: number): Promise<void>;
+}
+
+
+const tooManyRequestsError = new RelayConnectionError(
+    'error.tooManyRequests', {
+        errorType: RelayErrorType.TooManyRequests,
+        statusCode: 429,
+    });
+
+const badGatewayError = new RelayConnectionError(
+    'error.badGateway', {
+        errorType: RelayErrorType.BadGateway,
+        statusCode: 502,
+    });  
+
+const serviceUnavailableError = new RelayConnectionError(
+    'error.serviceUnavailable', {
+        errorType: RelayErrorType.ServiceUnavailable,
+        statusCode: 503,
+    });    
+
+async function connectionStatusChanged(
+    connection: TunnelConnection,
+    ...expectedStatus: ConnectionStatus[]
+): Promise<Error | undefined> {
+    const result = new Promise<Error | undefined>((resolve, reject) => {
+        connection.connectionStatusChanged((e) => {
+            if (e.status === expectedStatus[0]) {
+                if (expectedStatus.length > 1) {
+                    expectedStatus.shift();
+                } else {
+                    resolve(e.disconnectError);
+                }
+            }
+        });
+    });
+
+    return await withTimeout(result, 5000);
 }
 
 @suite
@@ -70,7 +110,9 @@ export class TunnelHostAndClientTests {
     @timeout(20000)
     public static async before() {}
 
-    public static async after() {}
+    public static async after() {
+        shutdownWebSocketServer();
+    }
 
     private createRelayTunnel(ports?: number[], dontAddClientEndpoint?: boolean): Tunnel {
         return {
@@ -134,16 +176,19 @@ export class TunnelHostAndClientTests {
     // Connects a relay client to a duplex stream and returns the SSH server session
     // on the other end of the stream.
     private async connectRelayClient(
-        relayClient: TestTunnelRelayTunnelClient,
-        tunnel: Tunnel,
-        connectionOptions?: TunnelConnectionOptions,
-        clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
-        serverSshKey?: KeyPair,
+        options: {
+            relayClient: TestTunnelRelayTunnelClient,
+            tunnel: Tunnel,
+            connectionOptions?: TunnelConnectionOptions,
+            clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
+            serverSshKey?: KeyPair,
+            type?: string,
+        },
         cancellation?: CancellationToken,
     ): Promise<SshServerSession> {
-        const [serverStream, clientStream] = await DuplexStream.createStreams();
-        serverSshKey ??= await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
-        let sshSession = await this.createSshServerSession(serverSshKey);
+        const {relayClient, tunnel, connectionOptions, clientStreamFactory, serverSshKey, type} = options;
+        const [serverStream, clientStream] = await DuplexStream.createStreams(type);
+        let sshSession = await this.createSshServerSession(serverSshKey ?? await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair());
         let serverConnectPromise = sshSession.connect(serverStream);
 
         relayClient.streamFactory = new MockTunnelRelayStreamFactory(
@@ -162,15 +207,19 @@ export class TunnelHostAndClientTests {
     }
 
     private async connectRelayHost(
-        relayHost: TunnelRelayTunnelHost,
-        tunnel: Tunnel,
-        connectionOptions?: TunnelConnectionOptions,
-        clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
+        options: {
+            relayHost: TunnelRelayTunnelHost,
+            tunnel: Tunnel,
+            connectionOptions?: TunnelConnectionOptions,
+            clientStreamFactory?: (stream: Stream) => Promise<{ stream: Stream, protocol: string }>,
+            type?: string,
+            },
         cancellation?: CancellationToken,
     ): Promise<TestMultiChannelStream> {
-        const [serverStream, clientStream] = await DuplexStream.createStreams();
+        const {relayHost, tunnel, connectionOptions, clientStreamFactory, type} = options;
+        const [serverStream, clientStream] = await DuplexStream.createStreams(type);
 
-        let multiChannelStream = new TestMultiChannelStream(serverStream, clientStream);
+        let multiChannelStream = new TestMultiChannelStream(serverStream);
         let serverConnectPromise = multiChannelStream.connect();
 
         relayHost.streamFactory = new MockTunnelRelayStreamFactory(
@@ -200,7 +249,7 @@ export class TunnelHostAndClientTests {
         relayClient.sshSessionClosedEvent((e) => (sshSessionClosedEventFired = true));
 
         let tunnel = this.createRelayTunnel();
-        await this.connectRelayClient(relayClient, tunnel);
+        await this.connectRelayClient({relayClient, tunnel});
         assert.strictEqual(sshSessionClosedEventFired, false);
 
         await relayClient.dispose();
@@ -215,19 +264,19 @@ export class TunnelHostAndClientTests {
         const tunnel = this.createRelayTunnel();
         const relayClient = new TestTunnelRelayTunnelClient();
         try {
-            const serverSshSession = await this.connectRelayClient(relayClient, tunnel);
+            // Use web socket to ensure SSH disconnect message is not preempted by stream closure in DuplexStream.
+            const serverSshSession = await this.connectRelayClient({relayClient, tunnel, type: 'ws'});
             assert(!relayClient.disconnectError);
 
-            const disconnectedCompletion = new PromiseCompletionSource<void>();
-            relayClient.connectionStatusChanged((e) => {
-                if (e.status === ConnectionStatus.Disconnected) {
-                    disconnectedCompletion.resolve();
-                }
-            });
+            const disconnected = connectionStatusChanged(relayClient, ConnectionStatus.Disconnected);
             await serverSshSession.close(SshDisconnectReason.byApplication);
-            await withTimeout(disconnectedCompletion.promise, 5000);
+            await disconnected;
 
-            await this.connectRelayClient(relayClient, tunnel);
+            assert.equal(relayClient.disconnectReason, SshDisconnectReason.byApplication);
+            assert(relayClient.disconnectError! instanceof SshConnectionError);
+            assert.equal((<SshConnectionError>relayClient.disconnectError).reason, SshDisconnectReason.byApplication);
+
+            await this.connectRelayClient({relayClient, tunnel});
         } finally {
             relayClient.dispose();
         }
@@ -241,15 +290,15 @@ export class TunnelHostAndClientTests {
             
             let error: Error | undefined = undefined;
             try {
-                await this.connectRelayClient(relayClient, tunnel, undefined, (s) => {
+                await this.connectRelayClient({relayClient, tunnel, clientStreamFactory: (s) => {
                     throw new Error('Test error');
-                });
+                }});
             } catch (e) {
                 error = <Error>e;
             }
             assert(error?.message?.includes('Test error'));
 
-            await this.connectRelayClient(relayClient, tunnel);
+            await this.connectRelayClient({relayClient, tunnel});
         } finally {
             relayClient.dispose();
         }
@@ -263,19 +312,19 @@ export class TunnelHostAndClientTests {
             const cancellationSource = new CancellationTokenSource();
             let error: Error | undefined = undefined;
             try {
-                await this.connectRelayClient(relayClient, tunnel, undefined, (s) => {
+                await this.connectRelayClient({relayClient, tunnel, clientStreamFactory: (s) => {
                     cancellationSource.cancel();
                     throw new RelayConnectionError(
                         'error.tooManyRequests',
                         { errorType: RelayErrorType.ConnectionError, statusCode: 429 },
                     );
-                }, undefined, cancellationSource.token);
+                }}, cancellationSource.token);
             } catch (e) {
                 error = <Error>e;
             }
             assert(error instanceof CancellationError);
 
-            await this.connectRelayClient(relayClient, tunnel);
+            await this.connectRelayClient({relayClient, tunnel});
         } finally {
             relayClient.dispose();
         }
@@ -287,13 +336,13 @@ export class TunnelHostAndClientTests {
         const relayClient = new TestTunnelRelayTunnelClient();
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayClient(relayClient, tunnel, undefined, (s) => {
+            await this.connectRelayClient({relayClient, tunnel, clientStreamFactory: (s) => {
                 relayClient.dispose();
                 throw new RelayConnectionError(
                     'error.tooManyRequests',
                     { errorType: RelayErrorType.ConnectionError, statusCode: 429 },
                 );
-            });
+            }});
         } catch (e) {
             error = <Error>e;
         }
@@ -308,7 +357,7 @@ export class TunnelHostAndClientTests {
 
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayClient(relayClient, tunnel);
+            await this.connectRelayClient({relayClient, tunnel});
         } catch (e) {
             error = <Error>e;
         }
@@ -316,52 +365,68 @@ export class TunnelHostAndClientTests {
    }
 
     @test
-    @params({ enableRetry: true })
-    @params({ enableRetry: false })
-    @params.naming((params) => `connectRelayClientRetriesOn429(enableRetry: ${params.enableRetry})`)
-    public async connectRelayClientRetriesOn429(connectionOptions: TunnelConnectionOptions) {
+    @params({ enableRetry: true, error: tooManyRequestsError})
+    @params({ enableRetry: false, error: tooManyRequestsError})
+    @params({ enableRetry: true, error: badGatewayError })
+    @params({ enableRetry: false, error: badGatewayError })    
+    @params({ enableRetry: true, error: serviceUnavailableError })
+    @params({ enableRetry: false, error: serviceUnavailableError })    
+    @params.naming((params) => `connectRelayClientRetriesOnErrorStatusCode(enableRetry: ${params.enableRetry}, statusCode: ${params.error.errorContext.statusCode})`)
+    public async connectRelayClientRetriesOnErrorStatusCode(connectionOptions: TunnelConnectionOptions & {error: RelayConnectionError}) {
         const relayClient = new TestTunnelRelayTunnelClient();
+        let isRetryAttempted = false;
+        relayClient.retryingTunnelConnection((e) => {
+            assert.equal(e.delayMs, maxReconnectDelayMs/2);
+            assert(e.error instanceof RelayConnectionError);
+            e.delayMs = 100;
+            isRetryAttempted = true;
+        });
+
         const tunnel = this.createRelayTunnel();
         let firstAttempt = true;
 
-        const connected = this.connectionStatusChanged(relayClient, ConnectionStatus.Connected);
+        const connected = connectionStatusChanged(relayClient, ConnectionStatus.Connected);
+        const disconnected = connectionStatusChanged(relayClient, ConnectionStatus.Disconnected);
 
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayClient(relayClient, tunnel, connectionOptions, async (stream) => {
+            await this.connectRelayClient({relayClient, tunnel, connectionOptions, clientStreamFactory: async (stream) => {
                 if (firstAttempt) {
                     firstAttempt = false;
-                    throw new RelayConnectionError('error.tooManyRequests', {
-                        errorType: RelayErrorType.TooManyRequests,
-                        statusCode: 429,
-                    });
+                    throw connectionOptions.error;
                 }
 
                 return { stream, protocol: TunnelRelayTunnelClient.webSocketSubProtocol };
-            });
+            }});
         } catch (e) {
             error = <Error>e;
         }
 
         if (connectionOptions.enableRetry) {
+            assert(isRetryAttempted);
             assert(!error);
+            assert.strictEqual(await connected, undefined);
+            assert.strictEqual(relayClient.disconnectError, undefined);
+            assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected);
+            assert.strictEqual(relayClient.disconnectReason, undefined);
+
+            await relayClient.dispose();
+            assert.strictEqual(await disconnected, undefined);
+            assert.strictEqual(relayClient.disconnectError, undefined);
+            assert.strictEqual(relayClient.disconnectReason, SshDisconnectReason.byApplication);
+            assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
         } else {
-            assert(error?.message?.includes('error.tooManyRequests'));
-            return;
+            assert(!isRetryAttempted);
+            assert(error?.message?.includes(connectionOptions.error.message));
+            assert.strictEqual(await disconnected, connectionOptions.error);
+            assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
+            assert.strictEqual(relayClient.disconnectReason, SshDisconnectReason.serviceNotAvailable);
+
+            await relayClient.dispose();
+            assert.strictEqual(relayClient.disconnectError, connectionOptions.error);
+            assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
+            assert.strictEqual(relayClient.disconnectReason, SshDisconnectReason.serviceNotAvailable);
         }
-
-        assert.strictEqual(await connected, undefined);
-        assert.strictEqual(relayClient.disconnectError, undefined);
-        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected);
-
-        const disconnected = this.connectionStatusChanged(
-            relayClient,
-            ConnectionStatus.Disconnected,
-        );
-        await relayClient.dispose();
-        assert.strictEqual(await disconnected, undefined);
-        assert.strictEqual(relayClient.disconnectError, undefined);
-        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
     }
 
     @test
@@ -378,6 +443,7 @@ export class TunnelHostAndClientTests {
         return this.connectRelayClientFailsForError(
             error,
             "Forbidden (403). Provide a fresh tunnel access token with 'connect' scope.",
+            SshDisconnectReason.authCancelledByUser,
         );
     }
 
@@ -390,6 +456,7 @@ export class TunnelHostAndClientTests {
         return this.connectRelayClientFailsForError(
             error,
             "Not authorized (401). Provide a fresh tunnel access token with 'connect' scope.",
+            SshDisconnectReason.authCancelledByUser,
         );
     }
 
@@ -402,8 +469,7 @@ export class TunnelHostAndClientTests {
         tunnel.endpoints![0].hostPublicKeys = [publicKeyBuffer!.toString('base64')];
 
         const relayClient = new TestTunnelRelayTunnelClient();
-        const serverSession = await this.connectRelayClient(
-            relayClient, tunnel, undefined, undefined, serverSshKey);
+        const serverSession = await this.connectRelayClient({relayClient, tunnel, serverSshKey});
 
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected, 'Client must be connected.');
         assert.strictEqual(serverSession.isConnected, true, 'Server SSH session must be connected.');
@@ -430,14 +496,23 @@ export class TunnelHostAndClientTests {
 
         const relayClient = new TestTunnelRelayTunnelClient(managementClient);
         let isHostPublicKeyRefreshed = false;
-        relayClient.connectionStatusChanged(
-            (e) => isHostPublicKeyRefreshed ||= (e.status === ConnectionStatus.RefreshingTunnelHostPublicKey));
-        const serverSession = await this.connectRelayClient(
-            relayClient, staleTunnel, undefined, undefined, serverSshKey);
+        relayClient.refreshingTunnel((e) => {
+            assert.strictEqual(e.tunnel, staleTunnel);
+            assert.strictEqual(e.managementClient, managementClient);
+            assert.strictEqual(e.includePorts, false);
+            assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connecting);
+            assert(!relayClient.disconnectError);
+            assert(!relayClient.disconnectReason);
+            isHostPublicKeyRefreshed = true;
+        });
+
+        const serverSession = await this.connectRelayClient({relayClient, tunnel: staleTunnel, serverSshKey});
 
         // Client should be connected after refreshing host public key.
         assert.strictEqual(isHostPublicKeyRefreshed, true, 'Client must have refreshed host public keys.');
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected, 'Client must be connected.');
+        assert(!relayClient.disconnectError);
+        assert(!relayClient.disconnectReason);
         assert.strictEqual(serverSession.isConnected, true, 'Server SSH session must be connected.');
 
         relayClient.dispose()
@@ -455,10 +530,10 @@ export class TunnelHostAndClientTests {
 
         const relayClient = new TestTunnelRelayTunnelClient(managementClient);
         let isHostPublicKeyRefreshed = false;
-        relayClient.connectionStatusChanged((e) => isHostPublicKeyRefreshed ||= (e.status === ConnectionStatus.RefreshingTunnelHostPublicKey));
+        relayClient.refreshingTunnel(() => isHostPublicKeyRefreshed = true);
         await assert.rejects(
-            () => this.connectRelayClient(relayClient, staleTunnel), 
-            (e) => (<Error>e).message === 'Failed to connect to tunnel relay. Error: SSH server authentication failed.');
+            () => this.connectRelayClient({relayClient, tunnel: staleTunnel}), 
+            (e) => (<Error>e).message === 'SSH server authentication failed.');
 
         assert.strictEqual(isHostPublicKeyRefreshed, true, 'Client must have tried to refresh the host public key.');
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected, 'Client must be disconnected.');
@@ -474,39 +549,37 @@ export class TunnelHostAndClientTests {
 
         const relayClient = new TestTunnelRelayTunnelClient();
         let isHostPublicKeyRefreshed = false;
-        relayClient.connectionStatusChanged((e) => isHostPublicKeyRefreshed ||= (e.status === ConnectionStatus.RefreshingTunnelHostPublicKey));
+        relayClient.refreshingTunnel(() => isHostPublicKeyRefreshed = true);
         await assert.rejects(
-            () => this.connectRelayClient(relayClient, staleTunnel), 
-            (e) => (<Error>e).message === 'Failed to connect to tunnel relay. Error: SSH server authentication failed.');
+            () => this.connectRelayClient({relayClient, tunnel: staleTunnel}), 
+            (e) => (<Error>e).message === 'SSH server authentication failed.');
 
-        assert.strictEqual(isHostPublicKeyRefreshed, false, 'Client must not have tried to refresh the host public key.');
+        assert.strictEqual(isHostPublicKeyRefreshed, true, 'Client must have tried to refresh the host public key.');
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected, 'Client must be disconnected.');
 
         relayClient.dispose()
     }       
 
-    private async connectRelayClientFailsForError(error: Error, expectedErrorMessage?: string) {
+    private async connectRelayClientFailsForError(error: Error, expectedErrorMessage?: string, expectedDisconnectReason?: SshDisconnectReason) {
         const relayClient = new TestTunnelRelayTunnelClient();
         const tunnel = this.createRelayTunnel();
-        const disconnectError = this.connectionStatusChanged(
+        const disconnectError = connectionStatusChanged(
             relayClient,
             ConnectionStatus.Disconnected,
         );
 
-        // Connecting wraps error in a new error object with this error message
-        const expectedConnectErrorMessage = `Failed to connect to tunnel relay. Error: ${expectedErrorMessage ??
-            error.message}`;
         try {
-            await this.connectRelayClient(relayClient, tunnel, undefined, () => {
+            await this.connectRelayClient({relayClient, tunnel, clientStreamFactory: () => {
                 throw error;
-            });
+            }});
         } catch (e) {
-            assert.strictEqual((e as Error).message, expectedConnectErrorMessage);
+            assert.strictEqual((e as Error).message, expectedErrorMessage ?? error.message);
         }
 
         // connectionStatusChanged event and disconnectError contain the original error.
         assert.strictEqual(await disconnectError, error);
         assert.strictEqual(relayClient.disconnectError, error);
+        assert.strictEqual(relayClient.disconnectReason, expectedDisconnectReason || SshDisconnectReason.connectionLost);
         assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
     }
 
@@ -519,7 +592,7 @@ export class TunnelHostAndClientTests {
         relayClient.acceptLocalConnectionsForForwardedPorts = false;
 
         let tunnel = this.createRelayTunnel();
-        let serverSshSession = await this.connectRelayClient(relayClient, tunnel);
+        let serverSshSession = await this.connectRelayClient({relayClient, tunnel});
         let pfs = serverSshSession.activateService(PortForwardingService);
 
         let testPort = 9881;
@@ -570,7 +643,7 @@ export class TunnelHostAndClientTests {
 
         const tunnel = this.createRelayTunnel([testPort]);
         await managementClient.createTunnel(tunnel);
-        const multiChannelStream = await this.connectRelayHost(relayHost, tunnel);
+        const multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
         const clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
@@ -599,7 +672,7 @@ export class TunnelHostAndClientTests {
 
         const testPort = 9982;
         const tunnel = this.createRelayTunnel([testPort]);
-        const serverSshSession = await this.connectRelayClient(relayClient, tunnel);
+        const serverSshSession = await this.connectRelayClient({relayClient, tunnel});
         const pfs = serverSshSession.activateService(PortForwardingService);
 
         const connectCompletion = new PromiseCompletionSource<void>();
@@ -627,7 +700,7 @@ export class TunnelHostAndClientTests {
         let relayClient = new TestTunnelRelayTunnelClient();
 
         let tunnel = this.createRelayTunnel();
-        let serverSshSession = await this.connectRelayClient(relayClient, tunnel);
+        let serverSshSession = await this.connectRelayClient({relayClient, tunnel});
         let pfs = serverSshSession.activateService(PortForwardingService);
 
         let testPort = 9983;
@@ -657,7 +730,7 @@ export class TunnelHostAndClientTests {
         assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.None);
 
         let tunnel = this.createRelayTunnel();
-        let multiChannelStream = await this.connectRelayHost(relayHost, tunnel);
+        let multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
 
         let clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
@@ -679,19 +752,52 @@ export class TunnelHostAndClientTests {
         const relayHost = new TunnelRelayTunnelHost(managementClient);
         const tunnel = this.createRelayTunnel();
 
-        const hostStream = await this.connectRelayHost(relayHost, tunnel);
-
-        const disconnectedCompletion = new PromiseCompletionSource<void>();
-        relayHost.connectionStatusChanged((e) => {
-            if (e.status === ConnectionStatus.Disconnected) {
-                disconnectedCompletion.resolve();
-            }
-        });
+        const disconnected = connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
+        const hostStream = await this.connectRelayHost({relayHost, tunnel});
+        assert.equal(relayHost.connectionStatus, ConnectionStatus.Connected);
+        assert.equal(1, managementClient.tunnelEndpointsUpdated);
+        assert.equal(0, managementClient.tunnelEndpointsDeleted);
 
         hostStream.dispose();
-        await withTimeout(disconnectedCompletion.promise, 5000);
+        await disconnected;
 
-        await this.connectRelayHost(relayHost, tunnel);
+        await this.connectRelayHost({relayHost, tunnel});
+        assert.equal(relayHost.connectionStatus, ConnectionStatus.Connected);
+        assert(!relayHost.disconnectError);
+        assert(!relayHost.disconnectReason);
+
+        // Second connection doesn't update the endpoint because it's for the same tunnel.
+        assert.equal(1, managementClient.tunnelEndpointsUpdated);
+        assert.equal(0, managementClient.tunnelEndpointsDeleted);
+
+        const disconnectedOnDispose = connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
+        await relayHost.dispose();
+        await disconnectedOnDispose;
+        assert(!relayHost.disconnectError);
+        assert.equal(relayHost.disconnectReason, SshDisconnectReason.byApplication);
+
+        // Disposal deletes the endpoint.
+        assert.equal(1, managementClient.tunnelEndpointsUpdated);
+        assert.equal(1, managementClient.tunnelEndpointsDeleted);
+    }
+
+    @test
+    public async disposeRelayHostWithoutConnectionDoesntDeleteEndpoint() {
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        assert.equal(0, managementClient.tunnelEndpointsUpdated);
+        assert.equal(0, managementClient.tunnelEndpointsDeleted);
+
+        const disconnectedOnDispose = connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
+        await relayHost.dispose();
+        await disconnectedOnDispose;
+        assert(!relayHost.disconnectError);
+        assert.equal(relayHost.disconnectReason, SshDisconnectReason.byApplication);
+
+        // Disposal doesn't delete the endpoint because it was not created.
+        assert.equal(0, managementClient.tunnelEndpointsUpdated);
+        assert.equal(0, managementClient.tunnelEndpointsDeleted);
     }
 
     @test
@@ -703,15 +809,61 @@ export class TunnelHostAndClientTests {
 
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayHost(relayHost, tunnel, undefined, (_) => {
+            await this.connectRelayHost({relayHost, tunnel, clientStreamFactory: (_) => {
                 throw new Error('Test failure');
-            });
+            }});
         } catch (e) {
             error = <Error>e;
         }
         assert(error?.message?.includes('Test failure'));
 
-        await this.connectRelayHost(relayHost, tunnel);
+        await this.connectRelayHost({relayHost, tunnel});
+    }
+
+    @test
+    public async connectRelayHostAfterTooManyConnectionsDisconnect() {
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        const tunnel = this.createRelayTunnel();
+
+        const hostStream = await this.connectRelayHost({relayHost, tunnel, type: 'ws'});
+        assert.equal(relayHost.connectionStatus, ConnectionStatus.Connected);
+        assert.equal(1, managementClient.tunnelEndpointsUpdated);
+        assert.equal(0, managementClient.tunnelEndpointsDeleted);
+
+        const disconnected = connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
+
+        hostStream.close(SshDisconnectReason.tooManyConnections);
+        const error = <SshConnectionError>await disconnected;
+        assert.equal(error?.reason, SshDisconnectReason.tooManyConnections);
+        assert.equal(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+        assert.equal(relayHost.disconnectReason, SshDisconnectReason.tooManyConnections);
+        assert.equal((<SshConnectionError>relayHost.disconnectError).reason, SshDisconnectReason.tooManyConnections);
+
+        let reconnectError;
+        try {
+            await this.connectRelayHost({relayHost, tunnel});
+        } catch (e) {
+            reconnectError = e;
+        }
+
+        assert.equal((<SshConnectionError>reconnectError).reason, SshDisconnectReason.tooManyConnections);
+        assert.equal(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+        assert.equal(relayHost.disconnectReason, SshDisconnectReason.tooManyConnections);
+        assert.equal((<SshConnectionError>relayHost.disconnectError).reason, SshDisconnectReason.tooManyConnections);
+
+        await relayHost.dispose();
+        assert.equal(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+        assert.equal(relayHost.disconnectReason, SshDisconnectReason.tooManyConnections);
+        assert.equal((<SshConnectionError>relayHost.disconnectError).reason, SshDisconnectReason.tooManyConnections);
+
+        assert.equal(1, managementClient.tunnelEndpointsUpdated);
+
+        // If the host was closed with "too many connections" reason, it means another host has connected
+        // to that tunnel. That other host, when connecting, has overwritten the endpoint.
+        // So no point in deleting it when the first host is disposed.        
+        assert.equal(0, managementClient.tunnelEndpointsDeleted);
     }
 
     @test
@@ -724,23 +876,23 @@ export class TunnelHostAndClientTests {
 
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayHost(relayHost, tunnel, undefined, (_) => {
+            await this.connectRelayHost({relayHost, tunnel, clientStreamFactory: (_) => {
                 cancellationSource.cancel();
                 throw new RelayConnectionError(
                     'error.tooManyRequests',
                     { errorType: RelayErrorType.ConnectionError, statusCode: 429 },
                 );
-            }, cancellationSource.token);
+            }}, cancellationSource.token);
         } catch (e) {
             error = <Error>e;
         }
         assert(error instanceof CancellationError);
 
-        await this.connectRelayHost(relayHost, tunnel);
+        await this.connectRelayHost({relayHost, tunnel});
     }
 
     @test
-    public async connectRelayHostDispose() {
+    public async connectRelayHostDisposeWhileConnecting() {
         const managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;
         const relayHost = new TunnelRelayTunnelHost(managementClient);
@@ -748,17 +900,42 @@ export class TunnelHostAndClientTests {
 
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayHost(relayHost, tunnel, undefined, (_) => {
+            await this.connectRelayHost({relayHost, tunnel, clientStreamFactory: (_) => {
                 relayHost.dispose();
                 throw new RelayConnectionError(
                     'error.tooManyRequests',
                     { errorType: RelayErrorType.ConnectionError, statusCode: 429 },
                 );
-            });
+            }});
         } catch (e) {
             error = <Error>e;
         }
         assert(error instanceof ObjectDisposedError);
+    }
+
+    @test
+    public async connectRelayHostDisposeAfterConnection() {
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        const tunnel = this.createRelayTunnel();
+        const serverSession = await this.connectRelayHost({relayHost, tunnel});
+        assert.strictEqual(managementClient.tunnelEndpointsUpdated, 1);
+        assert.strictEqual(managementClient.tunnelEndpointsDeleted, 0);
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Connected);
+        assert(!relayHost.disconnectError);
+        assert(!relayHost.disconnectReason);
+
+        const disposed = connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
+        await relayHost.dispose();
+        assert.strictEqual(managementClient.tunnelEndpointsUpdated, 1);
+        assert.strictEqual(managementClient.tunnelEndpointsDeleted, 1);
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+        assert(!relayHost.disconnectError);
+        assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.byApplication);
+        assert(!await disposed);
+
+        await withTimeout(serverSession.waitUntilClosed(), 5000);
     }
 
     @test
@@ -769,66 +946,90 @@ export class TunnelHostAndClientTests {
         const tunnel = this.createRelayTunnel();
 
         relayHost.dispose();
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+        assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.byApplication);
+        assert(!relayHost.disconnectError);
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayHost(relayHost, tunnel);
+            await this.connectRelayHost({relayHost, tunnel});
         } catch (e) {
             error = <Error>e;
         }
         assert(error instanceof ObjectDisposedError);
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+        assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.byApplication);
+        assert(!relayHost.disconnectError);
     }
 
     @test
-    @params({ enableRetry: true })
-    @params({ enableRetry: false })
-    @params.naming((params) => `connectRelayHostRetriesOn429(enableRetry: ${params.enableRetry})`)
-    public async connectRelayHostRetriesOn429(connectionOptions: TunnelConnectionOptions) {
+    @params({ enableRetry: true, error: tooManyRequestsError})
+    @params({ enableRetry: false, error: tooManyRequestsError})
+    @params({ enableRetry: true, error: badGatewayError })
+    @params({ enableRetry: false, error: badGatewayError })    
+    @params({ enableRetry: true, error: serviceUnavailableError })
+    @params({ enableRetry: false, error: serviceUnavailableError })    
+    @params.naming((params) => `connectRelayHostRetriesOnErrorStatusCode(enableRetry: ${params.enableRetry}, statusCode: ${params.error.errorContext.statusCode})`)
+    public async connectRelayHostRetriesOnErrorStatusCode(connectionOptions: TunnelConnectionOptions & {error: RelayConnectionError}) {
         let managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;
         let relayHost = new TunnelRelayTunnelHost(managementClient);
         assert.strictEqual(relayHost.disconnectError, undefined);
         assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.None);
 
+        let isRetryAttempted = false;
+        relayHost.retryingTunnelConnection((e) => {
+            assert.equal(e.delayMs, maxReconnectDelayMs/2);
+            assert(e.error instanceof RelayConnectionError);
+            e.delayMs = 100;
+            isRetryAttempted = true;
+        });
+
         let tunnel = this.createRelayTunnel();
 
         let firstAttempt = true;
 
-        const connected = this.connectionStatusChanged(relayHost, ConnectionStatus.Connected);
+        const connected = connectionStatusChanged(relayHost, ConnectionStatus.Connected);
+        const disconnected = connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
 
         let error: Error | undefined = undefined;
         try {
-            await this.connectRelayHost(relayHost, tunnel, connectionOptions, async (stream) => {
+            await this.connectRelayHost({relayHost, tunnel, connectionOptions, clientStreamFactory: async (stream) => {
                 if (firstAttempt) {
                     firstAttempt = false;
-                    throw new RelayConnectionError('error.tooManyRequests', {
-                        errorType: RelayErrorType.TooManyRequests,
-                        statusCode: 429,
-                    });
+                    throw connectionOptions.error;
                 }
 
                 return { stream, protocol: TunnelRelayTunnelHost.webSocketSubProtocol };
-            });
+            }});
         } catch (e) {
             error = <Error>e;
         }
 
         if (connectionOptions.enableRetry) {
+            assert(isRetryAttempted);
             assert(!error);
+            assert.strictEqual(await connected, undefined);
+            assert.strictEqual(relayHost.disconnectError, undefined);
+            assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Connected);
+            assert.strictEqual(relayHost.disconnectReason, undefined);
+
+            await relayHost.dispose();
+            assert.strictEqual(await disconnected, undefined);
+            assert.strictEqual(relayHost.disconnectError, undefined);
+            assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.byApplication);
+            assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
         } else {
-            assert(error?.message?.includes('error.tooManyRequests'));
-            return;
+            assert(!isRetryAttempted);
+            assert(error?.message?.includes(connectionOptions.error.message));
+            assert.strictEqual(await disconnected, connectionOptions.error);
+            assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+            assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.serviceNotAvailable);
+
+            await relayHost.dispose();
+            assert.strictEqual(relayHost.disconnectError, connectionOptions.error);
+            assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+            assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.serviceNotAvailable);
         }
-
-        assert.strictEqual(await connected, undefined);
-        assert.strictEqual(relayHost.disconnectError, undefined);
-        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Connected);
-
-        const disconnected = this.connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
-        await relayHost.dispose();
-
-        assert.strictEqual(await disconnected, undefined);
-        assert.strictEqual(relayHost.disconnectError, undefined);
-        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
     }
 
     @test
@@ -870,20 +1071,17 @@ export class TunnelHostAndClientTests {
         const tunnel = this.createRelayTunnel();
         await managementClient.createTunnel(tunnel);
 
-        const disconnectError = this.connectionStatusChanged(
+        const disconnectError = connectionStatusChanged(
             relayHost,
             ConnectionStatus.Disconnected,
         );
 
-        // Connecting wraps error in a new error object with this error message
-        const expectedConnectErrorMessage = `Failed to connect to tunnel relay. Error: ${expectedErrorMessage ??
-            error.message}`;
         try {
-            await this.connectRelayHost(relayHost, tunnel, undefined, () => {
+            await this.connectRelayHost({relayHost, tunnel, clientStreamFactory: () => {
                 throw error;
-            });
+            }});
         } catch (e) {
-            assert.strictEqual((e as Error).message, expectedConnectErrorMessage);
+            assert.strictEqual((e as Error).message, expectedErrorMessage ?? error.message);
         }
 
         // connectionStatusChanged event and disconnectError contain the original error.
@@ -899,7 +1097,7 @@ export class TunnelHostAndClientTests {
         let relayHost = new TunnelRelayTunnelHost(managementClient);
 
         let tunnel = this.createRelayTunnel([9984]);
-        let multiChannelStream = await this.connectRelayHost(relayHost, tunnel);
+        let multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
         let clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
@@ -939,7 +1137,7 @@ export class TunnelHostAndClientTests {
 
         let tunnel = this.createRelayTunnel([testPort]);
         await managementClient.createTunnel(tunnel);
-        let multiChannelStream = await this.connectRelayHost(relayHost, tunnel);
+        let multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
         let clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
@@ -966,7 +1164,7 @@ export class TunnelHostAndClientTests {
 
         let tunnel = this.createRelayTunnel();
         await managementClient.createTunnel(tunnel);
-        let multiChannelStream = await this.connectRelayHost(relayHost, tunnel);
+        let multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
         let clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
@@ -998,7 +1196,7 @@ export class TunnelHostAndClientTests {
 
         let tunnel = this.createRelayTunnel([9986]);
         await managementClient.createTunnel(tunnel);
-        let multiChannelStream = await this.connectRelayHost(relayHost, tunnel);
+        let multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
         let clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
@@ -1041,15 +1239,36 @@ export class TunnelHostAndClientTests {
             TunnelRelayTunnelClient.webSocketSubProtocol,
         );
 
+        const clientConnecting = connectionStatusChanged(relayClient, ConnectionStatus.Connecting);
+        const hostConnecting = connectionStatusChanged(relayHost, ConnectionStatus.Connecting);
         clientMultiChannelStream.dropConnection();
 
+        assert(!await clientConnecting);
+        assert.strictEqual((<SshConnectionError>relayClient.disconnectError).reason, SshDisconnectReason.connectionLost);
+        assert.strictEqual(relayClient.disconnectReason, SshDisconnectReason.connectionLost);
+
+        assert(!await hostConnecting);
+        assert.strictEqual((<SshConnectionError>relayHost.disconnectError).reason, SshDisconnectReason.connectionLost);
+        assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.connectionLost);
+
+        const clientConnected = connectionStatusChanged(relayClient, ConnectionStatus.Connected);
+        const hostConnected = connectionStatusChanged(relayHost, ConnectionStatus.Connected);
+
         const [serverStream, clientStream] = await DuplexStream.createStreams();
-        let newMultiChannelStream = new TestMultiChannelStream(serverStream, clientStream);
+        let newMultiChannelStream = new TestMultiChannelStream(serverStream);
         let serverConnectPromise = newMultiChannelStream.connect();
         reconnectedHostStream.resolve(clientStream);
         await serverConnectPromise;
 
         reconnectedClientMultiChannelStream.resolve(newMultiChannelStream);
+
+        assert(!await clientConnected);
+        assert(!relayClient.disconnectError);
+        assert(!relayClient.disconnectReason);
+
+        assert(!await hostConnected);
+        assert(!relayHost.disconnectError);
+        assert(!relayHost.disconnectReason);
 
         // Add port to the tunnel host and wait for it on the client
         await testConnection.addPortOnHostAndValidateOnClient(9995);
@@ -1063,16 +1282,46 @@ export class TunnelHostAndClientTests {
         const testConnection = await this.startHostWithClientAndAddPort();
         const { relayHost, relayClient, clientMultiChannelStream, clientStream } = testConnection;
 
-        // Disconnect the tunnel client. It'll eventually reconnect.
+        let isClientDisconnected = false;
+        const relayClientReconnected = connectionStatusChanged(relayClient, ConnectionStatus.Connecting, ConnectionStatus.Connected);
+        relayClient.connectionStatusChanged((e) => {
+            switch (e.status) {
+                case ConnectionStatus.Connecting:
+                    assert(!e.disconnectError);
+                    assert.strictEqual((<SshConnectionError>relayClient.disconnectError).reason, SshDisconnectReason.connectionLost);
+                    assert.strictEqual(relayClient.disconnectReason, SshDisconnectReason.connectionLost);
+                    assert(!relayHost.disconnectError);
+                    assert(!relayHost.disconnectReason);
+                    break;
+
+                case ConnectionStatus.Connected:
+                    assert(!e.disconnectError);
+                    assert(!relayClient.disconnectError);
+                    assert(!relayClient.disconnectReason);
+                    assert(!relayHost.disconnectError);
+                    assert(!relayHost.disconnectReason);
+                    break;
+                }
+        });
+
+        // Disconnect the tunnel client. It'll eventually reconnect. The host stays connected.
         clientStream?.channel.dispose();
+        await relayClientReconnected;
+
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected);
+        assert(!relayClient.disconnectError);
+        assert(!relayClient.disconnectReason);
+
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Connected);
+        assert(!relayHost.disconnectError);
+        assert(!relayHost.disconnectReason);
 
         // Add port to the tunnel host and wait for it on the client
         await testConnection.addPortOnHostAndValidateOnClient(9995);
         assert.strictEqual(clientMultiChannelStream.streamsOpened, 2);
 
         // Clean up
-        await relayClient.dispose();
-        await relayHost.dispose();
+        await testConnection.dispose();
     }
 
     @test
@@ -1081,7 +1330,7 @@ export class TunnelHostAndClientTests {
         const { relayClient, clientStream } = testConnection;
 
         // Wait for client disconnection and closed SSH session
-        const disconnected = this.connectionStatusChanged(
+        const disconnected = connectionStatusChanged(
             relayClient,
             ConnectionStatus.Connecting,
             ConnectionStatus.Disconnected,
@@ -1106,7 +1355,7 @@ export class TunnelHostAndClientTests {
         await sshSessionClosed;
         assert.strictEqual(await disconnected, error);
 
-        await testConnection.dispose();
+        await testConnection.dispose(SshDisconnectReason.connectionLost);
     }
 
     private async startHostWithClientAndAddPort(): Promise<TestConnection> {
@@ -1118,7 +1367,14 @@ export class TunnelHostAndClientTests {
         const tunnel = this.createRelayTunnel([], true); // Hosting a tunnel adds the endpoint
         await managementClient.createTunnel(tunnel);
         const relayHost = new TunnelRelayTunnelHost(managementClient);
-        let clientMultiChannelStream = await this.connectRelayHost(relayHost, tunnel);
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.None);
+        assert(!relayHost.disconnectError);
+        assert(!relayHost.disconnectReason);
+
+        let clientMultiChannelStream = await this.connectRelayHost({relayHost, tunnel});
+        assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Connected);
+        assert(!relayHost.disconnectError);
+        assert(!relayHost.disconnectReason);
         assert.strictEqual(clientMultiChannelStream.streamsOpened, 0);
 
         let clientStream: SshStream | undefined;
@@ -1131,8 +1387,15 @@ export class TunnelHostAndClientTests {
             },
         );
 
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.None);
+        assert(!relayClient.disconnectError);
+        assert(!relayClient.disconnectReason);
+
         await relayClient.connect(tunnel);
         assert.strictEqual(clientMultiChannelStream.streamsOpened, 1);
+        assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Connected);
+        assert(!relayClient.disconnectError);
+        assert(!relayClient.disconnectReason);
 
         const result: TestConnection = {
             relayHost,
@@ -1140,9 +1403,31 @@ export class TunnelHostAndClientTests {
             managementClient,
             clientMultiChannelStream,
             clientStream,
-            dispose: async () => {
+            dispose: async (clientDisconnectReason?: SshDisconnectReason) => {
+                const clientDisposed = relayClient.connectionStatus === ConnectionStatus.Disconnected ?
+                    Promise.resolve(undefined) :
+                    connectionStatusChanged(relayClient, ConnectionStatus.Disconnected);
+
+                const hostDisposed = relayHost.connectionStatus === ConnectionStatus.Disconnected ?
+                    Promise.resolve(undefined) :
+                    connectionStatusChanged(relayHost, ConnectionStatus.Disconnected);
+        
                 await relayClient.dispose();
                 await relayHost.dispose();
+
+                assert(!await clientDisposed);
+                assert.strictEqual(relayClient.connectionStatus, ConnectionStatus.Disconnected);
+                assert.strictEqual(relayClient.disconnectReason, clientDisconnectReason || SshDisconnectReason.byApplication);
+                if (clientDisconnectReason) {
+                    assert.strictEqual((<SshConnectionError>relayClient.disconnectError).reason, clientDisconnectReason);
+                } else {
+                    assert(!relayClient.disconnectError);
+                }
+        
+                assert(! await hostDisposed);
+                assert.strictEqual(relayHost.connectionStatus, ConnectionStatus.Disconnected);
+                assert.strictEqual(relayHost.disconnectReason, SshDisconnectReason.byApplication);
+                assert(!relayHost.disconnectError);
             },
             addPortOnHostAndValidateOnClient: async (portNumber: number) => {
                 const disposables: Disposable[] = [];
@@ -1163,22 +1448,5 @@ export class TunnelHostAndClientTests {
         // Add port to the tunnel host and wait for it on the client
         await result.addPortOnHostAndValidateOnClient(9985);
         return result;
-    }
-
-    private async connectionStatusChanged(
-        connection: TunnelConnection,
-        ...expectedStatus: ConnectionStatus[]
-    ): Promise<Error | undefined> {
-        return await new Promise<Error | undefined>((resolve, reject) => {
-            connection.connectionStatusChanged((e) => {
-                if (e.status === expectedStatus[0]) {
-                    if (expectedStatus.length > 1) {
-                        expectedStatus.shift();
-                    } else {
-                        resolve(e.disconnectError);
-                    }
-                }
-            });
-        });
     }
 }

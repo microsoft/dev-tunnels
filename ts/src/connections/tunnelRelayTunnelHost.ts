@@ -5,6 +5,9 @@ import {
     TunnelConnectionMode,
     TunnelProtocol,
     TunnelRelayTunnelEndpoint,
+    TunnelPort, 
+    Tunnel, 
+    TunnelAccessScopes,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
@@ -13,6 +16,7 @@ import {
     SshStream,
     SshSessionClosedEventArgs,
     SshDisconnectReason,
+    KeyPair,
     TraceLevel,
     SshServerSession,
     SshAuthenticatingEventArgs,
@@ -33,21 +37,26 @@ import {
     SshServerCredentials,
     SecureStream,
     SshProtocolExtensionNames,
+    SshConnectionError,
 } from '@microsoft/dev-tunnels-ssh';
 import {
     ForwardedPortConnectingEventArgs,
     PortForwardChannelOpenMessage,
     PortForwardingService,
+    RemotePortForwarder,
 } from '@microsoft/dev-tunnels-ssh-tcp';
-import { CancellationToken, Disposable } from 'vscode-jsonrpc';
+import { CancellationToken } from 'vscode-jsonrpc';
 import { SshHelpers } from './sshHelpers';
 import { MultiModeTunnelHost } from './multiModeTunnelHost';
-import { TunnelHostBase } from './tunnelHostBase';
-import { tunnelRelaySessionClass } from './tunnelRelaySessionClass';
 import { SessionPortKey } from './sessionPortKey';
 import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
 import { v4 as uuidv4 } from 'uuid';
+
+import { TunnelHost } from './tunnelHost';
+import { isNode } from './sshHelpers';
+import { TunnelConnectionOptions } from './tunnelConnectionOptions';
+import { TunnelConnectionSession } from './tunnelConnectionSession';
 
 const webSocketSubProtocol = 'tunnel-relay-host';
 const webSocketSubProtocolv2 = 'tunnel-relay-host-v2-dev';
@@ -64,10 +73,7 @@ const connectionProtocols =
  * Tunnel host implementation that uses data-plane relay
  *  to accept client connections.
  */
-export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
-    TunnelHostBase,
-    connectionProtocols,
-) {
+export class TunnelRelayTunnelHost extends TunnelConnectionSession implements TunnelHost {
     public static readonly webSocketSubProtocol = webSocketSubProtocol;
     public static readonly webSocketSubProtocolv2 = webSocketSubProtocolv2;
 
@@ -81,10 +87,118 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
     private readonly clientSessionPromises: Promise<void>[] = [];
     private readonly reconnectableSessions: SshServerSession[] = [];
 
+    /**
+     * Sessions created between this host and clients
+     * @internal
+     */
+    public readonly sshSessions: SshServerSession[] = [];
+
+    /**
+     * Port Forwarders between host and clients
+     */
+    public readonly remoteForwarders = new Map<string, RemotePortForwarder>();
+
+    /**
+     * Private key used for connections.
+     */
+    public hostPrivateKey?: KeyPair;
+
+    /**
+     * Public keys used for connections.
+     */
+    public hostPublicKeys?: string[];
+
+    /**
+     * Promise task to get private key used for connections.
+     */
+    public hostPrivateKeyPromise?: Promise<KeyPair>;
+
+    private loopbackIp = '127.0.0.1';
+
+    private forwardConnectionsToLocalPortsValue: boolean = isNode();
+
+    /**
+     * Synthetic endpoint signature of the endpoint created when host connects.
+     * undefined if the endpoint has not been created yet.
+     */
+    private endpointSignature?: string;
+
     public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
-        super(managementClient, trace);
+        super(TunnelAccessScopes.Host, connectionProtocols, trace, managementClient);
+        const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
+        if (publicKey) {
+            this.hostPrivateKeyPromise = publicKey.generateKeyPair();
+        }
+
         this.hostId = MultiModeTunnelHost.hostId;
         this.id = uuidv4() + "-relay";
+    }
+
+    /**
+     * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
+     * Forwarded connections are not possible if the host is not NodeJS (e.g. browser).
+     * The default value for NodeJS hosts is true.
+     */
+    public get forwardConnectionsToLocalPorts(): boolean {
+        return this.forwardConnectionsToLocalPortsValue;
+    }
+
+    public set forwardConnectionsToLocalPorts(value: boolean) {
+        if (value === this.forwardConnectionsToLocalPortsValue) {
+            return;
+        }
+
+        if (value && !isNode()) {
+            throw new Error('Cannot forward connections to local TCP sockets on this platform.');
+        }
+
+        this.forwardConnectionsToLocalPortsValue = value;
+    }
+
+    /**
+     * Connects to a tunnel as a host and starts accepting incoming connections
+     * to local ports as defined on the tunnel.
+     * @deprecated Use `connect()` instead.
+     */
+    public async start(tunnel: Tunnel): Promise<void> {
+        await this.connect(tunnel);
+    }
+
+    /**
+     * Connects to a tunnel as a host and starts accepting incoming connections
+     * to local ports as defined on the tunnel.
+     */
+    public async connect(
+        tunnel: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken,
+    ): Promise<void> {
+        await this.connectTunnelSession(tunnel, options, cancellation);
+    }
+
+    /**
+     * Connect to the tunnel session with the tunnel connector.
+     * @param tunnel Tunnel to use for the connection.
+     *     Undefined if the connection information is already known and the tunnel is not needed.
+     *     Tunnel object to get the connection information from that tunnel.
+     */
+    public async connectTunnelSession(
+        tunnel?: Tunnel,
+        options?: TunnelConnectionOptions,
+        cancellation?: CancellationToken
+    ): Promise<void> {
+        if (this.disconnectReason === SshDisconnectReason.tooManyConnections) {
+            // If another host for the same tunnel connects, the first connection is disconnected
+            // with "too many connections" reason. Reconnecting it again would cause the second host to
+            // be kicked out, and then it would try to reconnect, kicking out this one.
+            // To prevent this tug of war, do not allow reconnection in this case.
+            throw new SshConnectionError(
+                'Cannot retry connection because another host for this tunnel has connected. ' +
+                'Only one host connection at a time is supported.',
+                SshDisconnectReason.tooManyConnections);
+        }
+
+        await super.connectTunnelSession(tunnel, options, cancellation);
     }
 
     /**
@@ -98,13 +212,14 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         cancellation: CancellationToken,
     ): Promise<void> {
         this.connectionProtocol = protocol;
+        let session: SshClientSession;
         if (this.connectionProtocol === webSocketSubProtocol) {
             // The V1 protocol always configures no security, equivalent to SSH MultiChannelStream.
             // The websocket transport is still encrypted and authenticated.
-            this.sshSession = new SshClientSession(
+            session = new SshClientSession(
                 new SshSessionConfiguration(false)); // no encryption
         } else {
-            this.sshSession = SshHelpers.createSshClientSession((config) => {
+            session = SshHelpers.createSshClientSession((config) => {
                 // The V2 protocol configures optional encryption, including "none" as an enabled
                 // and preferred key-exchange algorithm, because encryption of the outer SSH
                 // session is optional since it is already over a TLS websocket.
@@ -113,39 +228,60 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
                 config.addService(PortForwardingService);
             });
 
-            const hostPfs = this.sshSession.activateService(PortForwardingService);
+            const hostPfs = session.activateService(PortForwardingService);
             hostPfs.messageFactory = this;
-            hostPfs.onForwardedPortConnecting((e) => this.onForwardedPortConnecting(e));
+            hostPfs.onForwardedPortConnecting(this.onForwardedPortConnecting, this, this.sshSessionDisposables);
         }
 
-        const channelOpenEventRegistration = this.sshSession.onChannelOpening((e) => {
-            this.hostSession_ChannelOpening(this.sshSession!, e);
-        });
-        const closeEventRegistration = this.sshSession.onClosed((e) => {
-            this.hostSession_Closed(e, channelOpenEventRegistration, closeEventRegistration);
-        });
+        session.onChannelOpening(this.hostSession_ChannelOpening, this, this.sshSessionDisposables);
+        session.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
 
-        this.sshSession.trace = this.trace;
-        await this.sshSession.connect(stream, cancellation);
+        session.trace = this.trace;
+        this.sshSession = session;
+        await session.connect(stream, cancellation);
 
         // SSH authentication is skipped in V1 protocol, optional in V2 depending on whether the
         // session performed a key exchange (as indicated by having a session ID or not). In the
         // latter case a password is not required. Strong authentication was already handled by
         // the relay service via the tunnel access token used for the websocket connection.
-        if (this.sshSession.sessionId) {
-            await this.sshSession.authenticate({ username: 'tunnel' });
+        if (session.sessionId) {
+            await session.authenticate({ username: 'tunnel' });
         }
 
         if (this.connectionProtocol === webSocketSubProtocolv2) {
             // In the v2 protocol, the host starts "forwarding" the ports as soon as it connects.
             // Then the relay will forward the forwarded ports to clients as they connect.
-            await this.startForwardingExistingPorts(this.sshSession);
+            await this.startForwardingExistingPorts(session);
         }
     }
 
+    /**
+     * Validate the {@link tunnel} and get data needed to connect to it, if the tunnel is provided;
+     * otherwise, ensure that there is already sufficient data to connect to a tunnel.
+     * @internal
+     */
     public async onConnectingToTunnel(): Promise<void> {
-        await super.onConnectingToTunnel();
-        if (!this.relayUri) {
+        if (!this.hostPrivateKey || !this.hostPublicKeys) {
+            if (!this.hostPrivateKeyPromise) {
+                throw new Error('Cannot create host keys');
+            }
+            this.hostPrivateKey = await this.hostPrivateKeyPromise;
+            const buffer = await this.hostPrivateKey.getPublicKeyBytes(
+                this.hostPrivateKey.keyAlgorithmName,
+            );
+            if (!buffer) {
+                throw new Error('Host private key public key bytes is not initialized');
+            }
+            this.hostPublicKeys = [buffer.toString('base64')];
+        }
+
+        const tunnelHasSshPort = this.tunnel?.ports != null && this.tunnel.ports.find((v) => v.protocol === TunnelProtocol.Ssh);
+        const endpointSignature = 
+            `${this.tunnel?.tunnelId}.${this.tunnel?.clusterId}:` +
+            `${this.tunnel?.name}.${this.tunnel?.domain}:` +
+            `${tunnelHasSshPort}:${this.hostId}:${this.hostPublicKeys}`;
+
+        if (!this.relayUri || this.endpointSignature !== endpointSignature) {
             if (!this.tunnel) {
                 throw new Error('Tunnel is required');
             }
@@ -158,19 +294,53 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
             };
             
             let additionalQueryParameters = undefined;
-            if (this.tunnel.ports != null && this.tunnel.ports.find((v) => v.protocol === TunnelProtocol.Ssh)) {
+            if (tunnelHasSshPort) {
                 additionalQueryParameters = { includeSshGatewayPublicKey: 'true' };
             }
     
             endpoint = await this.managementClient!.updateTunnelEndpoint(this.tunnel, endpoint, {
                 additionalQueryParameters: additionalQueryParameters,
             });
-            
+
             this.relayUri = endpoint.hostRelayUri!;
+            this.endpointSignature = endpointSignature;
         }
     }
 
-    private hostSession_ChannelOpening(sender: SshClientSession, e: SshChannelOpeningEventArgs) {
+    /**
+     * Disposes this tunnel session, closing all client connections, the host SSH session, and deleting the endpoint.
+     */
+    public async dispose(): Promise<void> {
+        await super.dispose();
+
+        const promises: Promise<any>[] = Object.assign([], this.clientSessionPromises);
+
+        // No new client session should be added because the channel requests are rejected when the tunnel host is disposed.
+        this.clientSessionPromises.length = 0;
+
+        // If the tunnel is present, the endpoint was created, and this host was not closed because of
+        // too many connections, delete the endpoint.
+        // Too many connections closure means another host has connected, and that other host, while
+        // connecting, would have updated the endpoint. So this host won't be able to delete it anyway.
+        if (this.tunnel &&
+            this.endpointSignature &&
+            this.disconnectReason !== SshDisconnectReason.tooManyConnections) {
+            const promise = this.managementClient!.deleteTunnelEndpoints(
+                this.tunnel,
+                this.id,
+            );
+            promises.push(promise);
+        }
+
+        for (const forwarder of this.remoteForwarders.values()) {
+            forwarder.dispose();
+        }
+
+        // When client session promises finish, they remove the sessions from this.sshSessions
+        await Promise.all(promises);
+    }
+
+    private hostSession_ChannelOpening(e: SshChannelOpeningEventArgs) {
         if (!e.isRemoteRequest) {
             // Auto approve all local requests (not that there are any for the time being).
             return;
@@ -448,29 +618,11 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         }
     }
 
-    private hostSession_Closed(
-        e: SshSessionClosedEventArgs,
-        channelOpenEventRegistration: Disposable,
-        closeEventRegistration: Disposable,
-    ) {
-        closeEventRegistration.dispose();
-        channelOpenEventRegistration.dispose();
-        this.sshSession = undefined;
-        this.traceInfo(
-            `Connection to host tunnel relay closed.${this.isDisposed ? '' : ' Reconnecting.'}`,
-        );
-
-        if (e.reason === SshDisconnectReason.connectionLost) {
-            this.startReconnectingIfNotDisposed();
-        }
-    }
-
     public async refreshPorts(cancellation?: CancellationToken): Promise<void> {
-        if (!this.canRefreshTunnel) {
+        if (!await this.refreshTunnel(true, cancellation)) {
             return;
         }
 
-        await this.refreshTunnel(cancellation);
         const ports = this.tunnel?.ports ?? [];
 
         let sessions: SshSession[] = this.sshSessions;
@@ -503,30 +655,27 @@ export class TunnelRelayTunnelHost extends tunnelRelaySessionClass(
         await Promise.all(forwardPromises);
     }
 
-    /**
-     * Disposes this tunnel session, closing all client connections, the host SSH session, and deleting the endpoint.
-     */
-    public async dispose(): Promise<void> {
-        await super.dispose();
-
-        const promises: Promise<any>[] = Object.assign([], this.clientSessionPromises);
-
-        // No new client session should be added because the channel requests are rejected when the tunnel host is disposed.
-        this.clientSessionPromises.length = 0;
-
-        if (this.tunnel) {
-            const promise = this.managementClient!.deleteTunnelEndpoints(
-                this.tunnel,
-                this.id,
-            );
-            promises.push(promise);
+    protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
+        const portNumber = Number(port.portNumber);
+        if (pfs.localForwardedPorts.find((p) => p.localPort === portNumber)) {
+            // The port is already forwarded. This may happen if we try to add the same port twice after reconnection.
+            return;
         }
 
-        for (const forwarder of this.remoteForwarders.values()) {
-            forwarder.dispose();
+        // When forwarding from a Remote port we assume that the RemotePortNumber
+        // and requested LocalPortNumber are the same.
+        const forwarder = await pfs.forwardFromRemotePort(
+            this.loopbackIp,
+            portNumber,
+            'localhost',
+            portNumber,
+        );
+        if (!forwarder) {
+            // The forwarding request was rejected by the client.
+            return;
         }
 
-        // When client session promises finish, they remove the sessions from this.sshSessions
-        await Promise.all(promises);
+        const key = new SessionPortKey(pfs.session.sessionId, Number(forwarder.localPort));
+        this.remoteForwarders.set(key.toString(), forwarder);
     }
 }

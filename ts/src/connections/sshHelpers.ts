@@ -287,6 +287,7 @@ export enum RelayErrorType {
     TunnelPortNotFound = 6,
     TooManyRequests = 7,
     ServiceUnavailable = 8,
+    BadGateway = 9,
 }
 /**
  * Error used when a connection to the tunnel relay failed.
@@ -348,6 +349,12 @@ const webSocketClientContexts: WebSocketClientErrorContext[] = [
         statusCode: 500,
         error: 'relayServerError',
         errorType: RelayErrorType.ServerError,
+    },
+    {
+        regex: /status: 502/,
+        statusCode: 502,
+        error: 'badGateway',
+        errorType: RelayErrorType.BadGateway,
     },
     {
         regex: /status: 503/,

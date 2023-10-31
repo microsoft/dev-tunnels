@@ -1,9 +1,9 @@
-import { CancellationToken, MultiChannelStream, SshStream, Stream } from "@microsoft/dev-tunnels-ssh";
+import { CancellationToken, MultiChannelStream, SshDisconnectReason, SshStream, Stream } from "@microsoft/dev-tunnels-ssh";
+import { waitForEvent } from "./promiseUtils";
 
 export class TestMultiChannelStream extends MultiChannelStream {
     constructor(
         public readonly serverStream: Stream, 
-        public readonly clientStream: Stream,
     ) {
         super(serverStream);
     }
@@ -16,9 +16,21 @@ export class TestMultiChannelStream extends MultiChannelStream {
         return result;
     }
 
-
     public dropConnection() {
         this.serverStream.dispose();
-        this.clientStream.dispose();
+    }
+
+	public async close(reason?: SshDisconnectReason, message?: string) {
+		if (reason !== undefined) {
+            await this.session.close(reason, message);
+		}
+
+        await super.close();
+	}
+
+    public async waitUntilClosed() : Promise<void> {
+        if (!this.isClosed) {
+            await waitForEvent(this.onClosed);
+        }
     }
 }

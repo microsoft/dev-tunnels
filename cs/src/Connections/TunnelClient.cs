@@ -7,26 +7,26 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DevTunnels.Connections.Messages;
+using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Management;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.DevTunnels.Ssh.Tcp.Events;
-using Microsoft.DevTunnels.Contracts;
-using Microsoft.DevTunnels.Management;
-using Microsoft.DevTunnels.Connections.Messages;
 
 namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Base class for clients that connect to a single host
 /// </summary>
-public abstract class TunnelClient : TunnelConnection, ITunnelClient
+public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
 {
     private bool acceptLocalConnectionsForForwardedPorts = true;
     private IPAddress localForwardingHostAddress = IPAddress.Loopback;
@@ -45,16 +45,6 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     /// <inheritdoc />
     public ForwardedPortsCollection? ForwardedPorts =>
         SshPortForwardingService?.RemoteForwardedPorts;
-
-    /// <summary>
-    /// Connection protocol used to connect to host.
-    /// </summary>
-    public string? ConnectionProtocol { get; protected set; }
-
-    /// <summary>
-    /// Session used to connect to host
-    /// </summary>
-    protected SshClientSession? SshSession { get; set; }
 
     /// <summary>
     /// One or more SSH public keys published by the host with the tunnel endpoint.
@@ -178,24 +168,20 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     /// </remarks>
     protected async Task StartSshSessionAsync(Stream stream, CancellationToken cancellation)
     {
-        ConnectionStatus = ConnectionStatus.Connecting;
         var session = this.SshSession;
         if (session != null)
         {
             // Unsubscribe event handler from the previous session.
-            session.Authenticating -= OnSshServerAuthenticating;
-            session.Disconnected -= OnSshSessionDisconnected;
-            session.Closed -= OnSshSessionClosed;
-            session.Request -= OnRequest;
+            UnsubscribeSessionEvents(session);
         }
 
         // Enable V1 reconnect only if connector is set as reconnect depends on it.
         // (V2 SSH reconnect is handled by the SecureStream class.)
         var clientConfig = new SshSessionConfiguration(
             enableReconnect: this.connector != null &&
-                ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocol);
+                ConnectionProtocol == WebSocketSubProtocol);
 
-        if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
+        if (ConnectionProtocol == WebSocketSubProtocolV2)
         {
             // Configure optional encryption, including "none" as an enabled and preferred kex algorithm,
             // because encryption of the outer SSH session is optional since it is already over a TLS websocket.
@@ -211,16 +197,12 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         clientConfig.AddService(typeof(PortForwardingService));
 
         session = new SshClientSession(clientConfig, Trace.WithName("SSH"));
-        this.SshSession = session;
-        session.Authenticating += OnSshServerAuthenticating;
-        session.Disconnected += OnSshSessionDisconnected;
-        session.Closed += OnSshSessionClosed;
-
+        SshSession = session;
         SshPortForwardingService = session.ActivateService<PortForwardingService>();
         ConfigurePortForwardingService();
-        session.Request += OnRequest;
+        SubscribeSessionEvents(session);
 
-        SshSessionCreated();
+        IsSshSessionActive = true;
         await session.ConnectAsync(stream, cancellation);
 
         // SSH authentication is required in V1 protocol, optional in V2 depending on whether the
@@ -238,21 +220,29 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
                     "SSH server authentication failed." : "SSH client authentication failed.");
             }
         }
-
-        ConnectionStatus = ConnectionStatus.Connected;
     }
 
     private void OnSshSessionDisconnected(object? sender, EventArgs e) =>
-        StartReconnectTaskIfNotDisposed();
-
+        MaybeStartReconnecting(
+            SshDisconnectReason.ConnectionLost,
+            exception: new SshConnectionException("Connection lost.", SshDisconnectReason.ConnectionLost));
 
     private void ConfigurePortForwardingService()
     {
         var pfs = SshPortForwardingService;
         if (pfs == null)
         {
+            if (ConnectionProtocol == WebSocketSubProtocolV2)
+            {
+                throw new InvalidOperationException($"{nameof(PortForwardingService)} is not activated.");
+            }
+
             return;
         }
+
+        // All tunnel hosts and clients should disable this because they do not use it (for now)
+        // and leaving it enabled is a potential security issue.
+        pfs.AcceptRemoteConnectionsForNonForwardedPorts = false;
 
         pfs.AcceptLocalConnectionsForForwardedPorts = this.acceptLocalConnectionsForForwardedPorts;
         if (pfs.AcceptLocalConnectionsForForwardedPorts)
@@ -260,12 +250,9 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             pfs.TcpListenerFactory = new RetryTcpListenerFactory(this.localForwardingHostAddress);
         }
 
-        if (ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocolV2)
+        if (ConnectionProtocol == WebSocketSubProtocolV2)
         {
             pfs.MessageFactory = this;
-            pfs.ForwardedPortConnecting += OnForwardedPortConnecting;
-            pfs.RemoteForwardedPorts.PortAdded += (_, e) => OnForwardedPortAdded(pfs, e);
-            pfs.RemoteForwardedPorts.PortUpdated += (_, e) => OnForwardedPortAdded(pfs, e);
         }
     }
 
@@ -446,15 +433,18 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
     private async Task<ClaimsPrincipal?> RefreshTunnelAndAuthenticateHostAsync(string hostKey, CancellationToken cancellation)
     {
-        var status = ConnectionStatus;
-        ConnectionStatus = ConnectionStatus.RefreshingTunnelHostPublicKey;
         try
         {
-            await RefreshTunnelAsync(cancellation);
+            await RefreshTunnelAsync(includePorts: false, cancellation);
         }
-        finally
+        catch (Exception exception)
+        when (DisposeToken.IsCancellationRequested &&
+            (exception is ObjectDisposedException || exception is OperationCanceledException))
         {
-            ConnectionStatus = status;
+            // Client has been disposed while refreshing the tunnel.
+            // The SSH session has closed or will close momentarily.
+            this.Trace.Warning("Host public key verification failed. Tunnel client is disconnected.");
+            return null;
         }
 
         if (Tunnel == null)
@@ -485,7 +475,7 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
 
     private void OnSshServerAuthenticating(object? sender, SshAuthenticatingEventArgs e)
     {
-        if (this.ConnectionProtocol == TunnelRelayTunnelClient.WebSocketSubProtocol)
+        if (this.ConnectionProtocol == WebSocketSubProtocol)
         {
             // For V1 protocol the SSH server is the host; it should be authenticated with public key.
             OnHostAuthenticating(sender, e);
@@ -496,41 +486,6 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
             // Relay server authentication is done via the websocket TLS host certificate.
             // If SSH encryption/authentication is used anyway, just accept any SSH host key.
             e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
-        }
-    }
-
-    /// <summary>
-    /// Ssh session has just been created but has not connected yet.
-    /// This is a good place to set up event handlers and activate services on it.
-    /// </summary>
-    protected virtual void SshSessionCreated()
-    {
-        // All tunnel hosts and clients should disable this because they do not use it (for now)
-        // and leaving it enabled is a potential security issue.
-        SshPortForwardingService!.AcceptRemoteConnectionsForNonForwardedPorts = false;
-        SshSession!.Closed += OnSshSessionClosed;
-        IsSshSessionActive = true;
-    }
-
-    /// <inheritdoc />
-    protected override async Task CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
-    {
-        await base.CloseSessionAsync(disconnectReason, exception);
-        if (SshSession != null && !SshSession.IsClosed)
-        {
-            if (exception != null)
-            {
-                await SshSession.CloseAsync(disconnectReason, exception);
-            }
-            else
-            {
-                await SshSession.CloseAsync(disconnectReason);
-            }
-
-            // Closing the SSH session does nothing if the session is in disconnected state,
-            // which may happen for a reconnectable session when the connection drops.
-            // Disposing of the session forces closing and frees up the resources.
-            SshSession.Dispose();
         }
     }
 
@@ -554,17 +509,17 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
     }
 
     /// <inheritdoc />
-    public override async ValueTask DisposeAsync()
+    protected override async Task DisposeConnectionAsync()
     {
-        await base.DisposeAsync();
-
-        var session = this.SshSession;
-        if (session != null)
+        // Invoke SshSessionClosed event proactively because if the session has not connected,
+        // closing it is a no-op and won't trigger OnSshSessionClosed event.
+        if (IsSshSessionActive)
         {
-            await session.CloseAsync(SshDisconnectReason.ByApplication);
+            OnSshSessionClosed(null);
         }
 
         SshSessionClosed = null;
+        await base.DisposeConnectionAsync();
     }
 
     /// <summary>
@@ -626,26 +581,60 @@ public abstract class TunnelClient : TunnelConnection, ITunnelClient
         await session.RequestAsync(request, cancellation);
     }
 
-    private void OnSshSessionClosed(object? sender, SshSessionClosedEventArgs e)
+    /// <inheritdoc/>
+    protected override void OnSshSessionClosed(object? sender, SshSessionClosedEventArgs e)
     {
-        if (sender is SshSession sshSession)
-        {
-            sshSession.Authenticating -= OnSshServerAuthenticating;
-            sshSession.Disconnected -= OnSshSessionDisconnected;
-            sshSession.Request -= OnRequest;
-            sshSession.Closed -= OnSshSessionClosed;
-        }
-
-        // Clear the SSH session before setting the status to Disconnected, in case the
-        // status-changed event handler immediately triggers annother connection attempt.
-        this.SshSession = null;
-
-        ConnectionStatus = ConnectionStatus.Disconnected;
-
         OnSshSessionClosed(e.Exception);
-        if (e.Reason == SshDisconnectReason.ConnectionLost)
+        base.OnSshSessionClosed(sender, e);
+    }
+
+    /// <inheritdoc/>
+    protected override void UnsubscribeSessionEvents(SshClientSession session)
+    {
+        base.UnsubscribeSessionEvents(session);
+        session.Authenticating -= OnSshServerAuthenticating;
+        session.Disconnected -= OnSshSessionDisconnected;
+        session.Request -= OnRequest;
+
+        var pfs = session.GetService<PortForwardingService>();
+        if (pfs != null)
         {
-            StartReconnectTaskIfNotDisposed();
+            pfs.ForwardedPortConnecting -= OnForwardedPortConnecting;
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void SubscribeSessionEvents(SshClientSession session)
+    {
+        base.SubscribeSessionEvents(session);
+        session.Authenticating += OnSshServerAuthenticating;
+        session.Disconnected += OnSshSessionDisconnected;
+        session.Closed += OnSshSessionClosed;
+        session.Request += OnRequest;
+
+        if (ConnectionProtocol == WebSocketSubProtocolV2)
+        {
+            PortForwardingService pfs = session.GetService<PortForwardingService>()
+                ?? throw new InvalidOperationException($"{nameof(PortForwardingService)} is not activated.");
+
+            pfs.ForwardedPortConnecting += OnForwardedPortConnecting;
+
+            // PortAdded and PortUpdated event handlers use a local closure
+            // and cannot be unsubscribed in UnsubscribeSessionEvents().
+            // To unsubscribe from them, use PortForwardingService.Disposed event handler.
+            pfs.RemoteForwardedPorts.PortAdded += OnPortAddedOrUpdated;
+            pfs.RemoteForwardedPorts.PortUpdated += OnPortAddedOrUpdated;
+            pfs.Disposed += OnDisposed;
+
+            void OnPortAddedOrUpdated(object? sender, ForwardedPortEventArgs e) =>
+                OnForwardedPortAdded(pfs, e);
+
+            void OnDisposed(object? sender, EventArgs e)
+            {
+                pfs.Disposed -= OnDisposed;
+                pfs.RemoteForwardedPorts.PortAdded -= OnPortAddedOrUpdated;
+                pfs.RemoteForwardedPorts.PortUpdated -= OnPortAddedOrUpdated;
+            }
         }
     }
 }

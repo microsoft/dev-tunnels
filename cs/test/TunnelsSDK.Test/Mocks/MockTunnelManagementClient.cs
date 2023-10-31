@@ -120,6 +120,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         TunnelRequestOptions options = null,
         CancellationToken cancellation = default)
     {
+        TunnelEndpointsUpdated++;
         tunnel.Endpoints ??= Array.Empty<TunnelEndpoint>();
 
         for (int i = 0; i < tunnel.Endpoints.Length; i++)
@@ -150,6 +151,8 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         return Task.FromResult(endpoint);
     }
 
+    public int TunnelEndpointsUpdated { get; private set; }
+
     public Task<bool> DeleteTunnelEndpointsAsync(
         Tunnel tunnel,
         string Id,
@@ -158,6 +161,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     {
         Requires.NotNullOrEmpty(Id, nameof(Id));
 
+        TunnelEndpointsDeleted++;
         if (tunnel.Endpoints == null)
         {
             return Task.FromResult(false);
@@ -170,6 +174,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         return Task.FromResult(tunnel.Endpoints.Length < initialLength);
     }
 
+    public int TunnelEndpointsDeleted { get; private set; }
 
     public Task<TunnelPort[]> ListTunnelPortsAsync(
         Tunnel tunnel,

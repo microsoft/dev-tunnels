@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
 
@@ -19,20 +18,18 @@ namespace Microsoft.DevTunnels.Connections;
 /// <summary>
 /// Tunnel client implementation that connects via a tunnel relay.
 /// </summary>
-public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
+public class TunnelRelayTunnelClient : TunnelClient
 {
     /// <summary>
     /// Web socket sub-protocol to connect to the tunnel relay endpoint with v1 client protocol.
     /// </summary>
-    public const string WebSocketSubProtocol = "tunnel-relay-client";
+    public override string WebSocketSubProtocol => ClientWebSocketSubProtocol;
 
     /// <summary>
     /// Web socket sub-protocol to connect to the tunnel relay endpoint with v2 client protocol.
     /// (The "-dev" suffix will be dropped when the v2 protocol is stable.)
     /// </summary>
-    public const string WebSocketSubProtocolV2 = "tunnel-relay-client-v2-dev";
-
-    private Uri? relayUri;
+    public override string WebSocketSubProtocolV2 => ClientWebSocketSubProtocolV2;
 
     /// <summary>
     /// Creates a new instance of a client that connects to a tunnel via a tunnel relay.
@@ -45,16 +42,6 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// Creates a new instance of a client that connects to a tunnel via a tunnel relay.
     /// </summary>
     public TunnelRelayTunnelClient(ITunnelManagementClient? managementClient, TraceSource trace) : base(managementClient, trace) { }
-
-    /// <summary>
-    /// Gets or sets a factory for creating relay streams.
-    /// </summary>
-    /// <remarks>
-    /// Normally the default <see cref="TunnelRelayStreamFactory" /> can be used. However a
-    /// different factory class may be used to customize the connection (or mock the connection
-    /// for testing).
-    /// </remarks>
-    public ITunnelRelayStreamFactory StreamFactory { get; set; } = new TunnelRelayStreamFactory();
 
     /// <inheritdoc />
     public override IReadOnlyCollection<TunnelConnectionMode> ConnectionModes
@@ -98,12 +85,12 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
                 nameof(Tunnel),
                 $"The tunnel client relay endpoint URI is missing.");
 
-            this.relayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
+            RelayUri = new Uri(endpoint.ClientRelayUri, UriKind.Absolute);
             this.HostPublicKeys = endpoint.HostPublicKeys;
         }
         else
         {
-            this.relayUri = null;
+            RelayUri = null;
             this.HostPublicKeys = null;
         }
     }
@@ -111,7 +98,7 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// <inheritdoc />
     protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
     {
-        Requires.NotNull(this.relayUri!, nameof(this.relayUri));
+        Requires.NotNull(RelayUri!, nameof(this.RelayUri));
         ITunnelConnector result = new RelayTunnelConnector(this);
         return Task.FromResult(result);
     }
@@ -119,7 +106,7 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
     /// <summary>
     /// Connect to the clientRelayUri using accessToken.
     /// </summary>
-    protected Task ConnectAsync(
+    protected async Task ConnectAsync(
         string clientRelayUri,
         string? accessToken,
         string[]? hostPublicKeys,
@@ -127,49 +114,21 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
         CancellationToken cancellation)
     {
         Requires.NotNull(clientRelayUri, nameof(clientRelayUri));
-        return ConnectTunnelSessionAsync(
-            (cancellation) =>
-            {
-                this.relayUri = new Uri(clientRelayUri, UriKind.Absolute);
-                this.accessToken = accessToken;
-                this.HostPublicKeys = hostPublicKeys;
-                this.connector = new RelayTunnelConnector(this);
-                return this.connector.ConnectSessionAsync(
-                    options, isReconnect: false, cancellation);
-            },
+        RelayUri = new Uri(clientRelayUri, UriKind.Absolute);
+
+        this.accessToken = accessToken;
+        this.HostPublicKeys = hostPublicKeys;
+        this.connector = new RelayTunnelConnector(this);
+        await this.connector.ConnectSessionAsync(
+            options,
+            isReconnect: false,
             cancellation);
-    }
-
-    /// <summary>
-    /// Create stream to the tunnel.
-    /// </summary>
-    protected virtual async Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
-    {
-        var protocols = Environment.GetEnvironmentVariable("DEVTUNNELS_PROTOCOL_VERSION") switch
-        {
-            "1" => new[] { WebSocketSubProtocol },
-            "2" => new[] { WebSocketSubProtocolV2 },
-
-            // By default, prefer V2 and fall back to V1.
-            _ => new[] { WebSocketSubProtocolV2, WebSocketSubProtocol },
-        };
-
-        ValidateAccessToken();
-        Trace.TraceInformation("Connecting to client tunnel relay {0}", this.relayUri!.AbsoluteUri);
-        var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
-            this.relayUri!,
-            this.accessToken,
-            protocols,
-            cancellation);
-        Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
-        ConnectionProtocol = subprotocol;
-        return stream;
     }
 
     /// <summary>
     /// Configures tunnel SSH session with the given stream.
     /// </summary>
-    protected virtual async Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
+    protected override async Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
     {
         var session = SshSession;
         if (isReconnect && session != null && !session.IsClosed)
@@ -181,33 +140,4 @@ public class TunnelRelayTunnelClient : TunnelClient, IRelayClient
             await StartSshSessionAsync(stream, cancellation);
         }
     }
-
-    #region IRelayClient
-
-    /// <inheritdoc />
-    string IRelayClient.TunnelAccessScope => TunnelAccessScope;
-
-    /// <inheritdoc />
-    TraceSource IRelayClient.Trace => Trace;
-
-    /// <inheritdoc />
-    Task<Stream> IRelayClient.CreateSessionStreamAsync(CancellationToken cancellation) =>
-        CreateSessionStreamAsync(cancellation);
-
-    /// <inheritdoc />
-    Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception) =>
-        CloseSessionAsync(disconnectReason, exception);
-
-    /// <inheritdoc />
-    Task IRelayClient.ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation) =>
-        ConfigureSessionAsync(stream, isReconnect, cancellation);
-
-    /// <inheritdoc />
-    Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>
-        RefreshTunnelAccessTokenAsync(cancellation);
-
-    /// <inheritdoc />
-    void IRelayClient.OnRetrying(RetryingTunnelConnectionEventArgs e) => OnRetrying(e);
-
-    #endregion IRelayClient
 }

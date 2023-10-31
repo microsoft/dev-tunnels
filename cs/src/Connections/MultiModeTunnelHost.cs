@@ -85,9 +85,9 @@ namespace Microsoft.DevTunnels.Connections
         }
 
         /// <inheritdoc />
-        public override async ValueTask DisposeAsync()
+        protected override async Task DisposeConnectionAsync()
         {
-            await base.DisposeAsync();
+            await base.DisposeConnectionAsync();
 
             var disposeTasks = new List<Task>();
 
@@ -97,12 +97,6 @@ namespace Microsoft.DevTunnels.Connections
             }
 
             await Task.WhenAll(disposeTasks);
-        }
-
-        /// <inheritdoc />
-        protected override Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
-        {
-            throw new NotImplementedException();
         }
 
         /// <inheritdoc />

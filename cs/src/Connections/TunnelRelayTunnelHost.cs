@@ -26,18 +26,18 @@ namespace Microsoft.DevTunnels.Connections;
 /// Tunnel host implementation that uses data-plane relay
 /// to accept client connections.
 /// </summary>
-public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
+public class TunnelRelayTunnelHost : TunnelHost
 {
     /// <summary>
     /// Web socket sub-protocol to connect to the tunnel relay endpoint with v1 host protocol.
     /// </summary>
-    public const string WebSocketSubProtocol = "tunnel-relay-host";
+    public override string WebSocketSubProtocol => HostWebSocketSubProtocol;
 
     /// <summary>
     /// Web socket sub-protocol to connect to the tunnel relay endpoint with v2 host protocol.
     /// (The "-dev" suffix will be dropped when the v2 protocol is stable.)
     /// </summary>
-    public const string WebSocketSubProtocolV2 = "tunnel-relay-host-v2-dev";
+    public override string WebSocketSubProtocolV2 => HostWebSocketSubProtocolV2;
 
     /// <summary>
     /// Ssh channel type in host relay ssh session where client session streams are passed.
@@ -48,8 +48,6 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     private readonly string hostId;
     private readonly ICollection<SshServerSession> reconnectableSessions = new List<SshServerSession>();
 
-    private SshClientSession? hostSession;
-    private Uri? relayUri;
     private string endpointId { get { return hostId + "-relay"; } }
 
     /// <summary>
@@ -62,27 +60,33 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     }
 
     /// <summary>
-    /// Gets or sets a factory for creating relay streams.
+    /// Get or set synthetic endpoint signature for the endpoint created for the host
+    /// when connecting.
+    /// <c>null</c> if the endpoint has not been created yet.
     /// </summary>
-    /// <remarks>
-    /// Normally the default <see cref="TunnelRelayStreamFactory" /> can be used. However a
-    /// different factory class may be used to customize the connection (or mock the connection
-    /// for testing).
-    /// </remarks>
-    public ITunnelRelayStreamFactory StreamFactory { get; set; } = new TunnelRelayStreamFactory();
+    private string? EndpointSignature { get; set; }
+
+    /// <inheritdoc/>
+    public override Task ConnectAsync(Tunnel tunnel, TunnelConnectionOptions? options, CancellationToken cancellation = default)
+    {
+        // If another host for the same tunnel connects, the first connection is disconnected
+        // with "too many connections" reason. Reconnecting it again would cause the second host to
+        // be kicked out, and then it would try to reconnect, kicking out this one.
+        // To prevent this tug of war, do not allow reconnection in this case.
+        if (DisconnectReason == SshDisconnectReason.TooManyConnections)
+        {
+            throw new TunnelConnectionException(
+                "Cannot retry connection because another host for this tunnel has connected. " +
+                "Only one host connection at a time is supported.");
+        }
+
+        return base.ConnectAsync(tunnel, options, cancellation);
+    }
 
     /// <inheritdoc />
-    public override async ValueTask DisposeAsync()
+    protected override async Task DisposeConnectionAsync()
     {
-        await base.DisposeAsync();
-
-        var hostSession = this.hostSession;
-        if (hostSession != null)
-        {
-            this.hostSession = null;
-            await hostSession.CloseAsync(SshDisconnectReason.None);
-            hostSession.Dispose();
-        }
+        await base.DisposeConnectionAsync();
 
         List<Task> tasks;
         lock (DisposeLock)
@@ -91,7 +95,13 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             this.clientSessionTasks.Clear();
         }
 
-        if (Tunnel != null)
+        // If the tunnel is present, the endpoint was created, and this host was not closed because of
+        // too many connections, delete the endpoint.
+        // Too many connections closure means another host has connected, and that other host, while
+        // connecting, would have updated the endpoint. So this host won't be able to delete it anyway.
+        if (Tunnel != null &&
+            !string.IsNullOrEmpty(EndpointSignature) &&
+            DisconnectReason != SshDisconnectReason.TooManyConnections)
         {
             tasks.Add(ManagementClient!.DeleteTunnelEndpointsAsync(Tunnel, endpointId));
         }
@@ -107,7 +117,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     /// <inheritdoc />
     protected override async Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation)
     {
-        if (this.hostSession != null)
+        if (SshSession != null)
         {
             throw new InvalidOperationException(
                 "Already connected. Use separate instances to connect to multiple tunnels.");
@@ -116,94 +126,53 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         Requires.NotNull(Tunnel!, nameof(Tunnel));
         Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
 
-        var hostPublicKeys = new[]
-        {
-            HostPrivateKey.GetPublicKeyBytes(HostPrivateKey.KeyAlgorithmName).ToBase64(),
-        };
+        var hostPublicKey = HostPrivateKey.GetPublicKeyBytes(HostPrivateKey.KeyAlgorithmName).ToBase64();
+        var tunnelHasSshPort = Tunnel.Ports != null &&
+            Tunnel.Ports.Any((p) => p.Protocol == TunnelProtocol.Ssh);
+        var endpointSignature =
+            $"{Tunnel.TunnelId}.{Tunnel.ClusterId}:" +
+            $"{Tunnel.Name}.{Tunnel.Domain}:" +
+            $"{tunnelHasSshPort}:{this.hostId}:{hostPublicKey}";
 
-        var endpoint = new TunnelRelayTunnelEndpoint
+        if (!string.Equals(endpointSignature, EndpointSignature, StringComparison.OrdinalIgnoreCase) ||
+            RelayUri == null)
         {
-            HostId = this.hostId,
-            Id = this.endpointId,
-            HostPublicKeys = hostPublicKeys,
-        };
-        List<KeyValuePair<string, string>>? additionalQueryParams = null;
-        if (Tunnel.Ports != null && Tunnel.Ports.Any((p) => p.Protocol == TunnelProtocol.Ssh))
-        {
-            additionalQueryParams = new () {new KeyValuePair<string, string>("includeSshGatewayPublicKey", "true")};
-        }
-
-        endpoint = (TunnelRelayTunnelEndpoint)await ManagementClient!.UpdateTunnelEndpointAsync(
-            Tunnel,
-            endpoint,
-            options: new TunnelRequestOptions()
+            var endpoint = new TunnelRelayTunnelEndpoint
             {
-                AdditionalQueryParameters = additionalQueryParams,
-            },
-            cancellation);
+                HostId = this.hostId,
+                Id = this.endpointId,
+                HostPublicKeys = new[] { hostPublicKey },
+            };
 
-        Requires.Argument(
-            !string.IsNullOrEmpty(endpoint?.HostRelayUri),
-            nameof(Tunnel),
-            $"The tunnel host relay endpoint URI is missing.");
+            List<KeyValuePair<string, string>>? additionalQueryParams = null;
+            if (tunnelHasSshPort)
+            {
+                additionalQueryParams = new () {new KeyValuePair<string, string>("includeSshGatewayPublicKey", "true")};
+            }
 
-        this.relayUri = new Uri(endpoint.HostRelayUri, UriKind.Absolute);
+            endpoint = (TunnelRelayTunnelEndpoint)await ManagementClient!.UpdateTunnelEndpointAsync(
+                Tunnel,
+                endpoint,
+                options: new TunnelRequestOptions()
+                {
+                    AdditionalQueryParameters = additionalQueryParams,
+                },
+                cancellation);
+
+            EndpointSignature = endpointSignature;
+            Requires.Argument(
+                !string.IsNullOrEmpty(endpoint?.HostRelayUri),
+                nameof(Tunnel),
+                $"The tunnel host relay endpoint URI is missing.");
+
+            RelayUri = new Uri(endpoint.HostRelayUri, UriKind.Absolute);
+        }
 
         return new RelayTunnelConnector(this);
     }
 
-    /// <summary>
-    /// Create stream to the tunnel.
-    /// </summary>
-    protected virtual async Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
-    {
-        var protocols = Environment.GetEnvironmentVariable("DEVTUNNELS_PROTOCOL_VERSION") switch
-        {
-            "1" => new[] { WebSocketSubProtocol },
-            "2" => new[] { WebSocketSubProtocolV2 },
-
-            // By default, prefer V2 and fall back to V1.
-            _ => new[] { WebSocketSubProtocolV2, WebSocketSubProtocol },
-        };
-
-        ValidateAccessToken();
-        Trace.Verbose("Connecting to host tunnel relay {0}", this.relayUri!.AbsoluteUri);
-        var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
-            this.relayUri!,
-            this.accessToken,
-            protocols,
-            cancellation);
-        Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
-        ConnectionProtocol = subprotocol;
-        return stream;
-    }
-
     /// <inheritdoc />
-    protected override async Task CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
-    {
-        await base.CloseSessionAsync(disconnectReason, exception);
-        var hostSession = this.hostSession;
-        if (hostSession != null)
-        {
-            await hostSession.CloseAsync(disconnectReason);
-            hostSession.Dispose();
-        }
-    }
-
-    #region IRelayClient
-
-    /// <inheritdoc />
-    string IRelayClient.TunnelAccessScope => TunnelAccessScope;
-
-    /// <inheritdoc />
-    TraceSource IRelayClient.Trace => Trace;
-
-    /// <inheritdoc />
-    Task<Stream> IRelayClient.CreateSessionStreamAsync(CancellationToken cancellation) =>
-        CreateSessionStreamAsync(cancellation);
-
-    /// <inheritdoc />
-    async Task IRelayClient.ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
+    protected override async Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
     {
         SshClientSession session;
         if (ConnectionProtocol == WebSocketSubProtocol)
@@ -229,19 +198,12 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             config.AddService(typeof(PortForwardingService));
             session = new SshClientSession(config, Trace.WithName("HostSSH"));
 
-            // Relay server authentication is done via the websocket TLS host certificate.
-            // If SSH encryption/authentication is used anyway, just accept any SSH host key.
-            session.Authenticating += (_, e) =>
-                e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
-
             var hostPfs = session.ActivateService<PortForwardingService>();
             hostPfs.MessageFactory = this;
-            hostPfs.ForwardedPortConnecting += OnForwardedPortConnecting;
         }
 
-        this.hostSession = session;
-        session.ChannelOpening += OnHostSessionChannelOpening;
-        session.Closed += OnHostSessionClosed;
+        SshSession = session;
+        SubscribeSessionEvents(session);
         await session.ConnectAsync(stream, cancellation);
 
         // SSH authentication is skipped in V1 protocol, optional in V2 depending on whether the
@@ -259,35 +221,6 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             // In the v2 protocol, the host starts "forwarding" the ports as soon as it connects.
             // Then the relay will forward the forwarded ports to clients as they connect.
             await StartForwardingExistingPortsAsync(session);
-        }
-    }
-
-    /// <inheritdoc />
-    Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception) =>
-        CloseSessionAsync(disconnectReason, exception);
-
-    /// <inheritdoc />
-    Task<bool> IRelayClient.RefreshTunnelAccessTokenAsync(CancellationToken cancellation) =>
-        RefreshTunnelAccessTokenAsync(cancellation);
-
-    /// <inheritdoc />
-    void IRelayClient.OnRetrying(RetryingTunnelConnectionEventArgs e) => OnRetrying(e);
-
-    #endregion IRelayClient
-
-    private void OnHostSessionClosed(object? sender, SshSessionClosedEventArgs e)
-    {
-        var session = (SshClientSession)sender!;
-        session.Closed -= OnHostSessionClosed;
-        session.ChannelOpening -= OnHostSessionChannelOpening;
-        this.hostSession = null;
-        Trace.TraceInformation(
-            "Connection to host tunnel relay closed.{0}",
-            DisposeToken.IsCancellationRequested ? string.Empty : " Reconnecting.");
-
-        if (e.Reason == SshDisconnectReason.ConnectionLost)
-        {
-            StartReconnectTaskIfNotDisposed();
         }
     }
 
@@ -618,7 +551,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
             trace.TraceEvent(
                 TraceEventType.Error,
                 0,
-                "Unhandled exception when forwarding ports.\n{1}",
+                "Unhandled exception when forwarding ports.\n{0}",
                 ex);
         }
     }
@@ -672,17 +605,12 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
     /// <inheritdoc />
     public override async Task RefreshPortsAsync(CancellationToken cancellation)
     {
-        if (Tunnel == null || ManagementClient == null)
+        if (! await RefreshTunnelAsync(includePorts: true, cancellation))
         {
             return;
         }
 
-        var updatedTunnel = await ManagementClient.GetTunnelAsync(
-            Tunnel, new TunnelRequestOptions { IncludePorts = true });
-
-        var updatedPorts = updatedTunnel?.Ports ?? Array.Empty<TunnelPort>();
-        Tunnel.Ports = updatedPorts;
-
+        var updatedPorts = Tunnel?.Ports ?? Array.Empty<TunnelPort>();
         var forwardTasks = new List<Task>();
 
         var sessions = SshSessions.Cast<SshSession?>();
@@ -690,7 +618,7 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         {
             // In the V2 protocol, ports are forwarded direclty on the host session.
             // (But even when the host is V2, some clients may still connect with V1.)
-            sessions = sessions.Append(this.hostSession);
+            sessions = sessions.Append(SshSession);
         }
 
         foreach (var port in updatedPorts)
@@ -722,5 +650,41 @@ public class TunnelRelayTunnelHost : TunnelHost, IRelayClient
         }
 
         await Task.WhenAll(forwardTasks);
+    }
+
+    /// <inheritdoc/>
+    protected override void SubscribeSessionEvents(SshClientSession session)
+    {
+        base.SubscribeSessionEvents(session);
+        session.ChannelOpening += OnHostSessionChannelOpening;
+        if (ConnectionProtocol == WebSocketSubProtocolV2)
+        {
+            // Relay server authentication is done via the websocket TLS host certificate.
+            // If SSH encryption/authentication is used anyway, just accept any SSH host key.
+            session.Authenticating += static (_, e) =>
+                e.AuthenticationTask = Task.FromResult<ClaimsPrincipal?>(new ClaimsPrincipal());
+
+            var hostPfs = session.GetService<PortForwardingService>()!
+                ?? throw new InvalidOperationException($"{nameof(PortForwardingService)} is not activated.");
+
+            hostPfs.ForwardedPortConnecting += OnForwardedPortConnecting;
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void UnsubscribeSessionEvents(SshClientSession session)
+    {
+        base.UnsubscribeSessionEvents(session);
+        session.ChannelOpening -= OnHostSessionChannelOpening;
+        if (ConnectionProtocol == WebSocketSubProtocolV2)
+        {
+            // session.Authenticating doesn't need unsubscribing because its event handler is static.
+
+            var hostPfs = session.GetService<PortForwardingService>();
+            if (hostPfs != null)
+            {
+                hostPfs.ForwardedPortConnecting -= OnForwardedPortConnecting;
+            }
+        }
     }
 }

@@ -4,28 +4,21 @@
 // </copyright>
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DevTunnels.Connections.Messages;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
-using Microsoft.DevTunnels.Ssh;
-using Microsoft.DevTunnels.Ssh.Messages;
-using Microsoft.DevTunnels.Ssh.Tcp;
 
 namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
 /// Base class for tunnel client and host.
 /// </summary>
-public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFactory
+public abstract class TunnelConnection : IAsyncDisposable
 {
     private readonly CancellationTokenSource disposeCts = new();
-    private Task? reconnectTask;
     private ConnectionStatus connectionStatus;
-    private TunnelConnectionOptions? connectionOptions;
     private Tunnel? tunnel;
 
     /// <summary>
@@ -67,6 +60,9 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// <summary>
     /// Gets the connection status.
     /// </summary>
+    /// <exception cref="ObjectDisposedException">
+    /// If setting any status but <see cref="ConnectionStatus.Disconnected"/> when connection is disposed.
+    /// </exception>
     public ConnectionStatus ConnectionStatus
     {
         get => this.connectionStatus;
@@ -74,22 +70,22 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
         {
             lock (DisposeLock)
             {
-                if (this.disposeCts.IsCancellationRequested)
+                if (value != ConnectionStatus.Disconnected &&
+                    DisposeToken.IsCancellationRequested)
                 {
-                    value = ConnectionStatus.Disconnected;
+                    throw new ObjectDisposedException(GetType().FullName);
+                }
+
+                if (value == ConnectionStatus.RefreshingTunnelAccessToken &&
+                    this.connectionStatus != ConnectionStatus.Connecting)
+                {
+                    Requires.Fail("Refreshing tunnel access token is allowed only when connecting.");
                 }
 
                 var previousConnectionStatus = this.connectionStatus;
-                this.connectionStatus = value;
                 if (value != previousConnectionStatus)
                 {
-                    // If there were temporary connection issue, DisconnectException may be not null.
-                    // Since we have successfully connected after all, clean it up.
-                    if (value == ConnectionStatus.Connected)
-                    {
-                        DisconnectException = null;
-                    }
-
+                    this.connectionStatus = value;
                     OnConnectionStatusChanged(previousConnectionStatus, value);
                 }
             }
@@ -98,10 +94,14 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
 
     /// <summary>
     /// Get the last exception that caused disconnection.
-    /// Null if not yet connected.
-    /// If disconnection was caused by disposing of this object, the value may be either null, or the last exception when the connection failed.
+    /// <c>null</c> if not yet connected, or connected succesfully, or disposed explicitly.
+    /// If not-null, this is the last exception that caused reconnection.
     /// </summary>
-    public Exception? DisconnectException { get; private set; }
+    public Exception? DisconnectException
+    {
+        get;
+        protected set;
+    }
 
     /// <summary>
     /// Get the tunnel that is being hosted or connected to.
@@ -109,7 +109,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// </summary>
     public Tunnel? Tunnel {
         get => this.tunnel;
-        private set
+        protected set
         {
             if (value != this.tunnel)
             {
@@ -191,14 +191,21 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     }
 
     /// <summary>
-    /// Create tunnel connector for <see cref="Tunnel"/>.
-    /// </summary>
-    protected abstract Task<ITunnelConnector> CreateTunnelConnectorAsync(CancellationToken cancellation);
-
-    /// <summary>
     /// Get tunnel access scope for this tunnel client or host.
     /// </summary>
     protected abstract string TunnelAccessScope { get; }
+
+    /// <summary>
+    /// Get the tunnel connection role, either "client", or "host", depending on <see cref="TunnelAccessScope"/>.
+    /// </summary>
+    protected string ConnectionRole =>
+        IsClientConnection ? "client" : "host";
+
+    /// <summary>
+    /// Get a value indicating if this is a client tunnel connection (as opposed to host connection).
+    /// </summary>
+    protected bool IsClientConnection =>
+        TunnelAccessScope == TunnelAccessScopes.Connect;
 
     /// <summary>
     /// Event handler for refreshing the tunnel access token.
@@ -213,6 +220,11 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     /// An event handler can cancel the retry by setting <see cref="RetryingTunnelConnectionEventArgs.Retry"/> to false.
     /// </remarks>
     public event EventHandler<RetryingTunnelConnectionEventArgs>? RetryingTunnelConnection;
+
+    /// <summary>
+    /// Event raised when a tunnel needs to be refreshed.
+    /// </summary>
+    public event EventHandler<RefreshingTunnelEventArgs>? RefreshingTunnel;
 
     /// <summary>
     /// Connection status changed event.
@@ -238,138 +250,50 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     public event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
 
     /// <summary>
-    /// Assign the tunnel and connect to it.
-    /// </summary>
-    protected Task ConnectTunnelSessionAsync(
-        Tunnel tunnel,
-        TunnelConnectionOptions? options,
-        CancellationToken cancellation)
-    {
-        Requires.NotNull(tunnel, nameof(tunnel));
-        this.connectionOptions = options;
-
-        return ConnectTunnelSessionAsync(async (cancellation) =>
-        {
-            var isReconnect = Tunnel != null;
-            Tunnel = tunnel;
-            this.connector ??= await CreateTunnelConnectorAsync(cancellation);
-            await this.connector.ConnectSessionAsync(options, isReconnect, cancellation);
-        },
-        cancellation);
-    }
-
-    /// <summary>
-    /// Close tunnel session with the given reason and exception.
-    /// </summary>
-    /// <remarks>
-    /// This is used by <see cref="ITunnelConnector"/> when it couldn't connect the tunnel SSH session.
-    /// Depending on whether the exception is recoverable, the tunnel connector may try to reconnect and start a new session,
-    /// or give up and change <see cref="ConnectionStatus"/> to <see cref="ConnectionStatus.Disconnected"/>.
-    /// </remarks>
-    protected virtual Task CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception)
-    {
-        if (exception != null)
-        {
-            DisconnectException = exception;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Connect to tunnel session by running <paramref name="connectAction"/>.
-    /// </summary>
-    protected async Task ConnectTunnelSessionAsync(
-        Func<CancellationToken, Task> connectAction,
-        CancellationToken cancellation)
-    {
-        Requires.NotNull(connectAction, nameof(connectAction));
-        ConnectionStatus = ConnectionStatus.Connecting;
-
-        var linkedCancellationSource =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellation, DisposeToken);
-        cancellation = linkedCancellationSource.Token;
-
-        try
-        {
-            await connectAction(cancellation);
-            ConnectionStatus = ConnectionStatus.Connected;
-        }
-        catch (OperationCanceledException)
-        {
-            ConnectionStatus = ConnectionStatus.Disconnected;
-
-            if (DisposeToken.IsCancellationRequested)
-            {
-                throw new ObjectDisposedException(nameof(TunnelConnection));
-            }
-
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Trace.Error(
-                "Error connecting {0} tunnel session: {1}",
-                TunnelAccessScope == TunnelAccessScopes.Connect ? "client" : "host",
-                ex is UnauthorizedAccessException || ex is TunnelConnectionException ? ex.Message : ex);
-
-            DisconnectException = ex;
-            ConnectionStatus = ConnectionStatus.Disconnected;
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets the fresh tunnel access token when Relay service returns 401.
-    /// </summary>
-    /// <exception cref="UnauthorizedAccessException">Thrown if the refreshed token is expired.</exception>
-    protected async Task<bool> RefreshTunnelAccessTokenAsync(CancellationToken cancellation)
-    {
-        var previousStatus = ConnectionStatus;
-        ConnectionStatus = ConnectionStatus.RefreshingTunnelAccessToken;
-        Trace.Verbose(
-            "Refreshing tunnel access token. Current token: {0}",
-            TunnelAccessTokenProperties.GetTokenTrace(this.accessToken));
-        try
-        {
-            if (!await OnRefreshingTunnelAccessTokenAsync(cancellation))
-            {
-                return false;
-            }
-
-            // Access token may be null if tunnel allows anonymous access.
-            if (this.accessToken != null)
-            {
-                TunnelAccessTokenProperties.ValidateTokenExpiration(this.accessToken);
-            }
-
-            Trace.Verbose(
-                "Refreshed tunnel access token. New token: {0}",
-                TunnelAccessTokenProperties.GetTokenTrace(this.accessToken));
-
-            return true;
-        }
-        finally
-        {
-            ConnectionStatus = previousStatus;
-        }
-    }
-
-    /// <summary>
     /// Fetch the tunnel from the service if <see cref="ManagementClient"/> and <see cref="Tunnel"/> are not null.
     /// </summary>
     /// <returns><c>true</c> if <see cref="Tunnel"/> was refreshed; otherwise, <c>false</c>.</returns>
-    protected virtual async Task<bool> RefreshTunnelAsync(CancellationToken cancellation)
+    protected virtual async Task<bool> RefreshTunnelAsync(bool includePorts, CancellationToken cancellation)
     {
-        if (Tunnel != null && ManagementClient != null)
+        var handler = RefreshingTunnel;
+        if (handler == null && (Tunnel == null || ManagementClient == null))
         {
-            Trace.TraceInformation("Refreshing tunnel.");
+            return false;
+        }
+
+        Trace.TraceInformation("Refreshing tunnel{0}", includePorts ? " and ports." : ".");
+        var isRefreshed = false;
+        if (handler != null)
+        {
+            var e = new RefreshingTunnelEventArgs(
+                TunnelAccessScope,
+                Tunnel,
+                ManagementClient,
+                includePorts,
+                cancellation);
+
+            handler(this, e);
+            if (e.TunnelRefreshTask != null)
+            {
+                Tunnel = await e.TunnelRefreshTask;
+                isRefreshed = true;
+            }
+        }
+
+        if (!isRefreshed && Tunnel != null && ManagementClient != null)
+        {
             var options = new TunnelRequestOptions
             {
                 TokenScopes = new[] { TunnelAccessScope },
+                IncludePorts = includePorts,
             };
 
             Tunnel = await ManagementClient.GetTunnelAsync(Tunnel, options, cancellation);
+            isRefreshed = true;
+        }
+
+        if (isRefreshed)
+        {
             if (Tunnel != null)
             {
                 Trace.TraceInformation("Refreshed tunnel.");
@@ -385,7 +309,6 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
         return false;
     }
 
-
     /// <summary>
     /// Refresh tunnel access token.
     /// </summary>
@@ -400,7 +323,7 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
         var handler = RefreshingTunnelAccessToken;
         if (handler == null)
         {
-            return await RefreshTunnelAsync(cancellation);
+            return await RefreshTunnelAsync(includePorts: false, cancellation);
         }
 
         var eventArgs = new RefreshingTunnelAccessTokenEventArgs(TunnelAccessScope, cancellation);
@@ -415,22 +338,37 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     }
 
     /// <inheritdoc />
-    public virtual async ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        Task? reconnectTask;
         lock (DisposeLock)
         {
+            if (this.disposeCts.IsCancellationRequested)
+            {
+                return;
+            }
+
             this.disposeCts.Cancel();
-            reconnectTask = this.reconnectTask;
         }
 
-        if (reconnectTask != null)
+        try
         {
-            await reconnectTask;
+            await DisposeConnectionAsync();
         }
-
-        ConnectionStatus = ConnectionStatus.Disconnected;
+        catch (Exception exception)
+        {
+            Trace.Error("Error disposing {0}: {1}", ConnectionRole, exception);
+        }
+        finally
+        {
+            ConnectionStatus = ConnectionStatus.Disconnected;
+        }
     }
+
+    /// <summary>
+    /// Close tunnel connection and dispose it.
+    /// </summary>
+    /// <returns></returns>
+    protected virtual Task DisposeConnectionAsync() => Task.CompletedTask;
 
     /// <summary>
     /// Event fired when the connection status has changed.
@@ -440,59 +378,17 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
         var handler = ConnectionStatusChanged;
         if (handler != null)
         {
+            // Disconnect exception is provided only during disconnection, not disposal.
+            var disconnectException =
+                connectionStatus == ConnectionStatus.Disconnected && !DisposeToken.IsCancellationRequested ?
+                DisconnectException : null;
+
             var args = new ConnectionStatusChangedEventArgs(
                 previousConnectionStatus,
                 connectionStatus,
-                connectionStatus == ConnectionStatus.Disconnected ? DisconnectException : null);
+                disconnectException);
 
             handler(this, args);
-        }
-    }
-
-    /// <summary>
-    /// Start reconnect task if the object is not yet disposed.
-    /// </summary>
-    protected void StartReconnectTaskIfNotDisposed()
-    {
-        lock (DisposeLock)
-        {
-            if (!this.disposeCts.IsCancellationRequested &&
-                this.connectionOptions?.EnableReconnect != false &&
-                this.reconnectTask == null &&
-                this.connector != null) // The connector may be null if the tunnel client/host was created directly from a stream.
-            {
-                var task = ReconnectAsync(this.disposeCts.Token);
-                this.reconnectTask = !task.IsCompleted ? task : null;
-            }
-            else
-            {
-                ConnectionStatus = ConnectionStatus.Disconnected;
-            }
-        }
-    }
-
-    private async Task ReconnectAsync(CancellationToken cancellation)
-    {
-        Requires.NotNull(this.connector!, nameof(this.connector));
-
-        try
-        {
-            await ConnectTunnelSessionAsync(
-                (cancellation) => this.connector.ConnectSessionAsync(
-                    this.connectionOptions, isReconnect: true, cancellation),
-                cancellation);
-        }
-        catch
-        {
-            // Tracing of the exception has already been done by ConnectToTunnelSessionAsync.
-            // As reconnection is an async process, there is nobody watching it throw.
-            // The exception, if it was not cancellation, is stored in DisconnectException property.
-            // There might have been ConnectionStatusChanged event fired as well.
-        }
-
-        lock (DisposeLock)
-        {
-            this.reconnectTask = null;
         }
     }
 
@@ -503,19 +399,4 @@ public abstract class TunnelConnection : IAsyncDisposable, IPortForwardMessageFa
     {
         RetryingTunnelConnection?.Invoke(this, e);
     }
-
-    Task<PortForwardRequestMessage> IPortForwardMessageFactory.CreateRequestMessageAsync(int port)
-        => Task.FromResult<PortForwardRequestMessage>(
-            new PortRelayRequestMessage { AccessToken = this.accessToken });
-
-    Task<PortForwardSuccessMessage> IPortForwardMessageFactory.CreateSuccessMessageAsync(int port)
-        => Task.FromResult(new PortForwardSuccessMessage()); // Success messages are not extended.
-
-    Task<PortForwardChannelOpenMessage> IPortForwardMessageFactory.CreateChannelOpenMessageAsync(int port)
-        => Task.FromResult<PortForwardChannelOpenMessage>(
-            new PortRelayConnectRequestMessage
-            {
-                AccessToken = this.accessToken,
-                IsE2EEncryptionRequested = this.EnableE2EEncryption,
-            });
 }

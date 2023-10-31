@@ -3,6 +3,9 @@
 // Licensed under the MIT license.
 // </copyright>
 
+using System;
+using System.ComponentModel;
+
 namespace Microsoft.DevTunnels.Connections;
 
 /// <summary>
@@ -38,5 +41,7 @@ public enum ConnectionStatus
     /// <summary>
     /// Refreshing tunnel host public key.
     /// </summary>
+    [Obsolete("Use " + nameof(TunnelConnection) + "." + nameof(TunnelConnection.RefreshingTunnel) + " event instead.")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     RefreshingTunnelHostPublicKey,
 }

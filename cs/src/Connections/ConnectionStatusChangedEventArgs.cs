@@ -1,11 +1,9 @@
-﻿// <copyright file="ConnectionStatusChangedEventArgs.cs" company="Microsoft">
+// <copyright file="ConnectionStatusChangedEventArgs.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -35,7 +33,9 @@ public class ConnectionStatusChangedEventArgs : EventArgs
     public ConnectionStatus Status { get; }
 
     /// <summary>
-    /// Get the exception that caused disconnect if <see cref="Status"/> is <see cref="ConnectionStatus.Disconnected"/>.
+    /// Get the exception that caused disconnect if <see cref="Status"/> is <see cref="ConnectionStatus.Disconnected"/> and the tunnel client is not disposed yet.
+    /// <c>null</c> if <see cref="Status"/> is not <see cref="ConnectionStatus.Disconnected"/> or the tunnel client is disposed.
     /// </summary>
+    /// <seealso cref="TunnelConnection.DisconnectException"/>.
     public Exception? DisconnectException { get; }
 }
