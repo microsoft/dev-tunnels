@@ -551,7 +551,7 @@ public class TunnelRelayTunnelHost : TunnelHost
             trace.TraceEvent(
                 TraceEventType.Error,
                 0,
-                "Unhandled exception when forwarding ports.\n{1}",
+                "Unhandled exception when forwarding ports.\n{0}",
                 ex);
         }
     }
