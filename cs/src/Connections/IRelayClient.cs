@@ -52,7 +52,7 @@ internal interface IRelayClient
     /// <summary>
     /// Create stream to the tunnel.
     /// If this method succeeds, <see cref="ConfigureSessionAsync(Stream, bool, CancellationToken)"/> will be called.
-    /// If this method fails, depending on <see cref="TunnelConnectionOptions.EnableRetry"/> and failure, tunnel client my try reconnecting.
+    /// If this method fails, depending on <see cref="TunnelConnectionOptions.EnableRetry"/> and failure, tunnel client may try reconnecting.
     /// </summary>
     Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation);
 
