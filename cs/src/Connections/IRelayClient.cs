@@ -64,7 +64,7 @@ internal interface IRelayClient
     /// <summary>
     /// Configures tunnel SSH session with the given stream.
     /// If this method succeeds, the SSH session must be connected and ready.
-    /// If this method fails, depending on <see cref="TunnelConnectionOptions.EnableRetry"/> and failure, tunnel client my try reconnecting.
+    /// If this method fails, depending on <see cref="TunnelConnectionOptions.EnableRetry"/> and failure, tunnel client may try reconnecting.
     /// </summary>
     Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation);
 
