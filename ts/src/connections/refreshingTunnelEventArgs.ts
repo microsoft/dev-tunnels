@@ -3,7 +3,7 @@
 
 import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
-import { CancellationToken, SshDisconnectReason, Stream, Trace } from '@microsoft/dev-tunnels-ssh';
+import { CancellationToken } from '@microsoft/dev-tunnels-ssh';
 
 /**
  * Event args for tunnel refresh event.

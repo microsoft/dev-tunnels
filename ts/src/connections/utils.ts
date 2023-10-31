@@ -2,8 +2,7 @@
 // Licensed under the MIT license.
 
 import { CancellationToken, CancellationError } from '@microsoft/dev-tunnels-ssh';
-import { EventEmitter } from 'stream';
-import { Disposable, Event, Emitter } from 'vscode-jsonrpc';
+import { Disposable, Emitter } from 'vscode-jsonrpc';
 
 export class List {
     public static groupBy<T, K>(
