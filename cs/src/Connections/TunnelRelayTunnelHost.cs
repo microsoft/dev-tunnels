@@ -623,13 +623,22 @@ public class TunnelRelayTunnelHost : TunnelHost
 
         foreach (var port in updatedPorts)
         {
-            foreach (var session in sessions.Where((s) => s?.IsConnected == true))
+            // For all sessions which are connected and authenticated, forward any added/updated
+            // ports. For sessions that are not yet authenticated, the ports will be forwarded
+            // immediately after authentication completes - see OnSshClientAuthenticated().
+            // (Session requests may not be sent before the session is authenticated, for sessions
+            // that require authentication; For V2 sessions that are not encrypted/authenticated
+            // at all, the session ID is null.)
+            //
+            // If authentication completes concurrently, or if there are concurrent calls to this
+            // method, then duplicate requests may be sent. Clients should ignore any duplicate
+            // requests.
+            foreach (var session in sessions.Where(
+                (s) => s?.IsConnected == true && (s.SessionId == null || s.Principal != null)))
             {
-                var key = new SessionPortKey(session!.SessionId!, port.PortNumber);
+                var key = new SessionPortKey(session!.SessionId, port.PortNumber);
                 if (!RemoteForwarders.ContainsKey(key))
                 {
-                    // Overlapping refresh operations could cause duplicate forward requests to be
-                    // sent to clients, but clients should ignore the duplicate requests.
                     var pfs = session.GetService<PortForwardingService>()!;
                     forwardTasks.Add(ForwardPortAsync(pfs, port, cancellation));
                 }

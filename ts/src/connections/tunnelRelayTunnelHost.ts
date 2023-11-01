@@ -635,8 +635,15 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         const forwardPromises: Promise<any>[] = [];
 
         for (const port of ports) {
-            for (const session of sessions.filter((s) => s.isConnected && s.sessionId)) {
-                const key = new SessionPortKey(session.sessionId!, Number(port.portNumber));
+            // For all sessions which are connected and authenticated, forward any added/updated
+            // ports. For sessions that are not yet authenticated, the ports will be forwarded
+            // immediately after authentication completes - see onSshClientAuthenticated().
+            // (Session requests may not be sent before the session is authenticated, for sessions
+            // that require authentication; For V2 sessions that are not encrypted/authenticated
+            // at all, the session ID is null.)
+            for (const session of sessions.filter(
+                    (s) => s.isConnected && (!s.sessionId || s.principal))) {
+                const key = new SessionPortKey(session.sessionId, Number(port.portNumber));
                 const forwarder = this.remoteForwarders.get(key.toString());
                 if (!forwarder) {
                     const pfs = session.getService(PortForwardingService)!;
