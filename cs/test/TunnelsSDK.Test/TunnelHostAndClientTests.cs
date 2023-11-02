@@ -1057,16 +1057,27 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         await this.serverStream.DisposeAsync();
 
-        await relayClient.WaitForConnectionStatusAsync(ConnectionStatus.Connecting, TimeoutToken);
+        await relayClient.WaitForConnectionStatusAsync(
+            ConnectionStatus.Connecting,
+            assert: (client) =>
+            {
+                var ex = Assert.IsType<SshConnectionException>(client.DisconnectException);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, relayClient.DisconnectReason);
+            },
+            cancellationToken: TimeoutToken);
 
-        var ex = Assert.IsType<SshConnectionException>(relayHost.DisconnectException);
-        Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
-        Assert.Equal(SshDisconnectReason.ConnectionLost, relayClient.DisconnectReason);
 
-        await relayHost.WaitForConnectionStatusAsync(ConnectionStatus.Connecting, TimeoutToken);
-        ex = Assert.IsType<SshConnectionException>(relayHost.DisconnectException);
-        Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
-        Assert.Equal(SshDisconnectReason.ConnectionLost, relayHost.DisconnectReason);
+        await relayHost.WaitForConnectionStatusAsync(
+            ConnectionStatus.Connecting,
+            assert: (host) =>
+            {
+                var ex = Assert.IsType<SshConnectionException>(host.DisconnectException);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, relayHost.DisconnectReason);
+
+            },
+            cancellationToken: TimeoutToken);
 
         var (serverStream, clientStream) = FullDuplexStream.CreatePair();
         var newMultiChannelStream = new MultiChannelStream(serverStream);
@@ -1076,8 +1087,8 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         clientMultiChannelStream.TrySetResult(newMultiChannelStream);
 
-        await relayClient.WaitForConnectionStatusAsync(ConnectionStatus.Connected, TimeoutToken);
-        await relayHost.WaitForConnectionStatusAsync(ConnectionStatus.Connected, TimeoutToken);
+        await relayClient.WaitForConnectionStatusAsync(ConnectionStatus.Connected, cancellationToken: TimeoutToken);
+        await relayHost.WaitForConnectionStatusAsync(ConnectionStatus.Connected, cancellationToken: TimeoutToken);
 
         Assert.Null(relayClient.DisconnectException);
         Assert.Equal(SshDisconnectReason.None, relayClient.DisconnectReason);

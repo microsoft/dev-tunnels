@@ -4,16 +4,21 @@ namespace Microsoft.DevTunnels.Test;
 
 public static class TunnelConnectionExtensions
 {
-    public async static Task WaitForConnectionStatusAsync(
-        this TunnelConnection tunnelConnection,
+    public async static Task WaitForConnectionStatusAsync<T>(
+        this T tunnelConnection,
         ConnectionStatus status,
+        Action<T> assert = null,
         CancellationToken cancellationToken = default)
+        where T : TunnelConnection
     {
         while (tunnelConnection.ConnectionStatus != status)
         {
             var tcs = new TaskCompletionSource();
-            void OnConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs e) =>
+            void OnConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs e)
+            {
+                assert?.Invoke(tunnelConnection);
                 tcs.TrySetResult();
+            }
 
             tunnelConnection.ConnectionStatusChanged += OnConnectionStatusChanged;
             try
