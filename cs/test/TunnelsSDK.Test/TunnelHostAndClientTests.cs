@@ -1449,7 +1449,9 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         managementClient.HostRelayUri = MockHostRelayUri;
         var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
 
-        var tunnel = CreateRelayTunnel();
+        // Initialize the tunnel with a single port, then host it and connect a client.
+        var testPort1 = GetAvailableTcpPort();
+        var tunnel = CreateRelayTunnel(testPort1);
         await managementClient.CreateTunnelAsync(tunnel, options: null, default);
 
         using var multiChannelStream = await ConnectRelayHostAsync(relayHost, tunnel);
@@ -1459,22 +1461,42 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         using var clientSshSession = CreateSshClientSession();
         await clientSshSession.ConnectAsync(clientRelayStream).WithTimeout(Timeout);
+
+        // Try to refresh ports after connecting, before the client is authenticated.
+        // It should do nothing even though the tunnel has one port.
+        await relayHost.RefreshPortsAsync(CancellationToken.None);
+        Assert.Empty(relayHost.RemoteForwarders);
+
         var clientCredentials = new SshClientCredentials("tunnel", password: null);
         await clientSshSession.AuthenticateAsync(clientCredentials);
 
-        Assert.Empty(relayHost.RemoteForwarders);
+        // The one port should be forwarded (asynchronously) after authentication.
+        await TaskExtensions.WaitUntil(() => relayHost.RemoteForwarders.Count == 1)
+            .WithTimeout(Timeout);
+        Assert.Equal(relayHost.RemoteForwarders.Single().Value.LocalPort, testPort1);
 
-        var testPort = GetAvailableTcpPort();
+        var testPort2 = GetAvailableTcpPort();
+        Assert.NotEqual(testPort1, testPort2);
+
+        // Add another port to the tunnel and check that it gets forwarded.
         await managementClient.CreateTunnelPortAsync(
             tunnel,
-            new TunnelPort { PortNumber = (ushort)testPort },
+            new TunnelPort { PortNumber = (ushort)testPort2 },
             options: null,
             CancellationToken.None);
         await relayHost.RefreshPortsAsync(CancellationToken.None);
-        var forwarder = relayHost.RemoteForwarders.Values.Single();
-        var forwardedPort = tunnel.Ports.Single();
-        Assert.Equal((int)forwardedPort.PortNumber, forwarder.LocalPort);
-        Assert.Equal((int)forwardedPort.PortNumber, forwarder.RemotePort);
+        Assert.Collection(
+            relayHost.RemoteForwarders.Values.OrderBy(f => f.LocalPort),
+            (f) =>
+            {
+                Assert.Equal(Math.Min(testPort1, testPort2), f.LocalPort);
+                Assert.Equal(Math.Min(testPort1, testPort2), f.RemotePort);
+            },
+            (f) =>
+            {
+                Assert.Equal(Math.Max(testPort1, testPort2), f.LocalPort);
+                Assert.Equal(Math.Max(testPort1, testPort2), f.RemotePort);
+            });
     }
 
     [Fact]

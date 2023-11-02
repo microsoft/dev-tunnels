@@ -1158,34 +1158,55 @@ export class TunnelHostAndClientTests {
 
     @test
     public async connectRelayHostAddPort() {
-        let managementClient = new MockTunnelManagementClient();
+        const managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;
-        let relayHost = new TunnelRelayTunnelHost(managementClient);
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
 
-        let tunnel = this.createRelayTunnel();
+        // Initialize the tunnel with a single port, then host it and connect a client.
+        const testPort1 = 9985;
+        const tunnel = this.createRelayTunnel([testPort1]);
         await managementClient.createTunnel(tunnel);
-        let multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
-        let clientRelayStream = await multiChannelStream.openStream(
+        const multiChannelStream = await this.connectRelayHost({relayHost, tunnel});
+        const clientRelayStream = await multiChannelStream.openStream(
             TunnelRelayTunnelHost.clientStreamChannelType,
         );
-        let clientSshSession = this.createSshClientSession();
-        await clientSshSession.connect(new NodeStream(clientRelayStream));
-        let clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
-        await clientSshSession.authenticate(clientCredentials);
+        const clientSshSession = this.createSshClientSession();
 
-        await managementClient.createTunnelPort(tunnel, { portNumber: 9985 });
-        await relayHost.refreshPorts();
+        try
+        {
+            await clientSshSession.connect(new NodeStream(clientRelayStream));
 
-        assert.strictEqual(tunnel.ports!.length, 1);
-        const forwardedPort = tunnel.ports![0];
+            // Try to refresh ports after connecting, before the client is authenticated.
+            // It should do nothing even though the tunnel has one port.
+            await relayHost.refreshPorts();
+            assert.strictEqual(relayHost.remoteForwarders.size, 0);
 
-        let forwarder = relayHost.remoteForwarders.get('9985');
-        if (forwarder) {
-            assert.strictEqual(forwardedPort.portNumber, forwarder.localPort);
-            assert.strictEqual(forwardedPort.portNumber, forwarder.remotePort);
+            const clientCredentials: SshClientCredentials = { username: 'tunnel', password: undefined };
+            await clientSshSession.authenticate(clientCredentials);
+
+            // The one port should be forwarded (asynchronously) after authentication.
+            await until(() => relayHost.remoteForwarders.size === 1, 5000);
+            assert.strictEqual(relayHost.remoteForwarders.size, 1);
+            assert.strictEqual([...relayHost.remoteForwarders.values()][0].localPort, testPort1);
+
+            // Add another port to the tunnel and check that it gets forwarded.
+            const testPort2 = 9986;
+            await managementClient.createTunnelPort(tunnel, { portNumber: testPort2 });
+            await relayHost.refreshPorts();
+
+            assert.strictEqual(tunnel.ports!.length, 2);
+
+            const forwardedPorts = [...relayHost.remoteForwarders.values()].map((p) => p.localPort).sort();
+            assert.strictEqual(forwardedPorts.length, 2);
+            assert.strictEqual(forwardedPorts[0], testPort1);
+            assert.strictEqual(forwardedPorts[1], testPort2);
         }
-        clientRelayStream.destroy();
-        clientSshSession.dispose();
+        finally
+        {
+            clientRelayStream.destroy();
+            clientSshSession.dispose();
+            await relayHost.dispose();
+        }
     }
 
     @test
