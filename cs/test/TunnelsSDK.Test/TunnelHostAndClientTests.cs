@@ -1044,6 +1044,29 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         await relayClient.RefreshPortsAsync(CancellationToken.None);
         Assert.Equal(this.localPortsFixture.Port, await clientPortAdded.Task);
 
+        // Prepare validation that would happen when the client and host start reconnecting.
+        var clientReconnecting = relayClient.WaitForConnectionStatusAsync(
+            ConnectionStatus.Connecting,
+            assert: (client) =>
+            {
+                var ex = Assert.IsType<SshConnectionException>(client.DisconnectException);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, relayClient.DisconnectReason);
+            },
+            cancellationToken: TimeoutToken);
+
+
+        var hostReconnecting = relayHost.WaitForConnectionStatusAsync(
+            ConnectionStatus.Connecting,
+            assert: (host) =>
+            {
+                var ex = Assert.IsType<SshConnectionException>(host.DisconnectException);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
+                Assert.Equal(SshDisconnectReason.ConnectionLost, relayHost.DisconnectReason);
+
+            },
+            cancellationToken: TimeoutToken);
+
         // Reconnect the tunnel host
         clientMultiChannelStream = new TaskCompletionSource<MultiChannelStream>();
 
@@ -1057,27 +1080,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         await this.serverStream.DisposeAsync();
 
-        await relayClient.WaitForConnectionStatusAsync(
-            ConnectionStatus.Connecting,
-            assert: (client) =>
-            {
-                var ex = Assert.IsType<SshConnectionException>(client.DisconnectException);
-                Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
-                Assert.Equal(SshDisconnectReason.ConnectionLost, relayClient.DisconnectReason);
-            },
-            cancellationToken: TimeoutToken);
-
-
-        await relayHost.WaitForConnectionStatusAsync(
-            ConnectionStatus.Connecting,
-            assert: (host) =>
-            {
-                var ex = Assert.IsType<SshConnectionException>(host.DisconnectException);
-                Assert.Equal(SshDisconnectReason.ConnectionLost, ex.DisconnectReason);
-                Assert.Equal(SshDisconnectReason.ConnectionLost, relayHost.DisconnectReason);
-
-            },
-            cancellationToken: TimeoutToken);
+        await Task.WhenAll(clientReconnecting, hostReconnecting);
 
         var (serverStream, clientStream) = FullDuplexStream.CreatePair();
         var newMultiChannelStream = new MultiChannelStream(serverStream);

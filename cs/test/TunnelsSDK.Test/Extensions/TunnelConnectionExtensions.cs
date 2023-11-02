@@ -16,8 +16,11 @@ public static class TunnelConnectionExtensions
             var tcs = new TaskCompletionSource();
             void OnConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs e)
             {
-                assert?.Invoke(tunnelConnection);
-                tcs.TrySetResult();
+                if (e.Status == status)
+                {
+                    assert?.Invoke(tunnelConnection);
+                    tcs.TrySetResult();
+                }
             }
 
             tunnelConnection.ConnectionStatusChanged += OnConnectionStatusChanged;
@@ -25,6 +28,7 @@ public static class TunnelConnectionExtensions
             {
                 if (tunnelConnection.ConnectionStatus == status)
                 {
+                    assert?.Invoke(tunnelConnection);
                     break;
                 }
 
