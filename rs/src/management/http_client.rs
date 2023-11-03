@@ -549,7 +549,7 @@ fn create_full_user_agent(user_agent: &str) -> String {
     let pkg_version = PKG_VERSION.unwrap_or("unknown");
     let os = os_info::get();
     let os_info = format!("{}: {} {}", "OS", os.os_type(), os.version());
-    let mut windows_partner_id: Option<String> = None;
+    let windows_partner_id: Option<String> = None;
     #[cfg(windows)]
     {
         use winreg::enums::*;
