@@ -519,6 +519,15 @@ namespace Microsoft.DevTunnels.Management
 
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
+            const string regKeyPath = @"Software\Policies\Microsoft\Tunnels";
+            var defaultOnError = true;
+            RegistryTools policies = new RegistryTools();
+            var keyValue = (string)policies.GetRegistryValueFromLocalMachineRoot(regKeyPath, defaultOnError);
+            if (keyValue != null)
+            {
+                request.Headers.Add("Policies", keyValue);
+            }
+
             if (body != null)
             {
                 request.Content = JsonContent.Create(body, null, JsonOptions);
