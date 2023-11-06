@@ -1,4 +1,4 @@
-// <copyright file="TunnelExtensions.cs" company="Microsoft">
+// <copyright file="RegistryTools.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 // </copyright>
@@ -55,9 +55,12 @@ namespace Microsoft.DevTunnels.Management
                                 foreach (string valueName in subKey.GetValueNames())
                                 {
                                     object? value = subKey.GetValue(valueName);
-                                    string headerValue = value != null ? value.ToString()! : "Not Set";
+                                    if (value != null)
+                                    {
+                                        string headerValue = value.ToString()!;
 
-                                    headerBuilder.AppendFormat("{0}={1}; ", Uri.EscapeDataString(valueName), Uri.EscapeDataString(headerValue!));
+                                        headerBuilder.AppendFormat("{0}={1}; ", Uri.EscapeDataString(valueName), Uri.EscapeDataString(headerValue!));
+                                    }
                                 }
                             }
                         }
