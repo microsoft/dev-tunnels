@@ -4,79 +4,95 @@
 // </copyright>
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.Win32;
 
 namespace Microsoft.DevTunnels.Management
 {
-    internal class RegistryTools
+    /// <summary>
+    /// Provides methods to get and format policy settings from the Windows Registry.
+    /// </summary>
+    public class PolicyProvider
     {
+        private readonly string regKeyPath;
+
         /// <summary>
-        /// Get registry key value from the HKLM root Registry.
+        /// Initializes a new instance of the <see cref="PolicyProvider"/> class.
         /// </summary>
-        /// <param name="regKeyPath"></param>
-        /// <param name="defaultOnError"></param>
-        /// <returns></returns>
-        public object GetRegistryValueFromLocalMachineRoot(string regKeyPath, object? defaultOnError = null)
+        /// <param name="regKeyPath">The registry path where the policy settings are stored on the local machine</param>
+        public PolicyProvider(string regKeyPath)
         {
-            object regValue = "";
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                RegistryKey rootKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
-                regValue = this.GetRegistryValue(rootKey, regKeyPath, defaultOnError);
-            }
-            return regValue;
+            this.regKeyPath = regKeyPath ?? throw new ArgumentException(nameof(regKeyPath));
         }
 
         /// <summary>
-        /// Get registry key settings int value.
+        /// Get formatted registry values as a header string from the Local Machine Hive. 
         /// </summary>
-        /// <param name="rootKey">Root key entry</param>
-        /// <param name="regKeyPath">Path to Key</param>
-        /// <param name="defaultOnError"></param>
-        /// <returns></returns>
-        private object GetRegistryValue(RegistryKey rootKey, string regKeyPath, object? defaultOnError = null)
+        /// <param name="defaultOnError">default value to return on error</param>
+        /// <returns>A string formatted for use in an Http header, or a 'null' as a default value.</returns>
+        public string? GetHeaderValue(string? defaultOnError = null)
         {
-            StringBuilder headerBuilder = new StringBuilder();
-
+            
+            string regValue = string.Empty;
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return defaultOnError;
+            }
             try
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    if (rootKey != null)
-                    {
-                        using (RegistryKey? subKey = rootKey.OpenSubKey(regKeyPath, RegistryKeyPermissionCheck.ReadSubTree, System.Security.AccessControl.RegistryRights.QueryValues))
-                        {
-                            if (subKey != null)
-                            {
-                                foreach (string valueName in subKey.GetValueNames())
-                                {
-                                    object? value = subKey.GetValue(valueName);
-                                    if (value != null)
-                                    {
-                                        string headerValue = value.ToString()!;
+                using var rootKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
+                regValue = this.CreateHeaderString(rootKey, regKeyPath);
 
-                                        headerBuilder.AppendFormat("{0}={1}; ", Uri.EscapeDataString(valueName), Uri.EscapeDataString(headerValue!));
-                                    }
-                                }
-                            }
-                        }
-
-                        if (headerBuilder.Length > 0)
-                        {
-                            headerBuilder.Length -= 2;
-                        }
-                    }
-                }
             }
             catch
             {
+                return defaultOnError;
             }
+           
+            return regValue.Length > 1024 ? regValue.Substring(0, 1024) : regValue;
+        }
+
+        /// <summary>
+        /// Format registry key values into a semicolon-delimited string.  
+        /// </summary>
+        /// <param name="rootKey">Root key entry</param>
+        /// <param name="regKeyPath">Path to Key</param>
+        /// <returns>A semicolon-delimited string of key-value pairs.</returns>
+        private string CreateHeaderString(RegistryKey rootKey, string regKeyPath)
+        {
+            var headerBuilder = new StringBuilder();
+
+
+#pragma warning disable CA1416 // This code will only run on Windows
+            using var subKey = rootKey.OpenSubKey(regKeyPath, RegistryKeyPermissionCheck.ReadSubTree, System.Security.AccessControl.RegistryRights.QueryValues);
+
+            if (subKey != null)
+            {
+                foreach (string valueName in subKey.GetValueNames())
+                {
+                    var value = subKey.GetValue(valueName);
+                    if (value != null)
+                    {
+                        string headerValue = value.ToString()!;
+
+                        headerBuilder.AppendFormat("{0}={1}; ", Uri.EscapeDataString(valueName), Uri.EscapeDataString(headerValue!));
+                    }
+                }
+                if (headerBuilder.Length > 0)
+                {
+                    headerBuilder.Length -= 2; // Remove trailing semicolon and space
+                }
+            }
+#pragma warning restore CA1416
 
             return headerBuilder.ToString();
-        }
+        } 
+
     }
 }

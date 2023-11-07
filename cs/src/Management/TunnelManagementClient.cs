@@ -519,13 +519,13 @@ namespace Microsoft.DevTunnels.Management
 
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
-            const string regKeyPath = @"Software\Policies\Microsoft\Tunnels";
-            var defaultOnError = true;
-            RegistryTools policies = new RegistryTools();
-            var keyValue = (string)policies.GetRegistryValueFromLocalMachineRoot(regKeyPath, defaultOnError);
-            if (keyValue != null)
+            // Add Group Policies
+            const string policyRegKeyPath = @"Software\Policies\Microsoft\Tunnels";
+            var policyProvider = new PolicyProvider(policyRegKeyPath);
+            var policyHeaderValue = policyProvider.GetHeaderValue();
+            if (!string.IsNullOrEmpty(policyHeaderValue))
             {
-                request.Headers.Add("Policies", keyValue);
+                request.Headers.Add("Policies", policyHeaderValue);
             }
 
             if (body != null)
