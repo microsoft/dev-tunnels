@@ -76,11 +76,10 @@ namespace Microsoft.DevTunnels.Management
             {
                 foreach (string valueName in subKey.GetValueNames())
                 {
-                    var value = subKey.GetValue(valueName);
-                    if (value != null)
+                    var value = subKey.GetValue(valueName, "");
+                    if (value != null && !string.IsNullOrEmpty(value.ToString()))
                     {
                         string headerValue = value.ToString()!;
-
                         headerBuilder.AppendFormat("{0}={1}; ", Uri.EscapeDataString(valueName), Uri.EscapeDataString(headerValue!));
                     }
                 }
