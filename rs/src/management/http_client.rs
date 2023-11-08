@@ -7,6 +7,8 @@ use reqwest::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, Method, Request,
 };
+
+use crate::policy_provider::PolicyProvider;
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
@@ -28,6 +30,7 @@ pub struct TunnelManagementClient {
     client: Client,
     authorization: Arc<Box<dyn AuthorizationProvider>>,
     pub(crate) user_agent: HeaderValue,
+    pub(crate) policy_provider: PolicyProvider,
     environment: TunnelServiceProperties,
     api_version: String,
 }
@@ -48,6 +51,7 @@ impl TunnelManagementClient {
             authorization: self.authorization.clone(),
             client: Some(self.client.clone()),
             user_agent: self.user_agent.clone(),
+            policy_provider: PolicyProvider::new(),
             environment: self.environment.clone(),
             api_version: self.api_version.clone(),
         }
@@ -456,6 +460,12 @@ impl TunnelManagementClient {
         let headers = request.headers_mut();
         headers.insert("User-Agent", self.user_agent.clone());
 
+        // Add Windows group policies to the header
+        let policy_header_value = self.policy_provider.get_header_value("").await?;
+        if !policy_header_value.is_empty() {
+            headers.insert("Policies", HeaderValue::from_str(&policy_header_value)?);
+        }
+
         if let Some(a) = self.authorization.get_authorization().await?.as_header() {
             headers.insert(AUTHORIZATION, HeaderValue::from_str(&a).unwrap());
         }
@@ -525,6 +535,7 @@ pub struct TunnelClientBuilder {
     authorization: Arc<Box<dyn AuthorizationProvider>>,
     client: Option<Client>,
     user_agent: HeaderValue,
+    policy_provider: PolicyProvider,
     environment: TunnelServiceProperties,
     api_version: String,
 }
