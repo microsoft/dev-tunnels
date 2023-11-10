@@ -19,6 +19,8 @@ use crate::contracts::{
     TunnelServiceProperties,
 };
 
+use crate::policy_provider::get_policy_header_value;
+
 use super::{
     Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError, TunnelLocator,
     TunnelRequestOptions, NO_REQUEST_OPTIONS,
