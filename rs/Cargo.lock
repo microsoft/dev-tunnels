@@ -1762,6 +1762,7 @@ dependencies = [
  "tokio-util",
  "tungstenite",
  "url",
+ "urlencoding",
  "uuid",
  "winreg 0.8.0",
 ]

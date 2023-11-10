@@ -19,12 +19,12 @@ use crate::contracts::{
     TunnelServiceProperties,
 };
 
-use crate::policy_provider::get_policy_header_value;
-
 use super::{
     Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError, TunnelLocator,
     TunnelRequestOptions, NO_REQUEST_OPTIONS,
 };
+
+use crate::management::policy_provider::get_policy_header_value;
 
 #[derive(Clone)]
 pub struct TunnelManagementClient {
@@ -460,7 +460,7 @@ impl TunnelManagementClient {
         headers.insert("User-Agent", self.user_agent.clone());
 
         // Add Windows group policies to the header
-        match get_policy_header_value() {
+        match get_policy_header_value("None") {
             Ok(Some(policy_header_value)) => {
                 let header_value = HeaderValue::from_maybe_shared(policy_header_value)
                     .expect("Invalid header value");
