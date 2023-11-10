@@ -8,7 +8,6 @@ use reqwest::{
     Client, Method, Request,
 };
 
-use crate::policy_provider::PolicyProvider;
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
@@ -30,7 +29,6 @@ pub struct TunnelManagementClient {
     client: Client,
     authorization: Arc<Box<dyn AuthorizationProvider>>,
     pub(crate) user_agent: HeaderValue,
-    pub(crate) policy_provider: PolicyProvider,
     environment: TunnelServiceProperties,
     api_version: String,
 }
@@ -51,7 +49,6 @@ impl TunnelManagementClient {
             authorization: self.authorization.clone(),
             client: Some(self.client.clone()),
             user_agent: self.user_agent.clone(),
-            policy_provider: PolicyProvider::new(),
             environment: self.environment.clone(),
             api_version: self.api_version.clone(),
         }
@@ -461,9 +458,22 @@ impl TunnelManagementClient {
         headers.insert("User-Agent", self.user_agent.clone());
 
         // Add Windows group policies to the header
-        let policy_header_value = self.policy_provider.get_header_value("").await?;
-        if !policy_header_value.is_empty() {
-            headers.insert("Policies", HeaderValue::from_str(&policy_header_value)?);
+        match get_policy_header_value() {
+            Ok(Some(policy_header_value)) => {
+                let header_value = HeaderValue::from_maybe_shared(policy_header_value)
+                    .expect("Invalid header value");
+                headers.insert("User-Agent-Policies", header_value);
+            }, 
+            Ok(None) => {
+                // No policies to add
+            }, 
+            Err(e) => {
+                log::error!("Failed to get policy header value: {}", e);
+            }
+        }
+
+        if let Some(h) = policy_header_value {
+            headers.insert("User-Agent-Policies", HeaderValue::from_str(&h)?);
         }
 
         if let Some(a) = self.authorization.get_authorization().await?.as_header() {
@@ -535,7 +545,6 @@ pub struct TunnelClientBuilder {
     authorization: Arc<Box<dyn AuthorizationProvider>>,
     client: Option<Client>,
     user_agent: HeaderValue,
-    policy_provider: PolicyProvider,
     environment: TunnelServiceProperties,
     api_version: String,
 }
