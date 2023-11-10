@@ -472,10 +472,6 @@ impl TunnelManagementClient {
             }
         }
 
-        if let Some(h) = policy_header_value {
-            headers.insert("User-Agent-Policies", HeaderValue::from_str(&h)?);
-        }
-
         if let Some(a) = self.authorization.get_authorization().await?.as_header() {
             headers.insert(AUTHORIZATION, HeaderValue::from_str(&a).unwrap());
         }
