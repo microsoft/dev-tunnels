@@ -460,15 +460,17 @@ impl TunnelManagementClient {
         headers.insert("User-Agent", self.user_agent.clone());
 
         // Add Windows group policies to the header
-        match get_policy_header_value("None") {
+        match get_policy_header_value() {
             Ok(Some(policy_header_value)) => {
-                let header_value = HeaderValue::from_maybe_shared(policy_header_value)
-                    .expect("Invalid header value");
-                headers.insert("User-Agent-Policies", header_value);
-            }, 
+                if let Ok(header_value) = HeaderValue::from_maybe_shared(policy_header_value) {
+                    headers.insert("User-Agent-Policies", header_value);
+                } else {
+                    log::error!("Invalid header value");
+                }
+            }
             Ok(None) => {
                 // No policies to add
-            }, 
+            }
             Err(e) => {
                 log::error!("Failed to get policy header value: {}", e);
             }
