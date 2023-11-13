@@ -519,6 +519,15 @@ namespace Microsoft.DevTunnels.Management
 
             request.Headers.UserAgent.Add(TunnelSdkUserAgent);
 
+            // Add Group Policies
+            const string policyRegKeyPath = @"Software\Policies\Microsoft\DevTunnels";
+            var policyProvider = new PolicyProvider(policyRegKeyPath);
+            var policyHeaderValue = policyProvider.GetHeaderValue();
+            if (!string.IsNullOrEmpty(policyHeaderValue))
+            {
+                request.Headers.Add("User-Agent-Policies", policyHeaderValue);
+            }
+
             if (body != null)
             {
                 request.Content = JsonContent.Create(body, null, JsonOptions);
