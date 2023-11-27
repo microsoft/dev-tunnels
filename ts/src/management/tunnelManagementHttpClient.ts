@@ -974,7 +974,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         allowNotFound?: boolean,
     ): Promise<NullableIfNotBoolean<TResult>> {
         this.trace(`${method} ${uri}`);
-        this.traceHeaders(config.headers);
+        if (config.headers) {
+            this.traceHeaders(config.headers);
+        }
         this.traceContent(data);
 
         const traceResponse = (response: AxiosResponse) => {
@@ -1009,8 +1011,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             // Axios errors have too much redundant detail! Delete some of it.
             delete requestError.request;
             if (requestError.response) {
-                delete requestError.config.httpAgent;
-                delete requestError.config.httpsAgent;
+                delete requestError.config?.httpAgent;
+                delete requestError.config?.httpsAgent;
                 delete requestError.response.request;
             }
 
