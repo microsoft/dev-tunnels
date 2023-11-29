@@ -291,6 +291,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
             this.convertTunnelForRequest(tunnel),
+            undefined,
+            true,
         ))!;
         preserveAccessTokens(tunnel, result2);
         parseTunnelDates(result2);
