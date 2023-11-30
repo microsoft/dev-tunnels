@@ -65,6 +65,9 @@ public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
     protected override string TunnelAccessScope => TunnelAccessScopes.Connect;
 
     /// <inheritdoc />
+    public event EventHandler<PortForwardingEventArgs>? PortForwarding;
+
+    /// <inheritdoc />
     public event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
 
     /// <summary>
@@ -500,10 +503,24 @@ public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
 
     private void OnRequest(object? sender, SshRequestEventArgs<SessionRequestMessage> e)
     {
-        if (e.Request.RequestType == "tcpip-forward" ||
-            e.Request.RequestType == "cancel-tcpip-forward")
+        if (e.Request.RequestType == "tcpip-forward")
         {
-            // SshPortForwardingService.AcceptLocalConnectionsForForwardedPorts may be set to disable listening on local TCP ports
+            EventHandler<PortForwardingEventArgs>? handler = PortForwarding;
+            if (handler != null)
+            {
+                // The event-handler has a chance to cancel forwarding of this port.
+                var request = (PortForwardRequestMessage)e.Request;
+                var args = new PortForwardingEventArgs((int)request.Port);
+                handler(this, args);
+                e.IsAuthorized = !args.Cancel;
+            }
+            else
+            {
+                e.IsAuthorized = true;
+            }
+        }
+        else if (e.Request.RequestType == "cancel-tcpip-forward")
+        {
             e.IsAuthorized = true;
         }
     }

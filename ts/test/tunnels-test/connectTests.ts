@@ -13,6 +13,8 @@ import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { TunnelClient, TunnelConnectionBase, TunnelHost } from '@microsoft/dev-tunnels-connections';
 import { CancellationToken, SshStream } from '@microsoft/dev-tunnels-ssh';
 import { TunnelConnectionOptions } from 'src/connections/tunnelConnectionOptions';
+import { Event } from 'vscode-jsonrpc';
+import { PortForwardingEventArgs } from 'src/connections/portForwardingEventArgs';
 
 @suite
 @slow(3000)
@@ -93,6 +95,9 @@ class MockTunnelClient extends TunnelConnectionBase implements TunnelClient {
     public onConnected?: Function;
     public onForwarding?: Function;
 
+    public get portForwarding() : Event<PortForwardingEventArgs> {
+        throw new Error('Method not implemented.');
+    }
     connectToForwardedPort(
         fowardedPort: number,
         cancellation?: CancellationToken,
