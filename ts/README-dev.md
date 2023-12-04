@@ -25,4 +25,4 @@ To run/debug an individual test case or subset of test cases matching a
 substring, use a command similar to the following:
 
 ## Making Changes
-If you update this SDK, please up the package.json file in conenctions and management to require a dependeny that is > the current published version. This will fix issues where yarn will pull the old version of packages and will cause mismatched dependencies. 
+If you update this SDK, please up the package.json file in conenctions and management to require a dependeny that is > the current published version. This will fix issues where yarn will pull the old version of packages and will cause mismatched dependencies. See [example PR](https://github.com/microsoft/dev-tunnels/pull/358)
