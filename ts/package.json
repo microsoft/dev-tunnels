@@ -109,5 +109,6 @@
 		"trailingComma": "all",
 		"arrowParens": "always",
 		"parser": "typescript"
-	}
+	},
+	"version": "1.0.7500"
 }
