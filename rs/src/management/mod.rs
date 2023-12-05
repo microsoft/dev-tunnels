@@ -1,6 +1,7 @@
 mod authorization;
 mod errors;
 mod http_client;
+mod policy_provider;
 mod tunnel_locator;
 mod tunnel_request_options;
 

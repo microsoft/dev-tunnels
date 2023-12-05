@@ -7,6 +7,7 @@ use reqwest::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, Method, Request,
 };
+
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
@@ -22,6 +23,8 @@ use super::{
     Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError, TunnelLocator,
     TunnelRequestOptions, NO_REQUEST_OPTIONS,
 };
+
+use crate::management::policy_provider::get_policy_header_value;
 
 #[derive(Clone)]
 pub struct TunnelManagementClient {
@@ -455,6 +458,23 @@ impl TunnelManagementClient {
         let mut request = Request::new(method, url);
         let headers = request.headers_mut();
         headers.insert("User-Agent", self.user_agent.clone());
+
+        // Add Windows group policies to the header
+        match get_policy_header_value() {
+            Ok(Some(policy_header_value)) => {
+                if let Ok(header_value) = HeaderValue::from_maybe_shared(policy_header_value) {
+                    headers.insert("User-Agent-Policies", header_value);
+                } else {
+                    log::error!("Invalid header value");
+                }
+            }
+            Ok(None) => {
+                // No policies to add
+            }
+            Err(e) => {
+                log::error!("Failed to get policy header value: {}", e);
+            }
+        }
 
         if let Some(a) = self.authorization.get_authorization().await?.as_header() {
             headers.insert(AUTHORIZATION, HeaderValue::from_str(&a).unwrap());
