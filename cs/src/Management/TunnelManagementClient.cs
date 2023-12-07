@@ -380,7 +380,7 @@ namespace Microsoft.DevTunnels.Management
             var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
             return await SendRequestAsync<TRequest, TResult>(
-                    method, uri, options, authHeader, body, cancellation);
+                method, uri, options, authHeader, body, cancellation);
         }
 
         /// <summary>
@@ -418,12 +418,12 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             return SendRequestAsync<object, TResult>(
-                 method,
-                 clusterId,
-                 path, query,
-                 options,
-                 body: null,
-                 cancellation);
+                method,
+                clusterId,
+                path, query,
+                options,
+                body: null,
+                cancellation);
         }
 
         /// <summary>
@@ -469,7 +469,7 @@ namespace Microsoft.DevTunnels.Management
             var authHeader = await GetAuthenticationHeaderAsync(
                 tunnel: tunnel, accessTokenScopes: null, options);
             return await SendRequestAsync<TRequest, TResult>(
-                method, uri, options, authHeader, body, cancellation);
+            method, uri, options, authHeader, body, cancellation);
         }
 
         /// <summary>
@@ -681,13 +681,6 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.Unauthorized:
                     case HttpStatusCode.Forbidden:
-                        // Enterprise Policies 
-                        if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
-                        {
-                            var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
-                            errorMessage = message;
-                        }
-
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
 
                         // The HttpResponseHeaders.WwwAuthenticate property does not correctly
