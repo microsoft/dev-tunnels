@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Authentication;
 #if NET5_0_OR_GREATER
 using System.Net.Http.Json;
 #endif
@@ -378,8 +379,20 @@ namespace Microsoft.DevTunnels.Management
         {
             var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
-            return await SendRequestAsync<TRequest, TResult>(
-                method, uri, options, authHeader, body, cancellation);
+            try
+            {
+                return await SendRequestAsync<TRequest, TResult>(
+                    method, uri, options, authHeader, body, cancellation);
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
+            {
+                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
+                        $" of an invalid TLS certificate. Check your firewall settings. ", auex);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -416,13 +429,25 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            return SendRequestAsync<object, TResult>(
-                method,
-                clusterId,
-                path, query,
-                options,
-                body: null,
-                cancellation);
+            try
+            {
+                return SendRequestAsync<object, TResult>(
+                 method,
+                 clusterId,
+                 path, query,
+                 options,
+                 body: null,
+                 cancellation);
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
+            {
+                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
+                        $"of an invalid TLS certificate. Check your firewall settings. ", auex);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -467,8 +492,20 @@ namespace Microsoft.DevTunnels.Management
             Tunnel? tunnel = null;
             var authHeader = await GetAuthenticationHeaderAsync(
                 tunnel: tunnel, accessTokenScopes: null, options);
-            return await SendRequestAsync<TRequest, TResult>(
+            try
+            {
+                return await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
+            {
+                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
+                        $"of an invalid TLS certificate. Check your firewall settings. ", auex);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -540,12 +577,20 @@ namespace Microsoft.DevTunnels.Management
 
             options?.SetRequestOptions(request);
 
-            var response = await this.httpClient.SendAsync(request, cancellation);
-            var result = await ConvertResponseAsync<TResult>(
+            try
+            {
+                var response = await this.httpClient.SendAsync(request, cancellation);
+                var result = await ConvertResponseAsync<TResult>(
                 method,
                 response,
                 cancellation);
-            return result;
+                return result;
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
+            {
+                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
+                        $"of an invalid TLS certificate. Check your firewall settings. ", auex);
+            }
         }
 
         /// <summary>
