@@ -11,6 +11,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Authentication;
+
 #if NET5_0_OR_GREATER
 using System.Net.Http.Json;
 #endif
@@ -540,12 +542,20 @@ namespace Microsoft.DevTunnels.Management
 
             options?.SetRequestOptions(request);
 
-            var response = await this.httpClient.SendAsync(request, cancellation);
-            var result = await ConvertResponseAsync<TResult>(
+            try
+            {
+                var response = await this.httpClient.SendAsync(request, cancellation);
+                var result = await ConvertResponseAsync<TResult>(
                 method,
                 response,
                 cancellation);
-            return result;
+                return result;
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
+            {
+                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
+                        $"of an invalid TLS certificate. Check your firewall settings. ", auex);
+            }
         }
 
         /// <summary>
