@@ -389,10 +389,6 @@ namespace Microsoft.DevTunnels.Management
                 throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
                         $" of an invalid TLS certificate. Check your firewall settings. ", auex);
             }
-            catch (Exception)
-            {
-                throw;
-            }
         }
 
         /// <summary>
@@ -443,10 +439,6 @@ namespace Microsoft.DevTunnels.Management
             {
                 throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
                         $"of an invalid TLS certificate. Check your firewall settings. ", auex);
-            }
-            catch (Exception)
-            {
-                throw;
             }
         }
 
@@ -501,10 +493,6 @@ namespace Microsoft.DevTunnels.Management
             {
                 throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
                         $"of an invalid TLS certificate. Check your firewall settings. ", auex);
-            }
-            catch (Exception)
-            {
-                throw;
             }
         }
 
@@ -717,6 +705,13 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.Unauthorized:
                     case HttpStatusCode.Forbidden:
+                        // Enterprise Policies 
+                        if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
+                        {
+                            var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
+                            errorMessage = message;
+                        }
+
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
 
                         // The HttpResponseHeaders.WwwAuthenticate property does not correctly
