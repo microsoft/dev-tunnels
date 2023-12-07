@@ -417,21 +417,13 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            try
-            {
-                return SendRequestAsync<object, TResult>(
+            return SendRequestAsync<object, TResult>(
                  method,
                  clusterId,
                  path, query,
                  options,
                  body: null,
                  cancellation);
-            }
-            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
-            {
-                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
-                        $"of an invalid TLS certificate. Check your firewall settings. ", auex);
-            }
         }
 
         /// <summary>
