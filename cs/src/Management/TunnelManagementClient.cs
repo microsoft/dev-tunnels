@@ -379,16 +379,8 @@ namespace Microsoft.DevTunnels.Management
         {
             var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
-            try
-            {
-                return await SendRequestAsync<TRequest, TResult>(
+            return await SendRequestAsync<TRequest, TResult>(
                     method, uri, options, authHeader, body, cancellation);
-            }
-            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
-            {
-                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
-                        $" of an invalid TLS certificate. Check your firewall settings. ", auex);
-            }
         }
 
         /// <summary>
@@ -484,16 +476,8 @@ namespace Microsoft.DevTunnels.Management
             Tunnel? tunnel = null;
             var authHeader = await GetAuthenticationHeaderAsync(
                 tunnel: tunnel, accessTokenScopes: null, options);
-            try
-            {
-                return await SendRequestAsync<TRequest, TResult>(
+            return await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
-            }
-            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
-            {
-                throw new HttpRequestException($"Your connection is getting intercepted due to the use" +
-                        $"of an invalid TLS certificate. Check your firewall settings. ", auex);
-            }
         }
 
         /// <summary>
