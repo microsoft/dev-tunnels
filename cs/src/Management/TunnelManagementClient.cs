@@ -672,6 +672,13 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.Unauthorized:
                     case HttpStatusCode.Forbidden:
+                        // Enterprise Policies 
+                        if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
+                        {
+                            var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
+                            errorMessage = message;
+                        }
+
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
 
                         // The HttpResponseHeaders.WwwAuthenticate property does not correctly
