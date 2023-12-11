@@ -20,7 +20,6 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/microsoft/dev-tunnels</RepositoryUrl>
     <PackageProjectUrl>https://github.com/microsoft/dev-tunnels</PackageProjectUrl>
-    <Versions>1.0.7500</Versions>
   </PropertyGroup>
 
   <!-- Product Properties -->
