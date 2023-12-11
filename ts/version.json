@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "version": "1.1",
+  "versionHeightOffset": 100,
+  "pathFilters": ["cs", "ts", "./"],
+
+  "publicReleaseRefSpec": [
+    "^refs/heads/main$", // we release out of main
+    "^refs/heads/v\\d+(?:.\\d+)?$", // we also release out of vNN branches
+    "^refs/heads/releases/.+$" // weekly release branches
+  ],
+  "cloudBuild": {
+    "setVersionVariables": true,
+    "buildNumber": {
+      "enabled": true,
+      "includeCommitId": {
+        "when": "nonPublicReleaseOnly",
+        // Tell NB.GV to create a build revision from the commit id.
+        // Using buildMetadata inserts "+commitId", and the "+" character is invalid in the docker image tag
+        "where": "fourthVersionComponent"
+      }
+    }
+  }
+}
