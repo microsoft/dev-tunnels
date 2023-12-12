@@ -26,7 +26,7 @@ import {
     Trace,
     TraceLevel,
 } from '@microsoft/dev-tunnels-ssh';
-import { ForwardedPortConnectingEventArgs, ForwardedPortEventArgs, ForwardedPortsCollection, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
+import { ForwardedPortConnectingEventArgs, ForwardedPortEventArgs, ForwardedPortsCollection, PortForwardRequestMessage, PortForwardingService } from '@microsoft/dev-tunnels-ssh-tcp';
 import { RetryTcpListenerFactory } from './retryTcpListenerFactory';
 import { isNode, SshHelpers } from './sshHelpers';
 import { TunnelClient } from './tunnelClient';
@@ -36,6 +36,7 @@ import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
+import { PortForwardingEventArgs } from './portForwardingEventArgs';
 
 export const webSocketSubProtocol = 'tunnel-relay-client';
 export const webSocketSubProtocolv2 = 'tunnel-relay-client-v2-dev';
@@ -59,6 +60,7 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
         super(TunnelAccessScopes.Connect, connectionProtocols, trace, managementClient);
     }
 
+    private readonly portForwardingEmitter = new Emitter<PortForwardingEventArgs>();
     private readonly sshSessionClosedEmitter = new Emitter<this>();
     private acceptLocalConnectionsForForwardedPortsValue: boolean = isNode();
     private localForwardingHostAddressValue: string = '127.0.0.1';
@@ -81,6 +83,16 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
     protected get isSshSessionActive(): boolean {
         return !!this.sshSession?.isConnected;
     }
+
+    /**
+     * Event raised when a port is about to be forwarded to the client.
+     *
+     * The application may cancel this event to prevent specific port(s) from being
+     * forwarded to the client. Cancelling prevents the tunnel client from listening on
+     * a local socket for the port, AND prevents use of {@link connectToForwardedPort}
+     * to open a direct stream connection to the port.
+     */
+    public readonly portForwarding = this.portForwardingEmitter.event;
 
     /**
      * Extensibility point and unit test hook.
@@ -204,10 +216,13 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
     }
 
     private onRequest(e: SshRequestEventArgs<SessionRequestMessage>) {
-        if (
-            e.request.requestType === PortForwardingService.portForwardRequestType ||
-            e.request.requestType === PortForwardingService.cancelPortForwardRequestType
-        ) {
+        if (e.request.requestType === PortForwardingService.portForwardRequestType) {
+            // The event-handler has a chance to cancel forwarding of this port.
+            const request = <PortForwardRequestMessage>e.request;
+            const args = new PortForwardingEventArgs(request.port);
+            this.portForwardingEmitter.fire(args);
+            e.isAuthorized = !args.cancel;
+        } else if (e.request.requestType === PortForwardingService.cancelPortForwardRequestType) {
             e.isAuthorized = true;
         }
     }
