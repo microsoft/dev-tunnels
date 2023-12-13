@@ -38,6 +38,7 @@ import {
     SecureStream,
     SshProtocolExtensionNames,
     SshConnectionError,
+    ReportProgress,
 } from '@microsoft/dev-tunnels-ssh';
 import {
     ForwardedPortConnectingEventArgs,
@@ -123,8 +124,8 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
      */
     private endpointSignature?: string;
 
-    public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
-        super(TunnelAccessScopes.Host, connectionProtocols, trace, managementClient);
+    public constructor(managementClient: TunnelManagementClient, trace?: Trace, reportProgress?: ReportProgress) {
+        super(TunnelAccessScopes.Host, connectionProtocols, trace, managementClient, reportProgress);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
@@ -237,6 +238,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         session.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
 
         session.trace = this.trace;
+        session.reportProgress = this.reportProgress;
         this.sshSession = session;
         await session.connect(stream, cancellation);
 
@@ -462,6 +464,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             config.addService(PortForwardingService);
         });
         session.trace = this.trace;
+        session.reportProgress = this.reportProgress;
         session.credentials = {
             publicKeys: [this.hostPrivateKey!],
         };
