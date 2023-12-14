@@ -11,7 +11,6 @@ import {
 } from '@microsoft/dev-tunnels-contracts';
 import {
     CancellationToken,
-    Progress,
     SecureStream,
     SessionRequestMessage,
     SshAlgorithms,
@@ -249,7 +248,7 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
                 }
             });
             this.sshSession.trace = this.trace;
-            this.sshSession.reportProgress = this.reportProgress;
+            this.sshSession.onReportProgress(this.raiseReportProgress, this, this.sshSessionDisposables);
             this.sshSession.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
             this.sshSession.onAuthenticating(this.onSshServerAuthenticating, this, this.sshSessionDisposables);
             this.sshSession.onDisconnected(this.onSshSessionDisconnected, this, this.sshSessionDisposables);
@@ -400,7 +399,6 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
     private async onHostAuthenticating(e: SshAuthenticatingEventArgs): Promise<object | null> {
         if (e.authenticationType !== SshAuthenticationType.serverPublicKey || !e.publicKey) {
             this.traceWarning('Invalid host authenticating event.');
-            this.reportProgress(Progress.HostIdentityVerificationInvalid);
             return null;
         }
 
@@ -415,13 +413,11 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
             this.traceWarning('Host identity could not be verified because ' +
                 'no public keys were provided.');
             this.traceVerbose(`Host key: ${hostKey}`);
-            this.reportProgress(Progress.HostIdentityCouldNotBeVerified);
             return {};
         } 
 
         if (this.hostPublicKeys.includes(hostKey)) {
             this.traceVerbose(`Verified host identity with public key ${hostKey}`);
-            this.reportProgress(Progress.HostIdentityVerified);
             return {};
         } 
         
@@ -430,14 +426,11 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
         if (!this.disposeToken.isCancellationRequested &&
             await this.refreshTunnel(false, this.disposeToken) &&
             this.hostPublicKeys.includes(hostKey)) {
-
             this.traceVerbose('Verified host identity with public key ' + hostKey);
-            this.reportProgress(Progress.HostIdentityVerified);
             return {};
         }
 
         this.traceError('Host public key verification failed.');
-        this.reportProgress(Progress.HostIdentityVerificationFailed);
         this.traceVerbose(`Host key: ${hostKey}`);
         this.traceVerbose(`Expected key(s): ${this.hostPublicKeys.join(', ')}`);
         return null;

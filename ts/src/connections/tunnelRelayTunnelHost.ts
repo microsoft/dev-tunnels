@@ -5,8 +5,8 @@ import {
     TunnelConnectionMode,
     TunnelProtocol,
     TunnelRelayTunnelEndpoint,
-    TunnelPort, 
-    Tunnel, 
+    TunnelPort,
+    Tunnel,
     TunnelAccessScopes,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
@@ -38,7 +38,6 @@ import {
     SecureStream,
     SshProtocolExtensionNames,
     SshConnectionError,
-    ReportProgress,
 } from '@microsoft/dev-tunnels-ssh';
 import {
     ForwardedPortConnectingEventArgs,
@@ -124,8 +123,8 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
      */
     private endpointSignature?: string;
 
-    public constructor(managementClient: TunnelManagementClient, trace?: Trace, reportProgress?: ReportProgress) {
-        super(TunnelAccessScopes.Host, connectionProtocols, trace, managementClient, reportProgress);
+    public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
+        super(TunnelAccessScopes.Host, connectionProtocols, trace, managementClient);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();
@@ -238,7 +237,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         session.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
 
         session.trace = this.trace;
-        session.reportProgress = this.reportProgress;
+        session.onReportProgress(this.raiseReportProgress, this, this.sshSessionDisposables);
         this.sshSession = session;
         await session.connect(stream, cancellation);
 
@@ -464,7 +463,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             config.addService(PortForwardingService);
         });
         session.trace = this.trace;
-        session.reportProgress = this.reportProgress;
+        session.onReportProgress(this.raiseReportProgress, this, this.sshSessionDisposables);
         session.credentials = {
             publicKeys: [this.hostPrivateKey!],
         };
