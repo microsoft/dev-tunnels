@@ -248,7 +248,10 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
                 }
             });
             this.sshSession.trace = this.trace;
-            this.sshSession.onReportProgress(this.raiseReportProgress, this, this.sshSessionDisposables);
+            this.sshSession.onReportProgress(
+                (args) => this.raiseReportProgress(args.progress, args.sessionNumber),
+                this,
+                this.sshSessionDisposables);
             this.sshSession.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
             this.sshSession.onAuthenticating(this.onSshServerAuthenticating, this, this.sshSessionDisposables);
             this.sshSession.onDisconnected(this.onSshSessionDisconnected, this, this.sshSessionDisposables);

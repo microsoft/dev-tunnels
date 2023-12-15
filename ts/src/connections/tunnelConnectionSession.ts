@@ -13,6 +13,7 @@ import {
     Progress,
     SshClientSession,
     SshDisconnectReason,
+    SshReportProgressEventArgs,
     SshSessionClosedEventArgs,
     Stream,
     Trace,
@@ -53,14 +54,14 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private readonly refreshingTunnelEmitter =
         new TrackingEmitter<RefreshingTunnelEventArgs>();
 
-    private readonly reportProgressEmitter = new Emitter<Progress>();
+    private readonly reportProgressEmitter = new Emitter<SshReportProgressEventArgs>();
 
     /**
      * Event that is raised to report connection progress.
      *
      * See `Progress` for a description of the different progress events that can be reported.
      */
-    public readonly onReportProgress: Event<Progress> = this.reportProgressEmitter.event;
+    public readonly onReportProgress: Event<SshReportProgressEventArgs> = this.reportProgressEmitter.event;
 
     public httpAgent?: http.Agent;
 
@@ -131,8 +132,9 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     public trace: Trace;
 
     /* @internal */
-    public raiseReportProgress(progress: Progress) {
-        this.reportProgressEmitter.fire(progress);
+    public raiseReportProgress(progress: Progress, sessionNumber?: number) {
+        const args = new SshReportProgressEventArgs(progress, sessionNumber);
+        this.reportProgressEmitter.fire(args);
     }
 
     /**

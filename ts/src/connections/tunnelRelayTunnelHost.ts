@@ -237,7 +237,10 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         session.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
 
         session.trace = this.trace;
-        session.onReportProgress(this.raiseReportProgress, this, this.sshSessionDisposables);
+        session.onReportProgress(
+            (args) => this.raiseReportProgress(args.progress, args.sessionNumber),
+            this,
+            this.sshSessionDisposables);
         this.sshSession = session;
         await session.connect(stream, cancellation);
 
@@ -463,7 +466,10 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             config.addService(PortForwardingService);
         });
         session.trace = this.trace;
-        session.onReportProgress(this.raiseReportProgress, this, this.sshSessionDisposables);
+        session.onReportProgress(
+            (args) => this.raiseReportProgress(args.progress, args.sessionNumber),
+            this,
+            this.sshSessionDisposables);
         session.credentials = {
             publicKeys: [this.hostPrivateKey!],
         };
