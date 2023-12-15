@@ -2,11 +2,13 @@
 // Licensed under the MIT license.
 
 import { Duplex } from 'stream';
+import { Event } from 'vscode-jsonrpc';
 import { TunnelConnectionMode, Tunnel } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TunnelConnection } from './tunnelConnection';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
+import { PortForwardingEventArgs } from './portForwardingEventArgs';
 
 /**
  * Interface for a client capable of making a connection
@@ -17,6 +19,17 @@ export interface TunnelClient extends TunnelConnection {
      * Gets the list of connection modes that this client supports.
      */
     readonly connectionModes: TunnelConnectionMode[];
+
+    /**
+     * Event raised when a port is about to be forwarded to the client.
+     *
+     * The application may cancel this event to prevent specific port(s) from being
+     * forwarded to the client. Cancelling prevents the tunnel client from listening on
+     * a local socket for the port, AND prevents use of {@link connectToForwardedPort}
+     * to open a direct stream connection to the port. This event is still fired when
+     * {@link acceptLocalConnectionsForForwardedPorts} is false.
+     */
+    readonly portForwarding: Event<PortForwardingEventArgs>;
 
     /**
      * Gets list of ports forwarded to client, this collection
