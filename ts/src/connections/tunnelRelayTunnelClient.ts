@@ -263,6 +263,10 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
                 }
             });
             this.sshSession.trace = this.trace;
+            this.sshSession.onReportProgress(
+                (args) => this.raiseReportProgress(args.progress, args.sessionNumber),
+                this,
+                this.sshSessionDisposables);
             this.sshSession.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
             this.sshSession.onAuthenticating(this.onSshServerAuthenticating, this, this.sshSessionDisposables);
             this.sshSession.onDisconnected(this.onSshSessionDisconnected, this, this.sshSessionDisposables);
@@ -440,7 +444,6 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
         if (!this.disposeToken.isCancellationRequested &&
             await this.refreshTunnel(false, this.disposeToken) &&
             this.hostPublicKeys.includes(hostKey)) {
-
             this.traceVerbose('Verified host identity with public key ' + hostKey);
             return {};
         }
