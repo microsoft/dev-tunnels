@@ -38,6 +38,9 @@ const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
 const createNameRetries = 3;
+enum ManagementApiVersions {
+    Version20230927preview = '2023-09-27-preview',
+}
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
