@@ -133,7 +133,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      */
     public constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
-        apiVersion: ManagementApiVersions,
+        apiVersion: string,
         userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,
