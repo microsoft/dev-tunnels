@@ -38,6 +38,9 @@ const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
 const createNameRetries = 3;
+export enum ManagementApiVersions {
+    Version20230927preview = '2023-09-27-preview',
+}
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
@@ -121,6 +124,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * with a client authentication callback, service URI, and HTTP handler.
      *
      * @param userAgent { name, version } object or a comment string to use as the User-Agent header.
+     * @param apiVersion ApiVersion to be used for requests, value should be one of ManagementApiVersions enum.
      * @param userTokenCallback Optional async callback for retrieving a client authentication
      * header value with access token, for AAD or GitHub user authentication. This may be omitted
      * for anonymous tunnel clients, or if tunnel access tokens will be specified via
@@ -133,7 +137,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      */
     public constructor(
         userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
-        apiVersion: string,
+        apiVersion: ManagementApiVersions,
         userTokenCallback?: () => Promise<string | null>,
         tunnelServiceUri?: string,
         public readonly httpsAgent?: https.Agent,

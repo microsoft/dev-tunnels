@@ -5,7 +5,7 @@ import * as assert from 'assert';
 import axios, { AxiosPromise, AxiosRequestConfig, Method } from 'axios';
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
-import { TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
+import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
 import { Tunnel } from '@microsoft/dev-tunnels-contracts';
 
 @suite
@@ -17,7 +17,7 @@ export class TunnelManagementTests {
 
     public constructor() {
         this.managementClient = new TunnelManagementHttpClient(
-            'test/0.0.0', "2023-09-27-preview", undefined, 'http://global.tunnels.test.api.visualstudio.com');
+            'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, 'http://global.tunnels.test.api.visualstudio.com');
         (<any>this.managementClient).request = this.mockRequest.bind(this);
     }
 
@@ -110,7 +110,7 @@ export class TunnelManagementTests {
 
         // Create a management client with a mock https agent and adapter
         const managementClient = new TunnelManagementHttpClient(
-            'test/0.0.0',"2023-09-27-preview", undefined, 'http://global.tunnels.test.api.visualstudio.com', httpsAgent, axiosAdapter);
+            'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, 'http://global.tunnels.test.api.visualstudio.com', httpsAgent, axiosAdapter);
         (<any>managementClient).request = this.mockRequest.bind(this);
 
         this.nextResponse = [];
