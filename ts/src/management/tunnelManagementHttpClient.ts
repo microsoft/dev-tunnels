@@ -124,6 +124,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * with a client authentication callback, service URI, and HTTP handler.
      *
      * @param userAgent { name, version } object or a comment string to use as the User-Agent header.
+     * @param apiVersion ApiVersion to be used for requests, value should be one of ManagementApiVersions enum.
      * @param userTokenCallback Optional async callback for retrieving a client authentication
      * header value with access token, for AAD or GitHub user authentication. This may be omitted
      * for anonymous tunnel clients, or if tunnel access tokens will be specified via
