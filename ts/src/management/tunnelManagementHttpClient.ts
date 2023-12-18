@@ -38,7 +38,7 @@ const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
 const createNameRetries = 3;
-enum ManagementApiVersions {
+export enum ManagementApiVersions {
     Version20230927preview = '2023-09-27-preview',
 }
 
