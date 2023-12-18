@@ -23,4 +23,5 @@ export { maxReconnectDelayMs } from './relayTunnelConnector';
 export * from './refreshingTunnelAccessTokenEventArgs';
 export * from './refreshingTunnelEventArgs';
 export * from './retryingTunnelConnectionEventArgs';
+export * from './portForwardingEventArgs';
 export * from './tunnelConnector';

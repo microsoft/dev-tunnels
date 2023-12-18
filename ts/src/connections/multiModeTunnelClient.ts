@@ -4,9 +4,11 @@
 import { TunnelConnectionMode, Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken, SshStream } from '@microsoft/dev-tunnels-ssh';
 import { ForwardedPortsCollection } from '@microsoft/dev-tunnels-ssh-tcp';
-import { TunnelClient } from '.';
+import { TunnelClient } from './tunnelClient'
+import { PortForwardingEventArgs } from './portForwardingEventArgs';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
+import { Event } from 'vscode-jsonrpc';
 
 /**
  * Tunnel client implementation that selects one of multiple available connection modes.
@@ -53,6 +55,10 @@ export class MultiModeTunnelClient extends TunnelConnectionBase implements Tunne
         }
 
         return new Promise<void>((resolve) => {});
+    }
+
+    public get portForwarding() : Event<PortForwardingEventArgs> {
+        throw new Error('Not supported.');
     }
 
     public connectToForwardedPort(
