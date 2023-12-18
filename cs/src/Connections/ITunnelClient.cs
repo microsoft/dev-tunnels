@@ -27,6 +27,20 @@ public interface ITunnelClient : IAsyncDisposable
     IReadOnlyCollection<TunnelConnectionMode> ConnectionModes { get; }
 
     /// <summary>
+    /// Event raised when a port is about to be forwarded to the client.
+    /// </summary>
+    /// <remarks>
+    /// The application may cancel this event to prevent specific port(s) from being
+    /// forwarded to the client. Cancelling prevents the tunnel client from listening on a
+    /// local socket for the port, AND prevents use of <see cref="ConnectToForwardedPortAsync"/>
+    /// to open a direct stream connection to the port.
+    /// 
+    /// This event is still fired when <see cref="AcceptLocalConnectionsForForwardedPorts" />
+    /// is false.
+    /// </remarks>
+    event EventHandler<PortForwardingEventArgs>? PortForwarding;
+
+    /// <summary>
     /// Gets list of ports forwarded to client, this collection
     /// contains events to notify when ports are forwarded
     /// </summary>

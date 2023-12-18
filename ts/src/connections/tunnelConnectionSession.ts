@@ -7,7 +7,18 @@ import {
     TunnelManagementClient,
     TunnelRequestOptions,
 } from '@microsoft/dev-tunnels-management';
-import { CancellationError, ObjectDisposedError, SshClientSession, SshDisconnectReason, SshSessionClosedEventArgs, Stream, Trace, TraceLevel } from '@microsoft/dev-tunnels-ssh';
+import {
+    CancellationError,
+    ObjectDisposedError,
+    Progress,
+    SshClientSession,
+    SshDisconnectReason,
+    SshReportProgressEventArgs,
+    SshSessionClosedEventArgs,
+    Stream,
+    Trace,
+    TraceLevel
+} from '@microsoft/dev-tunnels-ssh';
 import { CancellationToken, CancellationTokenSource, Disposable, Emitter, Event } from 'vscode-jsonrpc';
 import { ConnectionStatus } from './connectionStatus';
 import { RelayTunnelConnector } from './relayTunnelConnector';
@@ -42,6 +53,15 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
 
     private readonly refreshingTunnelEmitter =
         new TrackingEmitter<RefreshingTunnelEventArgs>();
+
+    private readonly reportProgressEmitter = new Emitter<SshReportProgressEventArgs>();
+
+    /**
+     * Event that is raised to report connection progress.
+     *
+     * See `Progress` for a description of the different progress events that can be reported.
+     */
+    public readonly onReportProgress: Event<SshReportProgressEventArgs> = this.reportProgressEmitter.event;
 
     public httpAgent?: http.Agent;
 
@@ -94,12 +114,12 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
 
     public constructor(
         tunnelAccessScope: string,
-        protected readonly connectionProtocols: string[],        
+        protected readonly connectionProtocols: string[],
         trace?: Trace,
         /**
          * Gets the management client used for the connection.
          */
-        protected readonly managementClient?: TunnelManagementClient,
+        protected readonly managementClient?: TunnelManagementClient
     ) {
         super(tunnelAccessScope);
         this.trace = trace ?? (() => {});
@@ -110,6 +130,12 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
      * Gets the trace source.
      */
     public trace: Trace;
+
+    /* @internal */
+    public raiseReportProgress(progress: Progress, sessionNumber?: number) {
+        const args = new SshReportProgressEventArgs(progress, sessionNumber);
+        this.reportProgressEmitter.fire(args);
+    }
 
     /**
      * Get the tunnel of this tunnel connection.
@@ -195,6 +221,12 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             );
         }
 
+        if (this.isClientConnection) {
+            this.raiseReportProgress(Progress.OpeningClientConnectionToRelay);
+        } else {
+            this.raiseReportProgress(Progress.OpeningHostConnectionToRelay);
+        }
+
         const accessToken = this.validateAccessToken();
         this.trace(TraceLevel.Info, 0, `Connecting to ${this.connectionRole} tunnel relay ${this.relayUri}`);
         this.trace(TraceLevel.Verbose, 0, `Sec-WebSocket-Protocol: ${this.connectionProtocols.join(', ')}`);
@@ -220,6 +252,11 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             TraceLevel.Verbose,
             0,
             `Connected with subprotocol '${streamAndProtocol.protocol}'`);
+        if (this.isClientConnection) {
+            this.raiseReportProgress(Progress.OpenedClientConnectionToRelay);
+        } else {
+            this.raiseReportProgress(Progress.OpenedHostConnectionToRelay);
+        }
         return streamAndProtocol;
     }
 
