@@ -1470,4 +1470,28 @@ export class TunnelHostAndClientTests {
         await result.addPortOnHostAndValidateOnClient(9985);
         return result;
     }
+
+    @test
+    async connectRelayClientAndCancelPort()
+    {
+        const tunnel = this.createRelayTunnel([2000, 3000]);
+        const relayClient = new TestTunnelRelayTunnelClient();
+        try {
+            const serverSshSession = await this.connectRelayClient({relayClient, tunnel});
+
+            relayClient.portForwarding((e) => {
+                // Cancel forwarding of port 2000. (Allow forwarding of port 3000.)
+                e.cancel = e.portNumber === 2000;
+            });
+
+            const pfs = serverSshSession.activateService(PortForwardingService);
+            let forwarder = await pfs!.forwardFromRemotePort('127.0.0.1', 2000);
+            assert(!forwarder); // Forarding of port 2000 should have been cancelled by the client.
+
+            forwarder = await pfs!.forwardFromRemotePort('127.0.0.1', 3000);
+            assert(forwarder); // Forarding of port 3000 should NOT have been cancelled by the client.
+        } finally {
+            relayClient.dispose();
+        }
+    }
 }

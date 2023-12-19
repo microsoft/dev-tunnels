@@ -1592,9 +1592,38 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(hostPublicKey, tunnel.Endpoints[0].HostPublicKeys[0]);
     }
 
+    [Fact]
+    public async Task ConnectRelayClientAndCancelPort()
+    {
+        var relayClient = new TunnelRelayTunnelClient(TestTS);
+
+        Assert.Collection(relayClient.ConnectionModes, new Action<TunnelConnectionMode>[]
+        {
+            (m) => Assert.Equal(TunnelConnectionMode.TunnelRelay, m),
+        });
+
+        var tunnel = CreateRelayTunnel(new[] { 2000, 3000 });
+        using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);
+        Assert.Null(relayClient.DisconnectException);
+
+        relayClient.PortForwarding += (_, e) =>
+        {
+            // Cancel forwarding of port 2000. (Allow forwarding of port 3000.)
+            e.Cancel = e.PortNumber == 2000;
+        };
+
+        var forwarder = await serverSshSession.ForwardFromRemotePortAsync(IPAddress.Loopback, 2000);
+        Assert.Null(forwarder); // Forarding of port 2000 should have been cancelled by the client.
+
+        forwarder = await serverSshSession.ForwardFromRemotePortAsync(IPAddress.Loopback, 3000);
+        Assert.NotNull(forwarder); // Forarding of port 3000 should NOT have been cancelled by the client.
+    }
+
     private static Task<Stream> ThrowNotAWebSocket(HttpStatusCode statusCode)
     {
-        var wse = new WebSocketException(WebSocketError.NotAWebSocket, $"The server returned status code '{statusCode:D}' when status code '101' was expected.");
+        var wse = new WebSocketException(
+            WebSocketError.NotAWebSocket,
+            $"The server returned status code '{statusCode:D}' when status code '101' was expected.");
         wse.Data["HttpStatusCode"] = statusCode;
         throw wse;
     }

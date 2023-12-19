@@ -73,7 +73,7 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// ApiVersion that will be used if one is not specified
         /// </summary>
-        public const string DefaultApiVersion = "2023-09-27-preview";
+        public const ManagementApiVersions DefaultApiVersion = ManagementApiVersions.Version20230927Preview;
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
             TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
@@ -95,7 +95,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -116,7 +116,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersion = DefaultApiVersion)
             : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -144,7 +144,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler, apiVersion)
         {
         }
@@ -167,17 +167,18 @@ namespace Microsoft.DevTunnels.Management
         /// <see cref="HttpClientHandler"/> specified (or at the end of the chain) must have
         /// automatic redirection disabled. The provided HTTP handler will not be disposed
         /// by <see cref="Dispose"/>.</param>
-        /// <param name="apiVersion"> Api version to use for tunnels requests, accepted
+        /// <param name="apiVersionEnum"> Api version to use for tunnels requests, accepted
         /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersionEnum = DefaultApiVersion)
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
+            var apiVersion = apiVersionEnum.ToVersionString();
             if (!string.IsNullOrEmpty(apiVersion) && !TunnelsApiVersions.Contains(apiVersion))
             {
                 throw new ArgumentException(
@@ -672,6 +673,13 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.Unauthorized:
                     case HttpStatusCode.Forbidden:
+                        // Enterprise Policies
+                        if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
+                        {
+                            var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
+                            errorMessage = message;
+                        }
+
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
 
                         // The HttpResponseHeaders.WwwAuthenticate property does not correctly

@@ -8,7 +8,7 @@ import {
     TunnelAccessControlEntryType,
     TunnelConnectionMode,
 } from '@microsoft/dev-tunnels-contracts';
-import { TunnelManagementHttpClient, TunnelRequestOptions } from '@microsoft/dev-tunnels-management';
+import { ManagementApiVersions, TunnelManagementHttpClient, TunnelRequestOptions } from '@microsoft/dev-tunnels-management';
 import * as yargs from 'yargs';
 import * as https from 'https';
 
@@ -43,7 +43,7 @@ async function main() {
 async function startTunnelRelayHost() {
     let tunnelManagementClient = new TunnelManagementHttpClient(
         userAgent,
-        "2023-09-27-preview",
+        ManagementApiVersions.Version20230927preview,
         () => Promise.resolve('Bearer'),
         'http://localhost:9900/', //'https://ci.dev.tunnels.vsengsaas.visualstudio.com/',
         new https.Agent({
