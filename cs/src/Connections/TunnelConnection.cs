@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Events;
 
 namespace Microsoft.DevTunnels.Connections;
 
@@ -227,6 +229,11 @@ public abstract class TunnelConnection : IAsyncDisposable
     public event EventHandler<RefreshingTunnelEventArgs>? RefreshingTunnel;
 
     /// <summary>
+    /// Event raised to report connection progress.
+    /// </summary>
+    public event EventHandler<SshReportProgressEventArgs>? ReportProgress;
+
+    /// <summary>
     /// Connection status changed event.
     /// </summary>
     /// <remarks>
@@ -398,5 +405,14 @@ public abstract class TunnelConnection : IAsyncDisposable
     internal void OnRetrying(RetryingTunnelConnectionEventArgs e)
     {
         RetryingTunnelConnection?.Invoke(this, e);
+    }
+
+    /// <summary>
+    /// Event fired when a progress connection event has been reported.
+    /// </summary>
+    internal void OnReportProgress(Progress progress, int? sessionNumber = null)
+    {
+        var args = new SshReportProgressEventArgs(progress, sessionNumber);
+        ReportProgress?.Invoke(this, args);
     }
 }
