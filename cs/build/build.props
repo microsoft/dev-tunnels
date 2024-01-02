@@ -44,11 +44,11 @@
     <MicrosoftAspNetCoreWebUtilitiesPackageVersion>1.0.3</MicrosoftAspNetCoreWebUtilitiesPackageVersion>
     <MicrosoftNETTestSdkVersion>15.8.0</MicrosoftNETTestSdkVersion>
     <MoqVersion>4.9.0</MoqVersion>
-    <NerdBankGitVersioningVersion>3.4.255</NerdBankGitVersioningVersion>
+    <NerdBankGitVersioningVersion>3.6.133</NerdBankGitVersioningVersion>
     <ReportGeneratorVersion>4.8.13</ReportGeneratorVersion>
     <SystemTextEncodingsWebPackageVersion>4.7.2</SystemTextEncodingsWebPackageVersion>
     <VisualStudioValidationVersion>15.5.31</VisualStudioValidationVersion>
-    <DevTunnelsSshPackageVersion>3.11.31</DevTunnelsSshPackageVersion>
+    <DevTunnelsSshPackageVersion>3.11.36</DevTunnelsSshPackageVersion>
     <XunitRunnerVisualStudioVersion>2.4.0</XunitRunnerVisualStudioVersion>
     <XunitVersion>2.4.0</XunitVersion>
   </PropertyGroup>

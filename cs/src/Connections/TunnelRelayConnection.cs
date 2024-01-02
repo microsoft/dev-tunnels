@@ -215,6 +215,16 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     protected virtual async Task<Stream> CreateSessionStreamAsync(CancellationToken cancellation)
     {
         Requires.NotNull(RelayUri!, nameof(RelayUri));
+
+        if (this.IsClientConnection)
+        {
+            this.OnReportProgress(Progress.OpeningClientConnectionToRelay);
+        }
+        else
+        {
+            this.OnReportProgress(Progress.OpeningHostConnectionToRelay);
+        }
+
         var protocols = Environment.GetEnvironmentVariable("DEVTUNNELS_PROTOCOL_VERSION") switch
         {
             "1" => new[] { WebSocketSubProtocol },
@@ -232,7 +242,18 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
             protocols,
             cancellation);
         Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
+
+        if (this.IsClientConnection)
+        {
+            this.OnReportProgress(Progress.OpenedClientConnectionToRelay);
+        }
+        else
+        {
+            this.OnReportProgress(Progress.OpenedHostConnectionToRelay);
+        }
+
         ConnectionProtocol = subprotocol;
+
         return stream;
     }
 
@@ -317,6 +338,7 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     {
         Requires.NotNull(session, nameof(session));
         session.Closed -= OnSshSessionClosed;
+        session.ReportProgress -= OnProgress;
     }
 
     /// <summary>
@@ -327,6 +349,7 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     {
         Requires.NotNull(session, nameof(session));
         session.Closed += OnSshSessionClosed;
+        session.ReportProgress += OnProgress;
     }
 
     /// <summary>
@@ -523,5 +546,10 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
         {
             this.reconnectTask = null;
         }
+    }
+
+    private void OnProgress(object? sender, SshReportProgressEventArgs e)
+    {
+        this.OnReportProgress(e.Progress, e.SessionNumber);
     }
 }
