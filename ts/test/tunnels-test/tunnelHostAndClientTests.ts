@@ -30,6 +30,7 @@ import {
     KeyPair,    
     NodeStream,
     ObjectDisposedError,
+    Progress,
     PromiseCompletionSource,
     SshAlgorithms,
     SshAuthenticationType,
@@ -37,6 +38,7 @@ import {
     SshClientSession,
     SshConnectionError,
     SshDisconnectReason,
+    SshReportProgressEventArgs,
     SshServerCredentials,
     SshServerSession,
     SshSessionConfiguration,
@@ -233,6 +235,28 @@ export class TunnelHostAndClientTests {
         await serverConnectPromise;
 
         return multiChannelStream;
+    }
+
+    @test
+    public async reportProgressTest() {
+        let relayClient = new TestTunnelRelayTunnelClient();
+        let progressEvents: SshReportProgressEventArgs[] = [];
+        relayClient.onReportProgress((e)=> {
+            progressEvents.push(e)
+        });
+
+        let tunnel = this.createRelayTunnel();
+        await this.connectRelayClient({relayClient, tunnel});
+
+        await relayClient.dispose();
+
+        let firstEvent = progressEvents[0];
+        assert.strictEqual(firstEvent.progress, Progress.OpeningClientConnectionToRelay);
+        assert.notStrictEqual(firstEvent.sessionNumber, null);
+
+        let lastEvent = progressEvents.pop() as SshReportProgressEventArgs;
+        assert.strictEqual(lastEvent.progress, Progress.CompletedSessionAuthentication);
+        assert.notEqual(lastEvent.sessionNumber, null);
     }
 
     @test

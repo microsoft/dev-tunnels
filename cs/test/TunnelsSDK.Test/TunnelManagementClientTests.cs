@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Events;
 using Xunit;
 
 namespace Microsoft.DevTunnels.Test;
@@ -50,6 +52,49 @@ public class TunnelManagementClientTests
         Assert.NotNull(tunnel);
         Assert.Equal(TunnelId, tunnel.TunnelId);
         Assert.Equal(ClusterId, tunnel.ClusterId);
+    }
+
+    [Fact]
+    public async Task ReportProgress()
+    {
+        var options = new TunnelRequestOptions()
+        {
+            HttpRequestOptions = new Dictionary<string, object>
+            {
+                { "foo", "bar" },
+                { "bazz", 100 },
+            }
+        };
+
+        var tunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+            ClusterId = ClusterId,
+        };
+
+       var handler = new MockHttpMessageHandler(
+          (message, ct) =>
+          {
+              var result = new HttpResponseMessage(HttpStatusCode.OK);
+              result.Content = JsonContent.Create(tunnel);
+              return Task.FromResult(result);
+          });
+
+        var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
+
+        var list = new Queue<SshReportProgressEventArgs>();
+        client.ReportProgress += (object sender, SshReportProgressEventArgs e) => {
+            list.Enqueue(e);
+        };
+
+        await client.GetTunnelPortAsync(tunnel, 9900, options, this.timeout);
+
+        Assert.Equal(Progress.StartingGetTunnelPort, list.Dequeue().Progress);
+        Assert.Equal(Progress.StartingRequestUri, list.Dequeue().Progress);
+        Assert.Equal(Progress.StartingRequestConfig, list.Dequeue().Progress);
+        Assert.Equal(Progress.StartingSendTunnelRequest, list.Dequeue().Progress);
+        Assert.Equal(Progress.CompletedSendTunnelRequest, list.Dequeue().Progress);
+        Assert.Equal(Progress.CompletedGetTunnelPort, list.Dequeue().Progress);WW
     }
 
     [Fact]

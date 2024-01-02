@@ -18,6 +18,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.DevTunnels.Contracts;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Events;
 using static Microsoft.DevTunnels.Contracts.TunnelContracts;
 
 namespace Microsoft.DevTunnels.Management
@@ -69,6 +71,11 @@ namespace Microsoft.DevTunnels.Management
         {
             "2023-09-27-preview"
         };
+
+        /// <summary>
+        /// Event raised to report tunnel management progress.
+        /// </summary>
+        public event EventHandler<SshReportProgressEventArgs>? ReportProgress;
 
         /// <summary>
         /// ApiVersion that will be used if one is not specified
@@ -377,10 +384,15 @@ namespace Microsoft.DevTunnels.Management
             bool isCreate = false)
             where TRequest : class
         {
+            this.OnReportProgress(Progress.StartingRequestUri);
             var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
+            this.OnReportProgress(Progress.StartingRequestConfig);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
-            return await SendRequestAsync<TRequest, TResult>(
+            this.OnReportProgress(Progress.StartingSendTunnelRequest);
+            var result = await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
+            this.OnReportProgress(Progress.CompletedSendTunnelRequest);
+            return result;
         }
 
         /// <summary>
@@ -1173,6 +1185,7 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
+            this.OnReportProgress(Progress.StartingGetTunnelPort);
             var path = $"{PortsApiSubPath}/{portNumber}";
             var result = await this.SendTunnelRequestAsync<TunnelPort>(
                 HttpMethod.Get,
@@ -1182,6 +1195,7 @@ namespace Microsoft.DevTunnels.Management
                 query: GetApiQuery(),
                 options,
                 cancellation);
+            this.OnReportProgress(Progress.CompletedGetTunnelPort);
             return result;
         }
 
@@ -1193,6 +1207,7 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
+            this.OnReportProgress(Progress.StartingCreateTunnelPort);
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
             options ??= new TunnelRequestOptions();
             options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
@@ -1217,7 +1232,7 @@ namespace Microsoft.DevTunnels.Management
                 .Append(result)
                 .OrderBy((p) => p.PortNumber)
                 .ToArray();
-
+            this.OnReportProgress(Progress.CompletedCreateTunnelPort);
             return result;
         }
 
@@ -1335,6 +1350,15 @@ namespace Microsoft.DevTunnels.Management
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Event fired when a progress connection event has been reported.
+        /// </summary>
+        private void OnReportProgress(Progress progress)
+        {
+            var args = new SshReportProgressEventArgs(progress);
+            ReportProgress?.Invoke(this, args);
         }
 
         /// <summary>

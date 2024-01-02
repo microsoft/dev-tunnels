@@ -38,6 +38,7 @@ import {
     SecureStream,
     SshProtocolExtensionNames,
     SshConnectionError,
+    Progress,
 } from '@microsoft/dev-tunnels-ssh';
 import {
     ForwardedPortConnectingEventArgs,
@@ -627,6 +628,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
     }
 
     public async refreshPorts(cancellation?: CancellationToken): Promise<void> {
+        this.raiseReportProgress(Progress.StartingRefreshPorts);
         if (!await this.refreshTunnel(true, cancellation)) {
             return;
         }
@@ -668,6 +670,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         }
 
         await Promise.all(forwardPromises);
+        this.raiseReportProgress(Progress.CompletedRefreshPorts);
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
