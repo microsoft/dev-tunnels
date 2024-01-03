@@ -3,8 +3,6 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Management;
-using Microsoft.DevTunnels.Ssh;
-using Microsoft.DevTunnels.Ssh.Events;
 using Xunit;
 
 namespace Microsoft.DevTunnels.Test;
@@ -82,19 +80,19 @@ public class TunnelManagementClientTests
 
         var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
 
-        var list = new Queue<SshReportProgressEventArgs>();
-        client.ReportProgress += (object sender, SshReportProgressEventArgs e) => {
+        var list = new Queue<TunnelReportProgressEventArgs>();
+        client.ReportProgress += (object sender, TunnelReportProgressEventArgs e) => {
             list.Enqueue(e);
         };
 
         await client.GetTunnelPortAsync(tunnel, 9900, options, this.timeout);
 
-        Assert.Equal(Progress.StartingGetTunnelPort, list.Dequeue().Progress);
-        Assert.Equal(Progress.StartingRequestUri, list.Dequeue().Progress);
-        Assert.Equal(Progress.StartingRequestConfig, list.Dequeue().Progress);
-        Assert.Equal(Progress.StartingSendTunnelRequest, list.Dequeue().Progress);
-        Assert.Equal(Progress.CompletedSendTunnelRequest, list.Dequeue().Progress);
-        Assert.Equal(Progress.CompletedGetTunnelPort, list.Dequeue().Progress);WW
+        Assert.Equal(TunnelProgress.StartingGetTunnelPort.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.StartingRequestUri.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.StartingRequestConfig.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.StartingSendTunnelRequest.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.CompletedSendTunnelRequest.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.CompletedGetTunnelPort.ToString(), list.Dequeue().Progress);
     }
 
     [Fact]

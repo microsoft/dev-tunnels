@@ -200,7 +200,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     {
         var relayClient = new TunnelRelayTunnelClient(TestTS);
 
-        var progressEvents = new List<SshReportProgressEventArgs>();
+        var progressEvents = new List<TunnelReportProgressEventArgs>();
         relayClient.ReportProgress += (sender, e) =>
         {
             progressEvents.Add(e);
@@ -211,11 +211,11 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         var firstEvent = progressEvents.First();
         Assert.Null(firstEvent.SessionNumber);
-        Assert.True(firstEvent.Progress == Progress.OpeningClientConnectionToRelay);
+        Assert.True(firstEvent.Progress == Progress.OpeningClientConnectionToRelay.ToString());
 
         var lastEvent = progressEvents.Last();
         Assert.NotNull(lastEvent.SessionNumber);
-        Assert.True(lastEvent.Progress == Progress.CompletedSessionAuthentication);
+        Assert.True(lastEvent.Progress == Progress.CompletedSessionAuthentication.ToString());
     }
 
     [Fact]

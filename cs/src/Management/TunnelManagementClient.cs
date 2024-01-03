@@ -4,9 +4,7 @@
 // </copyright>
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -18,8 +16,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.DevTunnels.Contracts;
-using Microsoft.DevTunnels.Ssh;
-using Microsoft.DevTunnels.Ssh.Events;
 using static Microsoft.DevTunnels.Contracts.TunnelContracts;
 
 namespace Microsoft.DevTunnels.Management
@@ -75,7 +71,7 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Event raised to report tunnel management progress.
         /// </summary>
-        public event EventHandler<SshReportProgressEventArgs>? ReportProgress;
+        public event EventHandler<TunnelReportProgressEventArgs>? ReportProgress;
 
         /// <summary>
         /// ApiVersion that will be used if one is not specified
@@ -384,14 +380,14 @@ namespace Microsoft.DevTunnels.Management
             bool isCreate = false)
             where TRequest : class
         {
-            this.OnReportProgress(Progress.StartingRequestUri);
+            this.OnReportProgress(TunnelProgress.StartingRequestUri);
             var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
-            this.OnReportProgress(Progress.StartingRequestConfig);
+            this.OnReportProgress(TunnelProgress.StartingRequestConfig);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
-            this.OnReportProgress(Progress.StartingSendTunnelRequest);
+            this.OnReportProgress(TunnelProgress.StartingSendTunnelRequest);
             var result = await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
-            this.OnReportProgress(Progress.CompletedSendTunnelRequest);
+            this.OnReportProgress(TunnelProgress.CompletedSendTunnelRequest);
             return result;
         }
 
@@ -1185,7 +1181,7 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
-            this.OnReportProgress(Progress.StartingGetTunnelPort);
+            this.OnReportProgress(TunnelProgress.StartingGetTunnelPort);
             var path = $"{PortsApiSubPath}/{portNumber}";
             var result = await this.SendTunnelRequestAsync<TunnelPort>(
                 HttpMethod.Get,
@@ -1195,7 +1191,7 @@ namespace Microsoft.DevTunnels.Management
                 query: GetApiQuery(),
                 options,
                 cancellation);
-            this.OnReportProgress(Progress.CompletedGetTunnelPort);
+            this.OnReportProgress(TunnelProgress.CompletedGetTunnelPort);
             return result;
         }
 
@@ -1207,7 +1203,7 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
-            this.OnReportProgress(Progress.StartingCreateTunnelPort);
+            this.OnReportProgress(TunnelProgress.StartingCreateTunnelPort);
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
             options ??= new TunnelRequestOptions();
             options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
@@ -1232,7 +1228,7 @@ namespace Microsoft.DevTunnels.Management
                 .Append(result)
                 .OrderBy((p) => p.PortNumber)
                 .ToArray();
-            this.OnReportProgress(Progress.CompletedCreateTunnelPort);
+            this.OnReportProgress(TunnelProgress.CompletedCreateTunnelPort);
             return result;
         }
 
@@ -1353,12 +1349,15 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <summary>
-        /// Event fired when a progress connection event has been reported.
+        /// Event fired when a tunnel progress event has been reported.
         /// </summary>
-        private void OnReportProgress(Progress progress)
+        protected virtual void OnReportProgress(TunnelProgress progress)
         {
-            var args = new SshReportProgressEventArgs(progress);
-            ReportProgress?.Invoke(this, args);
+            if (ReportProgress is EventHandler<TunnelReportProgressEventArgs> handler)
+            {
+                var args = new TunnelReportProgressEventArgs(progress.ToString());
+                handler.Invoke(this, args);
+            }
         }
 
         /// <summary>

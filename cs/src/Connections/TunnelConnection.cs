@@ -231,7 +231,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// <summary>
     /// Event raised to report connection progress.
     /// </summary>
-    public event EventHandler<SshReportProgressEventArgs>? ReportProgress;
+    public event EventHandler<TunnelReportProgressEventArgs>? ReportProgress;
 
     /// <summary>
     /// Connection status changed event.
@@ -408,11 +408,26 @@ public abstract class TunnelConnection : IAsyncDisposable
     }
 
     /// <summary>
-    /// Event fired when a progress connection event has been reported.
+    /// Event fired when a SSH progress connection event has been reported.
     /// </summary>
-    internal void OnReportProgress(Progress progress, int? sessionNumber = null)
+    protected virtual void OnReportProgress(Progress progress, int? sessionNumber = null)
     {
-        var args = new SshReportProgressEventArgs(progress, sessionNumber);
-        ReportProgress?.Invoke(this, args);
+        if (ReportProgress is EventHandler<TunnelReportProgressEventArgs> handler)
+        {
+            var args = new TunnelReportProgressEventArgs(progress.ToString(), sessionNumber);
+            ReportProgress.Invoke(this, args);
+        }
+    }
+
+    /// <summary>
+    /// Event fired when a tunnel progress event has been reported.
+    /// </summary>
+    protected virtual void OnReportProgress(TunnelProgress progress)
+    {
+        if (ReportProgress is EventHandler<TunnelReportProgressEventArgs> handler)
+        {
+            var args = new TunnelReportProgressEventArgs(progress.ToString());
+            ReportProgress.Invoke(this, args);
+        }
     }
 }

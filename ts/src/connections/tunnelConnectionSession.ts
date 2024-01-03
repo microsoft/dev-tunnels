@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel, TunnelAccessScopes } from '@microsoft/dev-tunnels-contracts';
+import { Tunnel, TunnelAccessScopes, TunnelProgress, TunnelReportProgressEventArgs } from '@microsoft/dev-tunnels-contracts';
 import {
     TunnelAccessTokenProperties,
     TunnelManagementClient,
@@ -13,7 +13,6 @@ import {
     Progress,
     SshClientSession,
     SshDisconnectReason,
-    SshReportProgressEventArgs,
     SshSessionClosedEventArgs,
     Stream,
     Trace,
@@ -54,14 +53,14 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private readonly refreshingTunnelEmitter =
         new TrackingEmitter<RefreshingTunnelEventArgs>();
 
-    private readonly reportProgressEmitter = new Emitter<SshReportProgressEventArgs>();
+    private readonly reportProgressEmitter = new Emitter<TunnelReportProgressEventArgs>();
 
     /**
      * Event that is raised to report connection progress.
      *
      * See `Progress` for a description of the different progress events that can be reported.
      */
-    public readonly onReportProgress: Event<SshReportProgressEventArgs> = this.reportProgressEmitter.event;
+    public readonly onReportProgress: Event<TunnelReportProgressEventArgs> = this.reportProgressEmitter.event;
 
     public httpAgent?: http.Agent;
 
@@ -132,8 +131,11 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     public trace: Trace;
 
     /* @internal */
-    public raiseReportProgress(progress: Progress, sessionNumber?: number) {
-        const args = new SshReportProgressEventArgs(progress, sessionNumber);
+    public raiseReportProgress(progress: Progress|TunnelProgress, sessionNumber?: number) {
+        const args : TunnelReportProgressEventArgs  = {
+            progress,
+            sessionNumber,
+        };
         this.reportProgressEmitter.fire(args);
     }
 

@@ -15,6 +15,7 @@ import {
     TunnelConnectionMode,
     TunnelAccessScopes,
     TunnelRelayTunnelEndpoint,
+    TunnelReportProgressEventArgs,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ConnectionStatus,
@@ -38,7 +39,6 @@ import {
     SshClientSession,
     SshConnectionError,
     SshDisconnectReason,
-    SshReportProgressEventArgs,
     SshServerCredentials,
     SshServerSession,
     SshSessionConfiguration,
@@ -240,7 +240,7 @@ export class TunnelHostAndClientTests {
     @test
     public async reportProgressTest() {
         let relayClient = new TestTunnelRelayTunnelClient();
-        let progressEvents: SshReportProgressEventArgs[] = [];
+        let progressEvents: TunnelReportProgressEventArgs[] = [];
         relayClient.onReportProgress((e)=> {
             progressEvents.push(e)
         });
@@ -254,7 +254,7 @@ export class TunnelHostAndClientTests {
         assert.strictEqual(firstEvent.progress, Progress.OpeningClientConnectionToRelay);
         assert.notStrictEqual(firstEvent.sessionNumber, null);
 
-        let lastEvent = progressEvents.pop() as SshReportProgressEventArgs;
+        let lastEvent = progressEvents.pop() as TunnelReportProgressEventArgs;
         assert.strictEqual(lastEvent.progress, Progress.CompletedSessionAuthentication);
         assert.notEqual(lastEvent.sessionNumber, null);
     }
