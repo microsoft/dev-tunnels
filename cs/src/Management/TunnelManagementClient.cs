@@ -4,9 +4,7 @@
 // </copyright>
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -69,6 +67,11 @@ namespace Microsoft.DevTunnels.Management
         {
             "2023-09-27-preview"
         };
+
+        /// <summary>
+        /// Event raised to report tunnel management progress.
+        /// </summary>
+        public event EventHandler<TunnelReportProgressEventArgs>? ReportProgress;
 
         /// <summary>
         /// ApiVersion that will be used if one is not specified
@@ -377,10 +380,15 @@ namespace Microsoft.DevTunnels.Management
             bool isCreate = false)
             where TRequest : class
         {
+            this.OnReportProgress(TunnelProgress.StartingRequestUri);
             var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
+            this.OnReportProgress(TunnelProgress.StartingRequestConfig);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
-            return await SendRequestAsync<TRequest, TResult>(
+            this.OnReportProgress(TunnelProgress.StartingSendTunnelRequest);
+            var result = await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
+            this.OnReportProgress(TunnelProgress.CompletedSendTunnelRequest);
+            return result;
         }
 
         /// <summary>
@@ -1173,6 +1181,7 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
+            this.OnReportProgress(TunnelProgress.StartingGetTunnelPort);
             var path = $"{PortsApiSubPath}/{portNumber}";
             var result = await this.SendTunnelRequestAsync<TunnelPort>(
                 HttpMethod.Get,
@@ -1182,6 +1191,7 @@ namespace Microsoft.DevTunnels.Management
                 query: GetApiQuery(),
                 options,
                 cancellation);
+            this.OnReportProgress(TunnelProgress.CompletedGetTunnelPort);
             return result;
         }
 
@@ -1193,6 +1203,7 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
+            this.OnReportProgress(TunnelProgress.StartingCreateTunnelPort);
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
             options ??= new TunnelRequestOptions();
             options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
@@ -1217,7 +1228,7 @@ namespace Microsoft.DevTunnels.Management
                 .Append(result)
                 .OrderBy((p) => p.PortNumber)
                 .ToArray();
-
+            this.OnReportProgress(TunnelProgress.CompletedCreateTunnelPort);
             return result;
         }
 
@@ -1335,6 +1346,18 @@ namespace Microsoft.DevTunnels.Management
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Event fired when a tunnel progress event has been reported.
+        /// </summary>
+        protected virtual void OnReportProgress(TunnelProgress progress)
+        {
+            if (ReportProgress is EventHandler<TunnelReportProgressEventArgs> handler)
+            {
+                var args = new TunnelReportProgressEventArgs(progress.ToString());
+                handler.Invoke(this, args);
+            }
         }
 
         /// <summary>

@@ -14,6 +14,8 @@ import {
     NamedRateStatus,
     TunnelListByRegionResponse,
     TunnelPortListResponse,
+    TunnelProgress,
+    TunnelReportProgressEventArgs,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -27,6 +29,7 @@ import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Met
 import * as https from 'https';
 import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 import { IdGeneration } from './idGeneration';
+import { Emitter, Event } from 'vscode-jsonrpc';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -116,6 +119,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private readonly baseAddress: string;
     private readonly userTokenCallback: () => Promise<string | null>;
     private readonly userAgents: string;
+
+    private readonly reportProgressEmitter = new Emitter<TunnelReportProgressEventArgs>();
+
+    /**
+     * Event that is raised to report tunnel management progress.
+     *
+     * See `Progress` for a description of the different progress events that can be reported.
+     */
+    public readonly onReportProgress: Event<TunnelReportProgressEventArgs> = this.reportProgressEmitter.event;
 
     public trace: (msg: string) => void = (msg) => {};
 
@@ -477,6 +489,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         portNumber: number,
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort | null> {
+        this.raiseReportProgress(TunnelProgress.StartingGetTunnelPort);
         const path = `${portsApiSubPath}/${portNumber}`;
         const result = await this.sendTunnelRequest<TunnelPort>(
             'GET',
@@ -487,6 +500,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
         );
         parseTunnelPortDates(result);
+        this.raiseReportProgress(TunnelProgress.CompletedGetTunnelPort);
         return result;
     }
 
@@ -495,6 +509,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
     ): Promise<TunnelPort> {
+        this.raiseReportProgress(TunnelProgress.StartingCreateTunnelPort);
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
         const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
         options = options || {};
@@ -518,6 +533,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             .sort(comparePorts);
 
         parseTunnelPortDates(result);
+        this.raiseReportProgress(TunnelProgress.CompletedCreateTunnelPort);
         return result;
     }
 
@@ -651,9 +667,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         allowNotFound?: boolean,
         isCreate: boolean = false
     ): Promise<NullableIfNotBoolean<TResult>> {
+        this.raiseReportProgress(TunnelProgress.StartingRequestUri);
         const uri = await this.buildUriForTunnel(tunnel, path, query, options, isCreate);
+        this.raiseReportProgress(TunnelProgress.StartingRequestConfig);
         const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
+        this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
+        this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
         return result;
     }
 
@@ -680,9 +700,11 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         body?: object,
         allowNotFound?: boolean,
     ): Promise<NullableIfNotBoolean<TResult>> {
+        this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
         const uri = await this.buildUri(clusterId, path, query, options);
         const config = await this.getAxiosRequestConfig(undefined, options);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
+        this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
         return result;
     }
 
@@ -697,6 +719,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             adapter: this.adapter,
         };
         return await this.request<boolean>('GET', uri, undefined, config);
+    }
+
+    private raiseReportProgress(progress: TunnelProgress) {
+        const args : TunnelReportProgressEventArgs = {
+            progress: progress
+        }
+        this.reportProgressEmitter.fire(args);
     }
 
     private getResponseErrorMessage(error: AxiosError) {

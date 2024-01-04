@@ -8,6 +8,7 @@ import {
     TunnelPort,
     Tunnel,
     TunnelAccessScopes,
+    TunnelProgress,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
@@ -627,6 +628,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
     }
 
     public async refreshPorts(cancellation?: CancellationToken): Promise<void> {
+        this.raiseReportProgress(TunnelProgress.StartingRefreshPorts);
         if (!await this.refreshTunnel(true, cancellation)) {
             return;
         }
@@ -668,6 +670,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         }
 
         await Promise.all(forwardPromises);
+        this.raiseReportProgress(TunnelProgress.CompletedRefreshPorts);
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {
