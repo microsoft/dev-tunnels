@@ -15,6 +15,7 @@ import {
     TunnelConnectionMode,
     TunnelAccessScopes,
     TunnelRelayTunnelEndpoint,
+    TunnelReportProgressEventArgs,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ConnectionStatus,
@@ -30,6 +31,7 @@ import {
     KeyPair,    
     NodeStream,
     ObjectDisposedError,
+    Progress,
     PromiseCompletionSource,
     SshAlgorithms,
     SshAuthenticationType,
@@ -233,6 +235,28 @@ export class TunnelHostAndClientTests {
         await serverConnectPromise;
 
         return multiChannelStream;
+    }
+
+    @test
+    public async reportProgressTest() {
+        let relayClient = new TestTunnelRelayTunnelClient();
+        let progressEvents: TunnelReportProgressEventArgs[] = [];
+        relayClient.onReportProgress((e)=> {
+            progressEvents.push(e)
+        });
+
+        let tunnel = this.createRelayTunnel();
+        await this.connectRelayClient({relayClient, tunnel});
+
+        await relayClient.dispose();
+
+        let firstEvent = progressEvents[0];
+        assert.strictEqual(firstEvent.progress, Progress.OpeningClientConnectionToRelay);
+        assert.notStrictEqual(firstEvent.sessionNumber, null);
+
+        let lastEvent = progressEvents.pop() as TunnelReportProgressEventArgs;
+        assert.strictEqual(lastEvent.progress, Progress.CompletedSessionAuthentication);
+        assert.notEqual(lastEvent.sessionNumber, null);
     }
 
     @test

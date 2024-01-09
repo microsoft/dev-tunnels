@@ -194,6 +194,30 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(ConnectionStatus.None, relayHost.ConnectionStatus);
     }
 
+
+    [Fact]
+    public async Task ReportProgress()
+    {
+        var relayClient = new TunnelRelayTunnelClient(TestTS);
+
+        var progressEvents = new List<TunnelReportProgressEventArgs>();
+        relayClient.ReportProgress += (sender, e) =>
+        {
+            progressEvents.Add(e);
+        };
+
+        var tunnel = CreateRelayTunnel();
+        using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);
+
+        var firstEvent = progressEvents.First();
+        Assert.Null(firstEvent.SessionNumber);
+        Assert.True(firstEvent.Progress == Progress.OpeningClientConnectionToRelay.ToString());
+
+        var lastEvent = progressEvents.Last();
+        Assert.NotNull(lastEvent.SessionNumber);
+        Assert.True(lastEvent.Progress == Progress.CompletedSessionAuthentication.ToString());
+    }
+
     [Fact]
     public async Task ConnectRelayClient()
     {

@@ -6,7 +6,7 @@ import axios, { AxiosPromise, AxiosRequestConfig, Method } from 'axios';
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
-import { Tunnel } from '@microsoft/dev-tunnels-contracts';
+import { Tunnel, TunnelProgress, TunnelReportProgressEventArgs } from '@microsoft/dev-tunnels-contracts';
 
 @suite
 @slow(3000)
@@ -37,6 +37,31 @@ export class TunnelManagementTests {
     ): Promise<TResponse> {
         this.lastRequest = { method, uri, data, config };
         return Promise.resolve(this.nextResponse as TResponse);
+    }
+    @test
+    public async reportProgress() {
+        let progressEvents: TunnelReportProgressEventArgs[] = [];
+        this.managementClient.onReportProgress((e) => {
+            progressEvents.push(e)
+        });
+
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+            accessTokens: {
+                'manage': 'manage-token-1',
+                'connect': 'connect-token-1',
+            },
+        };
+
+        await this.managementClient.getTunnelPort(requestTunnel, 9900);
+
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.CompletedGetTunnelPort);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.CompletedSendTunnelRequest);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingSendTunnelRequest);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingRequestConfig);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingRequestUri);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingGetTunnelPort);
     }
 
     @test

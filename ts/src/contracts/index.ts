@@ -22,3 +22,5 @@ export { ClusterDetails } from './clusterDetails';
 export { TunnelListByRegionResponse } from './tunnelListByRegionResponse';
 export { TunnelPortListResponse } from './tunnelPortListResponse';
 export { TunnelConstraints } from './tunnelConstraints';
+export { TunnelProgress } from './tunnelProgress';
+export { TunnelReportProgressEventArgs} from './tunnelReportProgressEventArgs';
