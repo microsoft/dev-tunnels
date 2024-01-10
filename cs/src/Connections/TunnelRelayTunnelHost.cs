@@ -605,6 +605,7 @@ public class TunnelRelayTunnelHost : TunnelHost
     /// <inheritdoc />
     public override async Task RefreshPortsAsync(CancellationToken cancellation)
     {
+        this.OnReportProgress(TunnelProgress.StartingRefreshPorts);
         if (! await RefreshTunnelAsync(includePorts: true, cancellation))
         {
             return;
@@ -659,6 +660,7 @@ public class TunnelRelayTunnelHost : TunnelHost
         }
 
         await Task.WhenAll(forwardTasks);
+        this.OnReportProgress(TunnelProgress.CompletedRefreshPorts);
     }
 
     /// <inheritdoc/>

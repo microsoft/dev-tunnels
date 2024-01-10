@@ -4,9 +4,7 @@
 // </copyright>
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -73,9 +71,14 @@ namespace Microsoft.DevTunnels.Management
         };
 
         /// <summary>
+        /// Event raised to report tunnel management progress.
+        /// </summary>
+        public event EventHandler<TunnelReportProgressEventArgs>? ReportProgress;
+
+        /// <summary>
         /// ApiVersion that will be used if one is not specified
         /// </summary>
-        public const string DefaultApiVersion = "2023-09-27-preview";
+        public const ManagementApiVersions DefaultApiVersion = ManagementApiVersions.Version20230927Preview;
 
         private static readonly ProductInfoHeaderValue TunnelSdkUserAgent =
             TunnelUserAgent.GetUserAgent(typeof(TunnelManagementClient).Assembly, "Dev-Tunnels-Service-CSharp-SDK")!;
@@ -97,7 +100,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue userAgent,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -118,7 +121,7 @@ namespace Microsoft.DevTunnels.Management
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersion = DefaultApiVersion)
             : this(userAgents, userTokenCallback, tunnelServiceUri: null, httpHandler: null, apiVersion)
         {
         }
@@ -146,7 +149,7 @@ namespace Microsoft.DevTunnels.Management
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersion = DefaultApiVersion)
             : this(new[] { userAgent }, userTokenCallback, tunnelServiceUri, httpHandler, apiVersion)
         {
         }
@@ -169,17 +172,18 @@ namespace Microsoft.DevTunnels.Management
         /// <see cref="HttpClientHandler"/> specified (or at the end of the chain) must have
         /// automatic redirection disabled. The provided HTTP handler will not be disposed
         /// by <see cref="Dispose"/>.</param>
-        /// <param name="apiVersion"> Api version to use for tunnels requests, accepted
+        /// <param name="apiVersionEnum"> Api version to use for tunnels requests, accepted
         /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
             ProductInfoHeaderValue[] userAgents,
             Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
             Uri? tunnelServiceUri = null,
             HttpMessageHandler? httpHandler = null,
-            string apiVersion = DefaultApiVersion)
+            ManagementApiVersions apiVersionEnum = DefaultApiVersion)
         {
             Requires.NotNullEmptyOrNullElements(userAgents, nameof(userAgents));
             UserAgents = Requires.NotNull(userAgents, nameof(userAgents));
+            var apiVersion = apiVersionEnum.ToVersionString();
             if (!string.IsNullOrEmpty(apiVersion) && !TunnelsApiVersions.Contains(apiVersion))
             {
                 throw new ArgumentException(
@@ -378,10 +382,15 @@ namespace Microsoft.DevTunnels.Management
             bool isCreate = false)
             where TRequest : class
         {
+            this.OnReportProgress(TunnelProgress.StartingRequestUri);
             var uri = BuildTunnelUri(tunnel, path, query, options, isCreate);
+            this.OnReportProgress(TunnelProgress.StartingRequestConfig);
             var authHeader = await GetAuthenticationHeaderAsync(tunnel, accessTokenScopes, options);
-            return await SendRequestAsync<TRequest, TResult>(
+            this.OnReportProgress(TunnelProgress.StartingSendTunnelRequest);
+            var result = await SendRequestAsync<TRequest, TResult>(
                 method, uri, options, authHeader, body, cancellation);
+            this.OnReportProgress(TunnelProgress.CompletedSendTunnelRequest);
+            return result;
         }
 
         /// <summary>
@@ -686,7 +695,7 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.Unauthorized:
                     case HttpStatusCode.Forbidden:
-                        // Enterprise Policies 
+                        // Enterprise Policies
                         if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
                         {
                             var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
@@ -1186,6 +1195,7 @@ namespace Microsoft.DevTunnels.Management
             TunnelRequestOptions? options,
             CancellationToken cancellation)
         {
+            this.OnReportProgress(TunnelProgress.StartingGetTunnelPort);
             var path = $"{PortsApiSubPath}/{portNumber}";
             var result = await this.SendTunnelRequestAsync<TunnelPort>(
                 HttpMethod.Get,
@@ -1195,6 +1205,7 @@ namespace Microsoft.DevTunnels.Management
                 query: GetApiQuery(),
                 options,
                 cancellation);
+            this.OnReportProgress(TunnelProgress.CompletedGetTunnelPort);
             return result;
         }
 
@@ -1206,6 +1217,7 @@ namespace Microsoft.DevTunnels.Management
             CancellationToken cancellation)
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
+            this.OnReportProgress(TunnelProgress.StartingCreateTunnelPort);
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
             options ??= new TunnelRequestOptions();
             options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
@@ -1230,7 +1242,7 @@ namespace Microsoft.DevTunnels.Management
                 .Append(result)
                 .OrderBy((p) => p.PortNumber)
                 .ToArray();
-
+            this.OnReportProgress(TunnelProgress.CompletedCreateTunnelPort);
             return result;
         }
 
@@ -1348,6 +1360,18 @@ namespace Microsoft.DevTunnels.Management
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Event fired when a tunnel progress event has been reported.
+        /// </summary>
+        protected virtual void OnReportProgress(TunnelProgress progress)
+        {
+            if (ReportProgress is EventHandler<TunnelReportProgressEventArgs> handler)
+            {
+                var args = new TunnelReportProgressEventArgs(progress.ToString());
+                handler.Invoke(this, args);
+            }
         }
 
         /// <summary>
@@ -1496,7 +1520,7 @@ namespace Microsoft.DevTunnels.Management
                 HttpMethod.Get,
                 clusterId: null,
                 TunnelsPath + "/" + name + CheckAvailableSubPath,
-                query: null,
+                query: GetApiQuery(),
                 options: null,
                 cancellation
             );

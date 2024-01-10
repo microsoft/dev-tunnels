@@ -46,6 +46,12 @@ public class MultiModeTunnelClient : TunnelConnection, ITunnelClient
     public IReadOnlyCollection<TunnelConnectionMode> ConnectionModes
         => Clients.SelectMany((c) => c.ConnectionModes).Distinct().ToArray();
 
+#pragma warning disable CS0067 // Not used
+    /// <inheritdoc />
+    public event EventHandler<PortForwardingEventArgs>? PortForwarding;
+#pragma warning restore CS0067
+
+
     /// <inheritdoc />
     public ForwardedPortsCollection? ForwardedPorts => throw new NotImplementedException();
 

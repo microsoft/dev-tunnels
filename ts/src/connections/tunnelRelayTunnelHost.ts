@@ -5,9 +5,10 @@ import {
     TunnelConnectionMode,
     TunnelProtocol,
     TunnelRelayTunnelEndpoint,
-    TunnelPort, 
-    Tunnel, 
+    TunnelPort,
+    Tunnel,
     TunnelAccessScopes,
+    TunnelProgress,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
@@ -237,6 +238,10 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         session.onClosed(this.onSshSessionClosed, this, this.sshSessionDisposables);
 
         session.trace = this.trace;
+        session.onReportProgress(
+            (args) => this.raiseReportProgress(args.progress, args.sessionNumber),
+            this,
+            this.sshSessionDisposables);
         this.sshSession = session;
         await session.connect(stream, cancellation);
 
@@ -462,6 +467,10 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             config.addService(PortForwardingService);
         });
         session.trace = this.trace;
+        session.onReportProgress(
+            (args) => this.raiseReportProgress(args.progress, args.sessionNumber),
+            this,
+            this.sshSessionDisposables);
         session.credentials = {
             publicKeys: [this.hostPrivateKey!],
         };
@@ -619,6 +628,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
     }
 
     public async refreshPorts(cancellation?: CancellationToken): Promise<void> {
+        this.raiseReportProgress(TunnelProgress.StartingRefreshPorts);
         if (!await this.refreshTunnel(true, cancellation)) {
             return;
         }
@@ -660,6 +670,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         }
 
         await Promise.all(forwardPromises);
+        this.raiseReportProgress(TunnelProgress.CompletedRefreshPorts);
     }
 
     protected async forwardPort(pfs: PortForwardingService, port: TunnelPort) {

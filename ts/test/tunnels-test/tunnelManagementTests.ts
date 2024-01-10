@@ -5,8 +5,8 @@ import * as assert from 'assert';
 import axios, { AxiosPromise, AxiosRequestConfig, Method } from 'axios';
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
-import { TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
-import { Tunnel } from '@microsoft/dev-tunnels-contracts';
+import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
+import { Tunnel, TunnelProgress, TunnelReportProgressEventArgs } from '@microsoft/dev-tunnels-contracts';
 
 @suite
 @slow(3000)
@@ -17,7 +17,7 @@ export class TunnelManagementTests {
 
     public constructor() {
         this.managementClient = new TunnelManagementHttpClient(
-            'test/0.0.0', "2023-09-27-preview", undefined, 'http://global.tunnels.test.api.visualstudio.com');
+            'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, 'http://global.tunnels.test.api.visualstudio.com');
         (<any>this.managementClient).request = this.mockRequest.bind(this);
     }
 
@@ -37,6 +37,31 @@ export class TunnelManagementTests {
     ): Promise<TResponse> {
         this.lastRequest = { method, uri, data, config };
         return Promise.resolve(this.nextResponse as TResponse);
+    }
+    @test
+    public async reportProgress() {
+        let progressEvents: TunnelReportProgressEventArgs[] = [];
+        this.managementClient.onReportProgress((e) => {
+            progressEvents.push(e)
+        });
+
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+            accessTokens: {
+                'manage': 'manage-token-1',
+                'connect': 'connect-token-1',
+            },
+        };
+
+        await this.managementClient.getTunnelPort(requestTunnel, 9900);
+
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.CompletedGetTunnelPort);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.CompletedSendTunnelRequest);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingSendTunnelRequest);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingRequestConfig);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingRequestUri);
+        assert.strictEqual(progressEvents.pop()?.progress, TunnelProgress.StartingGetTunnelPort);
     }
 
     @test
@@ -110,7 +135,7 @@ export class TunnelManagementTests {
 
         // Create a management client with a mock https agent and adapter
         const managementClient = new TunnelManagementHttpClient(
-            'test/0.0.0',"2023-09-27-preview", undefined, 'http://global.tunnels.test.api.visualstudio.com', httpsAgent, axiosAdapter);
+            'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, 'http://global.tunnels.test.api.visualstudio.com', httpsAgent, axiosAdapter);
         (<any>managementClient).request = this.mockRequest.bind(this);
 
         this.nextResponse = [];

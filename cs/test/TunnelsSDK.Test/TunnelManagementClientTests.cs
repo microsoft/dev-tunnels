@@ -53,6 +53,49 @@ public class TunnelManagementClientTests
     }
 
     [Fact]
+    public async Task ReportProgress()
+    {
+        var options = new TunnelRequestOptions()
+        {
+            HttpRequestOptions = new Dictionary<string, object>
+            {
+                { "foo", "bar" },
+                { "bazz", 100 },
+            }
+        };
+
+        var tunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+            ClusterId = ClusterId,
+        };
+
+       var handler = new MockHttpMessageHandler(
+          (message, ct) =>
+          {
+              var result = new HttpResponseMessage(HttpStatusCode.OK);
+              result.Content = JsonContent.Create(tunnel);
+              return Task.FromResult(result);
+          });
+
+        var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
+
+        var list = new Queue<TunnelReportProgressEventArgs>();
+        client.ReportProgress += (object sender, TunnelReportProgressEventArgs e) => {
+            list.Enqueue(e);
+        };
+
+        await client.GetTunnelPortAsync(tunnel, 9900, options, this.timeout);
+
+        Assert.Equal(TunnelProgress.StartingGetTunnelPort.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.StartingRequestUri.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.StartingRequestConfig.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.StartingSendTunnelRequest.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.CompletedSendTunnelRequest.ToString(), list.Dequeue().Progress);
+        Assert.Equal(TunnelProgress.CompletedGetTunnelPort.ToString(), list.Dequeue().Progress);
+    }
+
+    [Fact]
     public async Task PreserveAccessTokens()
     {
         var requestTunnel = new Tunnel

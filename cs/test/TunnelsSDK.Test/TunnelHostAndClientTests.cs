@@ -194,6 +194,30 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(ConnectionStatus.None, relayHost.ConnectionStatus);
     }
 
+
+    [Fact]
+    public async Task ReportProgress()
+    {
+        var relayClient = new TunnelRelayTunnelClient(TestTS);
+
+        var progressEvents = new List<TunnelReportProgressEventArgs>();
+        relayClient.ReportProgress += (sender, e) =>
+        {
+            progressEvents.Add(e);
+        };
+
+        var tunnel = CreateRelayTunnel();
+        using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);
+
+        var firstEvent = progressEvents.First();
+        Assert.Null(firstEvent.SessionNumber);
+        Assert.True(firstEvent.Progress == Progress.OpeningClientConnectionToRelay.ToString());
+
+        var lastEvent = progressEvents.Last();
+        Assert.NotNull(lastEvent.SessionNumber);
+        Assert.True(lastEvent.Progress == Progress.CompletedSessionAuthentication.ToString());
+    }
+
     [Fact]
     public async Task ConnectRelayClient()
     {
@@ -1592,9 +1616,38 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(hostPublicKey, tunnel.Endpoints[0].HostPublicKeys[0]);
     }
 
+    [Fact]
+    public async Task ConnectRelayClientAndCancelPort()
+    {
+        var relayClient = new TunnelRelayTunnelClient(TestTS);
+
+        Assert.Collection(relayClient.ConnectionModes, new Action<TunnelConnectionMode>[]
+        {
+            (m) => Assert.Equal(TunnelConnectionMode.TunnelRelay, m),
+        });
+
+        var tunnel = CreateRelayTunnel(new[] { 2000, 3000 });
+        using var serverSshSession = await ConnectRelayClientAsync(relayClient, tunnel);
+        Assert.Null(relayClient.DisconnectException);
+
+        relayClient.PortForwarding += (_, e) =>
+        {
+            // Cancel forwarding of port 2000. (Allow forwarding of port 3000.)
+            e.Cancel = e.PortNumber == 2000;
+        };
+
+        var forwarder = await serverSshSession.ForwardFromRemotePortAsync(IPAddress.Loopback, 2000);
+        Assert.Null(forwarder); // Forarding of port 2000 should have been cancelled by the client.
+
+        forwarder = await serverSshSession.ForwardFromRemotePortAsync(IPAddress.Loopback, 3000);
+        Assert.NotNull(forwarder); // Forarding of port 3000 should NOT have been cancelled by the client.
+    }
+
     private static Task<Stream> ThrowNotAWebSocket(HttpStatusCode statusCode)
     {
-        var wse = new WebSocketException(WebSocketError.NotAWebSocket, $"The server returned status code '{statusCode:D}' when status code '101' was expected.");
+        var wse = new WebSocketException(
+            WebSocketError.NotAWebSocket,
+            $"The server returned status code '{statusCode:D}' when status code '101' was expected.");
         wse.Data["HttpStatusCode"] = statusCode;
         throw wse;
     }

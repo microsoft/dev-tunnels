@@ -1,12 +1,8 @@
 {
-  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/master/src/NerdBank.GitVersioning/version.schema.json",
-
-  // Specifies the Major and Minor product version. The build number is automatically appended
-  // to this as the 3rd part of the product version. Increment the Major product version for
-  // major product milestones. Optionally increment the Minor product version for minor milestones.
-  "version": "1.0",
-  // Remove this when we update version number to start from 0
-  "versionHeightOffset": 7200,
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "version": "1.1",
+  "versionHeightOffset": 0,
+  "pathFilters": ["cs", "ts", "./"],
 
   "publicReleaseRefSpec": [
     "^refs/heads/main$", // we release out of main
