@@ -553,7 +553,7 @@ namespace Microsoft.DevTunnels.Management
             }
             catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
             {
-                throw new HttpRequestException($"Error: tunnel service HTTPS certificate is invalid. This may" +
+                throw new HttpRequestException($"Error: Tunnel service HTTPS certificate is invalid. This may" +
                     $" be caused by the use of a firewall intercepting the connection.", auex);
             }
         }
