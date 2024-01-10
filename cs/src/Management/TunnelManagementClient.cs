@@ -1506,7 +1506,7 @@ namespace Microsoft.DevTunnels.Management
                 HttpMethod.Get,
                 clusterId: null,
                 TunnelsPath + "/" + name + CheckAvailableSubPath,
-                query: null,
+                query: GetApiQuery(),
                 options: null,
                 cancellation
             );
