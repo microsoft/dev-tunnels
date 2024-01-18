@@ -29,7 +29,7 @@ import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Met
 import * as https from 'https';
 import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 import { IdGeneration } from './idGeneration';
-import { Emitter, Event } from 'vscode-jsonrpc';
+import { CancellationToken, Emitter, Event } from 'vscode-jsonrpc';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -226,6 +226,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         clusterId?: string,
         domain?: string,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<Tunnel[]> {
         const queryParams = [clusterId ? null : 'global=true', domain ? `domain=${domain}` : null];
         const query = queryParams.filter((p) => !!p).join('&');
@@ -235,6 +236,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             tunnelsApiPath,
             query,
             options,
+            undefined,
+            undefined,
+            cancellation
         ))!;
         let tunnels = new Array<Tunnel>();
         if (results.value) {
@@ -248,7 +252,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return tunnels;
     }
 
-    public async getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null> {
+    public async getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel | null> {
         const result = await this.sendTunnelRequest<Tunnel | null>(
             'GET',
             tunnel,
@@ -256,13 +260,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             undefined,
             options,
+            undefined,
+            undefined,
+            cancellation
         );
         preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
         return result;
     }
 
-    public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
+    public async createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
         const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
         options = options || {};
@@ -283,6 +290,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                     options,
                     this.convertTunnelForRequest(tunnel),
                     undefined,
+                    cancellation,
                     true,
                 ))!;
                 preserveAccessTokens(tunnel, result);
@@ -308,6 +316,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             this.convertTunnelForRequest(tunnel),
             undefined,
+            cancellation,
             true,
         ))!;
         preserveAccessTokens(tunnel, result2);
@@ -315,7 +324,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return result2;
     }
 
-    public async createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
+    public async createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
         const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
         if (idGenerated) {
@@ -332,6 +341,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                     options,
                     this.convertTunnelForRequest(tunnel),
                     undefined,
+                    cancellation,
                     true,
                 ))!;
                 preserveAccessTokens(tunnel, result);
@@ -357,6 +367,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             this.convertTunnelForRequest(tunnel),
             undefined,
+            cancellation,
             true,
         ))!;
         preserveAccessTokens(tunnel, result2);
@@ -364,7 +375,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return result2;
     }
 
-    public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel> {
+    public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel> {
         options = options || {};
         options.additionalHeaders = options.additionalHeaders || {};
         options.additionalHeaders['If-Match'] = "*";
@@ -376,13 +387,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
             this.convertTunnelForRequest(tunnel),
+            undefined,
+            cancellation,
         ))!;
         preserveAccessTokens(tunnel, result);
         parseTunnelDates(result);
         return result;
     }
 
-    public async deleteTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<boolean> {
+    public async deleteTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<boolean> {
         return await this.sendTunnelRequest<boolean>(
             'DELETE',
             tunnel,
@@ -392,6 +405,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             undefined,
             true,
+            cancellation,
         );
     }
 
@@ -399,6 +413,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         endpoint: TunnelEndpoint,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelEndpoint> {
         if (endpoint.id == null) {
             throw new Error('Endpoint ID must be specified when updating an endpoint.');
@@ -412,6 +427,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             "connectionMode=" + endpoint.connectionMode,
             options,
             endpoint,
+            undefined,
+            cancellation,
         ))!;
 
         if (tunnel.endpoints) {
@@ -432,6 +449,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         id: string,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<boolean> {
         const path = `${endpointsApiSubPath}/${id}`;
         const result = await this.sendTunnelRequest<boolean>(
@@ -443,6 +461,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             undefined,
             true,
+            cancellation,
         );
 
         if (result && tunnel.endpoints) {
@@ -455,13 +474,16 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return result;
     }
 
-    public async listUserLimits(): Promise<NamedRateStatus[]> {
+    public async listUserLimits(cancellation?: CancellationToken): Promise<NamedRateStatus[]> {
         const results = await this.sendRequest<NamedRateStatus[]>(
             'GET',
             undefined,
             limitsApiPath,
             undefined,
             undefined,
+            undefined,
+            undefined,
+            cancellation,
         );
         return results || [];
     }
@@ -469,6 +491,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     public async listTunnelPorts(
         tunnel: Tunnel,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort[]> {
         const results = (await this.sendTunnelRequest<TunnelPortListResponse>(
             'GET',
@@ -477,6 +500,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             portsApiSubPath,
             undefined,
             options,
+            undefined,
+            undefined,
+            cancellation,
         ))!;
         if (results.value){
             results.value.forEach(parseTunnelPortDates);
@@ -488,6 +514,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         portNumber: number,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort | null> {
         this.raiseReportProgress(TunnelProgress.StartingGetTunnelPort);
         const path = `${portsApiSubPath}/${portNumber}`;
@@ -498,6 +525,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             path,
             undefined,
             options,
+            undefined,
+            undefined,
+            cancellation,
         );
         parseTunnelPortDates(result);
         this.raiseReportProgress(TunnelProgress.CompletedGetTunnelPort);
@@ -508,6 +538,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort> {
         this.raiseReportProgress(TunnelProgress.StartingCreateTunnelPort);
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
@@ -523,6 +554,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
             tunnelPort,
+            undefined,
+            cancellation,
         ))!;
         
         tunnel.ports = tunnel.ports || [];
@@ -541,6 +574,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort> {
         if (tunnelPort.clusterId && tunnel.clusterId && tunnelPort.clusterId !== tunnel.clusterId) {
             throw new Error('Tunnel port cluster ID is not consistent.');
@@ -560,6 +594,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
             tunnelPort,
+            undefined,
+            cancellation,
         ))!;
         preserveAccessTokens(tunnelPort, result);
         parseTunnelPortDates(result);
@@ -578,6 +614,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort> {
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
         const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
@@ -589,6 +626,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             options,
             tunnelPort,
+            undefined,
+            cancellation,
         ))!;
 
         tunnel.ports = tunnel.ports || [];
@@ -606,6 +645,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel: Tunnel,
         portNumber: number,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<boolean> {
         const path = `${portsApiSubPath}/${portNumber}`;
         const result = await this.sendTunnelRequest<boolean>(
@@ -617,6 +657,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             options,
             undefined,
             true,
+            cancellation,
         );
 
         if (result && tunnel.ports) {
@@ -629,7 +670,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return result;
     }
 
-    public async listClusters(): Promise<ClusterDetails[]> {
+    public async listClusters(cancellation?: CancellationToken): Promise<ClusterDetails[]> {
         return (await this.sendRequest<ClusterDetails[]>(
             'GET',
             undefined,
@@ -638,6 +679,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             undefined,
             false,
+            cancellation,
         ))!;
     }
 
@@ -654,6 +696,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * @param body Optional request body object.
      * @param allowNotFound If true, a 404 response is returned as a null or false result
      * instead of an error.
+     * @param cancellationToken Optional cancellation token for the request.
+     * @param isCreate Set to true if this is a tunnel create request, default is false.
      * @returns Result of the request.
      */
     protected async sendTunnelRequest<TResult>(
@@ -665,12 +709,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
         body?: object,
         allowNotFound?: boolean,
+        cancellation?: CancellationToken,
         isCreate: boolean = false
     ): Promise<NullableIfNotBoolean<TResult>> {
         this.raiseReportProgress(TunnelProgress.StartingRequestUri);
         const uri = await this.buildUriForTunnel(tunnel, path, query, options, isCreate);
         this.raiseReportProgress(TunnelProgress.StartingRequestConfig);
-        const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
+        const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes, cancellation);
         this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
@@ -689,6 +734,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
      * @param body Optional request body object.
      * @param allowNotFound If true, a 404 response is returned as a null or false result
      * instead of an error.
+     * @param cancellationToken Optional cancellation token for the request.
      * @returns Result of the request.
      */
     protected async sendRequest<TResult>(
@@ -699,10 +745,11 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
         body?: object,
         allowNotFound?: boolean,
+        cancellation?: CancellationToken,
     ): Promise<NullableIfNotBoolean<TResult>> {
         this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
         const uri = await this.buildUri(clusterId, path, query, options);
-        const config = await this.getAxiosRequestConfig(undefined, options);
+        const config = await this.getAxiosRequestConfig(undefined, options, undefined, cancellation);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
         return result;
@@ -845,6 +892,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel?: Tunnel,
         options?: TunnelRequestOptions,
         accessTokenScopes?: string[],
+        cancellation?: CancellationToken,
     ): Promise<AxiosRequestConfig> {
         // Get access token header
         const headers: { [name: string]: string } = {};
