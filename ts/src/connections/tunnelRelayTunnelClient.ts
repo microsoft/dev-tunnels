@@ -499,7 +499,7 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
         return this.sshSession?.getService(PortForwardingService) ?? undefined;
     }
 
-    public async refreshPorts(): Promise<void> {
+    public async refreshPorts(cancellation?: CancellationToken): Promise<void> {
         if (!this.sshSession || this.sshSession.isClosed) {
             throw new Error('Not connected.');
         }
@@ -507,7 +507,7 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
         const request = new SessionRequestMessage();
         request.requestType = 'RefreshPorts';
         request.wantReply = true;
-        await this.sshSession.request(request);
+        await this.sshSession.request(request, cancellation);
     }
 
     /**

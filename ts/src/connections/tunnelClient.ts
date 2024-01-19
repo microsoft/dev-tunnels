@@ -104,6 +104,8 @@ export interface TunnelClient extends TunnelConnection {
      * removed ports will then propagate back to the set of ports forwarded by the current
      * client. After the returned task has completed, any newly added ports are usable from
      * the current client.
+     *
+     * @param cancellation Optional cancellation for the request.
      */
-    refreshPorts(): Promise<void>;
+    refreshPorts(cancellation?: CancellationToken): Promise<void>;
 }

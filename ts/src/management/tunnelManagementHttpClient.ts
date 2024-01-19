@@ -3,7 +3,6 @@
 
 import {
     Tunnel,
-    TunnelConnectionMode,
     TunnelAccessControl,
     TunnelAccessScopes,
     TunnelEndpoint,
@@ -29,7 +28,7 @@ import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Met
 import * as https from 'https';
 import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 import { IdGeneration } from './idGeneration';
-import { CancellationToken, Emitter, Event } from 'vscode-jsonrpc';
+import { CancellationToken, Disposable, Emitter, Event } from 'vscode-jsonrpc';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -110,7 +109,8 @@ const readAccessTokenScopes = [
     TunnelAccessScopes.Host,
     TunnelAccessScopes.Connect,
 ];
-const apiVersions = ["2023-09-27-preview"]
+const apiVersions = ["2023-09-27-preview"];
+const defaultRequestTimeoutMS = 20000;
 
 export class TunnelManagementHttpClient implements TunnelManagementClient {
     public additionalRequestHeaders?: { [header: string]: string };
@@ -715,7 +715,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         this.raiseReportProgress(TunnelProgress.StartingRequestUri);
         const uri = await this.buildUriForTunnel(tunnel, path, query, options, isCreate);
         this.raiseReportProgress(TunnelProgress.StartingRequestConfig);
-        const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes, cancellation);
+        const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
         this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
         const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
         this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
@@ -749,13 +749,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): Promise<NullableIfNotBoolean<TResult>> {
         this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
         const uri = await this.buildUri(clusterId, path, query, options);
-        const config = await this.getAxiosRequestConfig(undefined, options, undefined, cancellation);
-        const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
+        const config = await this.getAxiosRequestConfig(undefined, options);
+        const result = await this.request<TResult>(method, uri, body, config, allowNotFound, cancellation);
         this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
         return result;
     }
 
-    public async checkNameAvailablility(tunnelName: string): Promise<boolean> {
+    public async checkNameAvailablility(tunnelName: string, cancellation?: CancellationToken): Promise<boolean> {
         tunnelName = encodeURI(tunnelName);
         const uri = await this.buildUri(
             undefined,
@@ -765,7 +765,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             httpsAgent: this.httpsAgent,
             adapter: this.adapter,
         };
-        return await this.request<boolean>('GET', uri, undefined, config);
+        return await this.request<boolean>('GET', uri, undefined, config, undefined, cancellation);
     }
 
     private raiseReportProgress(progress: TunnelProgress) {
@@ -775,8 +775,19 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         this.reportProgressEmitter.fire(args);
     }
 
-    private getResponseErrorMessage(error: AxiosError) {
+    private getResponseErrorMessage(error: AxiosError, signal: AbortSignal) {
         let errorMessage = '';
+
+        if (error.code === 'ECONNABORTED') {
+            // server timeout
+            errorMessage = 'Timeout waiting for server response.';
+        }
+
+        if (error.message === 'Network Error' && signal.aborted) {
+            // connection timeout
+            errorMessage = 'Timeout connecting to server.'
+        }
+
         if (error.response?.data) {
             const problemDetails: ProblemDetails = error.response.data;
             if (problemDetails.title || problemDetails.detail) {
@@ -892,7 +903,6 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel?: Tunnel,
         options?: TunnelRequestOptions,
         accessTokenScopes?: string[],
-        cancellation?: CancellationToken,
     ): Promise<AxiosRequestConfig> {
         // Get access token header
         const headers: { [name: string]: string } = {};
@@ -1055,6 +1065,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         data: any,
         config: AxiosRequestConfig,
         allowNotFound?: boolean,
+        cancellation?: CancellationToken,
     ): Promise<NullableIfNotBoolean<TResult>> {
         this.trace(`${method} ${uri}`);
         if (config.headers) {
@@ -1068,10 +1079,23 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             this.traceContent(response.data);
         };
 
+        let disposable: Disposable | undefined;
+        const abortController = new AbortController();
+        const newAbortSignal = () => {
+            if (cancellation) {
+                disposable = cancellation.onCancellationRequested(() => abortController.abort());
+            } else {
+                setTimeout(() => abortController.abort(), defaultRequestTimeoutMS);
+            }
+            return abortController.signal;
+        }
+
         try {
             config.url = uri;
             config.method = method;
             config.data = data;
+            config.signal = newAbortSignal();
+            config.timeout = defaultRequestTimeoutMS;
 
             const response = await axios.request<TResult>(config);
             traceResponse(response);
@@ -1089,7 +1113,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 }
             }
 
-            requestError.message = this.getResponseErrorMessage(requestError);
+            requestError.message = this.getResponseErrorMessage(requestError, abortController.signal);
 
             // Axios errors have too much redundant detail! Delete some of it.
             delete requestError.request;
@@ -1100,6 +1124,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
 
             throw requestError;
+        } finally {
+            disposable?.dispose();
         }
     }
 
