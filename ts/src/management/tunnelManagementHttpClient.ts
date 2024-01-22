@@ -717,7 +717,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         this.raiseReportProgress(TunnelProgress.StartingRequestConfig);
         const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
         this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
-        const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
+        const result = await this.request<TResult>(method, uri, body, config, allowNotFound, cancellation);
         this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
         return result;
     }
@@ -1057,6 +1057,15 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     }
 
     /**
+     * Axios request that can be overridden for unit tests purposes.
+     * @param config axios request config
+     * @param _cancellation the cancellation token for the request (used by unit tests to simulate timeouts).
+     */
+    private async axiosRequest<TResponse>(config: AxiosRequestConfig, _cancellation?: CancellationToken) {
+        return await axios.request<TResponse>(config);
+    }
+
+    /**
      * Makes an HTTP request using Axios, while tracing request and response details.
      */
     private async request<TResult>(
@@ -1082,7 +1091,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         let disposable: Disposable | undefined;
         const abortController = new AbortController();
         const newAbortSignal = () => {
-            if (cancellation) {
+            if (cancellation?.isCancellationRequested) {
+                abortController.abort();
+            } else if (cancellation) {
                 disposable = cancellation.onCancellationRequested(() => abortController.abort());
             } else {
                 setTimeout(() => abortController.abort(), defaultRequestTimeoutMS);
@@ -1097,7 +1108,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             config.signal = newAbortSignal();
             config.timeout = defaultRequestTimeoutMS;
 
-            const response = await axios.request<TResult>(config);
+            const response = await this.axiosRequest<TResult>(config, cancellation);
             traceResponse(response);
 
             // This assumes that TResult is always boolean for DELETE requests.
