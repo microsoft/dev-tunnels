@@ -138,7 +138,7 @@ export class TunnelManagementTests {
             error = <Error>e;
         }
 
-        assert(error?.message?.includes('Timeout waiting for server response.'));
+        assert(error?.message?.includes('Timeout reached: '));
     }
 
     @test
@@ -159,7 +159,7 @@ export class TunnelManagementTests {
             error = <Error>e;
         }
 
-        assert(error?.message?.includes('Timeout connecting to server.'));
+        assert(error?.message?.includes('Signal aborted: '));
     }
 
     @test

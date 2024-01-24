@@ -780,12 +780,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         if (error.code === 'ECONNABORTED') {
             // server timeout
-            errorMessage = 'Timeout waiting for server response.';
+            errorMessage = `Timeout reached: ${error.message}`;
         }
 
-        if (error.message === 'Network Error' && signal.aborted) {
+        if (signal.aborted) {
             // connection timeout
-            errorMessage = 'Timeout connecting to server.'
+            errorMessage = `Signal aborted: ${error.message}`
         }
 
         if (error.response?.data) {
@@ -1090,13 +1090,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         let disposable: Disposable | undefined;
         const abortController = new AbortController();
+        let timeout: NodeJS.Timeout | undefined = undefined;
         const newAbortSignal = () => {
             if (cancellation?.isCancellationRequested) {
-                abortController.abort();
+                abortController.abort('Cancelled: CancellationToken cancel requested.');
             } else if (cancellation) {
-                disposable = cancellation.onCancellationRequested(() => abortController.abort());
+                disposable = cancellation.onCancellationRequested(() => abortController.abort('Cancelled: CancellationToken cancel requested.'));
             } else {
-                setTimeout(() => abortController.abort(), defaultRequestTimeoutMS);
+                timeout = setTimeout(() => abortController.abort('Cancelled: default request timeout reached.'), defaultRequestTimeoutMS);
             }
             return abortController.signal;
         }
@@ -1136,6 +1137,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
             throw requestError;
         } finally {
+            if (timeout) {
+                clearTimeout(timeout);
+            }
             disposable?.dispose();
         }
     }
