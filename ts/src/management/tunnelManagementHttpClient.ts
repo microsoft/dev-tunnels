@@ -1090,13 +1090,14 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         let disposable: Disposable | undefined;
         const abortController = new AbortController();
+        let timeOutId: number | undefined;
         const newAbortSignal = () => {
             if (cancellation?.isCancellationRequested) {
                 abortController.abort();
             } else if (cancellation) {
                 disposable = cancellation.onCancellationRequested(() => abortController.abort());
             } else {
-                setTimeout(() => abortController.abort(), defaultRequestTimeoutMS);
+                timeOutId = setTimeout(() => abortController.abort(), defaultRequestTimeoutMS);
             }
             return abortController.signal;
         }
@@ -1136,6 +1137,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
             throw requestError;
         } finally {
+            // clear abort timeout
+            clearTimeout(timeOutId);
             disposable?.dispose();
         }
     }
