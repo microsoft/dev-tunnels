@@ -775,17 +775,12 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         this.reportProgressEmitter.fire(args);
     }
 
-    private getResponseErrorMessage(error: AxiosError, signal: AbortSignal) {
+    private getResponseErrorMessage(error: AxiosError) {
         let errorMessage = '';
 
         if (error.code === 'ECONNABORTED') {
             // server timeout
             errorMessage = `Timeout reached: ${error.message}`;
-        }
-
-        if (signal.aborted) {
-            // connection timeout
-            errorMessage = `Signal aborted: ${error.message}`
         }
 
         if (error.response?.data) {
@@ -1089,25 +1084,29 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         };
 
         let disposable: Disposable | undefined;
-        const abortController = new AbortController();
+
+        // Using axios AbortController signal appears to have
+        // issues with React. Please ensure Codespaces isn't
+        // impacted when upgrading.
+        const axiosCancelTokenSource = axios.CancelToken.source()
         let timeout: NodeJS.Timeout | undefined = undefined;
-        const newAbortSignal = () => {
+        const getAxiosCancellationToken = () => {
             if (cancellation?.isCancellationRequested) {
-                abortController.abort('Cancelled: CancellationToken cancel requested.');
+                axiosCancelTokenSource.cancel('Cancelled: CancellationToken cancel requested.');
             } else if (cancellation) {
-                disposable = cancellation.onCancellationRequested(() => abortController.abort('Cancelled: CancellationToken cancel requested.'));
+                disposable = cancellation.onCancellationRequested(() => axiosCancelTokenSource.cancel('Cancelled: CancellationToken cancel requested.'));
             } else {
-                timeout = setTimeout(() => abortController.abort('Cancelled: default request timeout reached.'), defaultRequestTimeoutMS);
+                timeout = setTimeout(() => axiosCancelTokenSource.cancel('Cancelled: default request timeout reached.'), defaultRequestTimeoutMS);
             }
-            return abortController.signal;
+            return axiosCancelTokenSource.token;
         }
 
         try {
             config.url = uri;
             config.method = method;
             config.data = data;
-            config.signal = newAbortSignal();
             config.timeout = defaultRequestTimeoutMS;
+            config.cancelToken = getAxiosCancellationToken();
 
             const response = await this.axiosRequest<TResult>(config, cancellation);
             traceResponse(response);
@@ -1125,7 +1124,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 }
             }
 
-            requestError.message = this.getResponseErrorMessage(requestError, abortController.signal);
+            requestError.message = this.getResponseErrorMessage(requestError);
 
             // Axios errors have too much redundant detail! Delete some of it.
             delete requestError.request;

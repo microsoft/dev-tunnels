@@ -44,7 +44,7 @@ export class TunnelManagementTests {
         var token = (cancellation as any);
         if (token?.forceConnection) {
             token.tokenSource?.cancel();
-            throw new AxiosError('Network Error');
+            config.cancelToken?.throwIfRequested();
         }
 
         // simulate an Axios server response timeout
@@ -159,7 +159,7 @@ export class TunnelManagementTests {
             error = <Error>e;
         }
 
-        assert(error?.message?.includes('Signal aborted: '));
+        assert(error?.message?.includes('Cancelled: CancellationToken cancel requested.'));
     }
 
     @test

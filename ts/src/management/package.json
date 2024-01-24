@@ -18,7 +18,7 @@
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
 		"vscode-jsonrpc": "^4.0.0",
-		"@microsoft/dev-tunnels-contracts": ">1.1.8",
-		"axios": "^1.6.2"
+		"@microsoft/dev-tunnels-contracts": ">1.1.9",
+		"axios": "^1.6.5"
 	}
 }
