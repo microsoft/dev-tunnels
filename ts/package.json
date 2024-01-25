@@ -24,7 +24,7 @@
 		"@microsoft/dev-tunnels-ssh": "^3.11.36",
 		"@microsoft/dev-tunnels-ssh-tcp": "^3.11.36",
 		"await-semaphore": "^0.1.3",
-		"axios": "^1.6.2",
+		"axios": "^1.6.6",
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
 		"uuid": "^3.3.3",

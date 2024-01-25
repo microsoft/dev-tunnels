@@ -778,14 +778,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private getResponseErrorMessage(error: AxiosError, signal: AbortSignal) {
         let errorMessage = '';
 
-        if (error.code === 'ECONNABORTED') {
-            // server timeout
-            errorMessage = `Timeout reached: ${error.message}`;
-        }
-
         if (signal.aborted) {
             // connection timeout
-            errorMessage = `Signal aborted: ${error.message}`
+            error.code = 'ECONNABORTED';
+            errorMessage = `ECONNABORTED: (signal aborted) ${error.message}`
+        } else if (error.code === 'ECONNABORTED') {
+            // server timeout
+            errorMessage = `ECONNABORTED: (timeout) ${error.message}`;
         }
 
         if (error.response?.data) {

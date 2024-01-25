@@ -126,7 +126,7 @@ export class TunnelManagementTests {
     public async timeoutServerResponse() {
         this.nextResponse = [];
 
-        let error: Error | undefined = undefined;
+        let error: any | undefined = undefined;
         try {
             const cts = new CancellationTokenSource();
             // Add additional properties on token.
@@ -135,17 +135,18 @@ export class TunnelManagementTests {
             token.forceTimeout = true;
             await this.managementClient.listUserLimits(cts.token);
         } catch (e) {
-            error = <Error>e;
+            error = e;
         }
 
-        assert(error?.message?.includes('Timeout reached: '));
+        assert(error?.message?.includes('ECONNABORTED: (timeout)'));
+        assert(error?.code === 'ECONNABORTED');
     }
 
     @test
     public async timeoutServerConnection() {
         this.nextResponse = [];
 
-        let error: Error | undefined = undefined;
+        let error: any | undefined = undefined;
         try {
             const cts = new CancellationTokenSource();
 
@@ -156,10 +157,11 @@ export class TunnelManagementTests {
             token.tokenSource = cts;
             await this.managementClient.listUserLimits(cts.token);
         } catch (e) {
-            error = <Error>e;
+            error = e;
         }
 
-        assert(error?.message?.includes('Signal aborted: '));
+        assert(error?.message?.includes('ECONNABORTED: (signal aborted)'));
+        assert(error?.code === 'ECONNABORTED');
     }
 
     @test
