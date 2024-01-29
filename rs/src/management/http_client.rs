@@ -180,7 +180,7 @@ impl TunnelManagementClient {
         endpoint: &TunnelRelayTunnelEndpoint,
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelRelayTunnelEndpoint> {
-        let url = self.build_tunnel_uri(
+        let mut url = self.build_tunnel_uri(
             locator,
             Some(&format!(
                 "{}/{}",
