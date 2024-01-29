@@ -183,8 +183,8 @@ impl TunnelManagementClient {
         let url = self.build_tunnel_uri(
             locator,
             Some(&format!(
-                "{}/{}/{}",
-                ENDPOINTS_API_SUB_PATH, endpoint.base.host_id, endpoint.base.connection_mode
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH, endpoint.base.id
             )),
         );
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
