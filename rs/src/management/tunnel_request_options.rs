@@ -1,5 +1,7 @@
 use reqwest::header::{HeaderName, HeaderValue};
 
+use crate::contracts::TunnelConnectionMode;
+
 use super::Authorization;
 
 #[derive(Default, Clone)]
@@ -50,6 +52,9 @@ pub struct TunnelRequestOptions {
 
     /// Limits the number of tunnels returned when searching or listing tunnels.
     pub limit: u32,
+
+    /// Gets or sets the connection mode of the endpoint.
+    pub connection_mode: TunnelConnectionMode,
 }
 
 pub const NO_REQUEST_OPTIONS: &TunnelRequestOptions = &TunnelRequestOptions {
