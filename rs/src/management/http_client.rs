@@ -247,7 +247,10 @@ impl TunnelManagementClient {
         port: &TunnelPort,
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelPort> {
-        let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
+        let url = self.build_tunnel_uri(
+            locator,
+            Some(&format!("{}/{}", PORTS_API_SUB_PATH, port_number)),
+        );
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, port);
         self.execute_json("create_tunnel_port", request).await
