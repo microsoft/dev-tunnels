@@ -187,7 +187,6 @@ impl TunnelManagementClient {
                 ENDPOINTS_API_SUB_PATH, endpoint.base.id
             )),
         );
-        options.connection_mode = endpoint.base.connection_mode;
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_relay_endpoints", request)
@@ -651,10 +650,6 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &st
         if tunnel_opts.require_all_labels {
             url.query_pairs_mut().append_pair("allLabels", "true");
         }
-    }
-    if tunnel_opts.connection_mode.is_empty() {
-        url.query_pairs_mut()
-            .append_pair("connectionMode", &tunnel_opts.connection_mode);
     }
     url.query_pairs_mut()
         .append_pair("api-version", api_version);
