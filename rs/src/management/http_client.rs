@@ -14,7 +14,7 @@ use url::Url;
 use rand::Rng;
 
 use crate::contracts::{
-    env_production, NamedRateStatus, Tunnel, TunnelConnectionMode, TunnelEndpoint,
+    env_production, NamedRateStatus, Tunnel, TunnelEndpoint,
     TunnelListByRegionResponse, TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint,
     TunnelServiceProperties,
 };
@@ -161,7 +161,7 @@ impl TunnelManagementClient {
         endpoint: &TunnelEndpoint,
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelEndpoint> {
-        let url = self.build_tunnel_uri(
+        let mut url = self.build_tunnel_uri(
             locator,
             Some(&format!(
                 "{}/{}",
