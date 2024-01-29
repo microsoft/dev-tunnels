@@ -50,7 +50,6 @@ export class SshHelpers {
         if (isNode()) {
             return SshHelpers.nodeSshStreamFactory(relayUri, protocols, headers, clientConfig);
         }
-
         return SshHelpers.webSshStreamFactory(new WebSocket(relayUri, protocols));
     }
 
@@ -101,6 +100,7 @@ export class SshHelpers {
     public static webSshStreamFactory(socket: WebSocket): Promise<ssh.WebSocketStream> {
         socket.binaryType = 'arraybuffer';
         return new Promise<ssh.WebSocketStream>((resolve, reject) => {
+            const relayError = 'Failed to connect to relay url';
             socket.onopen = () => {
                 resolve(new ssh.WebSocketStream(socket));
             };
@@ -109,7 +109,15 @@ export class SshHelpers {
                 // the user agents must not convey extended error information including the cases where the server
                 // didn't complete the opening handshake (e.g. because it was not a WebSocket server).
                 // So we cannot obtain the response status code.
-                reject(new BrowserWebSocketRelayError(`Failed to connect to relay url`));
+                // Note: When the socket is connected and an error occurs then `onclose` event occurs after `onerror`.
+                // However, the promise is already rejected by `onerror` and we loose this information, hence the
+                // timeout helps to give us some info in this scenario.
+                setTimeout(() => reject(new BrowserWebSocketRelayError(relayError)), 100);
+            };
+            socket.onclose = (e) => {
+                if (e.code !== 1000) {
+                    reject(new BrowserWebSocketRelayError(`${relayError} Code: ${e.code} Reason: ${e.reason}`));
+                }
             };
         });
     }
