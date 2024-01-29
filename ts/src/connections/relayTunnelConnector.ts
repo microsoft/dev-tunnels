@@ -24,7 +24,7 @@ import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 export const maxReconnectDelayMs = 13000;
 
 // Delay between the 1st and the 2nd attempts.
-const reconnectInitialDelayMs = 100;
+const reconnectInitialDelayMs = 1000;
 
 // There is no status code information in web socket errors in browser context.
 // Instead, connection will retry anyway with limited retry attempts.
