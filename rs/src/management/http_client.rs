@@ -164,10 +164,11 @@ impl TunnelManagementClient {
         let url = self.build_tunnel_uri(
             locator,
             Some(&format!(
-                "{}/{}/{}",
-                ENDPOINTS_API_SUB_PATH, endpoint.host_id, endpoint.connection_mode
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH, endpoint.base.id
             )),
         );
+        url.query_pairs_mut().append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_endpoints", request).await
@@ -198,15 +199,11 @@ impl TunnelManagementClient {
     pub async fn delete_tunnel_endpoints(
         &self,
         locator: &TunnelLocator,
-        host_id: &str,
+        id: &str,
         connection_mode: Option<TunnelConnectionMode>,
         options: &TunnelRequestOptions,
     ) -> HttpResult<bool> {
-        let path = if let Some(cm) = connection_mode {
-            format!("{}/{}/{}", ENDPOINTS_API_SUB_PATH, host_id, cm)
-        } else {
-            format!("{}/{}", ENDPOINTS_API_SUB_PATH, host_id)
-        };
+        let path = format!("{}/{}", ENDPOINTS_API_SUB_PATH, id);
 
         let url = self.build_tunnel_uri(locator, Some(&path));
         let request = self
