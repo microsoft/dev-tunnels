@@ -571,8 +571,8 @@ fn create_full_user_agent(user_agent: &str) -> String {
     let os_info = format!("{}: {} {}", "OS", os.os_type(), os.version());
 
     let mut full_user_agent = format!(
-        "{}{}{} ({}",
-        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version, os_info
+        "{} Dev-Tunnels-Service-Rust-SDK/{} ({}",
+        user_agent, pkg_version, os_info
     );
 
     #[cfg(windows)]
@@ -582,7 +582,7 @@ fn create_full_user_agent(user_agent: &str) -> String {
         let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
         let key = hklm.open_subkey("SOFTWARE\\Microsoft\\Windows365");
         if let Ok(id) = key.and_then(|k| k.get_value::<String, _>("PartnerId")) {
-            full_user_agent.push_str(" Windows-Partner-Id: ");
+            full_user_agent.push_str("; Windows-Partner-Id: ");
             full_user_agent.push_str(&id);
         }
     }
