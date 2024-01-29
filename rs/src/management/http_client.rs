@@ -187,6 +187,7 @@ impl TunnelManagementClient {
                 ENDPOINTS_API_SUB_PATH, endpoint.base.id
             )),
         );
+        url.query_pairs_mut().append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_relay_endpoints", request)
