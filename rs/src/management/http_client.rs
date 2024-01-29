@@ -569,32 +569,26 @@ fn create_full_user_agent(user_agent: &str) -> String {
     let pkg_version = PKG_VERSION.unwrap_or("unknown");
     let os = os_info::get();
     let os_info = format!("{}: {} {}", "OS", os.os_type(), os.version());
-    let mut windows_partner_id: Option<String> = None;
+
+    let mut full_user_agent = format!(
+        "{}{}{} ({}",
+        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version, os_info
+    );
+
     #[cfg(windows)]
     {
         use winreg::enums::*;
         use winreg::RegKey;
         let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
         let key = hklm.open_subkey("SOFTWARE\\Microsoft\\Windows365");
-        windows_partner_id = key.and_then(|k| k.get_value("PartnerId")).ok();
+        if let Ok(id) = key.and_then(|k| k.get_value::<String, _>("PartnerId")) {
+            full_user_agent.push_str(" Windows-Partner-Id: ");
+            full_user_agent.push_str(&id);
+        }
     }
 
-    let mut full_user_agent = format!(
-        "{}{}{} ({})",
-        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version, os_info
-    );
+    full_user_agent.push(')');
 
-    if let Some(id) = &windows_partner_id {
-        let windows_partner_id_str = format!("Windows-Partner-Id: {}", id);
-        full_user_agent = format!(
-            "{}{}{} ({}; {})",
-            user_agent,
-            " Dev-Tunnels-Service-Rust-SDK/",
-            pkg_version,
-            os_info,
-            windows_partner_id_str
-        );
-    }
     full_user_agent
 }
 
