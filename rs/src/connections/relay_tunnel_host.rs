@@ -239,7 +239,7 @@ impl RelayTunnelHost {
         self.mgmt
             .delete_tunnel_endpoints(
                 &self.locator,
-                Some(format!("{}-{}", &self.host_id.to_string(), "relay")),
+                Some(format!("{}-relay", &self.host_id.to_string())),
                 NO_REQUEST_OPTIONS,
             )
             .await
@@ -389,7 +389,7 @@ impl RelayTunnelHost {
                 &self.locator,
                 &TunnelRelayTunnelEndpoint {
                     base: TunnelEndpoint {
-                        id: format!("{}-{}",self.host_id.to_string(), relay),
+                        id: format!("{}-relay",self.host_id.to_string()),
                         connection_mode: TunnelConnectionMode::TunnelRelay,
                         host_id: self.host_id.to_string(),
                         host_public_keys: vec![],
