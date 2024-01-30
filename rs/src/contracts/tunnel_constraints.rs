@@ -110,7 +110,7 @@ pub const TUNNEL_ALIAS_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{3,60}
 pub const TUNNEL_NAME_PATTERN: &str = r#"([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)"#;
 
 // Regular expression that can match or validate tunnel or port labels.
-pub const LABEL_PATTERN: &str = r#"[\w-=]{1,50}"#;
+pub const LABEL_PATTERN: &str = r"[\w-=]{1,50}";
 
 // Regular expression that can match or validate tunnel domains.
 //
