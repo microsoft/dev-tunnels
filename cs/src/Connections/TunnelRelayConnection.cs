@@ -234,7 +234,6 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
             _ => new[] { WebSocketSubProtocolV2, WebSocketSubProtocol },
         };
 
-        ValidateAccessToken();
         Trace.Verbose("Connecting to {0} tunnel relay {1}", ConnectionRole, RelayUri.AbsoluteUri);
         var (stream, subprotocol) = await this.StreamFactory.CreateRelayStreamAsync(
             RelayUri,
@@ -396,12 +395,6 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
             if (!await OnRefreshingTunnelAccessTokenAsync(cancellation))
             {
                 return false;
-            }
-
-            // Access token may be null if tunnel allows anonymous access.
-            if (this.accessToken != null)
-            {
-                TunnelAccessTokenProperties.ValidateTokenExpiration(this.accessToken);
             }
 
             Trace.Verbose(

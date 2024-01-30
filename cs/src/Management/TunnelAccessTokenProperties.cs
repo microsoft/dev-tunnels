@@ -126,7 +126,10 @@ public class TunnelAccessTokenProperties
     /// Checks if the tunnel access token expiration claim is in the past.
     /// </summary>
     /// <exception cref="UnauthorizedAccessException">The token is expired.</exception>
-    /// <remarks>Note this does not throw if the token is an invalid format.</remarks>
+    /// <remarks>
+    /// Note this does not throw if the token is an invalid format.
+    /// Uses the client's system time for validation.
+    /// </remarks>
     public static void ValidateTokenExpiration(string token)
     {
         var t = TryParse(token);

@@ -46,6 +46,7 @@ export interface TunnelSession extends TunnelConnection {
 
     /**
      * Validates tunnel access token if it's present. Returns the token.
+     * Note: uses client's system time for the validation.
      */
     validateAccessToken(): string | undefined;
 
