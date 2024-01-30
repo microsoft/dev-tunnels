@@ -14,9 +14,8 @@ use url::Url;
 use rand::Rng;
 
 use crate::contracts::{
-    env_production, NamedRateStatus, Tunnel, TunnelEndpoint,
-    TunnelListByRegionResponse, TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint,
-    TunnelServiceProperties,
+    env_production, NamedRateStatus, Tunnel, TunnelEndpoint, TunnelListByRegionResponse,
+    TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint, TunnelServiceProperties,
 };
 
 use super::{
@@ -163,12 +162,10 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!(
-                "{}/{}",
-                ENDPOINTS_API_SUB_PATH, endpoint.id
-            )),
+            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id)),
         );
-        url.query_pairs_mut().append_pair("connectionMode", &endpoint.connection_mode.to_string());
+        url.query_pairs_mut()
+            .append_pair("connectionMode", &endpoint.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_endpoints", request).await
@@ -183,12 +180,10 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelRelayTunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!(
-                "{}/{}",
-                ENDPOINTS_API_SUB_PATH, endpoint.base.id
-            )),
+            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id)),
         );
-        url.query_pairs_mut().append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
+        url.query_pairs_mut()
+            .append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_relay_endpoints", request)

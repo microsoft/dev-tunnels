@@ -325,7 +325,7 @@ impl RelayTunnelHost {
             connection_timeout: None,
             auth_rejection_time: std::time::Duration::from_secs(5),
             keys: vec![keypair],
-            window_size: 1024 * 1024 * 1,
+            window_size: 1024 * 1024,
             preferred: russh::Preferred::COMPRESSED,
             limits: russh::Limits {
                 rekey_read_limit: usize::MAX,
@@ -389,7 +389,7 @@ impl RelayTunnelHost {
                 &self.locator,
                 &TunnelRelayTunnelEndpoint {
                     base: TunnelEndpoint {
-                        id: format!("{}-relay",self.host_id.to_string()),
+                        id: format!("{}-relay", self.host_id),
                         connection_mode: TunnelConnectionMode::TunnelRelay,
                         host_id: self.host_id.to_string(),
                         host_public_keys: vec![],

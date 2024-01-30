@@ -368,8 +368,7 @@ mod test {
             }
         });
 
-        let mut output = Vec::new();
-        output.resize(input_len, 0);
+        let mut output = vec![0; input_len];
         read.read_exact(&mut output)
             .await
             .expect("expected to read");
