@@ -239,7 +239,7 @@ impl RelayTunnelHost {
         self.mgmt
             .delete_tunnel_endpoints(
                 &self.locator,
-                Some(format!("{}-relay", &self.host_id.to_string())),
+                &format!("{}-relay", &self.host_id.to_string()),
                 NO_REQUEST_OPTIONS,
             )
             .await
