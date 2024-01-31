@@ -64,7 +64,7 @@ export class TunnelAccessTokenProperties {
 
     /**
      * Checks if the tunnel access token expiration claim is in the past.
-     *
+     * Note: uses client's system time for the validation.
      * (Does not throw if the token is an invalid format.)
      */
     public static validateTokenExpiration(token: string): void {
@@ -126,7 +126,6 @@ export class TunnelAccessTokenProperties {
 
     /**
      * Gets a tunnel access token that matches any of the provided access token scopes.
-     * Validates token expiration if the token is found and throws an error if it's expired.
      * @param tunnel The tunnel to get the access tokens from.
      * @param accessTokenScopes What scopes the token needs to have.
      * @returns Tunnel access token if found; otherwise, undefined.
@@ -147,7 +146,6 @@ export class TunnelAccessTokenProperties {
             for (const [key, accessToken] of Object.entries(tunnel.accessTokens)) {
                 // Each key may be either a single scope or space-delimited list of scopes.
                 if (accessToken && key.split(' ').includes(scope)) {
-                    TunnelAccessTokenProperties.validateTokenExpiration(accessToken);
                     return accessToken;
                 }
             }

@@ -229,11 +229,10 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             this.raiseReportProgress(Progress.OpeningHostConnectionToRelay);
         }
 
-        const accessToken = this.validateAccessToken();
         this.trace(TraceLevel.Info, 0, `Connecting to ${this.connectionRole} tunnel relay ${this.relayUri}`);
         this.trace(TraceLevel.Verbose, 0, `Sec-WebSocket-Protocol: ${this.connectionProtocols.join(', ')}`);
-        if (accessToken) {
-            const tokenTrace = TunnelAccessTokenProperties.getTokenTrace(accessToken);
+        if (this.accessToken) {
+            const tokenTrace = TunnelAccessTokenProperties.getTokenTrace(this.accessToken);
             this.trace(TraceLevel.Verbose, 0, `Authorization: tunnel <${tokenTrace}>`);
         }
 
@@ -246,7 +245,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
         const streamAndProtocol = await this.streamFactory.createRelayStream(
             this.relayUri,
             this.connectionProtocols,
-            accessToken,
+            this.accessToken,
             clientConfig
         );
 
@@ -340,10 +339,6 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 this.accessToken = await this.getFreshTunnelAccessToken(cancellation) ?? undefined;
             } else {
                 await this.refreshTunnel(false, cancellation);
-            }
-
-            if (this.accessToken) {
-                TunnelAccessTokenProperties.validateTokenExpiration(this.accessToken);
             }
 
             this.traceVerbose(
@@ -639,6 +634,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
 
     /**
      * Validates tunnel access token if it's present. Returns the token.
+     * Note: uses client's system time for the validation.
      */
     public validateAccessToken(): string | undefined {
         if (this.accessToken) {

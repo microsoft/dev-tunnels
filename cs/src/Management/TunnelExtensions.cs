@@ -80,6 +80,7 @@ public static class TunnelExtensions
     /// The tokens are searched in <c>Tunnel.AccessTokens</c> dictionary where each
     /// key may be either a single scope or space-delimited list of scopes.
     /// The method only validates token expiration. It doesn't validate if the token is not JWT. It doesn't validate JWT signature or claims.
+    /// Uses the client's system time for validation.
     /// </remarks>
     /// <param name="tunnel">The tunnel to get the access token from.</param>
     /// <param name="accessTokenScope">Access token scope to get the token for.</param>

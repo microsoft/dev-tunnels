@@ -24,7 +24,7 @@ export class TunnelPlanTokenProperties {
 
     /**
      * Checks if the tunnel access token expiration claim is in the past.
-     *
+     * Note: uses client's system time for the validation.
      * (Does not throw if the token is an invalid format.)
      */
     public static validateTokenExpiration(token: string): void {

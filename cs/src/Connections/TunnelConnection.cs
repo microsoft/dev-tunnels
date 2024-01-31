@@ -184,6 +184,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// Validate <see cref="accessToken"/> if it is not null or empty.
     /// </summary>
     /// <exception cref="UnauthorizedAccessException">is thrown if the <see cref="accessToken"/> is expired.</exception>
+    /// <remarks>Note: uses the client's system time for validation.</remarks>
     protected virtual void ValidateAccessToken()
     {
         if (!string.IsNullOrEmpty(this.accessToken))

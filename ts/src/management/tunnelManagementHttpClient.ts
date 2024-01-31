@@ -907,7 +907,6 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const headers: { [name: string]: string } = {};
 
         if (options && options.accessToken) {
-            TunnelAccessTokenProperties.validateTokenExpiration(options.accessToken);
             headers[
                 tunnelAuthentication
             ] = `${TunnelAuthenticationSchemes.tunnel} ${options.accessToken}`;

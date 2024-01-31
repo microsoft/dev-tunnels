@@ -148,11 +148,7 @@ export class TunnelConnectionBase implements TunnelConnection {
             cancellation,
         );
         this.refreshingTunnelAccessTokenEmitter.fire(event);
-        const result = event.tunnelAccessToken ? await event.tunnelAccessToken : undefined;
-        if (result) {
-            TunnelAccessTokenProperties.validateTokenExpiration(result);
-        }
-        return result;
+        return event.tunnelAccessToken ? await event.tunnelAccessToken : undefined;
     }
 
     /**
