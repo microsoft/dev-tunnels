@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use std::{io, pin::Pin, task::Poll, time::Duration};
+use std::{io, net::SocketAddr, pin::Pin, task::Poll, time::Duration};
 
 use futures::{Future, Sink, Stream};
 use tokio::{
@@ -237,9 +237,19 @@ pub(crate) async fn connect_via_proxy(
         format!("{}:{}", hostname, port)
     };
 
-    let stream = TcpStream::connect(proxy_addr)
-        .await
-        .map_err(TunnelError::ProxyConnectionFailed)?;
+    let stream = match proxy_addr.parse::<SocketAddr>() {
+        Ok(addr) => TcpStream::connect(addr).await,
+        Err(_) => {
+            let as_uri = url::Url::parse(proxy_addr).map_err(TunnelError::ProxyAddressInvalid)?;
+            TcpStream::connect((
+                as_uri.host_str().unwrap_or("localhost"),
+                as_uri.port().unwrap_or(80),
+            ))
+            .await
+        }
+    };
+
+    let stream = stream.map_err(TunnelError::ProxyConnectionFailed)?;
 
     let (mut request_sender, conn) = hyper::client::conn::handshake(stream)
         .await
