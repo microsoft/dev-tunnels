@@ -30,13 +30,3 @@ steps:
     ServiceEndpointUrl: 'https://api.esrp.microsoft.com'
     MainPublisher: 'ESRPRELPACMAN'
     DomainTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
-
-- task: Npm@1
-  displayName: 'Publish packages to external feed'
-  inputs:
-    command: custom
-    workingDir: ts
-    verbose: false
-    customCommand: 'run publish --access public'
-    customRegistry: useNpmrc
-    customEndpoint: 'dev-tunnels-npm'
