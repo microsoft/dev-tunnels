@@ -17,13 +17,16 @@ variables:
 
 steps:
 - template: typescript-build-steps.yaml
-
-- task: Npm@1
-  displayName: 'Publish packages to external feed'
+- task: EsrpRelease@5
   inputs:
-    command: custom
-    workingDir: ts
-    verbose: false
-    customCommand: 'run publish --access public'
-    customRegistry: useNpmrc
-    customEndpoint: 'dev-tunnels-npm'
+    ConnectedServiceName: 'devtunnels-esrp'
+    Intent: 'PackageDistribution'
+    ContentType: 'npm'
+    ContentSource: 'Folder'
+    FolderLocation: '$(System.DefaultWorkingDirectory)/ts'
+    WaitForReleaseCompletion: true
+    Owners: 'jfullerton@microsoft.com'
+    Approvers: 'jfullerton@microsoft.com'
+    ServiceEndpointUrl: 'https://api.esrp.microsoft.com'
+    MainPublisher: 'ESRPRELPACMAN'
+    DomainTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
