@@ -23,7 +23,7 @@ steps:
     Intent: 'PackageDistribution'
     ContentType: 'npm'
     ContentSource: 'Folder'
-    FolderLocation: '$(System.DefaultWorkingDirectory)/ts'
+    FolderLocation: '$(System.DefaultWorkingDirectory)/ts/out/pkg'
     WaitForReleaseCompletion: true
     Owners: 'jfullerton@microsoft.com'
     Approvers: 'jasongin@microsoft.com, debekoe@microsoft.com, ilbiryuk@microsoft.com'
