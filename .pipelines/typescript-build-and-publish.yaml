@@ -17,7 +17,7 @@ variables:
 
 steps:
 - template: typescript-build-steps.yaml
-- task: EsrpRelease@5
+- task: EsrpRelease@6
   inputs:
     ConnectedServiceName: 'devtunnels-esrp'
     Intent: 'PackageDistribution'
