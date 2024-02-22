@@ -680,7 +680,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             if (/certificate/i.test((error as AxiosError<any>).message)) {
                 const originalErrorMessage = (error as AxiosError<any>).message;
                 throw new Error("Tunnel service HTTPS certificate is invalid. This may be caused by the use of a " +
-                    "self-signed certificate or a firewall intercepting the connection." + originalErrorMessage + ". ");
+                    "self-signed certificate or a firewall intercepting the connection. " + originalErrorMessage + ". ");
             }
             throw error;
         }
