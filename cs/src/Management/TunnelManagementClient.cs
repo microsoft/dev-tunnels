@@ -521,7 +521,7 @@ namespace Microsoft.DevTunnels.Management
             }
 
             var localMachineHeaders = TunnelUserAgent.GetMachineHeaders();
-            if (localMachineHeaders != null)
+            if(localMachineHeaders != null)
             {
                 request.Headers.UserAgent.Add(localMachineHeaders);
             }
@@ -951,7 +951,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnel, nameof(tunnel));
             options ??= new TunnelRequestOptions();
-            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
             var tunnelId = tunnel.TunnelId;
             var idGenerated = string.IsNullOrEmpty(tunnelId);
@@ -997,7 +997,7 @@ namespace Microsoft.DevTunnels.Management
             return result2!;
         }
 
-        /// <inheritdoc />
+                /// <inheritdoc />
         public async Task<Tunnel> CreateOrUpdateTunnelAsync(
             Tunnel tunnel,
             TunnelRequestOptions? options,
@@ -1205,7 +1205,7 @@ namespace Microsoft.DevTunnels.Management
             this.OnReportProgress(TunnelProgress.StartingCreateTunnelPort);
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
             options ??= new TunnelRequestOptions();
-            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
 
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
@@ -1240,7 +1240,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
             options ??= new TunnelRequestOptions();
-            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-Match", "*"));
 
             if (tunnelPort.ClusterId != null && tunnel.ClusterId != null &&
@@ -1276,7 +1276,7 @@ namespace Microsoft.DevTunnels.Management
             return result;
         }
 
-        /// <inheritdoc />
+                /// <inheritdoc />
         public async Task<TunnelPort> CreateOrUpdateTunnelPortAsync(
             Tunnel tunnel,
             TunnelPort tunnelPort,
@@ -1479,8 +1479,7 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc/>
-        public async Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation)
-        {
+        public async Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation) {
             var baseAddress = this.httpClient.BaseAddress!;
             var builder = new UriBuilder(baseAddress);
             builder.Path = ClustersPath;
