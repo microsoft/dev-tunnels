@@ -9,6 +9,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.Json;
+
 #if NET5_0_OR_GREATER
 using System.Net.Http.Json;
 #endif
@@ -685,7 +687,8 @@ namespace Microsoft.DevTunnels.Management
                         if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
                         {
                             var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
-                            errorMessage = message;
+                            var errorDetails = JsonSerializer.Deserialize<ErrorDetails>(message);
+                            errorMessage = errorDetails?.detail;
                         }
 
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
@@ -733,6 +736,7 @@ namespace Microsoft.DevTunnels.Management
         {
             public string? Message { get; set; }
             public string? StackTrace { get; set; }
+            public string? detail { get; set; }
         }
 
         /// <inheritdoc/>
