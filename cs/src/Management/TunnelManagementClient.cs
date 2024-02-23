@@ -565,10 +565,6 @@ namespace Microsoft.DevTunnels.Management
                 throw new HttpRequestException($"Error: Tunnel service HTTPS certificate is invalid. This may" +
                     $" be caused by the use of a firewall intercepting the connection.", auex);
             }
-            catch (Exception ex)
-            {
-                throw new HttpRequestException(ex.Message);
-            }
         }
 
         /// <summary>
