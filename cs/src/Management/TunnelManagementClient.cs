@@ -850,7 +850,6 @@ namespace Microsoft.DevTunnels.Management
 
             if (!string.IsNullOrEmpty(options?.AccessToken))
             {
-                TunnelAccessTokenProperties.ValidateTokenExpiration(options.AccessToken);
                 authHeader = new AuthenticationHeaderValue(
                     TunnelAuthenticationScheme, options.AccessToken);
             }
@@ -864,7 +863,7 @@ namespace Microsoft.DevTunnels.Management
             {
                 foreach (var scope in accessTokenScopes)
                 {
-                    if (tunnel.TryGetValidAccessToken(scope, out string? accessToken))
+                    if (tunnel.TryGetAccessToken(scope, out string? accessToken))
                     {
                         authHeader = new AuthenticationHeaderValue(
                             TunnelAuthenticationScheme, accessToken);

@@ -14,9 +14,8 @@ use url::Url;
 use rand::Rng;
 
 use crate::contracts::{
-    env_production, NamedRateStatus, Tunnel, TunnelConnectionMode, TunnelEndpoint,
-    TunnelListByRegionResponse, TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint,
-    TunnelServiceProperties,
+    env_production, NamedRateStatus, Tunnel, TunnelEndpoint, TunnelListByRegionResponse,
+    TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint, TunnelServiceProperties,
 };
 
 use super::{
@@ -161,13 +160,12 @@ impl TunnelManagementClient {
         endpoint: &TunnelEndpoint,
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelEndpoint> {
-        let url = self.build_tunnel_uri(
+        let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!(
-                "{}/{}/{}",
-                ENDPOINTS_API_SUB_PATH, endpoint.host_id, endpoint.connection_mode
-            )),
+            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id)),
         );
+        url.query_pairs_mut()
+            .append_pair("connectionMode", &endpoint.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_endpoints", request).await
@@ -180,13 +178,12 @@ impl TunnelManagementClient {
         endpoint: &TunnelRelayTunnelEndpoint,
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelRelayTunnelEndpoint> {
-        let url = self.build_tunnel_uri(
+        let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!(
-                "{}/{}/{}",
-                ENDPOINTS_API_SUB_PATH, endpoint.base.host_id, endpoint.base.connection_mode
-            )),
+            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id)),
         );
+        url.query_pairs_mut()
+            .append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_relay_endpoints", request)
@@ -197,15 +194,10 @@ impl TunnelManagementClient {
     pub async fn delete_tunnel_endpoints(
         &self,
         locator: &TunnelLocator,
-        host_id: &str,
-        connection_mode: Option<TunnelConnectionMode>,
+        id: &str,
         options: &TunnelRequestOptions,
     ) -> HttpResult<bool> {
-        let path = if let Some(cm) = connection_mode {
-            format!("{}/{}/{}", ENDPOINTS_API_SUB_PATH, host_id, cm)
-        } else {
-            format!("{}/{}", ENDPOINTS_API_SUB_PATH, host_id)
-        };
+        let path = format!("{}/{}", ENDPOINTS_API_SUB_PATH, id);
 
         let url = self.build_tunnel_uri(locator, Some(&path));
         let request = self
@@ -250,7 +242,10 @@ impl TunnelManagementClient {
         port: &TunnelPort,
         options: &TunnelRequestOptions,
     ) -> HttpResult<TunnelPort> {
-        let url = self.build_tunnel_uri(locator, Some(PORTS_API_SUB_PATH));
+        let url = self.build_tunnel_uri(
+            locator,
+            Some(&format!("{}/{}", PORTS_API_SUB_PATH, port.port_number)),
+        );
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, port);
         self.execute_json("create_tunnel_port", request).await
@@ -569,32 +564,26 @@ fn create_full_user_agent(user_agent: &str) -> String {
     let pkg_version = PKG_VERSION.unwrap_or("unknown");
     let os = os_info::get();
     let os_info = format!("{}: {} {}", "OS", os.os_type(), os.version());
-    let mut windows_partner_id: Option<String> = None;
+
+    let mut full_user_agent = format!(
+        "{}{}{} ({}",
+        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version, os_info
+    );
+
     #[cfg(windows)]
     {
         use winreg::enums::*;
         use winreg::RegKey;
         let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
         let key = hklm.open_subkey("SOFTWARE\\Microsoft\\Windows365");
-        windows_partner_id = key.and_then(|k| k.get_value("PartnerId")).ok();
+        if let Ok(id) = key.and_then(|k| k.get_value::<String, _>("PartnerId")) {
+            full_user_agent.push_str("; Windows-Partner-Id: ");
+            full_user_agent.push_str(&id);
+        }
     }
 
-    let mut full_user_agent = format!(
-        "{}{}{} ({})",
-        user_agent, " Dev-Tunnels-Service-Rust-SDK/", pkg_version, os_info
-    );
+    full_user_agent.push(')');
 
-    if let Some(id) = &windows_partner_id {
-        let windows_partner_id_str = format!("Windows-Partner-Id: {}", id);
-        full_user_agent = format!(
-            "{}{}{} ({}; {})",
-            user_agent,
-            " Dev-Tunnels-Service-Rust-SDK/",
-            pkg_version,
-            os_info,
-            windows_partner_id_str
-        );
-    }
     full_user_agent
 }
 

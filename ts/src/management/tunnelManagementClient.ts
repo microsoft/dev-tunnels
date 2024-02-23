@@ -5,12 +5,12 @@ import {
     ClusterDetails,
     NamedRateStatus,
     Tunnel,
-    TunnelConnectionMode,
     TunnelEndpoint,
     TunnelPort,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelRequestOptions } from './tunnelRequestOptions';
 import * as https from 'https';
+import { CancellationToken } from 'vscode-jsonrpc';
 
 /**
  * Interface for a client that manages tunnels and tunnel ports
@@ -31,11 +31,13 @@ export interface TunnelManagementClient {
      * @param clusterId A tunnel cluster ID, or null to list tunnels globally.
      * @param domain Tunnel domain, or null for the default domain.
      * @param options Request options.
+     * @param cancellation Optional cancellation token for the request.
      */
     listTunnels(
         clusterId?: string,
         domain?: string,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<Tunnel[]>;
 
     /**
@@ -47,47 +49,54 @@ export interface TunnelManagementClient {
      * @param tunnel Tunnel object including at least either a tunnel name (globally unique,
      * if configured) or tunnel ID and cluster ID.
      * @param options Request options.
+     * @param cancellation Optional cancellation token for the request.
      */
-    getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel | null>;
+    getTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel | null>;
 
     /**
      * Creates a tunnel.
      * @param tunnel
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
-    createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel>;
+    createTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel>;
 
     /**
      * Updates properties of a tunnel.
      * @param tunnel
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
-    updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel>;
+    updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel>;
 
     /**
      * Updates properties of a tunnel or creates it if it does not exist.
      * @param tunnel
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
-    createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<Tunnel>;
+    createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel>;
 
     /**
      * Deletes a tunnel.
      * @param tunnel
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
-    deleteTunnel(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<boolean>;
+    deleteTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<boolean>;
 
     /**
      * Creates or updates an endpoint for the tunnel.
      * @param tunnel
      * @param endpoint
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
     updateTunnelEndpoint(
         tunnel: Tunnel,
         endpoint: TunnelEndpoint,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelEndpoint>;
 
     /**
@@ -95,11 +104,13 @@ export interface TunnelManagementClient {
      * @param tunnel
      * @param id
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
     deleteTunnelEndpoints(
         tunnel: Tunnel,
         id: string,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<boolean>;
 
     /**
@@ -110,19 +121,22 @@ export interface TunnelManagementClient {
      * @param tunnel Tunnel object including at least either a tunnel name (globally unique,
      * if configured) or tunnel ID and cluster ID.
      * @param options Request options.
+     * @param cancellation Optional cancellation token for the request.
      */
-    listTunnelPorts(tunnel: Tunnel, options?: TunnelRequestOptions): Promise<TunnelPort[]>;
+    listTunnelPorts(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<TunnelPort[]>;
 
     /**
      * Gets one port on a tunnel by port number.
      * @param tunnel
      * @param portNumber
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
     getTunnelPort(
         tunnel: Tunnel,
         portNumber: number,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort | null>;
 
     /**
@@ -130,11 +144,13 @@ export interface TunnelManagementClient {
      * @param tunnel
      * @param tunnelPort
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
     createTunnelPort(
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort>;
 
     /**
@@ -142,11 +158,13 @@ export interface TunnelManagementClient {
      * @param tunnel
      * @param tunnelPort
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
     updateTunnelPort(
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort>;
 
     /**
@@ -154,11 +172,13 @@ export interface TunnelManagementClient {
      * @param tunnel
      * @param tunnelPort
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
     createOrUpdateTunnelPort(
         tunnel: Tunnel,
         tunnelPort: TunnelPort,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<TunnelPort>;
 
     /**
@@ -166,28 +186,33 @@ export interface TunnelManagementClient {
      * @param tunnel
      * @param portNumber
      * @param options
+     * @param cancellation Optional cancellation token for the request.
      */
     deleteTunnelPort(
         tunnel: Tunnel,
         portNumber: number,
         options?: TunnelRequestOptions,
+        cancellation?: CancellationToken,
     ): Promise<boolean>;
 
     /**
      * Lists limits and consumption status for the calling user.
+     * @param cancellation Optional cancellation token for the request.
      */
-    listUserLimits(): Promise<NamedRateStatus[]>;
+    listUserLimits(cancellation?: CancellationToken): Promise<NamedRateStatus[]>;
 
     /**
      * Lists details of tunneling service clusters in all supported Azure regions.
+     * @param cancellation Optional cancellation token for the request.
      */
-    listClusters(): Promise<ClusterDetails[]>;
+    listClusters(cancellation?: CancellationToken): Promise<ClusterDetails[]>;
 
     /**
      * Checks if the tunnel name is available.
      * @param tunnelName
+     * @param cancellation Optional cancellation token for the request.
      */
-    checkNameAvailablility(tunnelName: string): Promise<boolean>;
+    checkNameAvailablility(tunnelName: string, cancellation?: CancellationToken): Promise<boolean>;
 }
 
 /**

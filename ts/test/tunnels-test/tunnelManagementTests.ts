@@ -2,11 +2,12 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
-import axios, { AxiosPromise, AxiosRequestConfig, Method } from 'axios';
+import axios, { AxiosError, AxiosPromise, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
 import { Tunnel, TunnelProgress, TunnelReportProgressEventArgs } from '@microsoft/dev-tunnels-contracts';
+import { CancellationToken, CancellationTokenSource } from 'vscode-jsonrpc';
 
 @suite
 @slow(3000)
@@ -18,7 +19,7 @@ export class TunnelManagementTests {
     public constructor() {
         this.managementClient = new TunnelManagementHttpClient(
             'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, 'http://global.tunnels.test.api.visualstudio.com');
-        (<any>this.managementClient).request = this.mockRequest.bind(this);
+        (<any>this.managementClient).axiosRequest = this.mockAxiosRequest.bind(this);
     }
 
     private lastRequest?: {
@@ -29,15 +30,31 @@ export class TunnelManagementTests {
     };
     private nextResponse?: any;
 
-    private async mockRequest<TResponse>(
-        method: Method,
-        uri: string,
-        data: any,
-        config: AxiosRequestConfig,
-    ): Promise<TResponse> {
-        this.lastRequest = { method, uri, data, config };
-        return Promise.resolve(this.nextResponse as TResponse);
+    private async mockAxiosRequest(config: AxiosRequestConfig, cancellation: CancellationToken): Promise<AxiosResponse> {
+        this.lastRequest = { method: config.method as Method, uri: config.url || '', data: config.data, config };
+        var response = {
+            data: this.nextResponse,
+            status: 0,
+            statusText: '',
+            headers: {},
+            config
+        } as AxiosResponse;
+
+        // simulate an Axios connection timeout
+        var token = (cancellation as any);
+        if (token?.forceConnection) {
+            token.tokenSource?.cancel();
+            throw new AxiosError('Network Error');
+        }
+
+        // simulate an Axios server response timeout
+        if (token?.forceTimeout) {
+            throw new AxiosError('', 'ECONNABORTED');
+        }
+
+        return Promise.resolve(response);
     }
+
     @test
     public async reportProgress() {
         let progressEvents: TunnelReportProgressEventArgs[] = [];
@@ -106,6 +123,48 @@ export class TunnelManagementTests {
     }
 
     @test
+    public async timeoutServerResponse() {
+        this.nextResponse = [];
+
+        let error: any | undefined = undefined;
+        try {
+            const cts = new CancellationTokenSource();
+            // Add additional properties on token.
+            // These will be used to simulate axios responses
+            const token = (cts.token as any);
+            token.forceTimeout = true;
+            await this.managementClient.listUserLimits(cts.token);
+        } catch (e) {
+            error = e;
+        }
+
+        assert(error?.message?.includes('ECONNABORTED: (timeout)'));
+        assert(error?.code === 'ECONNABORTED');
+    }
+
+    @test
+    public async timeoutServerConnection() {
+        this.nextResponse = [];
+
+        let error: any | undefined = undefined;
+        try {
+            const cts = new CancellationTokenSource();
+
+            // Add additional properties on token.
+            // These will be used to simulate axios responses
+            const token = (cts.token as any);
+            token.forceConnection = true;
+            token.tokenSource = cts;
+            await this.managementClient.listUserLimits(cts.token);
+        } catch (e) {
+            error = e;
+        }
+
+        assert(error?.message?.includes('ECONNABORTED: (signal aborted)'));
+        assert(error?.code === 'ECONNABORTED');
+    }
+
+    @test
     public async configDoesNotContainHttpsAgentAndAdapter() {
         this.nextResponse = [];
         await this.managementClient.listUserLimits();
@@ -136,7 +195,7 @@ export class TunnelManagementTests {
         // Create a management client with a mock https agent and adapter
         const managementClient = new TunnelManagementHttpClient(
             'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, 'http://global.tunnels.test.api.visualstudio.com', httpsAgent, axiosAdapter);
-        (<any>managementClient).request = this.mockRequest.bind(this);
+        (<any>managementClient).axiosRequest = this.mockAxiosRequest.bind(this);
 
         this.nextResponse = [];
         await managementClient.listUserLimits();

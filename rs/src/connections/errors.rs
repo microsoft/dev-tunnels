@@ -30,6 +30,9 @@ pub enum TunnelError {
     #[error("proxy connection failed: {0}")]
     ProxyConnectionFailed(std::io::Error),
 
+    #[error("proxy address invalid: {0}")]
+    ProxyAddressInvalid(url::ParseError),
+
     #[error("proxy handshake failed: {0}")]
     ProxyHandshakeFailed(hyper::Error),
 
