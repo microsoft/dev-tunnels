@@ -10,6 +10,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Security.Authentication;
+
 #if NET5_0_OR_GREATER
 using System.Net.Http.Json;
 #endif
@@ -550,12 +552,20 @@ namespace Microsoft.DevTunnels.Management
 
             options?.SetRequestOptions(request);
 
-            var response = await this.httpClient.SendAsync(request, cancellation);
-            var result = await ConvertResponseAsync<TResult>(
+            try
+            {
+                var response = await this.httpClient.SendAsync(request, cancellation);
+                var result = await ConvertResponseAsync<TResult>(
                 method,
                 response,
                 cancellation);
-            return result;
+                return result;
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException auex)
+            {
+                throw new HttpRequestException($"Error: Tunnel service HTTPS certificate is invalid. This may" +
+                    $" be caused by the use of a firewall intercepting the connection.", auex);
+            }
         }
 
         /// <summary>
