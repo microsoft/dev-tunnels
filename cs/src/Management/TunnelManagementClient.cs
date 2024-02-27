@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Authentication;
+using System.Text.Json;
 
 #if NET5_0_OR_GREATER
 using System.Net.Http.Json;
@@ -694,8 +695,25 @@ namespace Microsoft.DevTunnels.Management
                         // Enterprise Policies
                         if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
                         {
+                            var options = new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            };
                             var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
-                            errorMessage = message;
+
+                            ErrorDetails? errorDetails = null;
+                            try
+                            {
+                                errorDetails = JsonSerializer.Deserialize<ErrorDetails>(message, options);
+                            }
+                            catch (JsonException)
+                            {
+                                // If deserialization fails, it means the message is not in JSON format.
+                                // In this case, use the message directly as the error message.
+                            }
+
+                            // Use the deserialized error detail if available, otherwise use the raw message.
+                            errorMessage = errorDetails?.Detail ?? message;
                         }
 
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
@@ -743,6 +761,7 @@ namespace Microsoft.DevTunnels.Management
         {
             public string? Message { get; set; }
             public string? StackTrace { get; set; }
+            public string? Detail { get; set; }
         }
 
         /// <inheritdoc/>
