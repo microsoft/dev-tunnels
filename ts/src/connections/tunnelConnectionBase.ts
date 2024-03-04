@@ -66,7 +66,7 @@ export class TunnelConnectionBase implements TunnelConnection {
      */
     protected set connectionStatus(value: ConnectionStatus) {
         if (this.isDisposed && value !== ConnectionStatus.Disconnected) {
-            this.throwIfDisposed();
+            this.throwIfDisposed(`ConnectionStatus: ${value}`);
         }
 
         if (value === ConnectionStatus.RefreshingTunnelAccessToken && this.status !== ConnectionStatus.Connecting) {
@@ -168,9 +168,11 @@ export class TunnelConnectionBase implements TunnelConnection {
     /**
      * Throws CancellationError if the tunnel connection is disposed.
      */
-    protected throwIfDisposed() {
+    protected throwIfDisposed(message: string, stack: string|undefined = undefined) {
         if (this.isDisposed) {
-            throw new ObjectDisposedError('The tunnel connection is disposed.');
+            const error = new ObjectDisposedError(`The tunnel connection is disposed. ${message}`);
+            error.stack = stack;
+            throw error;
         }
     }
 }
