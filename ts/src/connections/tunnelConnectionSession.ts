@@ -615,7 +615,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 await this.connector.connectSession(isReconnect, options, cancellation);
             } catch (e) {
                 if (e instanceof CancellationError) {
-                    this.throwIfDisposed();
+                    this.throwIfDisposed(`CancelationError: ${e.message}`, e.stack);
                 }
                 throw e;
             } finally {
