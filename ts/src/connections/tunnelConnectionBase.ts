@@ -168,10 +168,12 @@ export class TunnelConnectionBase implements TunnelConnection {
     /**
      * Throws CancellationError if the tunnel connection is disposed.
      */
-    protected throwIfDisposed(message: string, stack: string|undefined = undefined) {
+    protected throwIfDisposed(message: string, stack?: string) {
         if (this.isDisposed) {
             const error = new ObjectDisposedError(`The tunnel connection is disposed. ${message}`);
-            error.stack = stack;
+            if (stack) {
+                error.stack = stack;
+            }
             throw error;
         }
     }
