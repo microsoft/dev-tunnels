@@ -6,7 +6,7 @@ pub fn get_policy_header_value() -> io::Result<Option<String>> {
     use winreg::enums::*;
     use winreg::RegKey;
 
-    pub const REGISTRY_KEY_PATH: &str = r"Software\Policies\Microsoft\Tunnels";
+    pub const REGISTRY_KEY_PATH: &str = r"Software\Policies\Microsoft\DevTunnels";
 
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
     let sub_key = match hklm.open_subkey(REGISTRY_KEY_PATH) {
