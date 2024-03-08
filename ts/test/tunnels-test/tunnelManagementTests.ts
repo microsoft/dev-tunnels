@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as assert from 'assert';
-import axios, { AxiosError, AxiosPromise, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
+import axios, { Axios, AxiosHeaders, AxiosError, AxiosPromise, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
@@ -16,9 +16,11 @@ export class TunnelManagementTests {
 
     private readonly managementClient: TunnelManagementHttpClient;
 
+    private static readonly testServiceUri = 'http://global.tunnels.test.api.visualstudio.com';
+
     public constructor() {
         this.managementClient = new TunnelManagementHttpClient(
-            'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, 'http://global.tunnels.test.api.visualstudio.com');
+            'test/0.0.0', ManagementApiVersions.Version20230927preview, undefined, TunnelManagementTests.testServiceUri);
         (<any>this.managementClient).axiosRequest = this.mockAxiosRequest.bind(this);
     }
 
@@ -32,6 +34,11 @@ export class TunnelManagementTests {
 
     private async mockAxiosRequest(config: AxiosRequestConfig, cancellation: CancellationToken): Promise<AxiosResponse> {
         this.lastRequest = { method: config.method as Method, uri: config.url || '', data: config.data, config };
+        
+        if (this.nextResponse instanceof AxiosError) {
+            throw this.nextResponse;
+        }
+
         var response = {
             data: this.nextResponse,
             status: 0,
@@ -138,8 +145,8 @@ export class TunnelManagementTests {
             error = e;
         }
 
-        assert(error?.message?.includes('ECONNABORTED: (timeout)'));
-        assert(error?.code === 'ECONNABORTED');
+        assert.match(error?.message, /ECONNABORTED: \(timeout\)/);
+        assert.strictEqual(error?.code, 'ECONNABORTED');
     }
 
     @test
@@ -160,8 +167,8 @@ export class TunnelManagementTests {
             error = e;
         }
 
-        assert(error?.message?.includes('ECONNABORTED: (signal aborted)'));
-        assert(error?.code === 'ECONNABORTED');
+        assert.match(error?.message, /ECONNABORTED: \(signal aborted\)/);
+        assert.strictEqual(error?.code, 'ECONNABORTED');
     }
 
     @test
@@ -236,5 +243,37 @@ export class TunnelManagementTests {
         assert.strictEqual(resultTunnel.accessTokens['connect'], 'connect-token-1'); // preserved
         assert.strictEqual(resultTunnel.accessTokens['host'], 'host-token-2');       // added
         assert.strictEqual(resultTunnel.accessTokens['manage'], 'manage-token-2');   // updated
+    }
+
+    @test
+    public async handleFirewallResponse() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+        };
+        const firewallError = new AxiosError();
+        firewallError.config = {
+            url: TunnelManagementTests.testServiceUri,
+            headers: new AxiosHeaders(),
+        };
+        firewallError.response = {
+            status: 403,
+            statusText: 'Forbidden',
+            headers: new AxiosHeaders(),
+            data: undefined,
+            config: firewallError.config,
+        };
+        this.nextResponse = firewallError;
+
+        let error: any | undefined = undefined;
+        try {
+            await this.managementClient.getTunnel(requestTunnel);
+        } catch (e) {
+            error = e;
+        }
+
+        assert(error);
+        assert.match(error.message, /firewall/);
+        assert.match(error.message, new RegExp(new URL(TunnelManagementTests.testServiceUri).host));
     }
 }

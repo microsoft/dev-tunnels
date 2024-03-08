@@ -29,6 +29,7 @@ namespace Microsoft.DevTunnels.Management
     /// </summary>
     public class TunnelManagementClient : ITunnelManagementClient
     {
+        private const string ServedByHeaderPrefix = "tunnels-";
         private const string ApiV1Path = "/api/v1";
         private const string TunnelsV1ApiPath = ApiV1Path + "/tunnels";
         private const string SubjectsV1ApiPath = ApiV1Path + "/subjects";
@@ -679,6 +680,22 @@ namespace Microsoft.DevTunnels.Management
                     // A default error message will be filled in below.
                     innerException = ex;
                 }
+            }
+
+            if (errorMessage == null &&
+                (int)response.StatusCode >= 400 && (int)response.StatusCode < 500 &&
+                (!response.Headers.TryGetValues("X-Served-By", out var servedBy) ||
+                 !servedBy.First().StartsWith(ServedByHeaderPrefix)))
+            {
+                // The response did not include either a ProblemDetails body object or a header
+                // confirming it was served by the tunnel service. This check excludes 5xx status
+                // responses which may include non-firwall network infrastructure issues.
+                var requestUri = response.RequestMessage?.RequestUri ??
+                    new Uri(TunnelServiceProperties.Production.ServiceUri);
+                errorMessage = "The tunnel request resulted in " +
+                    $"{(int)response.StatusCode} {response.StatusCode} status, but the request " +
+                    "did not reach the tunnel service. This may indicate the domain " +
+                    $"'{requestUri.Host}' is blocked by a firewall.";
             }
 
             errorMessage ??= "Tunnel service response status code: " + response.StatusCode;
