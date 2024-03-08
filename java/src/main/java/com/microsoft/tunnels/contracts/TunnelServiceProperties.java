@@ -44,9 +44,17 @@ public class TunnelServiceProperties {
      * First-party app ID: `Visual Studio Tunnel Service - Test`
      *
      * Used for authenticating AAD/MSA users, and service principals outside the AME
-     * tenant, in the PPE and DEV service environments.
+     * tenant, in the PPE service environments.
      */
-    static final String nonProdFirstPartyAppId = "54c45752-bacd-424a-b928-652f3eca2b18";
+    static final String ppeFirstPartyAppId = "54c45752-bacd-424a-b928-652f3eca2b18";
+
+    /**
+     * First-party app ID: `DEV-VSTunnels`
+     *
+     * Used for authenticating AAD/MSA users, and service principals outside the AME
+     * tenant, in the DEV service environment
+     */
+    static final String devFirstPartyAppId = "9c63851a-ba2b-40a5-94bd-890be43b9284";
 
     /**
      * Third-party app ID: `tunnels-prod-app-sp`

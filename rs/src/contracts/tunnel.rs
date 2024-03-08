@@ -2,12 +2,12 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/Tunnel.cs
 
+use chrono::{DateTime, Utc};
 use crate::contracts::TunnelAccessControl;
 use crate::contracts::TunnelEndpoint;
 use crate::contracts::TunnelOptions;
 use crate::contracts::TunnelPort;
 use crate::contracts::TunnelStatus;
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
