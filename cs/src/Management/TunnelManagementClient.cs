@@ -638,8 +638,17 @@ namespace Microsoft.DevTunnels.Management
                                 return default;
                             }
 
-                            errorMessage = "Tunnel service error: " +
+                            // Enterprise Policies
+                            if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
+                            {
+                                errorMessage = problemDetails!.Title + ": " + problemDetails.Detail;
+                            }
+                            else
+                            {
+                                errorMessage = "Tunnel service error: " +
                                 problemDetails!.Title + " " + problemDetails.Detail;
+                            }
+                                
                             if (problemDetails.Errors != null)
                             {
                                 foreach (var error in problemDetails.Errors)
@@ -692,30 +701,6 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.Unauthorized:
                     case HttpStatusCode.Forbidden:
-                        // Enterprise Policies
-                        if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
-                        {
-                            var options = new JsonSerializerOptions
-                            {
-                                PropertyNameCaseInsensitive = true
-                            };
-                            var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
-
-                            ErrorDetails? errorDetails = null;
-                            try
-                            {
-                                errorDetails = JsonSerializer.Deserialize<ErrorDetails>(message, options);
-                            }
-                            catch (JsonException)
-                            {
-                                // If deserialization fails, it means the message is not in JSON format.
-                                // In this case, use the message directly as the error message.
-                            }
-
-                            // Use the deserialized error detail if available, otherwise use the raw message.
-                            errorMessage = errorDetails?.Detail ?? message;
-                        }
-
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
 
                         // The HttpResponseHeaders.WwwAuthenticate property does not correctly
@@ -761,7 +746,6 @@ namespace Microsoft.DevTunnels.Management
         {
             public string? Message { get; set; }
             public string? StackTrace { get; set; }
-            public string? Detail { get; set; }
         }
 
         /// <inheritdoc/>

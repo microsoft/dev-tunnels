@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntry.cs
 
-use crate::contracts::TunnelAccessControlEntryType;
 use chrono::{DateTime, Utc};
+use crate::contracts::TunnelAccessControlEntryType;
 use serde::{Deserialize, Serialize};
 
 // Data contract for an access control entry on a `Tunnel` or `TunnelPort`.

@@ -25,14 +25,14 @@ var ServiceProperties = TunnelServiceProperties{
 
 var PpeServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", ppeDnsName),
-	ServiceAppID:         nonProdFirstPartyAppID,
+	ServiceAppID:         ppeFirstPartyAppID,
 	ServiceInternalAppID: ppeThirdPartyAppID,
 	GitHubAppClientID:    nonProdGitHubAppClientID,
 }
 
 var DevServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", devDnsName),
-	ServiceAppID:         nonProdFirstPartyAppID,
+	ServiceAppID:         devFirstPartyAppID,
 	ServiceInternalAppID: devThirdPartyAppID,
 	GitHubAppClientID:    nonProdGitHubAppClientID,
 }
