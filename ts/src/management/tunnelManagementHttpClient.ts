@@ -823,7 +823,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         ) {
             const headers = error.response.headers;
             const servedBy = headers['X-Served-By'] || headers['x-served-by'];
-            if (!/tunnel-/.test(servedBy)) {
+            if (!/tunnels-/.test(servedBy)) {
                 // The response did not include either a ProblemDetails body object or a header
                 // confirming it was served by the tunnel service. This check excludes 5xx status
                 // responses which may include non-firwall network infrastructure issues.
