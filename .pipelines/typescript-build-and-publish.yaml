@@ -1,5 +1,7 @@
 pool:
   name: Azure Pipelines
+  demands:
+      - Agent.Name -equals "Azure Pipelines 21"
 
 # Publish only if changes to TypeScript directory are committed to main.
 trigger:
