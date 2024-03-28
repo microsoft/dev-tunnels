@@ -302,6 +302,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
 
     if (StringUtils.isNotBlank(clusterId)) {
       if (!baseAddress.getHost().equals("localhost")
+          && !baseAddress.getHost().contains(".local")
           && !baseAddress.getHost().startsWith(clusterId + ".")) {
         host = (clusterId + "." + baseAddress.getHost()).replace("global.", "");
       } else if (baseAddress.getScheme().equals("https")
