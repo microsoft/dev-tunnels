@@ -108,7 +108,7 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 
 	var client *http.Client
 	if httpHandler == nil {
-		if strings.Contains(tunnelServiceUrl.Host, "localhost") {
+		if strings.Contains(tunnelServiceUrl.Host, "localhost" || strings.Contains(".local")) {
 			client = &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
 		} else {
 			client = &http.Client{}
@@ -825,7 +825,9 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) *url.URL {
 	baseAddress := m.uri
 	if clusterId != "" {
-		if !strings.HasPrefix(baseAddress.Host, "localhost") && !strings.HasPrefix(baseAddress.Host, clusterId) {
+		if !strings.HasPrefix(baseAddress.Host, "localhost") &&
+			!strings.Contains(baseAddress.Host, ".local") &&
+			!strings.HasPrefix(baseAddress.Host, clusterId) {
 			// A specific cluster ID was specified (while not running on localhost).
 			// Prepend the cluster ID to the hostname, and optionally strip a global prefix.
 			baseAddress.Host = fmt.Sprintf("%s.%s", clusterId, baseAddress.Host)
