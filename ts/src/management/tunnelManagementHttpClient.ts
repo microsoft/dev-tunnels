@@ -875,7 +875,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (clusterId) {
             const url = new URL(baseAddress);
             const portNumber = parseInt(url.port, 10);
-            if (url.hostname !== 'localhost' && !url.hostname.startsWith(`${clusterId}.`)) {
+            if (url.hostname !== 'localhost' &&
+                !url.hostname.includes('.local') &&
+                !url.hostname.startsWith(`${clusterId}.`)
+            ) {
                 // A specific cluster ID was specified (while not running on localhost).
                 // Prepend the cluster ID to the hostname, and optionally strip a global prefix.
                 url.hostname = `${clusterId}.${url.hostname}`.replace('global.', '');

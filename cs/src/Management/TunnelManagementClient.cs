@@ -649,7 +649,7 @@ namespace Microsoft.DevTunnels.Management
                                 errorMessage = "Tunnel service error: " +
                                 problemDetails!.Title + " " + problemDetails.Detail;
                             }
-                                
+
                             if (problemDetails.Errors != null)
                             {
                                 foreach (var error in problemDetails.Errors)
@@ -785,7 +785,7 @@ namespace Microsoft.DevTunnels.Management
             if (!string.IsNullOrEmpty(clusterId) &&
                 baseAddress.HostNameType == UriHostNameType.Dns)
             {
-                if (baseAddress.Host != "localhost" &&
+                if (baseAddress.Host != "localhost" && !baseAddress.Host.Contains(".local") &&
                     !baseAddress.Host.StartsWith($"{clusterId}."))
                 {
                     // A specific cluster ID was specified (while not running on localhost).
