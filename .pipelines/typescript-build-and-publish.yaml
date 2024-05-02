@@ -27,7 +27,6 @@ steps:
     clientid: '142047f4-eda8-4853-8776-c2e81803ea13'
     intent: 'PackageDistribution'
     contenttype: 'npm'
-    contentsource: 'folder'
     folderlocation: '$(System.DefaultWorkingDirectory)/ts/out/pkg'
     waitforreleasecompletion: true
     owners: 'jfullerton@microsoft.com'
