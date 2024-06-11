@@ -142,7 +142,33 @@ public class TunnelManagementClientTests
                 TunnelAccessScopes.Host, "host-token-2"), item),       // added
             (item) => Assert.Equal(new KeyValuePair<string, string>(
                 TunnelAccessScopes.Manage, "manage-token-2"), item));  // updated
+    }
 
+    [Fact]
+    public async Task HandleFirewallResponse()
+    {
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                var result = new HttpResponseMessage(HttpStatusCode.Forbidden)
+                {
+                    RequestMessage = message,
+                };
+                return Task.FromResult(result);
+            });
+
+        var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
+
+        var requestTunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+            ClusterId = ClusterId,
+        };
+
+        var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => client.GetTunnelAsync(requestTunnel, options: null, this.timeout));
+        Assert.Contains("firewall", ex.Message);
+        Assert.Contains(tunnelServiceUri.Host, ex.Message);
     }
 
     private sealed class MockHttpMessageHandler : DelegatingHandler

@@ -718,7 +718,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const config = await this.getAxiosRequestConfig(tunnel, options, accessTokenScopes);
         this.raiseReportProgress(TunnelProgress.StartingSendTunnelRequest);
         try {
-            const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
+            const result = await this.request<TResult>(method, uri, body, config, allowNotFound, cancellation);
             this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
             return result;
         } catch (error) {
@@ -760,7 +760,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const uri = await this.buildUri(clusterId, path, query, options);
         const config = await this.getAxiosRequestConfig(undefined, options);
         try {
-            const result = await this.request<TResult>(method, uri, body, config, allowNotFound);
+            const result = await this.request<TResult>(method, uri, body, config, allowNotFound, cancellation);
             this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
             return result;
         } catch (error) {
@@ -817,8 +817,27 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
         }
 
+        if (!errorMessage && error.response && error.response.status &&
+            error.response.status >= 400 && error.response.status < 500 &&
+            error.response.headers
+        ) {
+            const headers = error.response.headers;
+            const servedBy = headers['X-Served-By'] || headers['x-served-by'];
+            if (!/tunnels-/.test(servedBy)) {
+                // The response did not include either a ProblemDetails body object or a header
+                // confirming it was served by the tunnel service. This check excludes 5xx status
+                // responses which may include non-firwall network infrastructure issues.
+                const requestDomain = new URL(error.config?.url ??
+                    TunnelServiceProperties.production.serviceUri).host;
+                errorMessage = 'The tunnel request resulted in ' +
+                    `${error.response.status} status, but the request ` +
+                    'did not reach the tunnel service. This may indicate the domain ' +
+                    `'${requestDomain}' is blocked by a firewall.`;
+            }
+        }
+
         if (!errorMessage) {
-            if (error?.response) {
+            if (error.response) {
                 errorMessage =
                     'Tunnel service returned status code: ' +
                     `${error.response.status} ${error.response.statusText}`;
@@ -856,7 +875,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (clusterId) {
             const url = new URL(baseAddress);
             const portNumber = parseInt(url.port, 10);
-            if (url.hostname !== 'localhost' && !url.hostname.startsWith(`${clusterId}.`)) {
+            if (url.hostname !== 'localhost' &&
+                !url.hostname.includes('.local') &&
+                !url.hostname.startsWith(`${clusterId}.`)
+            ) {
                 // A specific cluster ID was specified (while not running on localhost).
                 // Prepend the cluster ID to the hostname, and optionally strip a global prefix.
                 url.hostname = `${clusterId}.${url.hostname}`.replace('global.', '');

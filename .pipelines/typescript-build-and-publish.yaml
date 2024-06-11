@@ -17,16 +17,20 @@ variables:
 
 steps:
 - template: typescript-build-steps.yaml
-- task: EsrpRelease@6
+
+- task: EsrpRelease@7
   inputs:
-    ConnectedServiceName: 'devtunnels-esrp'
-    Intent: 'PackageDistribution'
-    ContentType: 'npm'
-    ContentSource: 'Folder'
-    FolderLocation: '$(System.DefaultWorkingDirectory)/ts/out/pkg'
-    WaitForReleaseCompletion: true
-    Owners: 'jfullerton@microsoft.com'
-    Approvers: 'jasongin@microsoft.com, debekoe@microsoft.com, ilbiryuk@microsoft.com'
-    ServiceEndpointUrl: 'https://api.esrp.microsoft.com'
-    MainPublisher: 'ESRPRELPACMAN'
-    DomainTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+    connectedservicename: 'Devtunnels-esrp-cert-based'
+    keyvaultname: 'tunnels-dev-kv'
+    authcertname: 'esrp-cert'
+    signcertname: 'esrp-sign'
+    clientid: '142047f4-eda8-4853-8776-c2e81803ea13'
+    intent: 'PackageDistribution'
+    contenttype: 'npm'
+    folderlocation: '$(System.DefaultWorkingDirectory)/ts/out/pkg'
+    waitforreleasecompletion: true
+    owners: 'jfullerton@microsoft.com'
+    approvers: 'jasongin@microsoft.com, debekoe@microsoft.com, ilbiryuk@microsoft.com'
+    serviceendpointurl: 'https://api.esrp.microsoft.com'
+    mainpublisher: 'ESRPRELPACMAN'
+    domaintenantid: '72f988bf-86f1-41af-91ab-2d7cd011db47'

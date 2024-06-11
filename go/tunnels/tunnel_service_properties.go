@@ -47,8 +47,14 @@ var prodFirstPartyAppID = "46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2"
 // First-party app ID: `Visual Studio Tunnel Service - Test`
 //
 // Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
-// in the PPE and DEV service environments.
-var nonProdFirstPartyAppID = "54c45752-bacd-424a-b928-652f3eca2b18"
+// in the PPE service environments.
+var ppeFirstPartyAppID = "54c45752-bacd-424a-b928-652f3eca2b18"
+
+// First-party app ID: `DEV-VSTunnels`
+//
+// Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
+// in the DEV service environment
+var devFirstPartyAppID = "9c63851a-ba2b-40a5-94bd-890be43b9284"
 
 // Third-party app ID: `tunnels-prod-app-sp`
 //

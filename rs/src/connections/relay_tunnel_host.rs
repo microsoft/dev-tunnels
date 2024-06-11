@@ -389,7 +389,7 @@ impl RelayTunnelHost {
                 &self.locator,
                 &TunnelRelayTunnelEndpoint {
                     base: TunnelEndpoint {
-                        id: format!("{}-relay", self.host_id),
+                        id: Some(format!("{}-relay", self.host_id)),
                         connection_mode: TunnelConnectionMode::TunnelRelay,
                         host_id: self.host_id.to_string(),
                         host_public_keys: vec![],

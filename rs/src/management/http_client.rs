@@ -162,7 +162,7 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id)),
+            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id.as_deref().unwrap())),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.connection_mode.to_string());
@@ -180,7 +180,7 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelRelayTunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id)),
+            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id.as_deref().unwrap())),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.base.connection_mode.to_string());

@@ -29,6 +29,7 @@ namespace Microsoft.DevTunnels.Management
     /// </summary>
     public class TunnelManagementClient : ITunnelManagementClient
     {
+        private const string ServedByHeaderPrefix = "tunnels-";
         private const string ApiV1Path = "/api/v1";
         private const string TunnelsV1ApiPath = ApiV1Path + "/tunnels";
         private const string SubjectsV1ApiPath = ApiV1Path + "/subjects";
@@ -638,8 +639,17 @@ namespace Microsoft.DevTunnels.Management
                                 return default;
                             }
 
-                            errorMessage = "Tunnel service error: " +
+                            // Enterprise Policies
+                            if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
+                            {
+                                errorMessage = problemDetails!.Title + ": " + problemDetails.Detail;
+                            }
+                            else
+                            {
+                                errorMessage = "Tunnel service error: " +
                                 problemDetails!.Title + " " + problemDetails.Detail;
+                            }
+
                             if (problemDetails.Errors != null)
                             {
                                 foreach (var error in problemDetails.Errors)
@@ -672,6 +682,22 @@ namespace Microsoft.DevTunnels.Management
                 }
             }
 
+            if (errorMessage == null &&
+                (int)response.StatusCode >= 400 && (int)response.StatusCode < 500 &&
+                (!response.Headers.TryGetValues("X-Served-By", out var servedBy) ||
+                 !servedBy.First().StartsWith(ServedByHeaderPrefix)))
+            {
+                // The response did not include either a ProblemDetails body object or a header
+                // confirming it was served by the tunnel service. This check excludes 5xx status
+                // responses which may include non-firwall network infrastructure issues.
+                var requestUri = response.RequestMessage?.RequestUri ??
+                    new Uri(TunnelServiceProperties.Production.ServiceUri);
+                errorMessage = "The tunnel request resulted in " +
+                    $"{(int)response.StatusCode} {response.StatusCode} status, but the request " +
+                    "did not reach the tunnel service. This may indicate the domain " +
+                    $"'{requestUri.Host}' is blocked by a firewall.";
+            }
+
             errorMessage ??= "Tunnel service response status code: " + response.StatusCode;
 
             if (response.Headers.TryGetValues(RequestIdHeaderName, out var requestId))
@@ -692,30 +718,6 @@ namespace Microsoft.DevTunnels.Management
 
                     case HttpStatusCode.Unauthorized:
                     case HttpStatusCode.Forbidden:
-                        // Enterprise Policies
-                        if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
-                        {
-                            var options = new JsonSerializerOptions
-                            {
-                                PropertyNameCaseInsensitive = true
-                            };
-                            var message = response.Content != null ? await response.Content.ReadAsStringAsync() : string.Empty;
-
-                            ErrorDetails? errorDetails = null;
-                            try
-                            {
-                                errorDetails = JsonSerializer.Deserialize<ErrorDetails>(message, options);
-                            }
-                            catch (JsonException)
-                            {
-                                // If deserialization fails, it means the message is not in JSON format.
-                                // In this case, use the message directly as the error message.
-                            }
-
-                            // Use the deserialized error detail if available, otherwise use the raw message.
-                            errorMessage = errorDetails?.Detail ?? message;
-                        }
-
                         var ex = new UnauthorizedAccessException(errorMessage, hrex);
 
                         // The HttpResponseHeaders.WwwAuthenticate property does not correctly
@@ -761,7 +763,6 @@ namespace Microsoft.DevTunnels.Management
         {
             public string? Message { get; set; }
             public string? StackTrace { get; set; }
-            public string? Detail { get; set; }
         }
 
         /// <inheritdoc/>
@@ -784,7 +785,7 @@ namespace Microsoft.DevTunnels.Management
             if (!string.IsNullOrEmpty(clusterId) &&
                 baseAddress.HostNameType == UriHostNameType.Dns)
             {
-                if (baseAddress.Host != "localhost" &&
+                if (baseAddress.Host != "localhost" && !baseAddress.Host.Contains(".local") &&
                     !baseAddress.Host.StartsWith($"{clusterId}."))
                 {
                     // A specific cluster ID was specified (while not running on localhost).
