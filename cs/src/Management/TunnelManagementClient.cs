@@ -731,9 +731,9 @@ namespace Microsoft.DevTunnels.Management
 
                         // Propagate failed policy requirement names.
                         if (response.Headers.TryGetValues(
-                            EnterprisePolicyFailureHeaderName, out var policyFaiulreValues))
+                            EnterprisePolicyFailureHeaderName, out var policyFailureValues))
                         {
-                            ex.SetEnterprisePolicyRequirements(policyFaiulreValues);
+                            ex.SetEnterprisePolicyRequirements(policyFailureValues);
                         }
 
                         throw ex;
