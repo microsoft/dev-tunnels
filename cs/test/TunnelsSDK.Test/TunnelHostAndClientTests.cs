@@ -13,6 +13,7 @@ using Microsoft.DevTunnels.Ssh.Tcp.Events;
 using Microsoft.DevTunnels.Test.Mocks;
 using Nerdbank.Streams;
 using Xunit;
+using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace Microsoft.DevTunnels.Test;
@@ -24,9 +25,9 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     private const string MockHostRelayUri = "ws://localhost/tunnel/host";
     private const string MockClientRelayUri = "ws://localhost/tunnel/client";
 
-    private static readonly TraceSource TestTS =
+    private readonly TraceSource TestTS =
         new TraceSource(nameof(TunnelHostAndClientTests));
-    private static readonly TimeSpan Timeout = Debugger.IsAttached ? TimeSpan.FromHours(1) : TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan Timeout = Debugger.IsAttached ? TimeSpan.FromHours(1) : TimeSpan.FromSeconds(20);
     private readonly CancellationToken TimeoutToken = new CancellationTokenSource(Timeout).Token;
 
     private Stream serverStream;
@@ -34,17 +35,14 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     private readonly IKeyPair serverSshKey;
     private readonly LocalPortsFixture localPortsFixture;
 
-    static TunnelHostAndClientTests()
-    {
-        // Enabling tracing to debug console.
-        TestTS.Switch.Level = SourceLevels.All;
-    }
-
-    public TunnelHostAndClientTests(LocalPortsFixture localPortsFixture)
+    public TunnelHostAndClientTests(LocalPortsFixture localPortsFixture, ITestOutputHelper output)
     {
         (this.serverStream, this.clientStream) = FullDuplexStream.CreatePair();
         this.serverSshKey = SshAlgorithms.PublicKey.ECDsaSha2Nistp384.GenerateKeyPair();
         this.localPortsFixture = localPortsFixture;
+
+        TestTS.Switch.Level = SourceLevels.All;
+        TestTS.Listeners.Add(new XunitTraceListener(output));
     }
 
     private Tunnel CreateRelayTunnel(bool addClientEndpoint = true) => CreateRelayTunnel(addClientEndpoint, Enumerable.Empty<int>());
@@ -1451,6 +1449,67 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
         await clientSshSession.WaitForForwardedPortAsync(port, TimeoutToken);
         using var sshStream = await clientSshSession.ConnectToForwardedPortAsync(port, TimeoutToken);
+    }
+
+    [Fact]
+    public async Task ConnectRelayHostThenConnectRelayClientsToForwardedPortStreamsThenSendData()
+    {
+        const int PortCount = 2;
+        const int ClientConnectionCount = 50;
+
+        var managementClient = new MockTunnelManagementClient
+        {
+            HostRelayUri = MockHostRelayUri,
+            ClientRelayUri = MockClientRelayUri,
+        };
+
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+
+        await using var listeners = new TcpListeners(PortCount, TestTS);
+        var tunnel = CreateRelayTunnel(false, listeners.Ports);
+
+        using var multiChannelStream = await ConnectRelayHostAsync(relayHost, tunnel);
+        Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
+
+        var clientStreamFactory = new MockTunnelRelayStreamFactory(TunnelRelayConnection.ClientWebSocketSubProtocol)
+        {
+            StreamFactory = async (accessToken) =>
+            {
+                return await multiChannelStream.OpenStreamAsync(TunnelRelayTunnelHost.ClientStreamChannelType);
+            },
+        };
+
+        for (int clientConnection = 0; clientConnection < ClientConnectionCount; clientConnection++)
+        {
+            foreach (var port in listeners.Ports)
+            {
+                TestTS.TraceInformation("Connecting client #{0} to port {1}", clientConnection, port);
+
+                // Create and connect tunnel client
+                await using var relayClient = new TunnelRelayTunnelClient(TestTS)
+                {
+                    AcceptLocalConnectionsForForwardedPorts = false,
+                    StreamFactory = clientStreamFactory,
+                };
+
+                Assert.Equal(ConnectionStatus.None, relayClient.ConnectionStatus);
+
+                await relayClient.ConnectAsync(tunnel, TimeoutToken);
+                Assert.Equal(ConnectionStatus.Connected, relayClient.ConnectionStatus);
+
+                await relayClient.WaitForForwardedPortAsync(port, TimeoutToken);
+                using var stream = await relayClient.ConnectToForwardedPortAsync(port, TimeoutToken);
+
+                var actualPort = await stream.ReadIntToEndAsync(TimeoutToken);
+                if (port != actualPort)
+                {
+                    // Debugger.Launch();
+                    TestTS.TraceInformation("Client #{0} received unexpected port {1} instead of {2}", clientConnection, actualPort, port);
+                }
+
+                Assert.Equal(port, actualPort);
+            }
+        }
     }
 
     [Fact]
