@@ -875,8 +875,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (clusterId) {
             const url = new URL(baseAddress);
             const portNumber = parseInt(url.port, 10);
+
+            // tunnels.local.api.visualstudio.com resolves to localhost (for local development).
             if (url.hostname !== 'localhost' &&
-                !url.hostname.includes('.local') &&
+                url.hostname !== 'tunnels.local.api.visualstudio.com' &&
                 !url.hostname.startsWith(`${clusterId}.`)
             ) {
                 // A specific cluster ID was specified (while not running on localhost).

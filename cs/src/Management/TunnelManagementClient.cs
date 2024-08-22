@@ -785,7 +785,9 @@ namespace Microsoft.DevTunnels.Management
             if (!string.IsNullOrEmpty(clusterId) &&
                 baseAddress.HostNameType == UriHostNameType.Dns)
             {
-                if (baseAddress.Host != "localhost" && !baseAddress.Host.Contains(".local") &&
+                // tunnels.local.api.visualstudio.com resolves to localhost (for local development).
+                if (baseAddress.Host != "localhost" &&
+                    baseAddress.Host != "tunnels.local.api.visualstudio.com" &&
                     !baseAddress.Host.StartsWith($"{clusterId}."))
                 {
                     // A specific cluster ID was specified (while not running on localhost).
