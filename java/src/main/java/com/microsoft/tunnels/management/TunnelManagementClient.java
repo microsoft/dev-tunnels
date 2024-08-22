@@ -300,9 +300,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     String host = null;
     int port = baseAddress.getPort();
 
+		// tunnels.local.api.visualstudio.com resolves to localhost (for local development).
     if (StringUtils.isNotBlank(clusterId)) {
       if (!baseAddress.getHost().equals("localhost")
-          && !baseAddress.getHost().contains(".local")
+          && !baseAddress.getHost().equals("tunnels.local.api.visualstudio.com")
           && !baseAddress.getHost().startsWith(clusterId + ".")) {
         host = (clusterId + "." + baseAddress.getHost()).replace("global.", "");
       } else if (baseAddress.getScheme().equals("https")

@@ -108,7 +108,8 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 
 	var client *http.Client
 	if httpHandler == nil {
-		if strings.Contains(tunnelServiceUrl.Host, "localhost") || strings.Contains(tunnelServiceUrl.Host, ".local") {
+		// tunnels.local.api.visualstudio.com resolves to localhost (for local development).
+		if tunnelServiceUrl.Host == "localhost" || tunnelServiceUrl.Host == "tunnels.local.api.visualstudio.com" {
 			client = &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
 		} else {
 			client = &http.Client{}
@@ -825,8 +826,9 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) *url.URL {
 	baseAddress := m.uri
 	if clusterId != "" {
-		if !strings.HasPrefix(baseAddress.Host, "localhost") &&
-			!strings.Contains(baseAddress.Host, ".local") &&
+		// tunnels.local.api.visualstudio.com resolves to localhost (for local development).
+		if baseAddress.Host != "localhost" &&
+			baseAddress.Host != "tunnels.local.api.visualstudio.com" &&
 			!strings.HasPrefix(baseAddress.Host, clusterId) {
 			// A specific cluster ID was specified (while not running on localhost).
 			// Prepend the cluster ID to the hostname, and optionally strip a global prefix.
