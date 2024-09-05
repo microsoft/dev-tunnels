@@ -44,6 +44,7 @@ namespace Microsoft.DevTunnels.Management
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
         private const string CheckAvailableSubPath = ":checkNameAvailability";
+        private const string EnterprisePolicyFailureHeaderName = "X-Enterprise-Policy-Failure";
         private const int CreateNameRetries = 3;
 
         private static readonly string[] ManageAccessTokenScope =
@@ -640,7 +641,7 @@ namespace Microsoft.DevTunnels.Management
                             }
 
                             // Enterprise Policies
-                            if (response.Headers.Contains("X-Enterprise-Policy-Failure"))
+                            if (response.Headers.Contains(EnterprisePolicyFailureHeaderName))
                             {
                                 errorMessage = problemDetails!.Title + ": " + problemDetails.Detail;
                             }
@@ -726,6 +727,13 @@ namespace Microsoft.DevTunnels.Management
                             "WWW-Authenticate", out var authHeaderValues))
                         {
                             ex.SetAuthenticationSchemes(authHeaderValues);
+                        }
+
+                        // Propagate failed policy requirement names.
+                        if (response.Headers.TryGetValues(
+                            EnterprisePolicyFailureHeaderName, out var policyFailureValues))
+                        {
+                            ex.SetEnterprisePolicyRequirements(policyFailureValues);
                         }
 
                         throw ex;
