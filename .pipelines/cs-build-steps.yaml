@@ -42,7 +42,7 @@ steps:
     publishTestResults: true
     arguments: '-v:n -c release -p:CodeCoverage=true --no-build'
 
-- task: PublishCodeCoverageResults@1
+- task: PublishCodeCoverageResults@2
   displayName: 'Publish code coverage'
   inputs:
     codeCoverageTool: Cobertura

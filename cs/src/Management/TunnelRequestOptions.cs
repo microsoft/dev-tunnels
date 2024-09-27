@@ -49,8 +49,7 @@ namespace Microsoft.DevTunnels.Management
 
         /// <summary>
         /// Gets or sets additional http request options
-        /// for <code>HttpRequestMessage.Options</code> (in net6.0) or
-        /// <code>HttpRequestMessage.Properties</code> (in netcoreapp3.1).
+        /// for <code>HttpRequestMessage.Options</code>.
         /// </summary>
         public IEnumerable<KeyValuePair<string, object?>>? HttpRequestOptions { get; set; }
 
@@ -193,21 +192,13 @@ namespace Microsoft.DevTunnels.Management
         /// <summary>
         /// Set HTTP request options.
         /// </summary>
-        /// <remarks>
-        /// On net 6.0+ it sets <code>request.Options</code>.
-        /// On netcoreapp 3.1 it sets <code>request.Properties</code>.
-        /// </remarks>
         /// <param name="request">Http request, not null.</param>
         internal void SetRequestOptions(HttpRequestMessage request)
         {
             Requires.NotNull(request, nameof(request));
             foreach (var kvp in HttpRequestOptions ?? Enumerable.Empty<KeyValuePair<string, object?>>())
             {
-#if NET6_0_OR_GREATER
                 request.Options.Set(new HttpRequestOptionsKey<object?>(kvp.Key), kvp.Value);
-#else
-                request.Properties[kvp.Key] = kvp.Value;
-#endif
             }
         }
     }

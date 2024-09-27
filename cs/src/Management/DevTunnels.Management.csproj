@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>Microsoft.DevTunnels.Management</AssemblyName>
     <RootNamespace>Microsoft.DevTunnels.Management</RootNamespace>
-    <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
+    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <IsPackable>true</IsPackable>
     <UseVsSaaSSdk>false</UseVsSaaSSdk>

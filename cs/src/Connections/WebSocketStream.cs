@@ -102,11 +102,16 @@ namespace Microsoft.DevTunnels.Connections
             }
             catch (WebSocketException wse) when (wse.WebSocketErrorCode == WebSocketError.NotAWebSocket)
             {
-                // The http request didn't upgrade to a web socket and instead may have returned a status code.
+                // The http request didn't upgrade to a web socket and instead may have returned an error status code.
+#if NET8_0_OR_GREATER
+                if ((int)socket.HttpStatusCode >= 400)
+                {
+                    TunnelConnectionException.SetHttpStatusCode(wse, socket.HttpStatusCode);
+                }
+#else
+                // Socket.HttpStatusCode is not available in older versions of .NET.
                 // As a workaround, check for "'{actual response code}'" pattern in the exception message,
                 // which may look like this: "The server returned status code '403' when status code '101' was expected".
-                // TODO: switch to ClientWebSocket.HttpStatusCode when we get to .NET CORE 7.0, see https://github.com/dotnet/runtime/issues/25918#issuecomment-1132039238
-
                 int i = wse.Message.IndexOf('\'');
                 if (i >= 0)
                 {
@@ -120,10 +125,9 @@ namespace Microsoft.DevTunnels.Connections
                         statusCode != 101)
                     {
                         TunnelConnectionException.SetHttpStatusCode(wse, (HttpStatusCode)statusCode);
-                        socket.Dispose();
-                        throw wse;
                     }
                 }
+#endif
 
                 socket.Dispose();
                 throw;
