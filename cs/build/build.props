@@ -28,16 +28,9 @@
     <Deterministic>true</Deterministic>
   </PropertyGroup>
 
-  <!-- .Net Targets -->
-  <PropertyGroup>
-    <NetCoreAppTargetFramework>netcoreapp3.1</NetCoreAppTargetFramework>
-    <NetStandardTargetFramework>netstandard2.1</NetStandardTargetFramework>
-    <NetStandardTargetFrameworkMT>netstandard2.1</NetStandardTargetFrameworkMT>
-  </PropertyGroup>
-
   <!-- NuGet Package Versions -->
   <PropertyGroup>
-    <AltcoverVersion>7.6.812</AltcoverVersion>
+    <AltcoverVersion>8.9.3</AltcoverVersion>
     <FluentAssertionsVersion>5.4.1</FluentAssertionsVersion>
     <FxCopAnalyzersPackageVersion>3.3.0</FxCopAnalyzersPackageVersion>
     <MicroBuildCoreVersion>0.3.0</MicroBuildCoreVersion>
@@ -45,7 +38,7 @@
     <MicrosoftNETTestSdkVersion>15.8.0</MicrosoftNETTestSdkVersion>
     <MoqVersion>4.9.0</MoqVersion>
     <NerdBankGitVersioningVersion>3.6.133</NerdBankGitVersioningVersion>
-    <ReportGeneratorVersion>4.8.13</ReportGeneratorVersion>
+    <ReportGeneratorVersion>5.3.9</ReportGeneratorVersion>
     <SystemTextEncodingsWebPackageVersion>4.7.2</SystemTextEncodingsWebPackageVersion>
     <VisualStudioValidationVersion>15.5.31</VisualStudioValidationVersion>
     <DevTunnelsSshPackageVersion>3.12.5</DevTunnelsSshPackageVersion>
@@ -95,7 +88,7 @@
       <!-- AltCover properties -->
       <PropertyGroup Condition=" '$(CodeCoverage)' == 'true' ">
         <AltCover>true</AltCover>
-        <AltCoverXmlReport>$(TestResultsDirectory)/$(TestBaseName)-coverage.xml</AltCoverXmlReport>
+        <AltCoverReport>$(TestResultsDirectory)/$(TestBaseName)-coverage.xml</AltCoverReport>
         <AltCoverAssemblyExcludeFilter>Interop|Test|xunit|AltCover|System.Reactive</AltCoverAssemblyExcludeFilter>
         <AltCoverTypeFilter>ThisAssembly|System.Runtime|CodeAnalysis</AltCoverTypeFilter>
         <AltCoverLcovReport>$(TestResultsDirectory)/$(TestBaseName)-lcov.info</AltCoverLcovReport>

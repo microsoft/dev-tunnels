@@ -22,41 +22,12 @@ yargs.version(false);
 const buildGroup = 'Build Options:';
 const testGroup = 'Test Options:';
 
-yargs.option('verbosity', { desc: 'MSBuild verbosity', string: true, group: buildGroup });
-yargs.option('configuration', {
-    desc: 'MSBuild configuration',
-    choices: ['Debug', 'Release'],
-    group: buildGroup,
-});
-yargs.option('release', {
-    desc: 'Use MSBuild Release configuration',
-    boolean: true,
-    group: buildGroup,
-});
-yargs.option('framework', {
-    desc: 'Specify .net application framework',
-    choices: ['netcoreapp2.1', 'netcoreapp2.1', 'net5.0', 'netstandard2.0', 'netstandard2.1'],
-    group: buildGroup,
-});
-yargs.option('msbuild', {
-    desc: 'Use MSBuild instead of dotnet CLI', // Signing requires msbuild
-    boolean: true,
-    group: buildGroup,
-});
 
 yargs.option('filter', { desc: 'Filter test cases', string: true, group: testGroup });
-yargs.option('serial', { desc: 'Run tests serially (slower)', boolean: true, group: testGroup });
-yargs.option('coverage', {
-    desc: 'Collect code coverage when testing',
-    boolean: true,
-    group: testGroup,
-});
 
-const namespace = 'Microsoft.VisualStudio.Tunnels';
 const srcDir = path.join(__dirname, 'src');
 const binDir = path.join(__dirname, 'out', 'bin');
 const libDir = path.join(__dirname, 'out', 'lib');
-const intermediateDir = path.join(__dirname, 'out', 'obj');
 const packageDir = path.join(__dirname, 'out', 'pkg');
 const packageJsonFile = path.join(__dirname, 'package.json');
 const testResultsDir = path.join(__dirname, 'out', 'testresults');

@@ -6,9 +6,9 @@
     <Target
         Name="GenerateDocumentation"
         AfterTargets="Build"
-        Condition="'$(GenerateDocs)'=='true' AND '$(TargetFramework)' == 'netcoreapp3.1'"
+        Condition="'$(GenerateDocs)'=='true' AND '$(TargetFramework)' == 'net6.0'"
     >
-        <!-- This target only runs for the .NET 3.1 target; xmldocmd tool currently does not work on .NET 6. -->
+        <!-- This target only runs for the .NET 6 target; xmldocmd does not yet support .NET 8. -->
         <!-- It requires the `xmldocmd` tool: dotnet tool install -g xmldocmd -->
         <!-- Invoke this target with: dotnet build -c Release TunnelsSDK.sln -p:GenerateDocs=true -->
 
@@ -19,7 +19,7 @@
         </PropertyGroup>
 
         <Message Importance="High" Text="Generating documentation for $(TargetName)..." />
-        <Exec Command="xmldocmd $(TargetPath) docs $(DocumentationReferenceAssemblies) --skip-unbrowsable" WorkingDirectory="$(MSBuildThisFileDirectory)" />
+        <Exec Command="xmldocmd $(TargetPath) docs $(DocumentationReferenceAssemblies) --skip-unbrowsable" WorkingDirectory="$(MSBuildThisFileDirectory).." />
     </Target>
 
     <Target 
