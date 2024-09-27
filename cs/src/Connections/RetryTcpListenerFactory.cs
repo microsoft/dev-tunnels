@@ -39,9 +39,10 @@ internal class RetryTcpListenerFactory : ITcpListenerFactory
 
     /// <inheritdoc />
     public Task<TcpListener> CreateTcpListenerAsync(
+        int? remotePort,
         IPAddress localIPAddress,
         int localPort,
-        bool canChangePort,
+        bool canChangeLocalPort,
         TraceSource trace,
         CancellationToken cancellation)
     {
@@ -77,14 +78,17 @@ internal class RetryTcpListenerFactory : ITcpListenerFactory
 
                 listener.Start();
 
-                // It is assumed that the localPort passed in is the same as the host port
-                trace.TraceInformation($"Forwarding from {listener.LocalEndpoint} to host port {localPort}.");
+                if (remotePort != null)
+                {
+                    trace.TraceInformation($"Forwarding from {listener.LocalEndpoint} to host port {remotePort}.");
+                }
+
                 return Task.FromResult(listener);
             }
             catch (SocketException sockex)
             when ((sockex.SocketErrorCode == SocketError.AccessDenied ||
                 sockex.SocketErrorCode == SocketError.AddressAlreadyInUse) &&
-                offset < maxOffet && canChangePort)
+                offset < maxOffet && canChangeLocalPort)
             {
                 trace.TraceEvent(TraceEventType.Verbose, 1, "Listening on port " + localPortNumber + " failed: " + sockex.Message);
                 trace.TraceEvent(TraceEventType.Verbose, 2, "Incrementing port and trying again");
