@@ -141,7 +141,7 @@ func (s *ClientSSHSession) forwardPort(ctx context.Context, port uint16) error {
 	var i uint16 = 0
 	for i < 10 {
 		portNum := port + i
-		innerListener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
+		innerListener, err := net.Listen("tcp4", fmt.Sprintf(":%d", portNum))
 		if err == nil {
 			listener = innerListener
 			break
@@ -149,7 +149,7 @@ func (s *ClientSSHSession) forwardPort(ctx context.Context, port uint16) error {
 		i++
 	}
 	if listener == nil {
-		innerListener, err := net.Listen("tcp", ":0")
+		innerListener, err := net.Listen("tcp4", ":0")
 		if err != nil {
 			return fmt.Errorf("error creating listener: %w", err)
 		}
