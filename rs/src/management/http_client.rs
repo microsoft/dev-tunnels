@@ -458,7 +458,9 @@ impl TunnelManagementClient {
         match get_policy_header_value() {
             Ok(Some(policy_header_value)) => {
                 if let Ok(header_value) = HeaderValue::from_maybe_shared(policy_header_value) {
-                    headers.insert("User-Agent-Policies", header_value);
+                    let header_value_str = header_value.to_str().unwrap().replace("%22", "").replace("%3B", ";");
+                    headers.insert("User-Agent-Policies", HeaderValue::from_str(&header_value_str).unwrap());
+                    log::info!("Headers: {:?}", headers);
                 } else {
                     log::error!("Invalid header value");
                 }
