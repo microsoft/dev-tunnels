@@ -162,7 +162,11 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.connection_mode.to_string());
@@ -180,7 +184,11 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelRelayTunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.base.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
@@ -458,8 +466,15 @@ impl TunnelManagementClient {
         match get_policy_header_value() {
             Ok(Some(policy_header_value)) => {
                 if let Ok(header_value) = HeaderValue::from_maybe_shared(policy_header_value) {
-                    let header_value_str = header_value.to_str().unwrap().replace("%22", "").replace("%3B", ";");
-                    headers.insert("User-Agent-Policies", HeaderValue::from_str(&header_value_str).unwrap());
+                    let header_value_str = header_value
+                        .to_str()
+                        .unwrap()
+                        .replace("%22", "")
+                        .replace("%3B", ";");
+                    headers.insert(
+                        "User-Agent-Policies",
+                        HeaderValue::from_str(&header_value_str).unwrap(),
+                    );
                     log::info!("Headers: {:?}", headers);
                 } else {
                     log::error!("Invalid header value");
