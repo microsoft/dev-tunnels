@@ -171,6 +171,42 @@ public class TunnelManagementClientTests
         Assert.Contains(tunnelServiceUri.Host, ex.Message);
     }
 
+    [Fact]
+    public async Task HandlePolicyFailureResponse()
+    {
+        const string policyRequirement1 = "DisableAnonymousAccessRequirement";
+        const string policyRequirement2 = "DisableAnonymousAccessRequirement";
+
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                var result = new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                {
+                    RequestMessage = message,
+                };
+                result.Headers.Add("X-Enterprise-Policy-Failure", policyRequirement1);
+                result.Headers.Add("X-Enterprise-Policy-Failure", policyRequirement2);
+                return Task.FromResult(result);
+            });
+
+        var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
+
+        var requestTunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+            ClusterId = ClusterId,
+        };
+
+        var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => client.GetTunnelAsync(requestTunnel, options: null, this.timeout));
+        Assert.Collection(
+            ex.GetEnterprisePolicyRequirements(),
+            (r) => Assert.Equal(policyRequirement1, r),
+            (r) => Assert.Equal(policyRequirement2, r));
+    }
+
+
+
     private sealed class MockHttpMessageHandler : DelegatingHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler;

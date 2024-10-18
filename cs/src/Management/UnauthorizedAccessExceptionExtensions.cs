@@ -16,12 +16,13 @@ namespace Microsoft.DevTunnels.Management;
 public static class UnauthorizedAccessExceptionExtensions
 {
     private const string AuthenticationSchemesKey = "AuthenticationSchemes";
+    private const string EnterprisePolicyRequirementsKey = "EnterprisePolicyRequirements";
 
     /// <summary>
     /// Gets the list of schemes that may be used to authenticate, when an
     /// <see cref="UnauthorizedAccessException" /> was thrown for an unauthenticated request.
     /// </summary>
-    public static IEnumerable<AuthenticationHeaderValue>? GetAuthenticationSchemes(
+    public static IEnumerable<AuthenticationHeaderValue> GetAuthenticationSchemes(
         this UnauthorizedAccessException ex)
     {
         Requires.NotNull(ex, nameof(ex));
@@ -32,7 +33,7 @@ public static class UnauthorizedAccessExceptionExtensions
             return authenticationSchemes?
                 .Select((s) => AuthenticationHeaderValue.TryParse(s, out var value) ? value : null!)
                 .Where((s) => s != null)
-                .ToArray();
+                .ToArray() ?? Enumerable.Empty<AuthenticationHeaderValue>();
         }
     }
 
@@ -56,6 +57,42 @@ public static class UnauthorizedAccessExceptionExtensions
         lock (ex.Data)
         {
             ex.Data[AuthenticationSchemesKey] = authenticationSchemes?.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Gets the list of enterprise policy requirements that caused the
+    /// <see cref="UnauthorizedAccessException" />.
+    /// </summary>
+    /// <remarks>
+    /// Each item is a non-localized string policy requirement name, such as:
+    ///   "DisableAnonymousAccessRequirement",
+    ///   "DisableDevTunnelsRequirement",
+    ///   "RestrictedTenantAccessRequirement"
+    /// </remarks>
+    public static IEnumerable<string> GetEnterprisePolicyRequirements(
+        this UnauthorizedAccessException ex)
+    {
+        Requires.NotNull(ex, nameof(ex));
+
+        lock (ex.Data)
+        {
+            return ex.Data[EnterprisePolicyRequirementsKey] as string[] ??
+                Enumerable.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Sets the list of enterprise policy requirements that caused the
+    /// <see cref="UnauthorizedAccessException" />.
+    /// </summary>
+    public static void SetEnterprisePolicyRequirements(
+        this UnauthorizedAccessException ex,
+        IEnumerable<string>? enterprisePolicyRequirements)
+    {
+        lock (ex.Data)
+        {
+            ex.Data[EnterprisePolicyRequirementsKey] = enterprisePolicyRequirements?.ToArray();
         }
     }
 }
