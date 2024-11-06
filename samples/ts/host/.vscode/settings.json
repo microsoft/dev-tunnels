@@ -1,0 +1,6 @@
+{
+    "files.exclude": {
+      "out/": true,
+      "node_modules/": true,
+    }
+  }
