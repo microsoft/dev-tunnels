@@ -1,5 +1,5 @@
 {
-  "name": "devtunnels-sample-host",
+  "name": "devtunnels-sample-client",
   "version": "1.0.0",
   "main": "out/index.js",
   "scripts": {
@@ -9,7 +9,7 @@
   "keywords": [],
   "author": "Microsoft",
   "license": "MIT",
-  "description": "Devtunnels host",
+  "description": "Devtunnels client",
   "devDependencies": {
     "@types/node": "^22.9.0",
     "typescript": "^5.6.3"

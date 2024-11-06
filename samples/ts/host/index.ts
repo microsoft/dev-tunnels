@@ -66,6 +66,8 @@ async function createTunnelAndConnectHost(tunnelManagementClient: TunnelManageme
   await host.connect(tunnel!);
 
   console.log('Tunnel host connected:');
+  console.log(`    Tunnel ID: ${tunnel.tunnelId}`);
+  console.log(`    Cluster ID: ${tunnel.clusterId}`);
   const clientAccessToken = tunnel.accessTokens?.[TunnelAccessScopes.Connect];
   if (clientAccessToken) {
     console.log(`    Client access token: ${clientAccessToken}`);
