@@ -102,7 +102,7 @@ async function main() {
 
     console.log("\nStopping tunnel client..."); 
     client.dispose();
-    
+
   } catch (err) {
     console.error(err);
   }
