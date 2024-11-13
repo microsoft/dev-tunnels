@@ -1,0 +1,22 @@
+{
+  "name": "devtunnels-sample-client",
+  "version": "1.0.0",
+  "main": "out/index.js",
+  "scripts": {
+    "compile": "tsc --build",
+    "run": "node out/index.js"
+  },
+  "keywords": [],
+  "author": "Microsoft",
+  "license": "MIT",
+  "description": "Devtunnels client",
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@microsoft/dev-tunnels-connections": "^1.2.1",
+    "@microsoft/dev-tunnels-contracts": "^1.2.1",
+    "@microsoft/dev-tunnels-management": "^1.2.1"
+  }
+}
