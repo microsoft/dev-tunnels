@@ -126,6 +126,14 @@ export namespace TunnelConstraints {
     export const clusterIdRegex: RegExp = new RegExp(TunnelConstraints.clusterIdPattern);
 
     /**
+     * Regular expression that can match or validate a tunnel cluster ID as a hostname
+     * prefix.
+     *
+     * Cluster IDs are alphanumeric; hyphens are not permitted.
+     */
+    export const clusterIdPrefixRegex: RegExp = new RegExp(TunnelConstraints.clusterIdPattern.replace('$', '\\.'));
+
+    /**
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
      * excluding vowels and 'y' (to avoid accidentally generating any random words).
      */

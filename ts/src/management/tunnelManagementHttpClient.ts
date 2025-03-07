@@ -5,6 +5,7 @@ import {
     Tunnel,
     TunnelAccessControl,
     TunnelAccessScopes,
+    TunnelConstraints,
     TunnelEndpoint,
     TunnelPort,
     ProblemDetails,
@@ -876,16 +877,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             const url = new URL(baseAddress);
             const portNumber = parseInt(url.port, 10);
 
-            // tunnels.local.api.visualstudio.com resolves to localhost (for local development).
-            if (url.hostname !== 'localhost' &&
-                url.hostname !== 'tunnels.local.api.visualstudio.com' &&
-                !url.hostname.startsWith(`${clusterId}.`)
-            ) {
-                // A specific cluster ID was specified (while not running on localhost).
-                // Prepend the cluster ID to the hostname, and optionally strip a global prefix.
-                url.hostname = `${clusterId}.${url.hostname}`.replace('global.', '');
-                baseAddress = url.toString();
-            } else if (
+            url.hostname = TunnelManagementHttpClient.replaceTunnelServiceHostnameClusterId(
+                url.hostname, clusterId);
+
+            if (
                 url.protocol === 'https:' &&
                 clusterId.startsWith('localhost') &&
                 portNumber % 10 > 0
@@ -895,9 +890,10 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 const clusterNumber = parseInt(clusterId.substring('localhost'.length), 10);
                 if (clusterNumber > 0 && clusterNumber < 10) {
                     url.port = (portNumber - (portNumber % 10) + clusterNumber).toString();
-                    baseAddress = url.toString();
                 }
             }
+
+            baseAddress = url.toString();
         }
 
         baseAddress = `${baseAddress.replace(/\/$/, '')}${path}`;
@@ -908,6 +904,32 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         return baseAddress;
+    }
+
+    private static replaceTunnelServiceHostnameClusterId(
+        hostname: string,
+        clusterId: string | undefined,
+    ): string {
+        // tunnels.local.api.visualstudio.com resolves to localhost (for local development).
+        if (!clusterId ||
+            hostname == 'localhost' ||
+            hostname == 'tunnels.local.api.visualstudio.com'
+        ) {
+            return hostname;
+        }
+
+        if (hostname.startsWith('global.') ||
+            TunnelConstraints.clusterIdPrefixRegex.test(hostname))
+        {
+            // Hostname is in the form "global.rel.tunnels..." or "<clusterId>.rel.tunnels..."
+            // Replace the first part of the hostname with the specified cluster ID.
+            return clusterId + hostname.substring(hostname.indexOf('.'));
+        }
+        else
+        {
+            // Hostname does not have a recognized cluster prefix. Prepend the cluster ID.
+            return `${clusterId}.${hostname}`;
+        }
     }
 
     private buildUriForTunnel(

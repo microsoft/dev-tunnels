@@ -6,6 +6,7 @@ package tunnels
 
 import (
 	"regexp"
+	"strings"
 )
 
 const (
@@ -144,6 +145,12 @@ var (
 	//
 	// Cluster IDs are alphanumeric; hyphens are not permitted.
 	TunnelConstraintsClusterIDRegex = regexp.MustCompile(TunnelConstraintsClusterIDPattern)
+
+	// Regular expression that can match or validate a tunnel cluster ID as a hostname
+	// prefix.
+	//
+	// Cluster IDs are alphanumeric; hyphens are not permitted.
+	TunnelConstraintsClusterIDPrefixRegex = regexp.MustCompile(strings.Replace(TunnelConstraintsClusterIDPattern, "$", "\\.", -1))
 
 	// Regular expression that can match or validate tunnel ID strings.
 	//

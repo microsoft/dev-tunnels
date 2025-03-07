@@ -790,28 +790,21 @@ namespace Microsoft.DevTunnels.Management
             var baseAddress = this.httpClient.BaseAddress!;
             var builder = new UriBuilder(baseAddress);
 
-            if (!string.IsNullOrEmpty(clusterId) &&
-                baseAddress.HostNameType == UriHostNameType.Dns)
+            if (baseAddress.HostNameType == UriHostNameType.Dns)
             {
-                // tunnels.local.api.visualstudio.com resolves to localhost (for local development).
-                if (baseAddress.Host != "localhost" &&
-                    baseAddress.Host != "tunnels.local.api.visualstudio.com" &&
-                    !baseAddress.Host.StartsWith($"{clusterId}."))
+                builder.Host = ReplaceTunnelServiceHostnameClusterId(builder.Host, clusterId);
+            }
+
+            if (baseAddress.Scheme == "https" &&
+                clusterId?.StartsWith("localhost") == true &&
+                builder.Port % 10 > 0 &&
+                ushort.TryParse(clusterId.Substring("localhost".Length), out var clusterNumber))
+            {
+                // Local testing simulates clusters by running the service on multiple ports.
+                // Change the port number to match the cluster ID suffix.
+                if (clusterNumber > 0 && clusterNumber < 10)
                 {
-                    // A specific cluster ID was specified (while not running on localhost).
-                    // Prepend the cluster ID to the hostname, and optionally strip a global prefix.
-                    builder.Host = $"{clusterId}.{builder.Host}".Replace("global.", string.Empty);
-                }
-                else if (baseAddress.Scheme == "https" &&
-                    clusterId.StartsWith("localhost") && builder.Port % 10 > 0 &&
-                    ushort.TryParse(clusterId.Substring("localhost".Length), out var clusterNumber))
-                {
-                    // Local testing simulates clusters by running the service on multiple ports.
-                    // Change the port number to match the cluster ID suffix.
-                    if (clusterNumber > 0 && clusterNumber < 10)
-                    {
-                        builder.Port = builder.Port - (builder.Port % 10) + clusterNumber;
-                    }
+                    builder.Port = builder.Port - (builder.Port % 10) + clusterNumber;
                 }
             }
 
@@ -828,6 +821,30 @@ namespace Microsoft.DevTunnels.Management
             builder.Path = path;
             builder.Query = query;
             return builder.Uri;
+        }
+
+        private static string ReplaceTunnelServiceHostnameClusterId(string hostname, string? clusterId)
+        {
+            // tunnels.local.api.visualstudio.com resolves to localhost (for local development).
+            if (string.IsNullOrEmpty(clusterId) ||
+                hostname == "localhost" ||
+                hostname == "tunnels.local.api.visualstudio.com")
+            {
+                return hostname;
+            }
+
+            if (hostname.StartsWith("global.") ||
+                TunnelConstraints.ClusterIdPrefixRegex.IsMatch(hostname))
+            {
+                // Hostname is in the form "global.rel.tunnels..." or "<clusterId>.rel.tunnels..."
+                // Replace the first part of the hostname with the specified cluster ID.
+                return clusterId + hostname.Substring(hostname.IndexOf('.'));
+            }
+            else
+            {
+                // Hostname does not have a recognized cluster prefix. Prepend the cluster ID.
+                return $"{clusterId}.{hostname}";
+            }
         }
 
         private Uri BuildTunnelUri(
