@@ -164,6 +164,15 @@ public static class TunnelConstraints
     public static Regex ClusterIdRegex { get; } = new Regex(ClusterIdPattern);
 
     /// <summary>
+    /// Regular expression that can match or validate a tunnel cluster ID as a hostname prefix.
+    /// </summary>
+    /// <remarks>
+    /// Cluster IDs are alphanumeric; hyphens are not permitted.
+    /// </remarks>
+    /// <seealso cref="Tunnel.ClusterId"/>
+    public static Regex ClusterIdPrefixRegex { get; } = new Regex(ClusterIdPattern.Replace("$", "\\."));
+
+    /// <summary>
     /// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
     /// excluding vowels and 'y' (to avoid accidentally generating any random words).
     /// </summary>

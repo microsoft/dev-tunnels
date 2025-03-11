@@ -129,6 +129,14 @@ public class TunnelConstraints {
     public static final Pattern clusterIdRegex = java.util.regex.Pattern.compile(TunnelConstraints.clusterIdPattern);
 
     /**
+     * Regular expression that can match or validate a tunnel cluster ID as a hostname
+     * prefix.
+     *
+     * Cluster IDs are alphanumeric; hyphens are not permitted.
+     */
+    public static final Pattern clusterIdPrefixRegex = java.util.regex.Pattern.compile(TunnelConstraints.clusterIdPattern.replace("$", "\\."));
+
+    /**
      * Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
      * excluding vowels and 'y' (to avoid accidentally generating any random words).
      */
