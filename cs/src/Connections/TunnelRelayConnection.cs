@@ -239,6 +239,7 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
             RelayUri,
             this.accessToken,
             protocols,
+            Trace,
             cancellation);
         Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
 

@@ -4,6 +4,7 @@
 // </copyright>
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
@@ -21,6 +22,7 @@ namespace Microsoft.DevTunnels.Connections
             Uri relayUri,
             string? accessToken,
             string[] subprotocols,
+            TraceSource trace,
             CancellationToken cancellation)
         {
             void ConfigureWebSocketOptions(ClientWebSocketOptions options)
@@ -37,7 +39,7 @@ namespace Microsoft.DevTunnels.Connections
             }
 
             var stream = await WebSocketStream.ConnectToWebSocketAsync(
-                relayUri, ConfigureWebSocketOptions, cancellation);
+                relayUri, ConfigureWebSocketOptions, trace, cancellation);
             return (stream, stream.SubProtocol);
         }
     }

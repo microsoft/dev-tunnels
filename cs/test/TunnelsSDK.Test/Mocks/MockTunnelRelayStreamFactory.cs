@@ -1,4 +1,5 @@
 using Microsoft.DevTunnels.Connections;
+using System.Diagnostics;
 using Xunit;
 
 namespace Microsoft.DevTunnels.Test.Mocks;
@@ -21,6 +22,7 @@ public class MockTunnelRelayStreamFactory : ITunnelRelayStreamFactory
         Uri relayUri,
         string accessToken,
         string[] subprotocols,
+        TraceSource trace,
         CancellationToken cancellation)
     {
         Assert.NotNull(relayUri);

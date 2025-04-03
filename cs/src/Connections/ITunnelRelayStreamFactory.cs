@@ -4,6 +4,7 @@
 // </copyright>
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ namespace Microsoft.DevTunnels.Connections
         /// <param name="accessToken">Tunnel host access token, or null if anonymous.</param>
         /// <param name="subprotocols">One or more websocket subprotocols (relay connection
         /// protocols).</param>
+        /// <param name="trace">Trace source for logging.</param>
         /// <param name="cancellation">Cancellation token.</param>
         /// <returns>Stream connected to the relay, along with the actual subprotocol that was
         /// selected by the server.</returns>
@@ -35,6 +37,7 @@ namespace Microsoft.DevTunnels.Connections
             Uri relayUri,
             string? accessToken,
             string[] subprotocols,
+            TraceSource trace,
             CancellationToken cancellation);
     }
 }
