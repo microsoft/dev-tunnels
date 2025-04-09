@@ -46,7 +46,7 @@ export interface TunnelOptions {
     /**
      * Gets or sets a value indicating whether `Origin` header is rewritten or the header
      * value stays intact. By default, if false, web-forwarding rewrites the origin header
-     * with the value from OriginHeader property or  "http(s)://localhost". If true, the
+     * with the value from OriginHeader property or "http(s)://localhost". If true, the
      * Origin header will be whatever the tunnel's web-forwarding Origin is, e.g.
      * https://tunnel-name-8080.devtunnels.ms. Port-level option, if set, takes precedence
      * over this option on the tunnel level.
@@ -57,4 +57,13 @@ export interface TunnelOptions {
      * Gets or sets if inspection is enabled for the tunnel.
      */
     isInspectionEnabled?: boolean;
+
+    /**
+     * Gets or sets a value indicating whether web requests to a tunnel can use the tunnel
+     * web authentication cookie if they come from a different site. Specifically, this
+     * controls whether the tunnel web-forwarding authentication cookie is marked as
+     * SameSite=None. The default is false, which means the cookie is marked as
+     * SameSite=Lax. This only applies to tunnels that require authentication.
+     */
+    isCrossSiteAuthenticationEnabled?: boolean;
 }
