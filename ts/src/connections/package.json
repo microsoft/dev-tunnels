@@ -18,13 +18,13 @@
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
 		"vscode-jsonrpc": "^4.0.0",
-		"@microsoft/dev-tunnels-contracts": ">1.2.3",
-		"@microsoft/dev-tunnels-management": ">1.2.3",
+		"@microsoft/dev-tunnels-contracts": ">1.2.4",
+		"@microsoft/dev-tunnels-management": ">1.2.4",
 		"@microsoft/dev-tunnels-ssh": "^3.12.5",
 		"@microsoft/dev-tunnels-ssh-tcp": "^3.12.5",
 		"uuid": "^3.3.3",
 		"await-semaphore": "^0.1.3",
 		"websocket": "^1.0.28",
-		"es5-ext": "0.10.63"
+		"es5-ext": "0.10.64"
 	}
 }
