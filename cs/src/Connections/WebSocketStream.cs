@@ -344,10 +344,10 @@ namespace Microsoft.DevTunnels.Connections
                 {
                     // Other party is closing the socket.
                     Close();
-                    Trace.TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.ReadAsync: Connection close message");
+                    Trace.TraceEvent(TraceEventType.Verbose, 0, "WS.R: Connection close message");
                     return 0;
                 }
-                TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.ReadAsync: Received message {0}", result.Count);
+                TraceEvent(TraceEventType.Verbose, 0, "WS.R: Received message {0}", result.Count);
 
                 return result.Count;
             }
@@ -357,10 +357,10 @@ namespace Microsoft.DevTunnels.Connections
                 // If the socket was closed, treat this as the end of the stream.
                 if (!CanReadFromSocket)
                 {
-                    Trace.TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.ReadAsync: Socket closed");
+                    Trace.TraceEvent(TraceEventType.Verbose, 0, "WS.R: Socket closed");
                     return 0;
                 }
-                TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.ReadAsync: Operation cancelled exception");
+                TraceEvent(TraceEventType.Warning, 0, "WS.R: Operation cancelled exception");
 
                 throw;
             }
@@ -369,7 +369,7 @@ namespace Microsoft.DevTunnels.Connections
             {
                 // Other party closed connection prematurely.
                 Close();
-                TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.ReadAsync: Websocket closed prematurely exception");
+                TraceEvent(TraceEventType.Warning, 0, "WS.R: Websocket closed prematurely exception");
                 return 0;
             }
         }
@@ -400,10 +400,10 @@ namespace Microsoft.DevTunnels.Connections
                 {
                     // Other party is closing the socket.
                     Close();
-                    TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.ReadAsync: Connection close message");
+                    TraceEvent(TraceEventType.Verbose, 0, "WS.R: Connection close message");
                     return 0;
                 }
-                TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.ReadAsync: Received message {0}", result.Count);
+                TraceEvent(TraceEventType.Verbose, 0, "WS.R: Received message {0}", result.Count);
 
                 return result.Count;
             }
@@ -413,10 +413,10 @@ namespace Microsoft.DevTunnels.Connections
                 // If the socket was closed, treat this as the end of the stream.
                 if (!CanReadFromSocket)
                 {
-                    TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.ReadAsync: Socket closed");
+                    TraceEvent(TraceEventType.Verbose, 0, "WS.R: Socket closed");
                     return 0;
                 }
-                TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.ReadAsync: Operation cancelled exception");
+                TraceEvent(TraceEventType.Warning, 0, "WS.R: Operation cancelled exception");
 
                 throw;
             }
@@ -425,7 +425,7 @@ namespace Microsoft.DevTunnels.Connections
             {
                 // Other party closed connection prematurely.
                 Close();
-                Trace.TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.ReadAsync: Websocket closed prematurely exception");
+                Trace.TraceEvent(TraceEventType.Warning, 0, "WS.R: Websocket closed prematurely exception");
                 return 0;
             }
         }
@@ -457,12 +457,12 @@ namespace Microsoft.DevTunnels.Connections
                 }
 
                 await writeTask.ConfigureAwait(false);
-                TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.WriteAsync: Wrote message {0}", count);
+                TraceEvent(TraceEventType.Verbose, 0, "WS.W: Wrote message {0}", count);
             }
             catch (OperationCanceledException oce)
             when (this.writeCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
-                TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.WriteAsync: Operation cancelled exception");
+                TraceEvent(TraceEventType.Warning, 0, "WS.W: Operation cancelled exception");
                 // Other thread is trying to dispose and is cancelling this write.
                 // Report that the object is disposed to the caller.
                 throw new ObjectDisposedException(GetType().Name, oce);
@@ -472,12 +472,12 @@ namespace Microsoft.DevTunnels.Connections
                 Close();
                 if (wse.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
                 {
-                    TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.WriteAsync: Websocket closed prematurely exception");
+                    TraceEvent(TraceEventType.Warning, 0, "WS.W: Websocket closed prematurely exception");
                     // Socket closed prematurely, treat as if the connection closed.
                     throw new ObjectDisposedException(GetType().Name, wse);
                 }
 
-                TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.WriteAsync: Websocket exception {0}", wse.Message);
+                TraceEvent(TraceEventType.Warning, 0, "WS.W: Websocket exception {0}", wse.Message);
                 throw;
             }
             finally
@@ -520,7 +520,7 @@ namespace Microsoft.DevTunnels.Connections
                 }
 
                 await writeTask.ConfigureAwait(false);
-                TraceEvent(TraceEventType.Verbose, 0, "WebSocketStream.WriteAsync: Wrote message");
+                TraceEvent(TraceEventType.Verbose, 0, "WS.W: Wrote message");
 
                 lock (this.lockObject)
                 {
@@ -533,7 +533,7 @@ namespace Microsoft.DevTunnels.Connections
             catch (OperationCanceledException oce)
             when (this.writeCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
-                TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.WriteAsync: Operation cancelled exception");
+                TraceEvent(TraceEventType.Warning, 0, "WS.W: Operation cancelled exception");
 
                 // Other thread is trying to dispose and is cancelling this write.
                 // Report that the object is disposed to the caller.
@@ -544,12 +544,12 @@ namespace Microsoft.DevTunnels.Connections
                 Close();
                 if (wse.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
                 {
-                    Trace.TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.WriteAsync: Websocket closed prematurely exception");
+                    Trace.TraceEvent(TraceEventType.Warning, 0, "WS.W: Websocket closed prematurely exception");
                     // Socket closed prematurely, treat as if the connection closed.
                     throw new ObjectDisposedException(GetType().Name, wse);
                 }
 
-                TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.WriteAsync: Websocket exception {0}", wse.Message);
+                TraceEvent(TraceEventType.Warning, 0, "WS.W: Websocket exception {0}", wse.Message);
                 throw;
             }
             finally
