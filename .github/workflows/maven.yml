@@ -24,7 +24,13 @@ jobs:
         with:
           java-version: "11"
           distribution: "microsoft"
-          cache: maven
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
       - name: Build with Maven
         # don't run ConnectionTest for now.
         run: mvn -B package --file pom.xml -Dtest=TunnelContractsTests
