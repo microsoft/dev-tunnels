@@ -208,7 +208,7 @@ public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
         SshSession = session;
         session.KeepAliveRequestFailed += (_, e) =>
         {
-            OnKeepAliveRequestFailed(e.Count);
+            OnKeepAliveFailed(e.Count);
         };
         SshPortForwardingService = session.ActivateService<PortForwardingService>();
         ConfigurePortForwardingService();

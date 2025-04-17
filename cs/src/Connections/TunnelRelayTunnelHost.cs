@@ -209,7 +209,7 @@ public class TunnelRelayTunnelHost : TunnelHost
         
         session.KeepAliveRequestFailed += (_, e) =>
         {
-            OnKeepAliveRequestFailed(e.Count);
+            OnKeepAliveFailed(e.Count);
         };
 
         SshSession = session;
