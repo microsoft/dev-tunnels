@@ -265,6 +265,7 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     protected abstract Task ConfigureSessionAsync(
         Stream stream,
         bool isReconnect,
+        TunnelConnectionOptions? options,
         CancellationToken cancellation);
 
     /// <summary>
@@ -481,8 +482,9 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     Task IRelayClient.ConfigureSessionAsync(
         Stream stream,
         bool isReconnect,
+        TunnelConnectionOptions? options,
         CancellationToken cancellation) =>
-        ConfigureSessionAsync(stream, isReconnect, cancellation);
+        ConfigureSessionAsync(stream, isReconnect, options, cancellation);
 
     /// <inheritdoc />
     Task IRelayClient.CloseSessionAsync(SshDisconnectReason disconnectReason, Exception? exception) =>

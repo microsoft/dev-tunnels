@@ -70,7 +70,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
 
                     // TODO: check tunnel access token expiration and try refresh it if it's expired.
                     stream = await this.relayClient.CreateSessionStreamAsync(cts.Token);
-                    await this.relayClient.ConfigureSessionAsync(stream, isReconnect, cts.Token);
+                    await this.relayClient.ConfigureSessionAsync(stream, isReconnect, options, cts.Token);
 
                     stream = null;
                     disconnectReason = SshDisconnectReason.None;

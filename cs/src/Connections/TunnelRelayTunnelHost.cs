@@ -172,15 +172,15 @@ public class TunnelRelayTunnelHost : TunnelHost
     }
 
     /// <inheritdoc />
-    protected override async Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
+    protected override async Task ConfigureSessionAsync(Stream stream, bool isReconnect, TunnelConnectionOptions? options, CancellationToken cancellation)
     {
         SshClientSession session;
         if (ConnectionProtocol == WebSocketSubProtocol)
         {
             // The V1 protocol always configures no security, equivalent to SSH MultiChannelStream.
             // The websocket transport is still encrypted and authenticated.
-            session = new SshClientSession(
-                SshSessionConfiguration.NoSecurity, Trace.WithName("HostSSH"));
+            var sessionConfig = new SshSessionConfiguration(useSecurity: false) { KeepAliveTimeoutInSeconds = options?.KeepAliveIntervalInSeconds ?? 0 };
+            session = new SshClientSession(sessionConfig, Trace.WithName("HostSSH"));
         }
         else
         {
@@ -196,11 +196,21 @@ public class TunnelRelayTunnelHost : TunnelHost
             config.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup14Sha256);
 
             config.AddService(typeof(PortForwardingService));
+            if (options?.KeepAliveIntervalInSeconds > 0)
+            {
+                config.KeepAliveTimeoutInSeconds = options.KeepAliveIntervalInSeconds;
+            }
+            
             session = new SshClientSession(config, Trace.WithName("HostSSH"));
 
             var hostPfs = session.ActivateService<PortForwardingService>();
             hostPfs.MessageFactory = this;
         }
+        
+        session.KeepAliveRequestFailed += (_, e) =>
+        {
+            OnKeepAliveFailed(e.Count);
+        };
 
         SshSession = session;
         SubscribeSessionEvents(session);

@@ -15,6 +15,7 @@ Dev tunnels allows developers to securely expose local web services to the Inter
 | Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SSH-level Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Automatic tunnel access token refresh | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Ssh Keep-alive | ✅ | 🗓️ | ❌ | ❌ | ❌ |
 
 ✅ - Supported  
 🚧 - In Progress  

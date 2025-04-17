@@ -169,7 +169,7 @@ public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
     /// Overwrites <see cref="SshSession"/> property.
     /// SSH session reconnect is enabled only if <see cref="TunnelConnection.connector"/> is not null.
     /// </remarks>
-    protected async Task StartSshSessionAsync(Stream stream, CancellationToken cancellation)
+    protected async Task StartSshSessionAsync(Stream stream, TunnelConnectionOptions? options, CancellationToken cancellation)
     {
         var session = this.SshSession;
         if (session != null)
@@ -196,11 +196,20 @@ public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
             clientConfig.KeyExchangeAlgorithms.Add(SshAlgorithms.KeyExchange.DHGroup14Sha256);
         }
 
+        if (options?.KeepAliveIntervalInSeconds > 0)
+        {
+            clientConfig.KeepAliveTimeoutInSeconds = options.KeepAliveIntervalInSeconds;
+        }
+
         // Enable port-forwarding via the SSH protocol.
         clientConfig.AddService(typeof(PortForwardingService));
 
         session = new SshClientSession(clientConfig, Trace.WithName("SSH"));
         SshSession = session;
+        session.KeepAliveRequestFailed += (_, e) =>
+        {
+            OnKeepAliveFailed(e.Count);
+        };
         SshPortForwardingService = session.ActivateService<PortForwardingService>();
         ConfigurePortForwardingService();
         SubscribeSessionEvents(session);

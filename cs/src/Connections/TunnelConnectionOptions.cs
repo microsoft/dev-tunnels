@@ -61,4 +61,17 @@ public class TunnelConnectionOptions
     /// (most common). This option applies only to client connections.
     /// </summary>
     public string? HostId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ssh keep-alive interval in seconds. The default value is 0, which means no keep-alive.
+    /// When set to a positive value, the client will send keep-alive messages to the server
+    /// and calls the <see cref="TunnelConnection.KeepAliveFailed"/> callback with the number of times
+    /// the keep-alive is sent without a response.
+    /// 
+    /// The KeepAliveFailed event is raised at the time of sending the next keep-alive request,
+    /// for example if the interval is set to 10 seconds the first request is sent after 10 seconds of inactivity
+    /// and waits for 10 more seconds to call the KeepAliveFailed callback before sending another
+    /// keep-alive request.
+    /// </summary>
+    public int KeepAliveIntervalInSeconds { get; set; } = 0;
 }

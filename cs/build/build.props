@@ -41,7 +41,7 @@
     <ReportGeneratorVersion>5.3.9</ReportGeneratorVersion>
     <SystemTextEncodingsWebPackageVersion>4.7.2</SystemTextEncodingsWebPackageVersion>
     <VisualStudioValidationVersion>15.5.31</VisualStudioValidationVersion>
-    <DevTunnelsSshPackageVersion>3.12.5</DevTunnelsSshPackageVersion>
+    <DevTunnelsSshPackageVersion>3.12.8</DevTunnelsSshPackageVersion>
     <XunitRunnerVisualStudioVersion>2.4.0</XunitRunnerVisualStudioVersion>
     <XunitVersion>2.4.0</XunitVersion>
   </PropertyGroup>
