@@ -258,6 +258,16 @@ public abstract class TunnelConnection : IAsyncDisposable
     public event EventHandler<ConnectionStatusChangedEventArgs>? ConnectionStatusChanged;
 
     /// <summary>
+    /// Event raised when a keep-alive message respose is not received.
+    /// </summary>
+    /// <remarks>
+    /// The event args provide the count of keep-alive messages that did not get a response within the
+    /// configured <see cref="TunnelConnectionOptions.KeepAliveIntervalInSeconds"/>. This callback is only invoked
+    /// if the keep-alive interval is greater than 0.
+    /// </remarks>
+    public event EventHandler<SshKeepAliveFailureEventArgs>? KeepAliveRequestFailed;
+
+    /// <summary>
     /// Fetch the tunnel from the service if <see cref="ManagementClient"/> and <see cref="Tunnel"/> are not null.
     /// </summary>
     /// <returns><c>true</c> if <see cref="Tunnel"/> was refreshed; otherwise, <c>false</c>.</returns>
@@ -343,6 +353,15 @@ public abstract class TunnelConnection : IAsyncDisposable
 
         this.accessToken = await eventArgs.TunnelAccessTokenTask.ConfigureAwait(false);
         return true;
+    }
+
+    /// <summary>
+    /// Event raised when a keep-alive message response is not received.
+    /// </summary>
+    protected virtual void OnKeepAliveRequestFailed(int count)
+    {
+        var e = new SshKeepAliveFailureEventArgs(count);
+        KeepAliveRequestFailed?.Invoke(this, e);
     }
 
     /// <inheritdoc />

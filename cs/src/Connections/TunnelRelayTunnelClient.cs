@@ -128,7 +128,11 @@ public class TunnelRelayTunnelClient : TunnelClient
     /// <summary>
     /// Configures tunnel SSH session with the given stream.
     /// </summary>
-    protected override async Task ConfigureSessionAsync(Stream stream, bool isReconnect, CancellationToken cancellation)
+    protected override async Task ConfigureSessionAsync(
+        Stream stream,
+        bool isReconnect,
+        TunnelConnectionOptions? options,
+        CancellationToken cancellation)
     {
         var session = SshSession;
         if (isReconnect && session != null && !session.IsClosed)
@@ -137,7 +141,7 @@ public class TunnelRelayTunnelClient : TunnelClient
         }
         else
         {
-            await StartSshSessionAsync(stream, cancellation);
+            await StartSshSessionAsync(stream, options, cancellation);
         }
     }
 }
