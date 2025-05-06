@@ -76,4 +76,15 @@ public class TunnelOptions {
      */
     @Expose
     public boolean isCrossSiteAuthenticationEnabled;
+
+    /**
+     * Gets or sets a value indicating whether the tunnel web-forwarding authentication
+     * cookie is set as Partitioned (CHIPS). The default is false. This only applies to
+     * tunnels that require authentication.
+     *
+     * A partitioned cookie always also has SameSite=None for compatbility with browsers
+     * that do not support partitioning.
+     */
+    @Expose
+    public boolean isPartitionedSiteAuthenticationEnabled;
 }

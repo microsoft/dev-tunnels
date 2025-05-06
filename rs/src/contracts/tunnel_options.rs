@@ -60,4 +60,13 @@ pub struct TunnelOptions {
     // SameSite=Lax. This only applies to tunnels that require authentication.
     #[serde(default)]
     pub is_cross_site_authentication_enabled: bool,
+
+    // Gets or sets a value indicating whether the tunnel web-forwarding authentication
+    // cookie is set as Partitioned (CHIPS). The default is false. This only applies to
+    // tunnels that require authentication.
+    //
+    // A partitioned cookie always also has SameSite=None for compatbility with browsers
+    // that do not support partitioning.
+    #[serde(default)]
+    pub is_partitioned_site_authentication_enabled: bool,
 }

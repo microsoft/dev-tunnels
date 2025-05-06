@@ -84,5 +84,15 @@ namespace Microsoft.DevTunnels.Contracts
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool IsCrossSiteAuthenticationEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the tunnel web-forwarding authentication cookie is set as
+        /// Partitioned (CHIPS). The default is false. This only applies to tunnels that require authentication.
+        /// </summary>
+        /// <remarks>
+        /// A partitioned cookie always also has SameSite=None for compatbility with browsers that do not support partitioning.
+        /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool IsPartitionedSiteAuthenticationEnabled { get; set; }
     }
 }
