@@ -83,7 +83,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// This only applies to tunnels that require authentication.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public bool IsCrossSiteAuthenticationEnabled { get; set; }
+        public bool? IsCrossSiteAuthenticationEnabled { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the tunnel web-forwarding authentication cookie is set as
@@ -93,6 +93,6 @@ namespace Microsoft.DevTunnels.Contracts
         /// A partitioned cookie always also has SameSite=None for compatbility with browsers that do not support partitioning.
         /// </remarks>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public bool IsPartitionedSiteAuthenticationEnabled { get; set; }
+        public bool? IsPartitionedSiteAuthenticationEnabled { get; set; }
     }
 }
