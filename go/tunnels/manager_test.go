@@ -653,6 +653,15 @@ func TestTunnelListPorts(t *testing.T) {
 	if len(ports) != 2 {
 		t.Errorf("ports not successfully listed")
 	}
+
+	if ports[0].PortNumber != 3000 {
+		t.Errorf("port 3000 not successfully listed")
+	}
+
+	if ports[1].PortNumber != 3001 {
+		t.Errorf("port 3001 not successfully listed")
+	}
+
 	for _, port := range ports {
 		logger.Printf("Port: %d", port.PortNumber)
 		port.Table().Print()
