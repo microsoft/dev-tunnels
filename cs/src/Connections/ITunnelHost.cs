@@ -127,7 +127,7 @@ public interface ITunnelHost : IAsyncDisposable
     /// ForwardedPortConnecting event will be raised.
     /// </remarks>
     event EventHandler<ForwardedPortConnectingEventArgs>? ForwardedPortConnecting;
-    
+
     /// <summary>
     /// Event raised when a keep-alive message response is not received.
     /// </summary>
@@ -137,4 +137,14 @@ public interface ITunnelHost : IAsyncDisposable
     /// if the keep-alive interval is greater than 0.
     /// </remarks>
     public event EventHandler<SshKeepAliveFailureEventArgs>? KeepAliveFailed;
+    
+    /// <summary>
+    /// Event raised when a keep-alive message response is received.
+    /// </summary>
+    /// <remarks>
+    /// The event args provide the count of keep-alive messages that got a response within the
+    /// configured <see cref="TunnelConnectionOptions.KeepAliveIntervalInSeconds"/>. This callback is only invoked
+    /// if the keep-alive interval is greater than 0.
+    /// </remarks>
+    public event EventHandler<SshKeepAliveSuccessEventArgs>? KeepAliveSucceeded;
 }
