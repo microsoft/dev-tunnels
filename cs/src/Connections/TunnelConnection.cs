@@ -265,7 +265,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// configured <see cref="TunnelConnectionOptions.KeepAliveIntervalInSeconds"/>. This callback is only invoked
     /// if the keep-alive interval is greater than 0.
     /// </remarks>
-    public event EventHandler<SshKeepAliveFailureEventArgs>? KeepAliveFailed;
+    public event EventHandler<SshKeepAliveEventArgs>? KeepAliveFailed;
 
     /// <summary>
     /// Event raised when a keep-alive message response is received.
@@ -275,7 +275,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// configured <see cref="TunnelConnectionOptions.KeepAliveIntervalInSeconds"/>. This callback is only invoked
     /// if the keep-alive interval is greater than 0.
     /// </remarks>
-    public event EventHandler<SshKeepAliveSuccessEventArgs>? KeepAliveSucceeded;
+    public event EventHandler<SshKeepAliveEventArgs>? KeepAliveSucceeded;
 
     /// <summary>
     /// Fetch the tunnel from the service if <see cref="ManagementClient"/> and <see cref="Tunnel"/> are not null.
@@ -370,7 +370,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// </summary>
     protected virtual void OnKeepAliveFailed(int count)
     {
-        KeepAliveFailed?.Invoke(this, new SshKeepAliveFailureEventArgs(count));
+        KeepAliveFailed?.Invoke(this, new SshKeepAliveEventArgs(count));
     }
 
     /// <summary>
@@ -378,7 +378,7 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// </summary>
     protected virtual void OnKeepAliveSucceeded(int count)
     {
-        KeepAliveSucceeded?.Invoke(this, new SshKeepAliveSuccessEventArgs(count));
+        KeepAliveSucceeded?.Invoke(this, new SshKeepAliveEventArgs(count));
     }
 
     /// <inheritdoc />

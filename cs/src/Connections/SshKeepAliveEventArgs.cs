@@ -10,12 +10,12 @@ namespace Microsoft.DevTunnels.Connections;
 /// <summary>
 /// Event raised when a keep-alive message respose is not received.
 /// </summary>
-public class SshKeepAliveSuccessEventArgs : EventArgs
+public class SshKeepAliveEventArgs : EventArgs
 {
     /// <summary>
-    /// Create a new instance of <see cref="SshKeepAliveSuccessEventArgs"/>.
+    /// Create a new instance of <see cref="SshKeepAliveEventArgs"/>.
     /// </summary>
-	public SshKeepAliveSuccessEventArgs(int count)
+	public SshKeepAliveEventArgs(int count)
 	{
 		Count = count;
 	}
