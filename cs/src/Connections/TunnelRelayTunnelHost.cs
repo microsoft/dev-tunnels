@@ -207,9 +207,13 @@ public class TunnelRelayTunnelHost : TunnelHost
             hostPfs.MessageFactory = this;
         }
         
-        session.KeepAliveRequestFailed += (_, e) =>
+        session.KeepAliveFailed += (_, e) =>
         {
             OnKeepAliveFailed(e.Count);
+        };
+        session.KeepAliveSucceeded += (_, e) =>
+        {
+            OnKeepAliveSucceeded(e.Count);
         };
 
         SshSession = session;
