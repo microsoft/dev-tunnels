@@ -15,9 +15,10 @@ public class RetryingTunnelConnectionEventArgs : EventArgs
     /// <summary>
     /// Creates a new instance of <see cref="RetryingTunnelConnectionEventArgs"/> class.
     /// </summary>
-    public RetryingTunnelConnectionEventArgs(Exception exception, TimeSpan delay)
+    public RetryingTunnelConnectionEventArgs(Exception exception, int attemptNumber, TimeSpan delay)
     {
         Exception = Requires.NotNull(exception, nameof(exception));
+        AttemptNumber = attemptNumber;
         Retry = true;
         Delay = delay;
     }
@@ -29,6 +30,11 @@ public class RetryingTunnelConnectionEventArgs : EventArgs
     /// For an au
     /// </remarks>
     public Exception Exception { get; }
+
+    /// <summary>
+    /// Gets the attempt number for the retry.
+    /// </summary>
+    public int AttemptNumber { get; }
 
     /// <summary>
     /// Gets the amount of time to wait before retrying. An event handler may change this value

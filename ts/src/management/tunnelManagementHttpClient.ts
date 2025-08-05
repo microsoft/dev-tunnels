@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { CancellationToken, Disposable, Emitter, Event } from 'vscode-jsonrpc';
+import { PromiseCompletionSource } from '@microsoft/dev-tunnels-ssh';
 import {
     Tunnel,
     TunnelAccessControl,
@@ -16,6 +18,7 @@ import {
     TunnelPortListResponse,
     TunnelProgress,
     TunnelReportProgressEventArgs,
+    TunnelEvent,
 } from '@microsoft/dev-tunnels-contracts';
 import {
     ProductHeaderValue,
@@ -29,7 +32,6 @@ import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Met
 import * as https from 'https';
 import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 import { IdGeneration } from './idGeneration';
-import { CancellationToken, Disposable, Emitter, Event } from 'vscode-jsonrpc';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -37,6 +39,7 @@ const tunnelsApiPath = '/tunnels';
 const limitsApiPath = '/userlimits';
 const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
+const eventsApiSubPath = '/events';
 const clustersApiPath = '/clusters';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
@@ -113,6 +116,12 @@ const readAccessTokenScopes = [
 const apiVersions = ["2023-09-27-preview"];
 const defaultRequestTimeoutMS = 20000;
 
+interface EventInfo {
+    tunnel: Tunnel;
+    event: TunnelEvent;
+    requestOptions?: TunnelRequestOptions;
+}
+
 export class TunnelManagementHttpClient implements TunnelManagementClient {
     public additionalRequestHeaders?: { [header: string]: string };
     public apiVersion: string;
@@ -131,6 +140,19 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     public readonly onReportProgress: Event<TunnelReportProgressEventArgs> = this.reportProgressEmitter.event;
 
     public trace: (msg: string) => void = (msg) => {};
+
+    /**
+     * Gets or sets a value indicating whether events reporting is enabled.
+     * 
+     * When not enabled, any events reported via {@link reportEvent}
+     * (either by the tunnel SDK or the application) will be ignored.
+     */
+    public enableEventsReporting: boolean = false;
+
+    private readonly eventsQueue: EventInfo[] = [];
+    private eventsPromise: Promise<void> | null = null;
+    private isDisposed: boolean = false;
+    private eventsAvailableCompletion = new PromiseCompletionSource<void>();
 
     /**
      * Initializes a new instance of the `TunnelManagementHttpClient` class
@@ -786,6 +808,111 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         return await this.request<boolean>('GET', uri, undefined, config, undefined, cancellation);
     }
 
+    public reportEvent(tunnel: Tunnel, tunnelEvent: TunnelEvent, options?: TunnelRequestOptions): void {
+        if (!tunnel) {
+            throw new TypeError('A tunnel is required.');
+        }
+        if (!tunnelEvent) {
+            throw new TypeError('A tunnelEvent is required.');
+        }
+
+        if (!this.apiVersion) {
+            // Events are not supported by the V1 API.
+            return;
+        }
+
+        if (!this.enableEventsReporting) {
+            return;
+        }
+
+        if (this.isDisposed) {
+            // Do not queue any more events after the client is disposed.
+            return;
+        }
+
+        // Set the client timestamp if it wasn't already initialized.
+        tunnelEvent.timestamp ??= new Date();
+
+        const wasEmpty = this.eventsQueue.length === 0;
+        this.eventsQueue.push({
+            tunnel: tunnel,
+            event: tunnelEvent,
+            requestOptions: options
+        });
+
+        // Signal that events are available
+        if (wasEmpty) {
+            this.eventsAvailableCompletion.resolve();
+        }
+
+        if (this.eventsPromise === null) {
+            this.eventsPromise = this.processPendingEventsAsync();
+        }
+    }
+
+    private async processPendingEventsAsync(): Promise<void> {
+        const eventsToSend: TunnelEvent[] = [];
+        
+        while (!this.isDisposed) {
+            await this.eventsAvailableCompletion.promise;
+            this.eventsAvailableCompletion = new PromiseCompletionSource<void>();
+
+            // Get the first event
+            const nextEventInfo = this.eventsQueue.shift();
+            if (!nextEventInfo) {
+                // The completion was resolved, but no events were queued.
+                // This indicates the client is being disposed.
+                break;
+            }
+
+            const tunnel = nextEventInfo.tunnel;
+            const requestOptions = nextEventInfo.requestOptions;
+            eventsToSend.length = 0;
+            eventsToSend.push(nextEventInfo.event);
+
+            // Batch events for the same tunnel with the same request options
+            while (this.eventsQueue.length > 0) {
+                const peekEventInfo = this.eventsQueue[0];
+                
+                // Check if next event is for the same tunnel and has same request options
+                if (peekEventInfo.tunnel !== tunnel || peekEventInfo.requestOptions !== requestOptions) {
+                    // Different tunnel or options, process as separate batch
+                    break;
+                }
+
+                eventsToSend.push(this.eventsQueue.shift()!.event);
+            }
+
+            // Upload a batch of events for the same tunnel
+            try {
+                // Do not use sendTunnelRequest() here, to avoid reporting progress
+                // for these requests.
+                const uri = await this.buildUriForTunnel(
+                    tunnel,
+                    eventsApiSubPath,
+                    this.tunnelRequestOptionsToQueryString(requestOptions),
+                    requestOptions
+                );
+                const config = await this.getAxiosRequestConfig(
+                    tunnel,
+                    requestOptions,
+                    readAccessTokenScopes
+                );
+                await this.request<boolean>(
+                    'POST',
+                    uri,
+                    [...eventsToSend], // Create a copy to avoid mutation issues
+                    config,
+                    undefined,
+                    undefined
+                );
+            } catch (error) {
+                // Errors uploading events are ignored.
+                this.trace(`Error uploading events: ${error}`);
+            }
+        }
+    }
+
     private raiseReportProgress(progress: TunnelProgress) {
         const args : TunnelReportProgressEventArgs = {
             progress: progress
@@ -912,21 +1039,18 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     ): string {
         // tunnels.local.api.visualstudio.com resolves to localhost (for local development).
         if (!clusterId ||
-            hostname == 'localhost' ||
-            hostname == 'tunnels.local.api.visualstudio.com'
+            hostname === 'localhost' ||
+            hostname === 'tunnels.local.api.visualstudio.com'
         ) {
             return hostname;
         }
 
         if (hostname.startsWith('global.') ||
-            TunnelConstraints.clusterIdPrefixRegex.test(hostname))
-        {
+            TunnelConstraints.clusterIdPrefixRegex.test(hostname)) {
             // Hostname is in the form "global.rel.tunnels..." or "<clusterId>.rel.tunnels..."
             // Replace the first part of the hostname with the specified cluster ID.
             return clusterId + hostname.substring(hostname.indexOf('.'));
-        }
-        else
-        {
+        } else {
             // Hostname does not have a recognized cluster prefix. Prepend the cluster ID.
             return `${clusterId}.${hostname}`;
         }
@@ -1267,5 +1391,21 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         return content;
+    }
+
+    /**
+     * Disposes the client and any background tasks.
+     */
+    public async dispose(): Promise<void> {
+        this.isDisposed = true;
+        
+        // Resolving the events-available completion will cause the events processing task
+        // to exit after processing any remaining already-queued events.
+        this.eventsAvailableCompletion.resolve();
+        
+        if (this.eventsPromise) {
+            await this.eventsPromise;
+            this.eventsPromise = null;
+        }
     }
 }

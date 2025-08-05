@@ -56,6 +56,21 @@ public class TunnelConstraints {
     public static final int descriptionMaxLength = 400;
 
     /**
+     * Max length of tunnel event details.
+     */
+    public static final int eventDetailsMaxLength = 4000;
+
+    /**
+     * Max number of properties in a tunnel event.
+     */
+    public static final int maxEventProperties = 100;
+
+    /**
+     * Max length of a single tunnel event property value.
+     */
+    public static final int eventPropertyValueMaxLength = 4000;
+
+    /**
      * Min length of a single tunnel or port tag.
      */
     public static final int labelMinLength = 1;
@@ -113,6 +128,21 @@ public class TunnelConstraints {
      * Maximum number of scopes in an access control entry.
      */
     public static final int accessControlMaxScopes = 10;
+
+    /**
+     * Regular expression that can match or validate tunnel event name strings.
+     */
+    public static final String eventNamePattern = "^[a-z0-9_]{3,80}$";
+
+    /**
+     * Regular expression that can match or validate tunnel event severity strings.
+     */
+    public static final String eventSeverityPattern = "^(info)|(warning)|(error)$";
+
+    /**
+     * Regular expression that can match or validate tunnel event property name strings.
+     */
+    public static final String eventPropertyNamePattern = "^[a-zA-Z0-9_.]{3,200}$";
 
     /**
      * Regular expression that can match or validate tunnel cluster ID strings.

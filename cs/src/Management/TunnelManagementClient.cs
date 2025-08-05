@@ -39,6 +39,7 @@ namespace Microsoft.DevTunnels.Management
         private const string UserLimitsApiPath = "/userlimits";
         private const string EndpointsApiSubPath = "/endpoints";
         private const string PortsApiSubPath = "/ports";
+        private const string EventsApiSubPath = "/events";
         private const string ClustersApiPath = "/clusters";
         private const string ClustersV1ApiPath = ApiV1Path + "/clusters";
         private const string TunnelAuthenticationScheme = "Tunnel";
@@ -88,6 +89,18 @@ namespace Microsoft.DevTunnels.Management
 
         private readonly HttpClient httpClient;
         private readonly Func<Task<AuthenticationHeaderValue?>> userTokenCallback;
+
+        private class EventInfo
+        {
+            public Tunnel Tunnel { get; set; } = null!;
+            public TunnelEvent Event { get; set; } = null!;
+            public TunnelRequestOptions? RequestOptions { get; set; }
+        }
+
+        private readonly Queue<EventInfo> eventsQueue = new Queue<EventInfo>();
+        private readonly SemaphoreSlim eventsSemaphore = new SemaphoreSlim(0);
+        private Task? eventsTask;
+        private bool isDisposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TunnelManagementClient"/> class
@@ -144,7 +157,7 @@ namespace Microsoft.DevTunnels.Management
         /// for HTTPS requests to the tunnel service. The <see cref="SocketsHttpHandler"/> or
         /// <see cref="HttpClientHandler"/> specified (or at the end of the chain) must have
         /// automatic redirection disabled. The provided HTTP handler will not be disposed
-        /// by <see cref="Dispose"/>.</param>
+        /// by <see cref="DisposeAsync"/>.</param>
         /// <param name="apiVersion"> Api version to use for tunnels requests, accepted
         /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
@@ -174,7 +187,7 @@ namespace Microsoft.DevTunnels.Management
         /// for HTTPS requests to the tunnel service. The <see cref="SocketsHttpHandler"/> or
         /// <see cref="HttpClientHandler"/> specified (or at the end of the chain) must have
         /// automatic redirection disabled. The provided HTTP handler will not be disposed
-        /// by <see cref="Dispose"/>.</param>
+        /// by <see cref="DisposeAsync"/>.</param>
         /// <param name="apiVersionEnum"> Api version to use for tunnels requests, accepted
         /// values are <see cref="TunnelsApiVersions"/></param>
         public TunnelManagementClient(
@@ -221,6 +234,15 @@ namespace Microsoft.DevTunnels.Management
                 BaseAddress = tunnelServiceUri,
             };
         }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether events reporting is enabled.
+        /// </summary>
+        /// <remarks>
+        /// When not enabled, any events reported via <see cref="ReportEvent"/>
+        /// (either by the tunnel SDK or the application) will be ignored.
+        /// </remarks>
+        public bool EnableEventsReporting { get; set; }
 
         private static void ValidateHttpHandler(HttpMessageHandler httpHandler)
         {
@@ -526,7 +548,7 @@ namespace Microsoft.DevTunnels.Management
             }
 
             var localMachineHeaders = TunnelUserAgent.GetMachineHeaders();
-            if(localMachineHeaders != null)
+            if (localMachineHeaders != null)
             {
                 request.Headers.UserAgent.Add(localMachineHeaders);
             }
@@ -774,9 +796,33 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc/>
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            this.httpClient.Dispose();
+            Task? eventsTask = null;
+
+            lock (this.eventsQueue)
+            {
+                this.isDisposed = true;
+
+                eventsTask = this.eventsTask;
+                if (eventsTask != null)
+                {
+                    // Releasing the semaphore an extra time will cause the events processing task
+                    // to exit after processing any remaining already-queued events.
+                    this.eventsSemaphore.Release();
+                }
+            }
+
+            if (eventsTask != null)
+            {
+                // The events processing task will dispose the HTTP client before completing.
+                await eventsTask;
+            }
+            else
+            {
+                // The HTTP client is not needed for processing events, so dispose it now.
+                this.httpClient.Dispose();
+            }
         }
 
         private Uri BuildUri(
@@ -1008,7 +1054,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnel, nameof(tunnel));
             options ??= new TunnelRequestOptions();
-            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
             var tunnelId = tunnel.TunnelId;
             var idGenerated = string.IsNullOrEmpty(tunnelId);
@@ -1054,7 +1100,7 @@ namespace Microsoft.DevTunnels.Management
             return result2!;
         }
 
-                /// <inheritdoc />
+        /// <inheritdoc />
         public async Task<Tunnel> CreateOrUpdateTunnelAsync(
             Tunnel tunnel,
             TunnelRequestOptions? options,
@@ -1262,7 +1308,7 @@ namespace Microsoft.DevTunnels.Management
             this.OnReportProgress(TunnelProgress.StartingCreateTunnelPort);
             var path = $"{PortsApiSubPath}/{tunnelPort.PortNumber}";
             options ??= new TunnelRequestOptions();
-            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
 
             var result = (await this.SendTunnelRequestAsync<TunnelPort, TunnelPort>(
@@ -1297,7 +1343,7 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnelPort, nameof(tunnelPort));
             options ??= new TunnelRequestOptions();
-            options.AdditionalHeaders ??= new List<KeyValuePair<string,string>>();
+            options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-Match", "*"));
 
             if (tunnelPort.ClusterId != null && tunnel.ClusterId != null &&
@@ -1333,7 +1379,7 @@ namespace Microsoft.DevTunnels.Management
             return result;
         }
 
-                /// <inheritdoc />
+        /// <inheritdoc />
         public async Task<TunnelPort> CreateOrUpdateTunnelPortAsync(
             Tunnel tunnel,
             TunnelPort tunnelPort,
@@ -1536,7 +1582,8 @@ namespace Microsoft.DevTunnels.Management
         }
 
         /// <inheritdoc/>
-        public async Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation) {
+        public async Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation)
+        {
             var baseAddress = this.httpClient.BaseAddress!;
             var builder = new UriBuilder(baseAddress);
             builder.Path = ClustersPath;
@@ -1618,6 +1665,136 @@ namespace Microsoft.DevTunnels.Management
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Reports a tunnel event to the tunnel service.
+        /// </summary>
+        /// <remarks>
+        /// This method does not block; events are batched and uploaded by a background task.
+        /// Any errors while uploading events are ignored.
+        /// <para>
+        /// The tunnel service and SDK automatically record some events related to tunnel operations
+        /// and connections. This method allows applications to report additional custom events.
+        /// </para>
+        /// </remarks>
+        public void ReportEvent(
+            Tunnel tunnel,
+            TunnelEvent tunnelEvent,
+            TunnelRequestOptions? options = null)
+        {
+            Requires.NotNull(tunnel, nameof(tunnel));
+            Requires.NotNull(tunnelEvent, nameof(tunnelEvent));
+
+            if (string.IsNullOrEmpty(ApiVersion))
+            {
+                // Events are not supported by the V1 API.
+                return;
+            }
+
+            lock (this.eventsQueue)
+            {
+                if (this.isDisposed)
+                {
+                    // Do not queue any more events after the client is disposed.
+                    return;
+                }
+
+                bool wasEmpty = this.eventsQueue.Count == 0;
+                this.eventsQueue.Enqueue(new EventInfo
+                {
+                    Tunnel = tunnel,
+                    Event = tunnelEvent,
+                    RequestOptions = options
+                });
+
+                if (wasEmpty)
+                {
+                    // Wake up the processing task if it was waiting.
+                    this.eventsSemaphore.Release();
+                }
+
+                if (this.eventsTask == null)
+                {
+                    this.eventsTask = Task.Run(this.ProcessPendingEventsAsync);
+                }
+            }
+        }
+
+        private async Task ProcessPendingEventsAsync()
+        {
+            List<TunnelEvent> eventsToSend = new();
+            while (true)
+            {
+                // Wait for some event(s) to be reported.
+                await this.eventsSemaphore.WaitAsync();
+                Tunnel tunnel;
+                TunnelRequestOptions? requestOptions;
+                lock (this.eventsQueue)
+                {
+                    if (this.eventsQueue.Count == 0)
+                    {
+                        // The semaphore was released, but no events were queued.
+                        // This indicates the client is being disposed.
+                        break;
+                    }
+
+                    var nextEventInfo = this.eventsQueue.Dequeue();
+                    tunnel = nextEventInfo.Tunnel;
+                    requestOptions = nextEventInfo.RequestOptions;
+                    eventsToSend.Add(nextEventInfo.Event);
+
+                    while (this.eventsQueue.Count > 0)
+                    {
+                        nextEventInfo = this.eventsQueue.Peek();
+
+                        // Comparisons here are intentionally using reference equality.
+                        // If different events have tunnels with only value equality then
+                        // they may be processed in separate batches, which is fine.
+                        if (nextEventInfo.Tunnel != tunnel ||
+                            nextEventInfo.RequestOptions != requestOptions)
+                        {
+                            // The next event is for a different tunnel or has different request
+                            // options, so process as a separate batch.
+                            this.eventsSemaphore.Release();
+                            break;
+                        }
+
+                        eventsToSend.Add(this.eventsQueue.Dequeue().Event);
+                    }
+                }
+
+                // Upload a batch of events for the same tunnel.
+                try
+                {
+                    // Do not use SendTunnelRequestAsync() here, to avoid reporting progress
+                    // for these requests.
+                    var uri = BuildTunnelUri(
+                        tunnel,
+                        EventsApiSubPath,
+                        query: GetApiQuery(),
+                        requestOptions);
+                    var authHeader = await GetAuthenticationHeaderAsync(
+                        tunnel,
+                        ReadAccessTokenScopes,
+                        requestOptions);
+                    await SendRequestAsync<TunnelEvent[], bool>(
+                        HttpMethod.Post,
+                        uri,
+                        requestOptions,
+                        authHeader,
+                        body: eventsToSend.ToArray(),
+                        CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    // Errors uploading events are ignored.
+                }
+
+                eventsToSend.Clear();
+            }
+
+            this.httpClient.Dispose();
         }
     }
 }

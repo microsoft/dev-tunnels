@@ -9,6 +9,7 @@ import {
     Tunnel,
     TunnelAccessScopes,
     TunnelProgress,
+    TunnelEvent,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelManagementClient } from '@microsoft/dev-tunnels-management';
 import {
@@ -462,6 +463,8 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             throw new CancellationError();
         }
 
+        const clientChannelId = stream.channel.channelId;
+
         const session = SshHelpers.createSshServerSession(this.reconnectableSessions, (config) => {
             config.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
             config.addService(PortForwardingService);
@@ -485,13 +488,16 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             void this.onSshClientAuthenticated(session);
         });
         const requestRegistration = session.onRequest((e) => {
-            this.onSshSessionRequest(e, session);
+            this.onClientSessionRequest(e, session);
         });
         const channelOpeningEventRegistration = session.onChannelOpening((e) => {
             this.onSshChannelOpening(e, session);
         });
+        const reconnectedEventRegistration = session.onReconnected(() => {
+            this.onClientSessionReconnecting(session, clientChannelId);
+        })
         const closedEventRegistration = session.onClosed((e) => {
-            this.session_Closed(session, e, cancellation);
+            this.onClientSessionClosed(session, e, clientChannelId, cancellation);
             tcs.resolve();
         });
 
@@ -502,11 +508,23 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             cancellation.onCancellationRequested((e) => {
                 tcs.reject(new CancellationError());
             });
+
+            if (this.tunnel && this.managementClient) {
+                const connectedEvent: TunnelEvent = {
+                    name: 'host_client_connected',
+                    properties: {
+                        'ClientChannelId': clientChannelId.toString(),
+                    }
+                };
+                this.managementClient.reportEvent(this.tunnel, connectedEvent);
+            }
+
             await tcs.promise;
         } finally {
             authenticatingEventRegistration.dispose();
             requestRegistration.dispose();
             channelOpeningEventRegistration.dispose();
+            reconnectedEventRegistration.dispose();
             closedEventRegistration.dispose();
 
             await session.close(SshDisconnectReason.byApplication);
@@ -545,7 +563,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         }
     }
 
-    private onSshSessionRequest(e: SshRequestEventArgs<SessionRequestMessage>, session: any) {
+    private onClientSessionRequest(e: SshRequestEventArgs<SessionRequestMessage>, session: any) {
         if (e.requestType === 'RefreshPorts') {
             e.responsePromise = (async () => {
                 await this.refreshPorts();
@@ -598,20 +616,56 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         }
     }
 
-    private session_Closed(
+    private onClientSessionReconnecting(session: SshServerSession, clientChannelId: number) {
+        if (this.tunnel && this.managementClient) {
+            const reconnectedEvent: TunnelEvent = {
+                name: 'host_client_reconnecting',
+                properties: {
+                    'ClientChannelId': clientChannelId.toString(),
+                }
+            };
+            this.managementClient.reportEvent(this.tunnel, reconnectedEvent);
+        }
+    }
+
+    private onClientSessionClosed(
         session: SshServerSession,
         e: SshSessionClosedEventArgs,
+        clientChannelId: number,
         cancellation: CancellationToken,
     ) {
+        // Determine severity based on the disconnect reason
+        let severity: string | undefined;
+        let details: string;
+        
         // Reconnecting client session may cause the new session to close with 'None' reason.
         if (e.reason === SshDisconnectReason.byApplication) {
-            this.traceInfo('Client ssh session closed.');
+            details = 'Client ssh session closed by application.';
+            this.traceInfo(details);
         } else if (cancellation.isCancellationRequested) {
-            this.traceInfo('Client ssh session cancelled.');
+            details = 'Client ssh session cancelled.';
+            this.traceInfo(details);
         } else if (e.reason !== SshDisconnectReason.none) {
-            this.traceError(
-                `Client ssh session closed unexpectedly due to ${e.reason}, "${e.message}"\n${e.error}`,
-            );
+            severity = TunnelEvent.error;
+            details = `Client ssh session closed unexpectedly due to ${e.reason}, ` +
+                `"${e.message}"\n${e.error}`;
+            this.traceError(details);
+        } else {
+            details = 'Client ssh session closed.';
+        }
+
+        // Report client disconnected event
+        if (this.tunnel && this.managementClient) {
+            const disconnectedEvent: TunnelEvent = {
+                timestamp: new Date(),
+                name: 'host_client_disconnected',
+                severity: severity,
+                details: details,
+                properties: {
+                    'ClientChannelId': clientChannelId.toString(),
+                }
+            };
+            this.managementClient.reportEvent(this.tunnel, disconnectedEvent);
         }
 
         for (const [key, forwarder] of this.remoteForwarders.entries()) {
