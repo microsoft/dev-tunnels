@@ -4,6 +4,7 @@
 // </copyright>
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ public abstract class TunnelConnection : IAsyncDisposable
 {
     private readonly CancellationTokenSource disposeCts = new();
     private ConnectionStatus connectionStatus;
+    private Stopwatch connectionTimer = new();
     private Tunnel? tunnel;
 
     /// <summary>
@@ -417,8 +419,29 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// <summary>
     /// Event fired when the connection status has changed.
     /// </summary>
-    protected virtual void OnConnectionStatusChanged(ConnectionStatus previousConnectionStatus, ConnectionStatus connectionStatus)
+    protected virtual void OnConnectionStatusChanged(
+        ConnectionStatus previousConnectionStatus,
+        ConnectionStatus connectionStatus)
     {
+        TimeSpan duration = this.connectionTimer.Elapsed;
+        this.connectionTimer.Restart();
+
+        if (Tunnel != null)
+        {
+            var statusEvent = new TunnelEvent($"{ConnectionRole}_connection_status");
+            statusEvent.Properties = new Dictionary<string, string>
+            {
+                [nameof(ConnectionStatus)] = connectionStatus.ToString(),
+                [$"Previous{nameof(ConnectionStatus)}"] = previousConnectionStatus.ToString(),
+            };
+            if (previousConnectionStatus != ConnectionStatus.None)
+            {
+                statusEvent.Properties[$"{previousConnectionStatus}Duration"] = duration.ToString();
+            }
+
+            ManagementClient?.ReportEvent(Tunnel, statusEvent);
+        }
+
         var handler = ConnectionStatusChanged;
         if (handler != null)
         {
@@ -441,7 +464,24 @@ public abstract class TunnelConnection : IAsyncDisposable
     /// </summary>
     internal void OnRetrying(RetryingTunnelConnectionEventArgs e)
     {
-        RetryingTunnelConnection?.Invoke(this, e);
+        if (e.Retry)
+        {
+            RetryingTunnelConnection?.Invoke(this, e);
+        }
+
+        if (Tunnel != null)
+        {
+            var retryingEvent = new TunnelEvent($"{ConnectionRole}_connect_retrying");
+            retryingEvent.Severity = TunnelEvent.Warning;
+            retryingEvent.Details = e.Exception?.ToString();
+            retryingEvent.Properties = new Dictionary<string, string>
+            {
+                [nameof(e.Retry)] = e.Retry.ToString(),
+                [nameof(e.AttemptNumber)] = e.AttemptNumber.ToString(),
+                [nameof(e.Delay)] = ((int)e.Delay.TotalMilliseconds).ToString(),
+            };
+            ManagementClient?.ReportEvent(Tunnel, retryingEvent);
+        }
     }
 
     /// <summary>

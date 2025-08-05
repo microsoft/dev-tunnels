@@ -8,6 +8,7 @@ import {
     TunnelPort,
     TunnelConnectionMode,
     TunnelEndpoint,
+    TunnelEvent,
     ClusterDetails,
     NamedRateStatus,
 } from '@microsoft/dev-tunnels-contracts';
@@ -282,5 +283,13 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
                 tunnel.accessTokens![scope] = 'mock-token';
             });
         }
+    }
+
+    reportEvent(tunnel: Tunnel, tunnelEvent: TunnelEvent, options?: TunnelRequestOptions): void {
+        // Mock implementation - do nothing
+    }
+
+    async dispose(): Promise<void> {
+        // Mock implementation - do nothing
     }
 }

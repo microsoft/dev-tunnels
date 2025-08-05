@@ -70,6 +70,22 @@ public static class TunnelConstraints
     public const int DescriptionMaxLength = 400;
 
     /// <summary>
+    /// Max length of tunnel event details.
+    /// </summary>
+    /// <seealso cref="TunnelEvent.Details"/>
+    public const int EventDetailsMaxLength = 4000;
+
+    /// <summary>
+    /// Max number of properties in a tunnel event.
+    /// </summary>
+    public const int MaxEventProperties = 100;
+
+    /// <summary>
+    /// Max length of a single tunnel event property value.
+    /// </summary>
+    public const int EventPropertyValueMaxLength = 4000;
+
+    /// <summary>
     /// Min length of a single tunnel or port tag.
     /// </summary>
     /// <seealso cref="Tunnel.Labels"/>
@@ -144,6 +160,21 @@ public static class TunnelConstraints
     /// </summary>
     /// <seealso cref="TunnelAccessControlEntry.Scopes"/>
     public const int AccessControlMaxScopes = 10;
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel event name strings.
+    /// </summary>
+    public const string EventNamePattern = "^[a-z0-9_]{3,80}$";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel event severity strings.
+    /// </summary>
+    public const string EventSeverityPattern = "^(info)|(warning)|(error)$";
+
+    /// <summary>
+    /// Regular expression that can match or validate tunnel event property name strings.
+    /// </summary>
+    public const string EventPropertyNamePattern = "^[a-zA-Z0-9_.]{3,200}$";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel cluster ID strings.

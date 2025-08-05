@@ -10,6 +10,7 @@ export { TunnelAccessControlEntryType } from './tunnelAccessControlEntryType';
 export { TunnelAccessScopes } from './tunnelAccessScopes';
 export { TunnelConnectionMode } from './tunnelConnectionMode';
 export { TunnelEndpoint } from './tunnelEndpoint';
+export { TunnelEvent } from './tunnelEvent';
 export { TunnelHeaderNames } from './tunnelHeaderNames';
 export { TunnelOptions } from './tunnelOptions';
 export { TunnelPort } from './tunnelPort';

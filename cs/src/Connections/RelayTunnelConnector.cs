@@ -79,7 +79,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 }
                 catch (UnauthorizedAccessException uaex) // Tunnel access token validation failed.
                 {
-                    if (!IsRetryAllowed(uaex, SshDisconnectReason.AuthCancelledByUser, delayNeeded: false))
+                    if (!IsRetryAllowed(uaex, attempt, SshDisconnectReason.AuthCancelledByUser, delayNeeded: false))
                     {
                         throw;
                     }
@@ -88,7 +88,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 }
                 catch (SshReconnectException srex)
                 {
-                    if (!IsRetryAllowed(srex, SshDisconnectReason.ProtocolError, delayNeeded: false))
+                    if (!IsRetryAllowed(srex, attempt, SshDisconnectReason.ProtocolError, delayNeeded: false))
                     {
                         throw;
                     }
@@ -99,7 +99,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 when (scex.DisconnectReason == SshDisconnectReason.ConnectionLost)
                 {
                     // Recoverable
-                    if (!IsRetryAllowed(scex, scex.DisconnectReason))
+                    if (!IsRetryAllowed(scex, attempt, scex.DisconnectReason))
                     {
                         throw;
                     }
@@ -127,7 +127,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                                     $"Unauthorized (401). Provide a fresh tunnel access token with '{this.relayClient.TunnelAccessScope}' scope.",
                                     wse);
 
-                                ThrowIfRetryNotAllowed(exception, SshDisconnectReason.AuthCancelledByUser, delayNeeded: false);
+                                ThrowIfRetryNotAllowed(exception, attempt, SshDisconnectReason.AuthCancelledByUser, delayNeeded: false);
 
                                 // Unauthorized error may happen when the tunnel access token is no longer valid, e.g. expired.
                                 // Try refreshing it.
@@ -166,7 +166,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                                     attemptDelayMs = RetryMaxDelayMs / 2;
                                 }
 
-                                if (!IsRetryAllowed(exception, SshDisconnectReason.ServiceNotAvailable) ||
+                                if (!IsRetryAllowed(exception, attempt, SshDisconnectReason.ServiceNotAvailable) ||
                                     attempt > 3)
                                 {
                                     throw exception;
@@ -181,7 +181,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                     }
 
                     // Other web socket errors may be recoverable
-                    else if (!IsRetryAllowed(wse))
+                    else if (!IsRetryAllowed(wse, attempt))
                     {
                         throw;
                     }
@@ -222,7 +222,7 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                         throw;
                     }
 
-                    if (!IsRetryAllowed(ex, SshDisconnectReason.ProtocolError))
+                    if (!IsRetryAllowed(ex, attempt, SshDisconnectReason.ProtocolError))
                     {
                         throw;
                     }
@@ -265,8 +265,8 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 }
             }
 
-            var retryTiming = isDelayNeeded ? $" in {(attemptDelayMs < 1000 ? $"0.{attemptDelayMs / 100}s" : $"{attemptDelayMs / 1000}s")}" : string.Empty;
-            Trace.Verbose($"Error connecting to tunnel SSH session, retrying{retryTiming}{(errorDescription != null ? $": {errorDescription}" : string.Empty)}");
+            var retryTiming = isDelayNeeded ? $"{(attemptDelayMs < 1000 ? $"0.{attemptDelayMs / 100}s" : $"{attemptDelayMs / 1000}s")}" : string.Empty;
+            Trace.Verbose($"Error connecting to tunnel SSH session, retrying in {retryTiming}{(errorDescription != null ? $": {errorDescription}" : string.Empty)}");
 
             if (isDelayNeeded)
             {
@@ -361,9 +361,9 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
                 return null;
             }
 
-            void ThrowIfRetryNotAllowed(Exception ex, SshDisconnectReason reason, bool delayNeeded = true)
+            void ThrowIfRetryNotAllowed(Exception ex, int attemptNumber, SshDisconnectReason reason, bool delayNeeded = true)
             {
-                if (!IsRetryAllowed(ex,reason, delayNeeded))
+                if (!IsRetryAllowed(ex, attemptNumber, reason, delayNeeded))
                 {
                     throw ex;
                 }
@@ -371,20 +371,18 @@ internal sealed class RelayTunnelConnector : ITunnelConnector
 
             bool IsRetryAllowed(
                 Exception ex,
+                int attemptNumber,
                 SshDisconnectReason reason = SshDisconnectReason.ConnectionLost,
                 bool delayNeeded = true)
             {
                 disconnectReason = reason;
                 errorDescription = ex.Message;
                 exception = ex;
-                if (options?.EnableRetry == false)
-                {
-                    return false;
-                }
 
                 isDelayNeeded = delayNeeded;
                 var retryDelay = TimeSpan.FromMilliseconds(isDelayNeeded ? attemptDelayMs : 0);
-                var retryingArgs = new RetryingTunnelConnectionEventArgs(ex, retryDelay);
+                var retryingArgs = new RetryingTunnelConnectionEventArgs(ex, attemptNumber, retryDelay);
+                retryingArgs.Retry = options?.EnableRetry ?? true;
                 this.relayClient.OnRetrying(retryingArgs);
                 if (!retryingArgs.Retry)
                 {
