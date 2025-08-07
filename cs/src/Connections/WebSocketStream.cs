@@ -239,21 +239,22 @@ namespace Microsoft.DevTunnels.Connections
                 }
                 catch (OperationCanceledException)
                 {
-                    // Timed out waiting for close handshake.
+                    TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.DisposeAsync: Timed out waiting for close handshake");
                 }
                 catch (ObjectDisposedException)
                 {
-                    // Already disposed.
+                    TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.DisposeAsync: Called on disposed socket");
                 }
                 catch (WebSocketException wse)
                 when (wse.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
                 {
                     // Other party closed connection prematurely.
+                    TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.DisposeAsync: Socket closed prematurely exception: {0}", wse);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // TODO: log the exception.
                     // Do not throw from DisposeAsync.
+                    TraceEvent(TraceEventType.Warning, 0, "WebSocketStream.DisposeAsync: Exception during DisposeAsync: {0}", ex);
                 }
             }
 
@@ -369,7 +370,7 @@ namespace Microsoft.DevTunnels.Connections
             {
                 // Other party closed connection prematurely.
                 Close();
-                TraceEvent(TraceEventType.Warning, 0, "WS.R: Websocket closed prematurely exception");
+                TraceEvent(TraceEventType.Warning, 0, "WS.R: Socket closed prematurely exception: {0}, SocketState={1}, CloseStatus={2}, CloseStatusDescription={3}", wse, socket.State, socket.CloseStatus, socket.CloseStatusDescription);
                 return 0;
             }
         }
@@ -425,7 +426,7 @@ namespace Microsoft.DevTunnels.Connections
             {
                 // Other party closed connection prematurely.
                 Close();
-                Trace.TraceEvent(TraceEventType.Warning, 0, "WS.R: Websocket closed prematurely exception");
+                Trace.TraceEvent(TraceEventType.Warning, 0, "WS.R: Socket closed prematurely exception: {0}, SocketState={1}, CloseStatus={2}, CloseStatusDescription={3}", wse, socket.State, socket.CloseStatus, socket.CloseStatusDescription);
                 return 0;
             }
         }
