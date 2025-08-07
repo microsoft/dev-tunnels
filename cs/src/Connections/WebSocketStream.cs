@@ -370,7 +370,7 @@ namespace Microsoft.DevTunnels.Connections
             {
                 // Other party closed connection prematurely.
                 Close();
-                TraceEvent(TraceEventType.Warning, 0, "WS.R: Socket closed prematurely exception: {0}, SocketState={1}, CloseStatus={2}", wse, socket.State, socket.CloseStatus);
+                TraceEvent(TraceEventType.Warning, 0, "WS.R: Socket closed prematurely exception: {0}, SocketState={1}, CloseStatus={2}, CloseStatusDescription={3}", wse, socket.State, socket.CloseStatus, socket.CloseStatusDescription);
                 return 0;
             }
         }
@@ -426,7 +426,7 @@ namespace Microsoft.DevTunnels.Connections
             {
                 // Other party closed connection prematurely.
                 Close();
-                Trace.TraceEvent(TraceEventType.Warning, 0, "WS.R: Socket closed prematurely exception: {0}, SocketState={1}, CloseStatus={2}", wse, socket.State, socket.CloseStatus);
+                Trace.TraceEvent(TraceEventType.Warning, 0, "WS.R: Socket closed prematurely exception: {0}, SocketState={1}, CloseStatus={2}, CloseStatusDescription={3}", wse, socket.State, socket.CloseStatus, socket.CloseStatusDescription);
                 return 0;
             }
         }
