@@ -155,7 +155,19 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
         var isReconnect = Tunnel != null;
         Tunnel = tunnel;
         this.connector ??= await CreateTunnelConnectorAsync(cancellation);
-        await this.connector.ConnectSessionAsync(options, isReconnect, cancellation);
+
+        try
+        {
+            await this.connector.ConnectSessionAsync(options, isReconnect, cancellation);
+        }
+        catch (Exception ex)
+        {
+            var connectFailedEvent = new TunnelEvent($"{ConnectionRole}_connect_failed");
+            connectFailedEvent.Severity = TunnelEvent.Error;
+            connectFailedEvent.Details = ex.ToString();
+            ManagementClient?.ReportEvent(tunnel, connectFailedEvent);
+            throw;
+        }
     }
 
     /// <summary>
@@ -197,12 +209,28 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
                 this.connector != null && // The connector may be null if the tunnel client/host was created directly from a stream.
                 reason == SshDisconnectReason.ConnectionLost) // Only reconnect if it's connection lost.
             {
+                if (Tunnel != null)
+                {
+                    var reconnectEvent = new TunnelEvent($"{ConnectionRole}_reconnect");
+                    reconnectEvent.Severity = TunnelEvent.Warning;
+                    reconnectEvent.Details = exception?.ToString() ?? traceMessage;
+                    ManagementClient?.ReportEvent(Tunnel, reconnectEvent);
+                }
+
                 Trace.TraceInformation($"{traceMessage}. Reconnecting.");
                 var task = ReconnectAsync(DisposeToken);
                 this.reconnectTask = !task.IsCompleted ? task : null;
             }
             else
             {
+                if (Tunnel != null)
+                {
+                    var disconnectEvent = new TunnelEvent($"{ConnectionRole}_disconnect");
+                    disconnectEvent.Severity = TunnelEvent.Warning;
+                    disconnectEvent.Details = exception?.ToString() ?? traceMessage;
+                    ManagementClient?.ReportEvent(Tunnel, disconnectEvent);
+                }
+
                 Trace.TraceInformation(traceMessage);
                 ConnectionStatus = ConnectionStatus.Disconnected;
             }
@@ -530,8 +558,16 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
                 isReconnect: true,
                 cancellation);
         }
-        catch
+        catch (Exception ex)
         {
+            if (Tunnel != null)
+            {
+                var connectFailedEvent = new TunnelEvent($"{ConnectionRole}_reconnect_failed");
+                connectFailedEvent.Severity = TunnelEvent.Error;
+                connectFailedEvent.Details = ex.ToString();
+                ManagementClient?.ReportEvent(Tunnel, connectFailedEvent);
+            }
+
             // Tracing of the exception has already been done by ConnectSessionAsync.
             // As reconnection is an async process, there is nobody watching it throw.
             // The exception, if it was not cancellation, is stored in DisconnectException property.

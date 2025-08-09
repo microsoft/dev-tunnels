@@ -6,6 +6,7 @@ import {
     NamedRateStatus,
     Tunnel,
     TunnelEndpoint,
+    TunnelEvent,
     TunnelPort,
 } from '@microsoft/dev-tunnels-contracts';
 import { TunnelRequestOptions } from './tunnelRequestOptions';
@@ -213,6 +214,23 @@ export interface TunnelManagementClient {
      * @param cancellation Optional cancellation token for the request.
      */
     checkNameAvailablility(tunnelName: string, cancellation?: CancellationToken): Promise<boolean>;
+
+    /**
+     * Reports a tunnel event to the tunnel service.
+     * 
+     * This method does not block; events are batched and uploaded by a background task.
+     * The tunnel service and SDK automatically record some events related to tunnel operations
+     * and connections. This method allows applications to report additional custom events.
+     * @param tunnel Tunnel that the event is associated with.
+     * @param tunnelEvent Event to report.
+     * @param options Optional request options.
+     */
+    reportEvent(tunnel: Tunnel, tunnelEvent: TunnelEvent, options?: TunnelRequestOptions): void;
+
+    /**
+     * Disposes the client and any background tasks.
+     */
+    dispose(): Promise<void>;
 }
 
 /**

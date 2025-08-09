@@ -37,6 +37,15 @@ const (
 	// Max length of tunnel or port description.
 	TunnelConstraintsDescriptionMaxLength = 400
 
+	// Max length of tunnel event details.
+	TunnelConstraintsEventDetailsMaxLength = 4000
+
+	// Max number of properties in a tunnel event.
+	TunnelConstraintsMaxEventProperties = 100
+
+	// Max length of a single tunnel event property value.
+	TunnelConstraintsEventPropertyValueMaxLength = 4000
+
 	// Min length of a single tunnel or port tag.
 	TunnelConstraintsLabelMinLength = 1
 
@@ -73,6 +82,15 @@ const (
 
 	// Maximum number of scopes in an access control entry.
 	TunnelConstraintsAccessControlMaxScopes = 10
+
+	// Regular expression that can match or validate tunnel event name strings.
+	TunnelConstraintsEventNamePattern = "^[a-z0-9_]{3,80}$"
+
+	// Regular expression that can match or validate tunnel event severity strings.
+	TunnelConstraintsEventSeverityPattern = "^(info)|(warning)|(error)$"
+
+	// Regular expression that can match or validate tunnel event property name strings.
+	TunnelConstraintsEventPropertyNamePattern = "^[a-zA-Z0-9_.]{3,200}$"
 
 	// Regular expression that can match or validate tunnel cluster ID strings.
 	//

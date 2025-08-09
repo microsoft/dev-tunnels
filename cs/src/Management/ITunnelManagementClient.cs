@@ -15,7 +15,7 @@ namespace Microsoft.DevTunnels.Management
     /// Interface for a client that manages tunnels and tunnel ports via the tunnel service
     /// management API.
     /// </summary>
-    public interface ITunnelManagementClient : IDisposable
+    public interface ITunnelManagementClient : IAsyncDisposable
     {
         /// <summary>
         /// Lists tunnels that are owned by the caller.
@@ -404,5 +404,18 @@ namespace Microsoft.DevTunnels.Management
         Task<bool> CheckNameAvailabilityAsync(
             string name,
             CancellationToken cancellation = default);
+
+        /// <summary>
+        /// Reports a tunnel event to the tunnel service.
+        /// </summary>
+        /// <remarks>
+        /// This method does not block; events are batched and uploaded by a background task.
+        /// The tunnel service and SDK automatically record some events related to tunnel operations
+        /// and connections. This method allows applications to report additional custom events.
+        /// </remarks>
+        void ReportEvent(
+            Tunnel tunnel,
+            TunnelEvent tunnelEvent,
+            TunnelRequestOptions? options = null);
     }
 }

@@ -311,9 +311,9 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         return Task.FromResult(resolvedSubjects.ToArray());
     }
 
-    public void Dispose()
+    public ValueTask DisposeAsync()
     {
-        throw new NotImplementedException();
+        return ValueTask.CompletedTask;
     }
 
     private static void IssueMockTokens(Tunnel tunnel, TunnelRequestOptions options)
@@ -384,5 +384,12 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     public Task<TunnelPort> CreateOrUpdateTunnelPortAsync(Tunnel tunnel, TunnelPort tunnelPort, TunnelRequestOptions options = null, CancellationToken cancellation = default)
     {
         throw new NotImplementedException();
+    }
+
+    public void ReportEvent(
+        Tunnel tunnel,
+        TunnelEvent tunnelEvent,
+        TunnelRequestOptions options = null)
+    {
     }
 }

@@ -31,6 +31,15 @@ pub const TUNNEL_NAME_MAX_LENGTH: i32 = 60;
 // Max length of tunnel or port description.
 pub const DESCRIPTION_MAX_LENGTH: i32 = 400;
 
+// Max length of tunnel event details.
+pub const EVENT_DETAILS_MAX_LENGTH: i32 = 4000;
+
+// Max number of properties in a tunnel event.
+pub const MAX_EVENT_PROPERTIES: i32 = 100;
+
+// Max length of a single tunnel event property value.
+pub const EVENT_PROPERTY_VALUE_MAX_LENGTH: i32 = 4000;
+
 // Min length of a single tunnel or port tag.
 pub const LABEL_MIN_LENGTH: i32 = 1;
 
@@ -67,6 +76,15 @@ pub const ACCESS_CONTROL_SUBJECT_NAME_MAX_LENGTH: i32 = 200;
 
 // Maximum number of scopes in an access control entry.
 pub const ACCESS_CONTROL_MAX_SCOPES: i32 = 10;
+
+// Regular expression that can match or validate tunnel event name strings.
+pub const EVENT_NAME_PATTERN: &str = r#"^[a-z0-9_]{3,80}$"#;
+
+// Regular expression that can match or validate tunnel event severity strings.
+pub const EVENT_SEVERITY_PATTERN: &str = r#"^(info)|(warning)|(error)$"#;
+
+// Regular expression that can match or validate tunnel event property name strings.
+pub const EVENT_PROPERTY_NAME_PATTERN: &str = r#"^[a-zA-Z0-9_.]{3,200}$"#;
 
 // Regular expression that can match or validate tunnel cluster ID strings.
 //
