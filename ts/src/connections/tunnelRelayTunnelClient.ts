@@ -56,8 +56,8 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
     public static readonly webSocketSubProtocol = webSocketSubProtocol;
     public static readonly webSocketSubProtocolv2 = webSocketSubProtocolv2;
 
-    public constructor(trace?: Trace, managementClient?: TunnelManagementClient) {
-        super(TunnelAccessScopes.Connect, connectionProtocols, trace, managementClient);
+    public constructor(managementClient?: TunnelManagementClient, trace?: Trace) {
+        super(TunnelAccessScopes.Connect, connectionProtocols, managementClient, trace);
     }
 
     private readonly portForwardingEmitter = new Emitter<PortForwardingEventArgs>();
@@ -194,7 +194,7 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
                     'There are multiple hosts for the tunnel. Specify a host ID to connect to.',
                 );
             } else {
-                this.endpoints = endpointGroups.entries().next().value[1];
+                this.endpoints = endpointGroups.entries().next().value?.[1];
             }
 
             const tunnelEndpoints: TunnelRelayTunnelEndpoint[] = this.endpoints!.filter(

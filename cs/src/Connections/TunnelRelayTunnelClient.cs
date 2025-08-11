@@ -119,10 +119,25 @@ public class TunnelRelayTunnelClient : TunnelClient
         this.accessToken = accessToken;
         this.HostPublicKeys = hostPublicKeys;
         this.connector = new RelayTunnelConnector(this);
-        await this.connector.ConnectSessionAsync(
-            options,
-            isReconnect: false,
-            cancellation);
+
+        try
+        {
+            await this.connector.ConnectSessionAsync(
+                options,
+                isReconnect: false,
+                cancellation);
+        }
+        catch (Exception ex)
+        {
+            if (Tunnel != null)
+            {
+                var connectFailedEvent = new TunnelEvent($"{ConnectionRole}_connect_failed");
+                connectFailedEvent.Severity = TunnelEvent.Error;
+                connectFailedEvent.Details = ex.ToString();
+                ManagementClient?.ReportEvent(Tunnel, connectFailedEvent);
+            }
+            throw;
+        }
     }
 
     /// <summary>

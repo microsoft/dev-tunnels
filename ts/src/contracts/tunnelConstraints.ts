@@ -53,6 +53,21 @@ export namespace TunnelConstraints {
     export const descriptionMaxLength: number = 400;
 
     /**
+     * Max length of tunnel event details.
+     */
+    export const eventDetailsMaxLength: number = 4000;
+
+    /**
+     * Max number of properties in a tunnel event.
+     */
+    export const maxEventProperties: number = 100;
+
+    /**
+     * Max length of a single tunnel event property value.
+     */
+    export const eventPropertyValueMaxLength: number = 4000;
+
+    /**
      * Min length of a single tunnel or port tag.
      */
     export const labelMinLength: number = 1;
@@ -110,6 +125,21 @@ export namespace TunnelConstraints {
      * Maximum number of scopes in an access control entry.
      */
     export const accessControlMaxScopes: number = 10;
+
+    /**
+     * Regular expression that can match or validate tunnel event name strings.
+     */
+    export const eventNamePattern: string = '^[a-z0-9_]{3,80}$';
+
+    /**
+     * Regular expression that can match or validate tunnel event severity strings.
+     */
+    export const eventSeverityPattern: string = '^(info)|(warning)|(error)$';
+
+    /**
+     * Regular expression that can match or validate tunnel event property name strings.
+     */
+    export const eventPropertyNamePattern: string = '^[a-zA-Z0-9_.]{3,200}$';
 
     /**
      * Regular expression that can match or validate tunnel cluster ID strings.

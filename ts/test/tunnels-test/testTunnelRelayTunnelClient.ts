@@ -9,7 +9,7 @@ import { TunnelManagementClient } from "@microsoft/dev-tunnels-management";
  */
 export class TestTunnelRelayTunnelClient extends TunnelRelayTunnelClient {
     constructor(managementClient?: TunnelManagementClient) {
-        super(undefined, managementClient);
+        super(managementClient);
     }
 
     public get isSshSessionActiveProperty(): boolean {

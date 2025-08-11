@@ -1,7 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Tunnel, TunnelAccessScopes, TunnelProgress, TunnelReportProgressEventArgs } from '@microsoft/dev-tunnels-contracts';
+import {
+    Tunnel,
+    TunnelAccessScopes,
+    TunnelProgress,
+    TunnelReportProgressEventArgs,
+    TunnelEvent,
+} from '@microsoft/dev-tunnels-contracts';
 import {
     TunnelAccessTokenProperties,
     TunnelManagementClient,
@@ -35,6 +41,7 @@ import { PortRelayConnectRequestMessage } from './messages/portRelayConnectReque
 import * as http from 'http';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 import { RefreshingTunnelEventArgs } from './refreshingTunnelEventArgs';
+import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { TunnelRelayStreamFactory } from './tunnelRelayStreamFactory';
 import { DefaultTunnelRelayStreamFactory } from './defaultTunnelRelayStreamFactory';
 import { IClientConfig } from 'websocket';
@@ -100,6 +107,59 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
+     * @internal onRetrying override to report tunnel events.
+     */
+    public onRetrying(event: RetryingTunnelConnectionEventArgs): void {
+        // Report tunnel event for retry
+        if (this.tunnel && this.managementClient) {
+            const retryingEvent: TunnelEvent = {
+                name: `${this.connectionRole}_connect_retrying`,
+                severity: TunnelEvent.warning,
+                details: event.error?.toString(),
+                properties: {
+                    'Retry': event.retry.toString(),
+                    'Delay': event.delayMs.toString()
+                },
+            };
+            this.managementClient.reportEvent(this.tunnel, retryingEvent);
+        }
+
+        super.onRetrying(event);
+    }
+
+    /**
+     * @internal onConnectionStatusChanged override to report tunnel events.
+     */
+    protected onConnectionStatusChanged(
+        previousStatus: ConnectionStatus,
+        status: ConnectionStatus,
+    ) {
+        // Report tunnel event for connection status change
+        if (this.tunnel && this.managementClient) {
+            const statusEvent: TunnelEvent = {
+                name: `${this.connectionRole}_connection_status`,
+                severity: TunnelEvent.info,
+                details: undefined,
+                properties: {
+                    'ConnectionStatus': status.toString(),
+                    'PreviousConnectionStatus': previousStatus.toString()
+                },
+            };
+            
+            // Add duration property if we had a previous status
+            if (previousStatus !== ConnectionStatus.None) {
+                // Note: In C# this uses a duration calculation, but we don't have
+                // timing information readily available in TypeScript, so we'll skip this for now
+                // statusEvent.properties[`${previousStatus}Duration`] = duration.toString();
+            }
+            
+            this.managementClient.reportEvent(this.tunnel, statusEvent);
+        }
+
+        super.onConnectionStatusChanged(previousStatus, status);
+    }
+
+    /**
      * Tunnel access token.
      */
     protected accessToken?: string;
@@ -114,11 +174,11 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     public constructor(
         tunnelAccessScope: string,
         protected readonly connectionProtocols: string[],
-        trace?: Trace,
         /**
          * Gets the management client used for the connection.
          */
-        protected readonly managementClient?: TunnelManagementClient
+        protected readonly managementClient?: TunnelManagementClient,
+        trace?: Trace,
     ) {
         super(tunnelAccessScope);
         this.trace = trace ?? (() => {});
@@ -509,11 +569,30 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             reason === SshDisconnectReason.connectionLost &&
             this.connector) {
 
+            // Report reconnect event
+            if (this.tunnel && this.managementClient) {
+                const reconnectEvent: TunnelEvent = {
+                    name: `${this.connectionRole}_reconnect`,
+                    severity: TunnelEvent.warning,
+                    details: error?.toString() ?? message,
+                };
+                this.managementClient.reportEvent(this.tunnel, reconnectEvent);
+            }
+
             this.traceInfo(`${traceMessage} Reconnecting.`);
             this.reconnectPromise = (async () => {
                 try {
                     await this.connectTunnelSession();
-                } catch {
+                } catch (ex) {
+                    // Report reconnect failed event
+                    if (this.tunnel && this.managementClient) {
+                        const reconnectFailedEvent: TunnelEvent = {
+                            name: `${this.connectionRole}_reconnect_failed`,
+                            severity: TunnelEvent.error,
+                            details: ex instanceof Error ? ex.toString() : String(ex),
+                        };
+                        this.managementClient.reportEvent(this.tunnel, reconnectFailedEvent);
+                    }
                     // Tracing of the error has already been done by connectTunnelSession.
                     // As reconnection is an async process, there is nobody watching it throw.
                     // The error, if it was not cancellation, is stored in disconnectError property.
@@ -522,6 +601,16 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 this.reconnectPromise = undefined;
             })();
         } else {
+            // Report disconnect event
+            if (this.tunnel && this.managementClient) {
+                const disconnectEvent: TunnelEvent = {
+                    name: `${this.connectionRole}_disconnect`,
+                    severity: TunnelEvent.warning,
+                    details: error?.toString() ?? message,
+                };
+                this.managementClient.reportEvent(this.tunnel, disconnectEvent);
+            }
+
             this.traceInfo(traceMessage);
             this.connectionStatus = ConnectionStatus.Disconnected;
         }
@@ -549,7 +638,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             case SshDisconnectReason.tooManyConnections:
                 return this.isClientConnection ? ' Too many client connections.' : ' Another host for the tunnel has connected.';
             default:
-                return '';                
+                return '';
         }
     }
 
@@ -566,6 +655,15 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 } else {
                     const message = `Error connecting ${this.connectionRole} tunnel session: ${e}`;
                     this.traceError(message);
+                }
+
+                if (this.tunnel && this.managementClient) {
+                    const connectFailedEvent: TunnelEvent = {
+                        name: `${this.connectionRole}_connect_failed`,
+                        severity: TunnelEvent.error,
+                        details: e instanceof Error ? e.toString() : String(e),
+                    };
+                    this.managementClient.reportEvent(this.tunnel, connectFailedEvent);
                 }
             }
             throw e;

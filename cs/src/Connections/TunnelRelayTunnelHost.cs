@@ -200,13 +200,13 @@ public class TunnelRelayTunnelHost : TunnelHost
             {
                 config.KeepAliveTimeoutInSeconds = options.KeepAliveIntervalInSeconds;
             }
-            
+
             session = new SshClientSession(config, Trace.WithName("HostSSH"));
 
             var hostPfs = session.ActivateService<PortForwardingService>();
             hostPfs.MessageFactory = this;
         }
-        
+
         session.KeepAliveFailed += (_, e) =>
         {
             OnKeepAliveFailed(e.Count);
@@ -381,8 +381,9 @@ public class TunnelRelayTunnelHost : TunnelHost
         }
     }
 
-    private async Task ConnectAndRunClientSessionAsync(Stream stream, CancellationToken cancellation)
+    private async Task ConnectAndRunClientSessionAsync(SshStream stream, CancellationToken cancellation)
     {
+        var channelId = stream.Channel.ChannelId;
         var sshSessionOwnsStream = false;
         var tcs = new TaskCompletionSource<object?>();
         try
@@ -419,6 +420,16 @@ public class TunnelRelayTunnelHost : TunnelHost
 
                 AddClientSshSession(session);
 
+                if (Tunnel != null)
+                {
+                    var connectedEvent = new TunnelEvent($"host_client_connect");
+                    connectedEvent.Properties = new Dictionary<string, string>
+                    {
+                        ["ClientChannelId"] = channelId.ToString(),
+                    };
+                    ManagementClient?.ReportEvent(Tunnel, connectedEvent);
+                }
+
                 await tcs.Task;
             }
             finally
@@ -443,28 +454,64 @@ public class TunnelRelayTunnelHost : TunnelHost
             throw;
         }
 
+        async void OnSshClientReconnected(object? sender, EventArgs e)
+        {
+            if (Tunnel != null)
+            {
+                var reconnectedEvent = new TunnelEvent($"host_client_reconnect");
+                reconnectedEvent.Properties = new Dictionary<string, string>
+                {
+                    ["ClientChannelId"] = channelId.ToString(),
+                };
+                ManagementClient?.ReportEvent(Tunnel, reconnectedEvent);
+            }
+
+            await StartForwardingExistingPortsAsync(
+                (SshServerSession)sender!,
+                removeUnusedPorts: true);
+        }
+
         void OnClientSessionClosed(object? sender, SshSessionClosedEventArgs e)
         {
             TraceSource trace = ((SshSession)sender!).Trace;
+            string? details = null;
+            string? severity = null;
 
             // Reconnecting client session may cause the new session to close with 'None' reason.
             if (cancellation.IsCancellationRequested)
             {
-                trace.Verbose("Session cancelled.");
+                details = "Session cancelled.";
+                trace.Verbose(details);
             }
             else if (e.Reason == SshDisconnectReason.ByApplication)
             {
-                trace.Verbose("Session closed.");
+                details = "Session closed.";
+                trace.Verbose(details);
             }
             else if (e.Reason != SshDisconnectReason.None)
             {
+                string messageFormat = "Session closed unexpectedly due to {0}, \"{1}\"\n{2}";
+                details = string.Format(messageFormat, e.Reason, e.Message, e.Exception);
+                severity = TunnelEvent.Error;
                 trace.TraceEvent(
                     TraceEventType.Error,
                     0,
-                    "Session closed unexpectedly due to {0}, \"{1}\"\n{2}",
+                    messageFormat,
                     e.Reason,
                     e.Message,
                     e.Exception);
+            }
+
+            if (Tunnel != null)
+            {
+                var disconnectedEvent = new TunnelEvent($"host_client_disconnect");
+                disconnectedEvent.Severity = severity;
+                disconnectedEvent.Details = details;
+                disconnectedEvent.Properties = new Dictionary<string, string>
+                {
+                    ["ClientChannelId"] = channelId.ToString(),
+                };
+                ManagementClient?.ReportEvent(Tunnel, disconnectedEvent);
             }
 
             tcs.TrySetResult(null);
@@ -504,9 +551,6 @@ public class TunnelRelayTunnelHost : TunnelHost
 
     private async void OnSshClientAuthenticated(object? sender, EventArgs e) =>
         await StartForwardingExistingPortsAsync((SshServerSession)sender!);
-
-    private async void OnSshClientReconnected(object? sender, EventArgs e) =>
-        await StartForwardingExistingPortsAsync((SshServerSession)sender!, removeUnusedPorts: true);
 
     private async Task StartForwardingExistingPortsAsync(
         SshSession session, bool removeUnusedPorts = false)
