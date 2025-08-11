@@ -126,7 +126,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
     private endpointSignature?: string;
 
     public constructor(managementClient: TunnelManagementClient, trace?: Trace) {
-        super(TunnelAccessScopes.Host, connectionProtocols, trace, managementClient);
+        super(TunnelAccessScopes.Host, connectionProtocols, managementClient, trace);
         const publicKey = SshAlgorithms.publicKey.ecdsaSha2Nistp384!;
         if (publicKey) {
             this.hostPrivateKeyPromise = publicKey.generateKeyPair();

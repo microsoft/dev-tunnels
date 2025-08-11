@@ -174,11 +174,11 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     public constructor(
         tunnelAccessScope: string,
         protected readonly connectionProtocols: string[],
-        trace?: Trace,
         /**
          * Gets the management client used for the connection.
          */
-        protected readonly managementClient?: TunnelManagementClient
+        protected readonly managementClient?: TunnelManagementClient,
+        trace?: Trace,
     ) {
         super(tunnelAccessScope);
         this.trace = trace ?? (() => {});
