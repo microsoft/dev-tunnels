@@ -50,5 +50,5 @@ steps:
     FolderLocation: '$(System.DefaultWorkingDirectory)/ts/out/pkg'
     WaitForReleaseCompletion: true
     Owners: 'plequere@microsoft.com'
-    Approvers: 'jasongin@microsoft.com, jroberts@microsoft.com, nkotchar@microsoft.com'
+    Approvers: 'jasongin@microsoft.com, jarober@microsoft.com, nkotchar@microsoft.com'
     MainPublisher: 'ESRPRELPACMAN'
