@@ -4,6 +4,7 @@
 // </copyright>
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -55,8 +56,10 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     /// </summary>
     public const int RetryMaxDelayMs = 12_800;
 
+    private string? websocketRequestId = null;
     private TunnelConnectionOptions? connectionOptions;
     private Task? reconnectTask;
+    private Stopwatch connectionTimer = new();
 
     /// <summary>
     /// Create a new instance of <see cref="TunnelRelayConnection"/> class.
@@ -65,6 +68,12 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
         : base(managementClient, trace)
     {
     }
+
+    /// <summary>
+    /// Gets an ID that is unique to this instance of <see cref="TunnelRelayConnection"/>,
+    /// useful for correlating connection events over time.
+    /// </summary>
+    protected virtual string ConnectionId { get; } = Guid.NewGuid().ToString();
 
     /// <summary>
     /// Connection protocol used to connect to Relay.
@@ -171,10 +180,59 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     }
 
     /// <summary>
+    /// Event fired when the connection status has changed.
+    /// </summary>
+    protected override void OnConnectionStatusChanged(
+        ConnectionStatus previousConnectionStatus,
+        ConnectionStatus connectionStatus)
+    {
+        TimeSpan duration = this.connectionTimer.Elapsed;
+        this.connectionTimer.Restart();
+
+        if (Tunnel != null && ManagementClient != null)
+        {
+            var statusEvent = new TunnelEvent($"{ConnectionRole}_connection_status");
+            statusEvent.Properties = new Dictionary<string, string>
+            {
+                [nameof(ConnectionStatus)] = connectionStatus.ToString(),
+                [$"Previous{nameof(ConnectionStatus)}"] = previousConnectionStatus.ToString(),
+            };
+
+            if (previousConnectionStatus != ConnectionStatus.None)
+            {
+                statusEvent.Properties[$"{previousConnectionStatus}Duration"] = duration.ToString();
+            }
+
+            if (IsClientConnection)
+            {
+                // For client sessions, report the SSH session ID property, which is derived from
+                // the SSH key-exchange such that both host and client have the same ID.
+                statusEvent.Properties["ClientSessionId"] = SshSession?.GetShortSessionId() ?? string.Empty;
+            }
+            else
+            {
+                // For host sessions, there is no SSH encryption or key-exchange.
+                // Just use a locally-generated GUID that is unique to this session.
+                statusEvent.Properties["HostSessionId"] = ConnectionId;
+            }
+
+            if (this.websocketRequestId != null)
+            {
+                statusEvent.Properties["WebsocketRequestId"] = this.websocketRequestId;
+            }
+
+            ManagementClient.ReportEvent(Tunnel, statusEvent);
+        }
+
+        base.OnConnectionStatusChanged(previousConnectionStatus, connectionStatus);
+    }
+
+    /// <summary>
     /// Start reconnecting if connected, not reconnecting already,
     /// and <paramref name="reason"/> is <see cref="SshDisconnectReason.ConnectionLost"/>.
     /// </summary>
     protected void MaybeStartReconnecting(
+        SshSession session,
         SshDisconnectReason reason,
         string? message = null,
         Exception? exception = null)
@@ -214,6 +272,10 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
                     var reconnectEvent = new TunnelEvent($"{ConnectionRole}_reconnect");
                     reconnectEvent.Severity = TunnelEvent.Warning;
                     reconnectEvent.Details = exception?.ToString() ?? traceMessage;
+                    reconnectEvent.Properties = new Dictionary<string, string>
+                    {
+                        ["ClientSessionId"] = session.GetShortSessionId(),
+                    };
                     ManagementClient?.ReportEvent(Tunnel, reconnectEvent);
                 }
 
@@ -228,6 +290,10 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
                     var disconnectEvent = new TunnelEvent($"{ConnectionRole}_disconnect");
                     disconnectEvent.Severity = TunnelEvent.Warning;
                     disconnectEvent.Details = exception?.ToString() ?? traceMessage;
+                    disconnectEvent.Properties = new Dictionary<string, string>
+                    {
+                        ["ClientSessionId"] = session.GetShortSessionId(),
+                    };
                     ManagementClient?.ReportEvent(Tunnel, disconnectEvent);
                 }
 
@@ -270,6 +336,8 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
             Trace,
             cancellation);
         Trace.TraceEvent(TraceEventType.Verbose, 0, "Connected with subprotocol '{0}'", subprotocol);
+
+        this.websocketRequestId = (stream as WebSocketStream)?.RequestId;
 
         if (this.IsClientConnection)
         {
@@ -329,7 +397,6 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
             return;
         }
 
-        SshSession = null;
         UnsubscribeSessionEvents(session);
         if (!session.IsClosed && session.IsConnected)
         {
@@ -343,6 +410,11 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
             }
         }
 
+        // Set the connection status to disconnected before setting SshSession to null,
+        // so the session ID can be reported in the disconnect event.
+        ConnectionStatus = ConnectionStatus.Disconnected;
+        SshSession = null;
+
         // Closing the SSH session does nothing if the session is in disconnected state,
         // which may happen for a reconnectable session when the connection drops.
         // Disposing of the session forces closing and frees up the resources.
@@ -355,9 +427,7 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     protected virtual void OnSshSessionClosed(object? sender, SshSessionClosedEventArgs e)
     {
         var session = (SshClientSession)sender!;
-        UnsubscribeSessionEvents(session);
-        SshSession = null;
-        MaybeStartReconnecting(e.Reason, e.Message, e.Exception);
+        MaybeStartReconnecting(session, e.Reason, e.Message, e.Exception);
     }
 
     /// <summary>

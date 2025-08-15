@@ -59,6 +59,9 @@ public class TunnelRelayTunnelHost : TunnelHost
         this.hostId = MultiModeTunnelHost.HostId;
     }
 
+    /// <inheritdoc/>
+    protected override string ConnectionId => this.hostId;
+
     /// <summary>
     /// Get or set synthetic endpoint signature for the endpoint created for the host
     /// when connecting.
@@ -426,6 +429,8 @@ public class TunnelRelayTunnelHost : TunnelHost
                     connectedEvent.Properties = new Dictionary<string, string>
                     {
                         ["ClientChannelId"] = channelId.ToString(),
+                        ["ClientSessionId"] = session.GetShortSessionId(),
+                        ["HostSessionId"] = ConnectionId,
                     };
                     ManagementClient?.ReportEvent(Tunnel, connectedEvent);
                 }
@@ -456,12 +461,15 @@ public class TunnelRelayTunnelHost : TunnelHost
 
         async void OnSshClientReconnected(object? sender, EventArgs e)
         {
+            var session = (SshSession)sender!;
             if (Tunnel != null)
             {
                 var reconnectedEvent = new TunnelEvent($"host_client_reconnect");
                 reconnectedEvent.Properties = new Dictionary<string, string>
                 {
                     ["ClientChannelId"] = channelId.ToString(),
+                    ["ClientSessionId"] = session.GetShortSessionId(),
+                    ["HostSessionId"] = ConnectionId,
                 };
                 ManagementClient?.ReportEvent(Tunnel, reconnectedEvent);
             }
@@ -473,7 +481,8 @@ public class TunnelRelayTunnelHost : TunnelHost
 
         void OnClientSessionClosed(object? sender, SshSessionClosedEventArgs e)
         {
-            TraceSource trace = ((SshSession)sender!).Trace;
+            var session = (SshSession)sender!;
+            var trace = session.Trace;
             string? details = null;
             string? severity = null;
 
@@ -510,6 +519,8 @@ public class TunnelRelayTunnelHost : TunnelHost
                 disconnectedEvent.Properties = new Dictionary<string, string>
                 {
                     ["ClientChannelId"] = channelId.ToString(),
+                    ["ClientSessionId"] = session.GetShortSessionId(),
+                    ["HostSessionId"] = ConnectionId,
                 };
                 ManagementClient?.ReportEvent(Tunnel, disconnectedEvent);
             }

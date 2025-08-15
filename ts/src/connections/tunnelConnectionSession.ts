@@ -19,6 +19,7 @@ import {
     Progress,
     SshClientSession,
     SshDisconnectReason,
+    SshSession,
     SshSessionClosedEventArgs,
     Stream,
     Trace,
@@ -45,6 +46,7 @@ import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEve
 import { TunnelRelayStreamFactory } from './tunnelRelayStreamFactory';
 import { DefaultTunnelRelayStreamFactory } from './defaultTunnelRelayStreamFactory';
 import { IClientConfig } from 'websocket';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Tunnel connection session.
@@ -56,6 +58,9 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private reconnectPromise?: Promise<void>;
     private connectionProtocolValue?: string;
     private disconnectionReason?: SshDisconnectReason;
+    private connectionStartTime: number = Date.now();
+
+    private readonly uniqueConnectionId: string = uuidv4();
 
     private readonly refreshingTunnelEmitter =
         new TrackingEmitter<RefreshingTunnelEventArgs>();
@@ -90,6 +95,14 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
     protected set connectionProtocol(value: string | undefined) {
         this.connectionProtocolValue = value;
+    }
+
+    /**
+     * Gets an ID that is unique to this instance of `TunnelConnectionSession`,
+     * useful for correlating connection events over time.
+     */
+    protected get connectionId() {
+        return this.uniqueConnectionId;
     }
 
     /**
@@ -141,21 +154,32 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                 severity: TunnelEvent.info,
                 details: undefined,
                 properties: {
-                    'ConnectionStatus': status.toString(),
-                    'PreviousConnectionStatus': previousStatus.toString()
+                    ConnectionStatus: status.toString(),
+                    PreviousConnectionStatus: previousStatus.toString()
                 },
             };
-            
-            // Add duration property if we had a previous status
+
             if (previousStatus !== ConnectionStatus.None) {
-                // Note: In C# this uses a duration calculation, but we don't have
-                // timing information readily available in TypeScript, so we'll skip this for now
-                // statusEvent.properties[`${previousStatus}Duration`] = duration.toString();
+                // Format the duration as a TimeSpan in the form "00:00:00.000"
+                const duration = Date.now() - this.connectionStartTime;
+                const formattedDuration = new Date(duration).toISOString().substring(11, 23);
+                statusEvent.properties![`${previousStatus}Duration`] = formattedDuration;
             }
-            
+
+            if (this.isClientConnection) {
+                // For client sessions, report the SSH session ID property, which is derived from
+                // the SSH key-exchange such that both host and client have the same ID.
+                statusEvent.properties!.ClientSessionId = this.getShortSessionId(this.sshSession);
+            } else {
+                // For host sessions, there is no SSH encryption or key-exchange.
+                // Just use a locally-generated GUID that is unique to this session.
+                statusEvent.properties!.HostSessionId = this.connectionId;
+            }
+
             this.managementClient.reportEvent(this.tunnel, statusEvent);
         }
 
+        this.connectionStartTime = Date.now();
         super.onConnectionStatusChanged(previousStatus, status);
     }
 
@@ -575,6 +599,9 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                     name: `${this.connectionRole}_reconnect`,
                     severity: TunnelEvent.warning,
                     details: error?.toString() ?? message,
+                    properties: {
+                        ClientSessionId: this.getShortSessionId(this.sshSession),
+                    },
                 };
                 this.managementClient.reportEvent(this.tunnel, reconnectEvent);
             }
@@ -590,6 +617,9 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                             name: `${this.connectionRole}_reconnect_failed`,
                             severity: TunnelEvent.error,
                             details: ex instanceof Error ? ex.toString() : String(ex),
+                            properties: {
+                                ClientSessionId: this.getShortSessionId(this.sshSession),
+                            },
                         };
                         this.managementClient.reportEvent(this.tunnel, reconnectFailedEvent);
                     }
@@ -607,6 +637,9 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
                     name: `${this.connectionRole}_disconnect`,
                     severity: TunnelEvent.warning,
                     details: error?.toString() ?? message,
+                    properties: {
+                        ClientSessionId: this.getShortSessionId(this.sshSession),
+                    },
                 };
                 this.managementClient.reportEvent(this.tunnel, disconnectEvent);
             }
@@ -768,5 +801,21 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     protected unsubscribeSessionEvents() {
         this.sshSessionDisposables.forEach((d) => d.dispose());
         this.sshSessionDisposables = [];
+    }
+
+    /** @internal */
+    protected getShortSessionId(session?: SshSession): string {
+        const b = session?.sessionId;
+        if (!b || b.length < 16) {
+            return '';
+        }
+
+        // Format as a GUID. This cannot use uuid.stringify() because
+        // the bytes might not be technically valid for a UUID.
+        return b.subarray(0, 4).toString('hex') + '-' +
+            b.subarray(4, 6).toString('hex') + '-' +
+            b.subarray(6, 8).toString('hex') + '-' +
+            b.subarray(8, 10).toString('hex') + '-' +
+            b.subarray(10, 16).toString('hex');
     }
 }
