@@ -54,7 +54,6 @@ import { SessionPortKey } from './sessionPortKey';
 import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
 import { v4 as uuidv4 } from 'uuid';
-
 import { TunnelHost } from './tunnelHost';
 import { isNode } from './sshHelpers';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
@@ -134,6 +133,10 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
 
         this.hostId = MultiModeTunnelHost.hostId;
         this.id = uuidv4() + "-relay";
+    }
+
+    protected override get connectionId() {
+        return this.hostId;
     }
 
     /**
@@ -511,9 +514,11 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
 
             if (this.tunnel && this.managementClient) {
                 const connectedEvent: TunnelEvent = {
-                    name: 'host_client_connected',
+                    name: 'host_client_connect',
                     properties: {
-                        'ClientChannelId': clientChannelId.toString(),
+                        ClientChannelId: clientChannelId.toString(),
+                        ClientSessionId: this.getShortSessionId(session),
+                        HostSessionId: this.connectionId,
                     }
                 };
                 this.managementClient.reportEvent(this.tunnel, connectedEvent);
@@ -619,9 +624,11 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
     private onClientSessionReconnecting(session: SshServerSession, clientChannelId: number) {
         if (this.tunnel && this.managementClient) {
             const reconnectedEvent: TunnelEvent = {
-                name: 'host_client_reconnecting',
+                name: 'host_client_reconnect',
                 properties: {
-                    'ClientChannelId': clientChannelId.toString(),
+                    ClientChannelId: clientChannelId.toString(),
+                    ClientSessionId: this.getShortSessionId(session),
+                    HostSessionId: this.connectionId,
                 }
             };
             this.managementClient.reportEvent(this.tunnel, reconnectedEvent);
@@ -658,11 +665,13 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         if (this.tunnel && this.managementClient) {
             const disconnectedEvent: TunnelEvent = {
                 timestamp: new Date(),
-                name: 'host_client_disconnected',
+                name: 'host_client_disconnect',
                 severity: severity,
                 details: details,
                 properties: {
-                    'ClientChannelId': clientChannelId.toString(),
+                    ClientChannelId: clientChannelId.toString(),
+                    ClientSessionId: this.getShortSessionId(session),
+                    HostSessionId: this.connectionId,
                 }
             };
             this.managementClient.reportEvent(this.tunnel, disconnectedEvent);

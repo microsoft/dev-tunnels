@@ -140,7 +140,7 @@ public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
         Requires.NotNull(tunnel, nameof(tunnel));
         Requires.NotNull(tunnel.Endpoints!, nameof(Tunnel.Endpoints));
 
-        if (this.SshSession != null)
+        if (this.SshSession?.IsConnected == true)
         {
             throw new InvalidOperationException(
                 "Already connected. Use separate instances to connect to multiple tunnels.");
@@ -240,6 +240,7 @@ public abstract class TunnelClient : TunnelRelayConnection, ITunnelClient
 
     private void OnSshSessionDisconnected(object? sender, EventArgs e) =>
         MaybeStartReconnecting(
+            (SshSession)sender!,
             SshDisconnectReason.ConnectionLost,
             exception: new SshConnectionException("Connection lost.", SshDisconnectReason.ConnectionLost));
 

@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
 using System.Threading;
@@ -98,11 +99,45 @@ namespace Microsoft.DevTunnels.Connections
         }
 
         /// <summary>
+        /// Gets the HTTP request ID from the web socket connection, if available.
+        /// </summary>
+        /// <remarks>
+        /// The request ID is returned as a response HTTP header when the websocket connection
+        /// is established. The value can then be added to client-reported events to support
+        /// correlation with service events.
+        /// </remarks>
+        public string? RequestId
+        {
+            get
+            {
+#if NET8_0_OR_GREATER
+                var responseHeaders = (this.socket as ClientWebSocket)?.HttpResponseHeaders;
+                if (responseHeaders?.TryGetValue("VsSaaS-Request-ID", out var requestIdValues) == true)
+                {
+                    var requestId = requestIdValues.FirstOrDefault();
+                    if (!string.IsNullOrEmpty(requestId))
+                    {
+                        return requestId;
+                    }
+                }
+#endif
+
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Connect to web socket.
         /// </summary>
         public static async Task<WebSocketStream> ConnectToWebSocketAsync(Uri uri, Action<ClientWebSocketOptions>? configure = default, TraceSource? trace = default, CancellationToken cancellation = default)
         {
             var socket = new ClientWebSocket();
+
+#if NET8_0_OR_GREATER
+            // Enable access to HTTP response headers.
+            socket.Options.CollectHttpResponseDetails = true;
+#endif
+
             try
             {
                 configure?.Invoke(socket.Options);
@@ -125,11 +160,11 @@ namespace Microsoft.DevTunnels.Connections
                 if (i >= 0)
                 {
                     int j = wse.Message.IndexOf('\'', i + 1);
-                    if (j > i + 1 && 
+                    if (j > i + 1 &&
                         int.TryParse(
-                            wse.Message.Substring(i + 1, j - i - 1), 
+                            wse.Message.Substring(i + 1, j - i - 1),
                             NumberStyles.None,
-                            CultureInfo.InvariantCulture, 
+                            CultureInfo.InvariantCulture,
                             out var statusCode) &&
                         statusCode != 101)
                     {

@@ -22,7 +22,6 @@ public abstract class TunnelConnection : IAsyncDisposable
 {
     private readonly CancellationTokenSource disposeCts = new();
     private ConnectionStatus connectionStatus;
-    private Stopwatch connectionTimer = new();
     private Tunnel? tunnel;
 
     /// <summary>
@@ -423,25 +422,6 @@ public abstract class TunnelConnection : IAsyncDisposable
         ConnectionStatus previousConnectionStatus,
         ConnectionStatus connectionStatus)
     {
-        TimeSpan duration = this.connectionTimer.Elapsed;
-        this.connectionTimer.Restart();
-
-        if (Tunnel != null)
-        {
-            var statusEvent = new TunnelEvent($"{ConnectionRole}_connection_status");
-            statusEvent.Properties = new Dictionary<string, string>
-            {
-                [nameof(ConnectionStatus)] = connectionStatus.ToString(),
-                [$"Previous{nameof(ConnectionStatus)}"] = previousConnectionStatus.ToString(),
-            };
-            if (previousConnectionStatus != ConnectionStatus.None)
-            {
-                statusEvent.Properties[$"{previousConnectionStatus}Duration"] = duration.ToString();
-            }
-
-            ManagementClient?.ReportEvent(Tunnel, statusEvent);
-        }
-
         var handler = ConnectionStatusChanged;
         if (handler != null)
         {
