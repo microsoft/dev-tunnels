@@ -56,4 +56,16 @@ export interface TunnelConnectionOptions {
      * (most common). This option applies only to client connections.
      */
     hostId?: string;
+
+    /**
+     * Gets or sets the SSH keep-alive interval in seconds. Default is 0 (disabled).
+     * When set to a positive value, the client/host will send SSH keep-alive messages
+     * and raise keep-alive events with the number of consecutive successes or failures.
+     * 
+     * The keep-alive events are raised at the time of sending the next keep-alive request.
+     * For example, if the interval is set to 10 seconds, the first request is sent after
+     * 10 seconds of inactivity and waits for 10 more seconds to call the keep-alive
+     * callback before sending another keep-alive request.
+     */
+    keepAliveIntervalInSeconds?: number;
 }

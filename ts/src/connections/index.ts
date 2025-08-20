@@ -17,6 +17,8 @@ export * from './tunnelRelayTunnelClient';
 export * from './tunnelRelayTunnelHost';
 export * from './tunnelConnection';
 export * from './tunnelConnectionBase';
+export * from './tunnelConnectionOptions';
+export * from './sshKeepAliveEventArgs';
 export * from './connectionStatus';
 export * from './connectionStatusChangedEventArgs';
 export { maxReconnectDelayMs } from './relayTunnelConnector';

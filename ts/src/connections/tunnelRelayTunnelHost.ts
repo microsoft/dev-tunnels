@@ -471,6 +471,12 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         const session = SshHelpers.createSshServerSession(this.reconnectableSessions, (config) => {
             config.protocolExtensions.push(SshProtocolExtensionNames.sessionReconnect);
             config.addService(PortForwardingService);
+
+            // Configure keep-alive if requested
+            const keepAliveInterval = this.connectionOptions?.keepAliveIntervalInSeconds;
+            if (keepAliveInterval && keepAliveInterval > 0) {
+                config.keepAliveTimeoutInSeconds = keepAliveInterval;
+            }
         });
         session.trace = this.trace;
         session.onReportProgress(
@@ -482,7 +488,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         };
 
         const tcs = new PromiseCompletionSource<void>();
-        
+
         const authenticatingEventRegistration = session.onAuthenticating((e) => {
             this.onSshClientAuthenticating(e);
         });
@@ -503,6 +509,9 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             this.onClientSessionClosed(session, e, clientChannelId, cancellation);
             tcs.resolve();
         });
+
+        session.onKeepAliveFailed((count) => this.onKeepAliveFailed(count));
+        session.onKeepAliveSucceeded((count) => this.onKeepAliveSucceeded(count));
 
         try {
             const nodeStream = new NodeStream(stream);

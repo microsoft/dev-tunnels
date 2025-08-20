@@ -261,6 +261,12 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
                     // session is optional since it is already over a TLS websocket.
                     config.keyExchangeAlgorithms.splice(0, 0, SshAlgorithms.keyExchange.none);
                 }
+
+                // Configure keep-alive if requested
+                const keepAliveInterval = this.connectionOptions?.keepAliveIntervalInSeconds;
+                if (keepAliveInterval && keepAliveInterval > 0) {
+                    config.keepAliveTimeoutInSeconds = keepAliveInterval;
+                }
             });
             this.sshSession.trace = this.trace;
             this.sshSession.onReportProgress(
@@ -271,6 +277,9 @@ export class TunnelRelayTunnelClient extends TunnelConnectionSession implements 
             this.sshSession.onAuthenticating(this.onSshServerAuthenticating, this, this.sshSessionDisposables);
             this.sshSession.onDisconnected(this.onSshSessionDisconnected, this, this.sshSessionDisposables);
             this.sshSession.onRequest(this.onRequest, this, this.sshSessionDisposables);
+
+            this.sshSession.onKeepAliveFailed((count) => this.onKeepAliveFailed(count));
+            this.sshSession.onKeepAliveSucceeded((count) => this.onKeepAliveSucceeded(count));
 
             const pfs = this.sshSession.activateService(PortForwardingService);
             if (this.connectionProtocol === webSocketSubProtocolv2) {
