@@ -52,7 +52,7 @@ import { v4 as uuidv4 } from 'uuid';
  * Tunnel connection session.
  */
 export class TunnelConnectionSession extends TunnelConnectionBase implements TunnelSession {
-    private connectionOptions?: TunnelConnectionOptions;
+    protected connectionOptions?: TunnelConnectionOptions;
     private connectedTunnel: Tunnel | null = null;
     private connector?: TunnelConnector;
     private reconnectPromise?: Promise<void>;

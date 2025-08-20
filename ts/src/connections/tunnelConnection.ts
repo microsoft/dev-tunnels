@@ -7,6 +7,7 @@ import { ConnectionStatusChangedEventArgs } from './connectionStatusChangedEvent
 import { RefreshingTunnelAccessTokenEventArgs } from './refreshingTunnelAccessTokenEventArgs';
 import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEventArgs';
 import { ForwardedPortConnectingEventArgs } from '@microsoft/dev-tunnels-ssh-tcp';
+import { SshKeepAliveEventArgs } from './sshKeepAliveEventArgs';
 
 /**
  * Tunnel connection.
@@ -44,6 +45,16 @@ export interface TunnelConnection {
      * An event which fires when a connection is made to the forwarded port.
      */
     readonly forwardedPortConnecting: Event<ForwardedPortConnectingEventArgs>;
+
+    /**
+     * Event raised when a keep-alive message response is not received.
+     */
+    readonly keepAliveFailed: Event<SshKeepAliveEventArgs>;
+
+    /**
+     * Event raised when a keep-alive message response is received.
+     */
+    readonly keepAliveSucceeded: Event<SshKeepAliveEventArgs>;
 
      /**
       * Disposes this tunnel session.

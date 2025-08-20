@@ -11,6 +11,7 @@ import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEve
 import { TunnelAccessTokenProperties } from '@microsoft/dev-tunnels-management';
 import { ForwardedPortConnectingEventArgs } from '@microsoft/dev-tunnels-ssh-tcp';
 import { TrackingEmitter } from './utils';
+import { SshKeepAliveEventArgs } from './sshKeepAliveEventArgs';
 
 /**
  * Tunnel connection base class.
@@ -27,6 +28,8 @@ export class TunnelConnectionBase implements TunnelConnection {
         new Emitter<RetryingTunnelConnectionEventArgs>();
     private readonly forwardedPortConnectingEmitter =
         new Emitter<ForwardedPortConnectingEventArgs>();
+    private readonly keepAliveFailedEmitter = new Emitter<SshKeepAliveEventArgs>();
+    private readonly keepAliveSucceededEmitter = new Emitter<SshKeepAliveEventArgs>();
 
     protected constructor(
         /**
@@ -117,8 +120,32 @@ export class TunnelConnectionBase implements TunnelConnection {
      */
     public readonly forwardedPortConnecting = this.forwardedPortConnectingEmitter.event;
 
+    /**
+     * Event raised when a keep-alive message response is not received.
+     */
+    public readonly keepAliveFailed = this.keepAliveFailedEmitter.event;
+
+    /**
+     * Event raised when a keep-alive message response is received.
+     */
+    public readonly keepAliveSucceeded = this.keepAliveSucceededEmitter.event;
+
     protected onForwardedPortConnecting(e: ForwardedPortConnectingEventArgs) {
         this.forwardedPortConnectingEmitter.fire(e);
+    }
+
+    /**
+     * Raises the keep-alive failed event.
+     */
+    protected onKeepAliveFailed(count: number) {
+        this.keepAliveFailedEmitter.fire(new SshKeepAliveEventArgs(count));
+    }
+
+    /**
+     * Raises the keep-alive succeeded event.
+     */
+    protected onKeepAliveSucceeded(count: number) {
+        this.keepAliveSucceededEmitter.fire(new SshKeepAliveEventArgs(count));
     }
 
     /**
