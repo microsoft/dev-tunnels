@@ -74,5 +74,6 @@ pub struct TunnelOptions {
     //
     // The default timeout is 100 seconds. If the host does not return a response before
     // the timeout, the tunnel relay aborts the request and returns 504 Gateway Timeout.
+    #[serde(default)]
     pub request_timeout_seconds: Option<i32>,
 }

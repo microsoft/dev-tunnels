@@ -102,6 +102,7 @@ namespace Microsoft.DevTunnels.Contracts
         /// The default timeout is 100 seconds. If the host does not return a response before the timeout,
         /// the tunnel relay aborts the request and returns 504 Gateway Timeout.
         /// </remarks>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public int? RequestTimeoutSeconds { get; set; }
     }
 }
