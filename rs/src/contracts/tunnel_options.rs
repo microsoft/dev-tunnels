@@ -69,4 +69,10 @@ pub struct TunnelOptions {
     // that do not support partitioning.
     #[serde(default)]
     pub is_partitioned_site_authentication_enabled: Option<bool>,
+
+    // Gets or sets the timeout for HTTP requests to the tunnel or port.
+    //
+    // The default timeout is 100 seconds. If the host does not return a response before
+    // the timeout, the tunnel relay aborts the request and returns 504 Gateway Timeout.
+    pub request_timeout_seconds: Option<i32>,
 }

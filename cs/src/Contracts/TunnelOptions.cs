@@ -94,5 +94,14 @@ namespace Microsoft.DevTunnels.Contracts
         /// </remarks>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool? IsPartitionedSiteAuthenticationEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the timeout for HTTP requests to the tunnel or port.
+        /// </summary>
+        /// <remarks>
+        /// The default timeout is 100 seconds. If the host does not return a response before the timeout,
+        /// the tunnel relay aborts the request and returns 504 Gateway Timeout.
+        /// </remarks>
+        public int? RequestTimeoutSeconds { get; set; }
     }
 }

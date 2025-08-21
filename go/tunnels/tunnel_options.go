@@ -58,4 +58,10 @@ type TunnelOptions struct {
 	// A partitioned cookie always also has SameSite=None for compatbility with browsers that
 	// do not support partitioning.
 	IsPartitionedSiteAuthenticationEnabled bool `json:"isPartitionedSiteAuthenticationEnabled,omitempty"`
+
+	// Gets or sets the timeout for HTTP requests to the tunnel or port.
+	//
+	// The default timeout is 100 seconds. If the host does not return a response before the
+	// timeout, the tunnel relay aborts the request and returns 504 Gateway Timeout.
+	RequestTimeoutSeconds                  int32 `json:"requestTimeoutSeconds"`
 }
