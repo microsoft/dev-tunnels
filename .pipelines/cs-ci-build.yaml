@@ -21,10 +21,13 @@ variables:
 
 steps:
 
-- task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@3
-  displayName: 'Install Signing Plugin'
+- task: MicroBuildSigningPlugin@4
+  displayName: Install Signing Plugin
   inputs:
     signType: $(signType)
+    azureSubscription: 'MicroBuild Signing Task (DevDiv)'
+    feedSource: 'https://devdiv.pkgs.visualstudio.com/DefaultCollection/_packaging/MicroBuildToolset/nuget/v3/index.json'
+    ConnectedPMEServiceName: '6cc74545-d7b9-4050-9dfa-ebefcc8961ea'
 
 - task: NuGetToolInstaller@1
   inputs:
