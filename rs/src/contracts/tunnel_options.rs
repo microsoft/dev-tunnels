@@ -69,4 +69,15 @@ pub struct TunnelOptions {
     // that do not support partitioning.
     #[serde(default)]
     pub is_partitioned_site_authentication_enabled: Option<bool>,
+
+    // Gets or sets the timeout for HTTP requests to the tunnel or port.
+    //
+    // The default timeout is 100 seconds. Set this to 0 to disable the timeout. The
+    // timeout will reset when response headers are received or after successfully reading
+    // or writing any request, response, or streaming data like gRPC or WebSockets. TCP
+    // keep-alives and HTTP/2 protocol pings will not reset the timeout, but WebSocket
+    // pings will. When a request times out, the tunnel relay aborts the request and
+    // returns 504 Gateway Timeout.
+    #[serde(default)]
+    pub request_timeout_seconds: Option<i32>,
 }
