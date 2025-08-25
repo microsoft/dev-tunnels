@@ -410,8 +410,8 @@ func (m *Manager) ListTunnelPorts(
 		return nil, fmt.Errorf("error parsing response json to tunnel ports: %w", err)
 	}
 
-	for _, port := range tunnelPortsResponse.Value {
-		tp = append(tp, &port)
+	for i := range tunnelPortsResponse.Value {
+		tp = append(tp, &tunnelPortsResponse.Value[i])
 	}
 
 	return tp, nil
