@@ -1692,6 +1692,11 @@ namespace Microsoft.DevTunnels.Management
                 return;
             }
 
+            if (!EnableEventsReporting)
+            {
+                return;
+            }
+
             lock (this.eventsQueue)
             {
                 if (this.isDisposed)
