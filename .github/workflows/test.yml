@@ -2,9 +2,6 @@ name: Test GitHub Workflow
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - dev/jasongin/action
 
 jobs:
   no-basis:
