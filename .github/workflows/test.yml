@@ -13,3 +13,5 @@ jobs:
       with:
         timeout-minutes: 15
         detached: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
