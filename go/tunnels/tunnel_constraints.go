@@ -156,7 +156,7 @@ const (
 	// Note angle-brackets are only allowed when they wrap an email address as part of a
 	// formatted name with email. The service will block any other use of angle-brackets, to
 	// avoid any XSS risks.
-	TunnelConstraintsAccessControlSubjectNamePattern = "[ \\w\\d-.,/'\"_@()<>]{0,200}"
+	TunnelConstraintsAccessControlSubjectNamePattern = "[ \\w\\d-.,/:'\"_@()<>]{0,200}"
 )
 var (
 	// Regular expression that can match or validate tunnel cluster ID strings.
