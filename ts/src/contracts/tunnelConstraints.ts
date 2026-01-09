@@ -295,7 +295,7 @@ export namespace TunnelConstraints {
      * formatted name with email. The service will block any other use of angle-brackets,
      * to avoid any XSS risks.
      */
-    export const accessControlSubjectNamePattern: string = '[ \\w\\d-.,/\'"_@()<>]{0,200}';
+    export const accessControlSubjectNamePattern: string = '[ \\w\\d-.,/:\'"_@()<>]{0,200}';
 
     /**
      * Regular expression that can match or validate an access control subject name, when

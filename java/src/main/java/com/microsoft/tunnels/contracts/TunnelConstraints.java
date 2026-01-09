@@ -298,7 +298,7 @@ public class TunnelConstraints {
      * formatted name with email. The service will block any other use of angle-brackets,
      * to avoid any XSS risks.
      */
-    public static final String accessControlSubjectNamePattern = "[ \\w\\d-.,/'\"_@()<>]{0,200}";
+    public static final String accessControlSubjectNamePattern = "[ \\w\\d-.,/:'\"_@()<>]{0,200}";
 
     /**
      * Regular expression that can match or validate an access control subject name, when

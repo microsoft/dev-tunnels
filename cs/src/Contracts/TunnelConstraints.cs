@@ -369,7 +369,7 @@ public static class TunnelConstraints
     /// formatted name with email. The service will block any other use of angle-brackets,
     /// to avoid any XSS risks.
     /// </remarks>
-    public const string AccessControlSubjectNamePattern = "[ \\w\\d-.,/'\"_@()<>]{0,200}";
+    public const string AccessControlSubjectNamePattern = "[ \\w\\d-.,/:'\"_@()<>]{0,200}";
 
     /// <summary>
     /// Regular expression that can match or validate an access control subject name, when resolving

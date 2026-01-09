@@ -150,4 +150,4 @@ pub const ACCESS_CONTROL_SUBJECT_PATTERN: &str = r#"[0-9a-zA-Z-._:/@]{0,200}"#;
 // Note angle-brackets are only allowed when they wrap an email address as part of a
 // formatted name with email. The service will block any other use of angle-brackets, to
 // avoid any XSS risks.
-pub const ACCESS_CONTROL_SUBJECT_NAME_PATTERN: &str = r#"[ \w\d-.,/'"_@()<>]{0,200}"#;
+pub const ACCESS_CONTROL_SUBJECT_NAME_PATTERN: &str = r#"[ \w\d-.,/:'"_@()<>]{0,200}"#;
