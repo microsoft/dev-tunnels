@@ -14,6 +14,8 @@ jobs:
         wget -qO- https://update.code.visualstudio.com/latest/linux-x64/stable | tar -xzf -
         sudo mv VSCode-linux-x64 /usr/local/vscode
         sudo ln -s /usr/local/vscode/code /usr/local/bin/code
+        sudo chown root:root /usr/local/vscode/chrome-sandbox
+        sudo chmod 4755 /usr/local/vscode/chrome-sandbox
 
     - name: Run VS Code Server
       run: |
