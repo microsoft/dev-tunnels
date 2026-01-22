@@ -16,16 +16,8 @@ jobs:
 
     - name: Run VS Code Server
       run: |
+        /usr/local/vscode/bin/code-tunnel settings set security.workspace.trust.enabled false
         /usr/local/vscode/bin/code-tunnel tunnel \
           --accept-server-license-terms \
           --tunnel-id fun-hill-4v1r4gw.usw3 \
-          --host-token "${{ secrets.DEVTUNNEL_TOKEN }}" \
-          -- --disable-workspace-trust
-
-    #- name: Setup debug session
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
-    #    timeout-minutes: 15
-    #    detached: false
-    #  env:
-    #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          --host-token "${{ secrets.DEVTUNNEL_TOKEN }}"
