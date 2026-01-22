@@ -16,6 +16,7 @@ jobs:
 
     - name: Run VS Code Server
       run: |
+        /usr/local/vscode/bin/code version use stable --install-dir /usr/local/vscode
         /usr/local/vscode/bin/code-tunnel settings set security.workspace.trust.enabled false
         /usr/local/vscode/bin/code-tunnel tunnel \
           --accept-server-license-terms \
