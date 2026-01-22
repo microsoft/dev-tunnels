@@ -14,7 +14,10 @@ jobs:
         curl -L 'https://update.code.visualstudio.com/latest/cli-linux-x64/stable' \
              -o vscode-cli.tar.gz
         mkdir -p ~/.vscode-cli
-        tar -xzf vscode-cli.tar.gz -C ~/.vscode-cli --strip-components=1
+        tar -xzvf vscode-cli.tar.gz -C ~/.vscode-cli --strip-components=1
+        ls -l ~/.vscode-cli/bin
+        file ~/.vscode-cli/bin/code
+        readelf -l ~/.vscode-cli/bin/code | grep interpreter
 
     - name: Run VS Code Server
       run: |
