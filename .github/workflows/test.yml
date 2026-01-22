@@ -11,14 +11,15 @@ jobs:
 
     - name: Install VS Code CLI
       run: |
-        wget -qO- https://update.code.visualstudio.com/latest/linux-x64/stable | tar -xzf -
-        sudo mv VSCode-linux-x64 /usr/local/vscode
+        curl -L 'https://code.visualstudio.com/sha/download?build=stable&os=cli-linux-x64' -o vscode-cli.tar.gz
+        mkdir -p ~/.vscode-cli
+        tar -xzf vscode-cli.tar.gz -C ~/.vscode-cli --strip-components=1
 
     - name: Run VS Code Server
       run: |
-        /usr/local/vscode/bin/code version use stable --install-dir /usr/local/vscode
-        /usr/local/vscode/bin/code-tunnel settings set security.workspace.trust.enabled false
-        /usr/local/vscode/bin/code-tunnel tunnel \
+        ~/.vscode-cli/bin/code version use stable --install-dir ~/.vscode-cli
+        ~/.vscode-cli/bin/code-tunnel settings set security.workspace.trust.enabled false
+        ~/.vscode-cli/bin/code-tunnel tunnel \
           --accept-server-license-terms \
           --tunnel-id fun-hill-4v1r4gw.usw3 \
           --host-token "${{ secrets.DEVTUNNEL_TOKEN }}"
