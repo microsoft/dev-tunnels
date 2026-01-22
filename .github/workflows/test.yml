@@ -9,6 +9,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install VS Code dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          xvfb dbus-x11 libgtk-3-0 libgbm1 libdrm2 libxkbcommon0 \
+          libnss3 libasound2 libxss1 libatk-bridge2.0-0
+
     - name: Install VS Code CLI
       run: |
         wget -qO- https://update.code.visualstudio.com/latest/linux-x64/stable | tar -xzf -
@@ -19,16 +26,22 @@ jobs:
 
     - name: Configure virtual display for VS Code
       run: |
-        sudo apt-get update
-        sudo apt-get install xvfb -y
         export DISPLAY=:99
-        Xvfb :99 -screen 0 1024x768x24 &
-        echo "DISPLAY=:99" >> $GITHUB_ENV
+        Xvfb :99 -screen 0 1280x720x24 &
+        eval "$(dbus-launch --sh-syntax)"
+        echo "DISPLAY=$DISPLAY" >> $GITHUB_ENV
+        echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
+        echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID" >> $GITHUB_ENV
+        echo "LIBGL_ALWAYS_SOFTWARE=1" >> $GITHUB_ENV
+        echo "ELECTRON_OZONE_PLATFORM_HINT=x11" >> $GITHUB_ENV
 
     - name: Run VS Code Server
       run: |
         dbus-run-session -- bash -c \
-          "code tunnel --accept-server-license-terms --tunnel-id fun-hill-4v1r4gw.usw3 --host-token ${{ secrets.DEVTUNNEL_TOKEN }}"
+          "code tunnel --accept-server-license-terms \
+            --tunnel-id fun-hill-4v1r4gw.usw3 \
+            --host-token ${{ secrets.DEVTUNNEL_TOKEN }} \
+            -- --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
 
     #- name: Setup debug session
     #  uses: mxschmitt/action-tmate@v3
