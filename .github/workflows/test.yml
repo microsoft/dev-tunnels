@@ -19,7 +19,9 @@ jobs:
 
     - name: Run VS Code Server
       run: |
-        code tunnel --accept-server-license-terms --tunnel-id fun-hill-4v1r4gw.usw3 --host-token ${{ secrets.DEVTUNNEL_TOKEN }}
+        export ELECTRON_ENABLE_LOGGING=1
+        export ELECTRON_RUN_AS_NODE=1
+        code tunnel --accept-server-license-terms --tunnel-id fun-hill-4v1r4gw.usw3 --host-token ${{ secrets.DEVTUNNEL_TOKEN }} -- --no-sandbox --disable-gpu --disable-software-rasterizer
 
     #- name: Setup debug session
     #  uses: mxschmitt/action-tmate@v3
