@@ -17,11 +17,16 @@ jobs:
         sudo chown root:root /usr/local/vscode/chrome-sandbox
         sudo chmod 4755 /usr/local/vscode/chrome-sandbox
 
+    - name: Configure virtual display for VS Code
+      run: |
+        sudo apt-get update
+        sudo apt-get install xvfb -y
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1024x768x24 &
+
     - name: Run VS Code Server
       run: |
-        export ELECTRON_ENABLE_LOGGING=1
-        export ELECTRON_RUN_AS_NODE=1
-        code tunnel --accept-server-license-terms --tunnel-id fun-hill-4v1r4gw.usw3 --host-token ${{ secrets.DEVTUNNEL_TOKEN }} -- --no-sandbox --disable-gpu --disable-software-rasterizer
+        code tunnel --accept-server-license-terms --tunnel-id fun-hill-4v1r4gw.usw3 --host-token ${{ secrets.DEVTUNNEL_TOKEN }}
 
     #- name: Setup debug session
     #  uses: mxschmitt/action-tmate@v3
