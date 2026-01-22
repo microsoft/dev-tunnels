@@ -11,7 +11,7 @@ jobs:
 
     - name: Install VS Code CLI
       run: |
-        curl -L 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' \
+        curl -L 'https://update.code.visualstudio.com/latest/cli-linux-x64/stable' \
              -o vscode-cli.tar.gz
         mkdir -p ~/.vscode-cli
         tar -xzf vscode-cli.tar.gz -C ~/.vscode-cli --strip-components=1
