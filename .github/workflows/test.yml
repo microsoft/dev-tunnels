@@ -21,4 +21,6 @@ jobs:
         ~/.vscode-cli/code tunnel \
           --accept-server-license-terms \
           --tunnel-id fun-hill-4v1r4gw.usw3 \
-          --host-token "${{ secrets.DEVTUNNEL_TOKEN }}"
+          --host-token "${{ secrets.DEVTUNNEL_TOKEN }}" \
+          --install-extension github.vscode-github-actions
+
