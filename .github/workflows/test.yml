@@ -23,6 +23,7 @@ jobs:
         sudo apt-get install xvfb -y
         export DISPLAY=:99
         Xvfb :99 -screen 0 1024x768x24 &
+        echo "DISPLAY=:99" >> $GITHUB_ENV
 
     - name: Run VS Code Server
       run: |
