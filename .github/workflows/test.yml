@@ -14,16 +14,11 @@ jobs:
         curl -L 'https://update.code.visualstudio.com/latest/cli-linux-x64/stable' \
              -o vscode-cli.tar.gz
         mkdir -p ~/.vscode-cli
-        tar -xzvf vscode-cli.tar.gz -C ~/.vscode-cli --strip-components=1
-        ls -l ~/.vscode-cli/bin
-        file ~/.vscode-cli/bin/code
-        readelf -l ~/.vscode-cli/bin/code | grep interpreter
+        tar -xzvf vscode-cli.tar.gz -C ~/.vscode-cli
 
     - name: Run VS Code Server
       run: |
-        ~/.vscode-cli/bin/code version use stable --install-dir ~/.vscode-cli
-        ~/.vscode-cli/bin/code-tunnel settings set security.workspace.trust.enabled false
-        ~/.vscode-cli/bin/code-tunnel tunnel \
+        ~/.vscode-cli/code tunnel \
           --accept-server-license-terms \
           --tunnel-id fun-hill-4v1r4gw.usw3 \
           --host-token "${{ secrets.DEVTUNNEL_TOKEN }}"
