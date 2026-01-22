@@ -8,10 +8,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Setup debug session
-      uses: mxschmitt/action-tmate@v3
-      with:
-        timeout-minutes: 15
-        detached: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install VS Code CLI
+      run: |
+        wget -qO- https://update.code.visualstudio.com/latest/linux-x64/stable | tar -xJf -
+        sudo mv VSCode-linux-x64 /usr/local/vscode
+        sudo ln -s /usr/local/vscode/code /usr/local/bin/code
+
+    - name: Run VS Code Server
+      run: |
+        code tunnel --accept-server-license-terms --tunnel-id fun-hill-4v1r4gw.usw3 --host-token ${{ secrets.DEVTUNNEL_TOKEN }}
+
+    #- name: Setup debug session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    timeout-minutes: 15
+    #    detached: false
+    #  env:
+    #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
