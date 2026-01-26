@@ -279,8 +279,8 @@ namespace Microsoft.DevTunnels.Management
             {
                 throw new NotSupportedException(
                     $"Unsupported HTTP handler type: {httpHandler?.GetType().Name}. " +
-                    "HTTP handler chain must consist of 0 or more DelegatingHandlers " +
-                    "ending with a HttpClientHandler.");
+                    $"HTTP handler chain must consist of 0 or more {nameof(DelegatingHandler)}s " +
+                    $"ending with a {nameof(HttpClientHandler)} or {nameof(SocketsHttpHandler)}.");
             }
         }
 
@@ -1055,14 +1055,15 @@ namespace Microsoft.DevTunnels.Management
             Requires.NotNull(tunnel, nameof(tunnel));
             options ??= new TunnelRequestOptions();
             options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
-            options.AdditionalHeaders = options.AdditionalHeaders.Append(new KeyValuePair<string, string>("If-None-Match", "*"));
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(
+                new KeyValuePair<string, string>("If-None-Match", "*"));
             var tunnelId = tunnel.TunnelId;
             var idGenerated = string.IsNullOrEmpty(tunnelId);
             if (idGenerated)
             {
                 tunnel.TunnelId = IdGeneration.GenerateTunnelId();
             }
-            for (int retries = 0; retries <= CreateNameRetries; retries++)
+            for (int retries = 0; ; retries++)
             {
                 try
                 {
@@ -1079,25 +1080,14 @@ namespace Microsoft.DevTunnels.Management
                     PreserveAccessTokens(tunnel, result);
                     return result!;
                 }
-                catch (UnauthorizedAccessException) when (idGenerated && retries < CreateNameRetries) // The tunnel ID was already taken.
+                catch (InvalidOperationException ex)
+                when (ex.InnerException is HttpRequestException hrex &&
+                      hrex.StatusCode == HttpStatusCode.Conflict &&
+                      idGenerated && retries < CreateNameRetries) // The tunnel ID was already taken.
                 {
                     tunnel.TunnelId = IdGeneration.GenerateTunnelId();
                 }
             }
-
-            // This code is unreachable, but the compiler still requires it.
-            var result2 = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-                       HttpMethod.Put,
-                       tunnel,
-                       ManageAccessTokenScope,
-                       path: null,
-                       query: GetApiQuery(),
-                       options,
-                       ConvertTunnelForRequest(tunnel),
-                       cancellation,
-                       true);
-            PreserveAccessTokens(tunnel, result2);
-            return result2!;
         }
 
         /// <inheritdoc />
@@ -1108,48 +1098,25 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnel, nameof(tunnel));
 
-            var tunnelId = tunnel.TunnelId;
-            var idGenerated = string.IsNullOrEmpty(tunnelId);
-            if (idGenerated)
+            if (string.IsNullOrEmpty(tunnel.TunnelId))
             {
-                tunnel.TunnelId = IdGeneration.GenerateTunnelId();
-            }
-            for (int retries = 0; retries <= CreateNameRetries; retries++)
-            {
-                try
-                {
-                    var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-                       HttpMethod.Put,
-                       tunnel,
-                       ManageAccessTokenScope,
-                       path: null,
-                       query: GetApiQuery(),
-                       options,
-                       ConvertTunnelForRequest(tunnel),
-                       cancellation,
-                       true);
-                    PreserveAccessTokens(tunnel, result);
-                    return result!;
-                }
-                catch (UnauthorizedAccessException) when (idGenerated && retries < 3) // The tunnel ID was already taken.
-                {
-                    tunnel.TunnelId = IdGeneration.GenerateTunnelId();
-                }
+                // When no tunnel ID is specified, a randomly-generated ID should not unintionally
+                // update an existing tunnel.
+                return await CreateTunnelAsync(tunnel, options, cancellation);
             }
 
-            // This code is unreachable, but the compiler still requires it.
-            var result2 = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
-                       HttpMethod.Put,
-                       tunnel,
-                       ManageAccessTokenScope,
-                       path: null,
-                       query: GetApiQuery(),
-                       options,
-                       ConvertTunnelForRequest(tunnel),
-                       cancellation,
-                       true);
-            PreserveAccessTokens(tunnel, result2);
-            return result2!;
+            var result = await this.SendTunnelRequestAsync<Tunnel, Tunnel>(
+                HttpMethod.Put,
+                tunnel,
+                ManageAccessTokenScope,
+                path: null,
+                query: GetApiQuery(),
+                options,
+                ConvertTunnelForRequest(tunnel),
+                cancellation,
+                true);
+            PreserveAccessTokens(tunnel, result);
+            return result!;
         }
 
         /// <inheritdoc />

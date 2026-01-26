@@ -145,6 +145,62 @@ public class TunnelManagementClientTests
     }
 
     [Fact]
+    public async Task CreateTunnelRetriesOnGeneratedIdConflict()
+    {
+        var requestTunnel = new Tunnel
+        {
+            ClusterId = ClusterId,
+
+            // Tunnel ID is not set, so the client will generate one.
+        };
+
+        var callCount = 0;
+        string firstTunnelId = null;
+        string secondTunnelId = null;
+
+        var handler = new MockHttpMessageHandler(
+            async (message, ct) =>
+            {
+                callCount++;
+                Assert.NotNull(message.Content);
+
+                var sentTunnel = await message.Content!.ReadFromJsonAsync<Tunnel>(cancellationToken: ct);
+                Assert.NotNull(sentTunnel);
+                Assert.False(string.IsNullOrEmpty(sentTunnel!.TunnelId));
+
+                if (callCount == 1)
+                {
+                    firstTunnelId = sentTunnel.TunnelId;
+                    var conflictResult = new HttpResponseMessage(HttpStatusCode.Conflict);
+                    conflictResult.RequestMessage = message;
+                    return conflictResult;
+                }
+
+                secondTunnelId = sentTunnel.TunnelId;
+
+                var responseTunnel = new Tunnel
+                {
+                    TunnelId = sentTunnel.TunnelId,
+                    ClusterId = ClusterId,
+                };
+
+                var result = new HttpResponseMessage(HttpStatusCode.OK);
+                result.Content = JsonContent.Create(responseTunnel);
+                return result;
+            });
+
+        var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
+
+        var resultTunnel = await client.CreateTunnelAsync(requestTunnel, options: null, this.timeout);
+
+        Assert.Equal(2, callCount);
+        Assert.NotNull(firstTunnelId);
+        Assert.NotNull(secondTunnelId);
+        Assert.Equal(secondTunnelId, resultTunnel.TunnelId);
+        Assert.Equal(resultTunnel.TunnelId, requestTunnel.TunnelId);
+    }
+
+    [Fact]
     public async Task HandleFirewallResponse()
     {
         var handler = new MockHttpMessageHandler(
