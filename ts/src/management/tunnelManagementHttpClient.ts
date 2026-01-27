@@ -302,7 +302,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
         }
-        for (let i = 0;i<=createNameRetries; i++){
+        for (let retries = 0; ; retries++){
             try {
                 const result = (await this.sendTunnelRequest<Tunnel>(
                     'PUT',
@@ -320,7 +320,9 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 parseTunnelDates(result);
                 return result;
             } catch (error) {
-                if (idGenerated) {
+                if ((error as AxiosError)?.response?.status === 409 &&
+                    idGenerated && retries < createNameRetries
+                ) {
                     // The tunnel ID was generated and there was a conflict.
                     // Try again with a new ID.
                     tunnel.tunnelId = IdGeneration.generateTunnelId();
@@ -329,73 +331,30 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
                 }
             }
         }
-
-        const result2 = (await this.sendTunnelRequest<Tunnel>(
-            'PUT',
-            tunnel,
-            manageAccessTokenScope,
-            undefined,
-            undefined,
-            options,
-            this.convertTunnelForRequest(tunnel),
-            undefined,
-            cancellation,
-            true,
-        ))!;
-        preserveAccessTokens(tunnel, result2);
-        parseTunnelDates(result2);
-        return result2;
     }
 
     public async createOrUpdateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel> {
         const tunnelId = tunnel.tunnelId;
-        const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
-        if (idGenerated) {
-            tunnel.tunnelId = IdGeneration.generateTunnelId();
+        if (!tunnelId) {
+                // When no tunnel ID is specified, a randomly-generated ID should not unintionally
+                // update an existing tunnel.
+            return this.createTunnel(tunnel, options, cancellation);
         }
-        for (let i = 0;i<=createNameRetries; i++){
-            try {
-                const result = (await this.sendTunnelRequest<Tunnel>(
-                    'PUT',
-                    tunnel,
-                    manageAccessTokenScope,
-                    undefined,
-                    undefined,
-                    options,
-                    this.convertTunnelForRequest(tunnel),
-                    undefined,
-                    cancellation,
-                    true,
-                ))!;
-                preserveAccessTokens(tunnel, result);
-                parseTunnelDates(result);
-                return result;
-            } catch (error) {
-                if (idGenerated) {
-                    // The tunnel ID was generated and there was a conflict.
-                    // Try again with a new ID.
-                    tunnel.tunnelId = IdGeneration.generateTunnelId();
-                } else {
-                    throw error;
-                }
-            }
-        }
-
-        const result2 = (await this.sendTunnelRequest<Tunnel>(
+        const result = (await this.sendTunnelRequest<Tunnel>(
             'PUT',
             tunnel,
             manageAccessTokenScope,
             undefined,
-            "forceCreate=true",
+            undefined,
             options,
             this.convertTunnelForRequest(tunnel),
             undefined,
             cancellation,
             true,
         ))!;
-        preserveAccessTokens(tunnel, result2);
-        parseTunnelDates(result2);
-        return result2;
+        preserveAccessTokens(tunnel, result);
+        parseTunnelDates(result);
+        return result;
     }
 
     public async updateTunnel(tunnel: Tunnel, options?: TunnelRequestOptions, cancellation?: CancellationToken): Promise<Tunnel> {
@@ -745,8 +704,8 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             this.raiseReportProgress(TunnelProgress.CompletedSendTunnelRequest);
             return result;
         } catch (error) {
-            if (/certificate/i.test((error as AxiosError<any>).message)) {
-                const originalErrorMessage = (error as AxiosError<any>).message;
+            if (/certificate/i.test((error as AxiosError).message)) {
+                const originalErrorMessage = (error as AxiosError).message;
                 throw new Error("Tunnel service HTTPS certificate is invalid. This may be caused by the use of a " +
                     "self-signed certificate or a firewall intercepting the connection. " + originalErrorMessage + ". ");
             }

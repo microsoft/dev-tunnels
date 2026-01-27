@@ -246,6 +246,76 @@ export class TunnelManagementTests {
     }
 
     @test
+    public async createTunnelRetriesOnGeneratedIdConflict() {
+        const requestTunnel = <Tunnel>{
+            clusterId: 'clusterId',
+        };
+
+        let callCount = 0;
+        let firstTunnelId: string | undefined;
+        let secondTunnelId: string | undefined;
+
+        const conflictError = new AxiosError();
+        conflictError.config = {
+            url: TunnelManagementTests.testServiceUri,
+            headers: new AxiosHeaders(),
+        };
+        conflictError.response = {
+            status: 409,
+            statusText: 'Conflict',
+            headers: new AxiosHeaders(),
+            data: undefined,
+            config: conflictError.config,
+        };
+
+        const originalAxiosRequest = (<any>this.managementClient).axiosRequest;
+        (<any>this.managementClient).axiosRequest = async (
+            config: AxiosRequestConfig,
+            cancellation: CancellationToken,
+        ): Promise<AxiosResponse> => {
+            this.lastRequest = {
+                method: config.method as Method,
+                uri: config.url || '',
+                data: config.data,
+                config,
+            };
+            callCount++;
+
+            const sentTunnel = config.data as Tunnel;
+            if (callCount === 1) {
+                firstTunnelId = sentTunnel?.tunnelId;
+                throw conflictError;
+            }
+
+            secondTunnelId = sentTunnel?.tunnelId;
+
+            return {
+                data: <Tunnel>{
+                    tunnelId: sentTunnel?.tunnelId,
+                    clusterId: requestTunnel.clusterId,
+                },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config,
+            } as AxiosResponse;
+        };
+
+        try {
+            const resultTunnel = await this.managementClient.createTunnel(requestTunnel);
+
+            assert.strictEqual(callCount, 2);
+            assert.ok(firstTunnelId);
+            assert.ok(secondTunnelId);
+            assert.notStrictEqual(firstTunnelId, secondTunnelId);
+            assert.strictEqual(resultTunnel.tunnelId, secondTunnelId);
+            assert.strictEqual(requestTunnel.tunnelId, secondTunnelId);
+        } finally {
+            (<any>this.managementClient).axiosRequest = originalAxiosRequest;
+        }
+    }
+
+    @test
     public async handleFirewallResponse() {
         const requestTunnel = <Tunnel>{
             tunnelId: 'tunnelid',
