@@ -78,6 +78,28 @@ export interface TunnelOptions {
     isPartitionedSiteAuthenticationEnabled?: boolean;
 
     /**
+     * Gets or sets a value indicating whether web requests to the tunnel or port can be
+     * directly authenticated with bearer token authentication by supplying an
+     * `Authorization` header with an Entra ID or GitHub token of a user with access to
+     * the tunnel. The default is false, which means only the tunnel web authentication
+     * cookie or `X-Tunnel-Authorization` header can be used for authenticating web
+     * requests to the tunnel.
+     *
+     * When this option is enabled, AND neither a tunnel web authentication cookie nor an
+     * `X-Tunnel-Authorization` header is present in a web request, the tunnel relay will
+     * attempt to authenticate the request using the `Authorization` header with Entra ID
+     * or GitHub credentials. In that case the `Authorization` header will be stripped
+     * from the request before it is forwarded to the host application.  Enabling this
+     * option may be desirable for API tunnels, where clients are likely to have better
+     * support for bearer token authentication using the `Authorization` header. However,
+     * interception of that header could block host applications which themselves
+     * implement bearer token authentication, which is why this option is disabled by
+     * default.  This option does not apply to the tunnel management API, which always
+     * supports bearer token authentication using the `Authorization` header.
+     */
+    isBearerTokenAuthenticationEnabled?: boolean;
+
+    /**
      * Gets or sets the timeout for HTTP requests to the tunnel or port.
      *
      * The default timeout is 100 seconds. Set this to 0 to disable the timeout. The
