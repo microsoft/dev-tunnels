@@ -61,18 +61,38 @@ steps:
   displayName: Publish symbols to drop artifacts
   inputs:
     pathtoPublish: '$(System.DefaultWorkingDirectory)\cs\bin\release\sym'
-    artifactName: symbols
-    publishLocation: 'Container'
+    artifactName: Symbols
+    publishLocation: Container
 
-# docs: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/azure-artifacts/symbol-service
+# Index symbols only (no cross-org publish)
+# https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/34315/Archiving-Symbols
 - task: PublishSymbols@2
-  displayName: Publish symbols to Microsoft Server (https://symweb)
+  displayName: Index symbols (local only)
   inputs:
     SymbolsFolder: '$(System.DefaultWorkingDirectory)\cs\bin\release\sym'
     SearchPattern: '**\*.pdb'
     SymbolServerType: TeamServices
-    # Expiration parameter: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/azure-artifacts/symbol-service#how-to-change-the-expiration-date-of-a-symbol-request
-    SymbolExpirationInDays: '1095'
+    PublishSymbols: false
+
+- task: DownloadBuildArtifacts@0
+  displayName: Download symbols artifact
+  inputs:
+    artifactName: Symbols
+    downloadPath: '$(Pipeline.Workspace)\Symbols'
+
+# Archive symbols to symweb using WIF service connection
+# https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/34315/Archiving-Symbols
+- task: MicroBuildArchiveSymbols@6
+  displayName: Archive symbols to symweb (internal only)
+  inputs:
+    azureSubscription: 'VSEng-SymbolsUpload'
+    SymbolsFeatureName: DevTunnels
+    SymbolsProject: DDE
+    SymbolsAgentPath: '$(Pipeline.Workspace)\Symbols'
+    SubmitToInternet: false
+    ExpirationInDays: 1095
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)  # required by task per WIF migration guidance [1](https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/49030)
 
 - task: PublishBuildArtifacts@1
   displayName: Publish Build
