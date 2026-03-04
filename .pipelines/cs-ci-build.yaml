@@ -85,7 +85,7 @@ steps:
 - task: MicroBuildArchiveSymbols@6
   displayName: Archive symbols to symweb (internal only)
   inputs:
-    azureSubscription: 'VSEng-SymbolsUpload'
+    azureSubscription: 'VSEng-SymbolsUpload-OnlineServices'
     SymbolsFeatureName: DevTunnels
     SymbolsProject: DDE
     SymbolsAgentPath: '$(Pipeline.Workspace)\Symbols'
