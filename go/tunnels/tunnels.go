@@ -10,7 +10,7 @@ import (
 	"github.com/rodaine/table"
 )
 
-const PackageVersion = "0.1.20"
+const PackageVersion = "0.1.21"
 
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	convertedTunnel := &Tunnel{
