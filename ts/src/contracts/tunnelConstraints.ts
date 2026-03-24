@@ -29,8 +29,11 @@ export namespace TunnelConstraints {
 
     /**
      * Max length of V2 tunnelId.
+     *
+     * Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+     * (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
      */
-    export const newTunnelIdMaxLength: number = 60;
+    export const newTunnelIdMaxLength: number = 49;
 
     /**
      * Length of a tunnel alias.
@@ -44,8 +47,16 @@ export namespace TunnelConstraints {
 
     /**
      * Max length of tunnel name.
+     *
+     * Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+     * (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
      */
-    export const tunnelNameMaxLength: number = 60;
+    export const tunnelNameMaxLength: number = 49;
+
+    /**
+     * Max length of SSH username.
+     */
+    export const sshUserMaxLength: number = 60;
 
     /**
      * Max length of tunnel or port description.
@@ -194,10 +205,11 @@ export namespace TunnelConstraints {
     /**
      * Regular expression that can match or validate tunnel ID strings.
      *
-     * Tunnel IDs are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
+     * Tunnel IDs have a limited character set of numbers and lowercase letters. Limited
+     * to 49 characters to ensure tunnel URIs with ports and inspection suffixes remain
+     * within the DNS label limit of 63 characters.
      */
-    export const newTunnelIdPattern: string = '[a-z0-9][a-z0-9-]{1,58}[a-z0-9]';
+    export const newTunnelIdPattern: string = '[a-z0-9][a-z0-9-]{1,47}[a-z0-9]';
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -217,9 +229,11 @@ export namespace TunnelConstraints {
      * Regular expression that can match or validate tunnel alias strings.
      *
      * Tunnel Aliases are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
+     * lowercase letters (minus vowels and y). Limited to 49 characters to ensure tunnel
+     * URIs with ports and inspection suffixes remain within the DNS label limit of 63
+     * characters.
      */
-    export const tunnelAliasPattern: string = '[' + TunnelConstraints.tunnelAliasChars + ']{3,60}';
+    export const tunnelAliasPattern: string = '[' + TunnelConstraints.tunnelAliasChars + ']{3,49}';
 
     /**
      * Regular expression that can match or validate tunnel alias strings.
@@ -233,9 +247,11 @@ export namespace TunnelConstraints {
      * Regular expression that can match or validate tunnel names.
      *
      * Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
-     * empty string because tunnels may be unnamed.
+     * empty string because tunnels may be unnamed. Limited to 49 characters to ensure
+     * tunnel URIs with ports and inspection suffixes remain within the DNS label limit of
+     * 63 characters.
      */
-    export const tunnelNamePattern: string = '([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)';
+    export const tunnelNamePattern: string = '([a-z0-9][a-z0-9-]{1,47}[a-z0-9])|(^$)';
 
     /**
      * Regular expression that can match or validate tunnel names.
