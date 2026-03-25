@@ -15,6 +15,7 @@ const PackageVersion = "0.1.22"
 func (tunnel *Tunnel) requestObject() (*Tunnel, error) {
 	convertedTunnel := &Tunnel{
 		TunnelID:         tunnel.TunnelID,
+		ClusterID:        tunnel.ClusterID,
 		Name:             tunnel.Name,
 		Domain:           tunnel.Domain,
 		Description:      tunnel.Description,
