@@ -62,6 +62,11 @@ yargs.command('build-ts', 'Build TypeScript code', async (yargs) => {
     const buildVersion = await getBuildVersion();
     const rootPackageJson = JSON.parse(await fs.readFile(path.join(__dirname, 'package.json')));
 
+    // Internal packages built in this repo; only these should be version-pinned.
+    const internalPackages = new Set(
+        tsPackageNames.map((name) => rootPackageJson.name + '-' + name),
+    );
+
     // Update the package.json and README for each built package.
     for (let packageName of tsPackageNames) {
         const sourceDir = path.join(srcDir, packageName);
@@ -75,9 +80,14 @@ yargs.command('build-ts', 'Build TypeScript code', async (yargs) => {
         packageJson.main = './index.js';
 
         // Force the dependencies on other packages in this project to be the same build version.
-        for (let packageName of Object.keys(packageJson.dependencies)) {
-            if (packageName.startsWith(rootPackageJson.name + '-')) {
+        for (let packageName of Object.keys(packageJson.dependencies || {})) {
+            if (internalPackages.has(packageName)) {
                 packageJson.dependencies[packageName] = buildVersion;
+            }
+        }
+        for (let packageName of Object.keys(packageJson.peerDependencies || {})) {
+            if (internalPackages.has(packageName)) {
+                packageJson.peerDependencies[packageName] = buildVersion;
             }
         }
 
@@ -94,6 +104,11 @@ yargs.command('pack-ts', 'Build TypeScript npm packages', async (yargs) => {
     await mkdirp(packageDir);
     let packageFiles = [];
 
+    // Internal packages built in this repo; only these should be version-pinned.
+    const internalPackages = new Set(
+        ['contracts', 'management', 'connections'].map((name) => rootPackageJson.name + '-' + name),
+    );
+
     for (let packageName of ['contracts', 'management', 'connections']) {
         const sourceDir = path.join(srcDir, packageName);
         const targetDir = path.join(libDir, packageName);
@@ -103,6 +118,19 @@ yargs.command('pack-ts', 'Build TypeScript npm packages', async (yargs) => {
         packageJson.version = buildVersion;
         packageJson.scripts = undefined;
         packageJson.main = './index.js';
+
+        // Force the dependencies on other packages in this project to be the same build version.
+        for (let depName of Object.keys(packageJson.dependencies || {})) {
+            if (internalPackages.has(depName)) {
+                packageJson.dependencies[depName] = buildVersion;
+            }
+        }
+        for (let depName of Object.keys(packageJson.peerDependencies || {})) {
+            if (internalPackages.has(depName)) {
+                packageJson.peerDependencies[depName] = buildVersion;
+            }
+        }
+
         await fs.writeFile(
             path.join(targetDir, 'package.json'),
             JSON.stringify(packageJson, null, '\t'),
