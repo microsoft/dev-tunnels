@@ -386,10 +386,13 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         throw new NotImplementedException();
     }
 
+    public List<TunnelEvent> ReportedEvents { get; } = new();
+
     public void ReportEvent(
         Tunnel tunnel,
         TunnelEvent tunnelEvent,
         TunnelRequestOptions options = null)
     {
+        ReportedEvents.Add(tunnelEvent);
     }
 }
