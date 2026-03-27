@@ -17,7 +17,10 @@ pub const OLD_TUNNEL_ID_LENGTH: i32 = 8;
 pub const NEW_TUNNEL_ID_MIN_LENGTH: i32 = 3;
 
 // Max length of V2 tunnelId.
-pub const NEW_TUNNEL_ID_MAX_LENGTH: i32 = 60;
+//
+// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+// (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
+pub const NEW_TUNNEL_ID_MAX_LENGTH: i32 = 49;
 
 // Length of a tunnel alias.
 pub const TUNNEL_ALIAS_LENGTH: i32 = 8;
@@ -26,7 +29,13 @@ pub const TUNNEL_ALIAS_LENGTH: i32 = 8;
 pub const TUNNEL_NAME_MIN_LENGTH: i32 = 3;
 
 // Max length of tunnel name.
-pub const TUNNEL_NAME_MAX_LENGTH: i32 = 60;
+//
+// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+// (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
+pub const TUNNEL_NAME_MAX_LENGTH: i32 = 49;
+
+// Max length of SSH username.
+pub const SSH_USER_MAX_LENGTH: i32 = 60;
 
 // Max length of tunnel or port description.
 pub const DESCRIPTION_MAX_LENGTH: i32 = 400;
@@ -107,9 +116,10 @@ pub const NEW_TUNNEL_ID_CHARS: &str = r#"0123456789abcdefghijklmnopqrstuvwxyz-"#
 
 // Regular expression that can match or validate tunnel ID strings.
 //
-// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
-// letters (minus vowels and y).
-pub const NEW_TUNNEL_ID_PATTERN: &str = r#"[a-z0-9][a-z0-9-]{1,58}[a-z0-9]"#;
+// Tunnel IDs have a limited character set of numbers and lowercase letters. Limited to 49
+// characters to ensure tunnel URIs with ports and inspection suffixes remain within the
+// DNS label limit of 63 characters.
+pub const NEW_TUNNEL_ID_PATTERN: &str = r#"[a-z0-9][a-z0-9-]{1,47}[a-z0-9]"#;
 
 // Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 // excluding vowels and 'y' (to avoid accidentally generating any random words).
@@ -118,14 +128,16 @@ pub const TUNNEL_ALIAS_CHARS: &str = r#"0123456789bcdfghjklmnpqrstvwxz"#;
 // Regular expression that can match or validate tunnel alias strings.
 //
 // Tunnel Aliases are fixed-length and have a limited character set of numbers and
-// lowercase letters (minus vowels and y).
-pub const TUNNEL_ALIAS_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{3,60}"#;
+// lowercase letters (minus vowels and y). Limited to 49 characters to ensure tunnel URIs
+// with ports and inspection suffixes remain within the DNS label limit of 63 characters.
+pub const TUNNEL_ALIAS_PATTERN: &str = r#"[0123456789bcdfghjklmnpqrstvwxz]{3,49}"#;
 
 // Regular expression that can match or validate tunnel names.
 //
 // Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an empty
-// string because tunnels may be unnamed.
-pub const TUNNEL_NAME_PATTERN: &str = r#"([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)"#;
+// string because tunnels may be unnamed. Limited to 49 characters to ensure tunnel URIs
+// with ports and inspection suffixes remain within the DNS label limit of 63 characters.
+pub const TUNNEL_NAME_PATTERN: &str = r#"([a-z0-9][a-z0-9-]{1,47}[a-z0-9])|(^$)"#;
 
 // Regular expression that can match or validate tunnel or port labels.
 pub const LABEL_PATTERN: &str = r#"[\w-=]{1,50}"#;

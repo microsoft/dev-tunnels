@@ -46,8 +46,8 @@ public class TunnelConstraintsTests
     [InlineData("test")]
     [InlineData("aaa")]
     [InlineData("bcd-ghjk")]
-    [InlineData("jfullerton44-name-with-special-char--jrw9q5vrfjpwx")]
-    [InlineData("012345678901234567890123456789012345678901234567890123456789")]
+    [InlineData("username-name-with-special-char--jrw9q5vrfjpwx")]
+    [InlineData("0123456789012345678901234567890123456789012345678")]
     public void IsValidTunnelName_Valid(string tunnelName)
     {
         Assert.True(IsValidTunnelName(tunnelName));
@@ -55,6 +55,8 @@ public class TunnelConstraintsTests
 
     [Theory]
     [InlineData("a")]
+    [InlineData("username2345-name-with-special-char--jrw9q5vrfjpwx")]
+    [InlineData("012345678901234567890123456789012345678901234567890123456789")]
     [InlineData("0123456789012345678901234567890123456789012345678901234567890")]
     [InlineData("89bcdfgh")]
     [InlineData("stvwxzzz")]

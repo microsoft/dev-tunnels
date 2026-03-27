@@ -23,7 +23,10 @@ const (
 	TunnelConstraintsNewTunnelIDMinLength = 3
 
 	// Max length of V2 tunnelId.
-	TunnelConstraintsNewTunnelIDMaxLength = 60
+	//
+	// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+	// (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
+	TunnelConstraintsNewTunnelIDMaxLength = 49
 
 	// Length of a tunnel alias.
 	TunnelConstraintsTunnelAliasLength = 8
@@ -32,7 +35,13 @@ const (
 	TunnelConstraintsTunnelNameMinLength = 3
 
 	// Max length of tunnel name.
-	TunnelConstraintsTunnelNameMaxLength = 60
+	//
+	// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+	// (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
+	TunnelConstraintsTunnelNameMaxLength = 49
+
+	// Max length of SSH username.
+	TunnelConstraintsSshUserMaxLength = 60
 
 	// Max length of tunnel or port description.
 	TunnelConstraintsDescriptionMaxLength = 400
@@ -113,9 +122,10 @@ const (
 
 	// Regular expression that can match or validate tunnel ID strings.
 	//
-	// Tunnel IDs are fixed-length and have a limited character set of numbers and lowercase
-	// letters (minus vowels and y).
-	TunnelConstraintsNewTunnelIDPattern = "[a-z0-9][a-z0-9-]{1,58}[a-z0-9]"
+	// Tunnel IDs have a limited character set of numbers and lowercase letters. Limited to
+	// 49 characters to ensure tunnel URIs with ports and inspection suffixes remain within
+	// the DNS label limit of 63 characters.
+	TunnelConstraintsNewTunnelIDPattern = "[a-z0-9][a-z0-9-]{1,47}[a-z0-9]"
 
 	// Characters that are valid in tunnel IDs. Includes numbers and lowercase letters,
 	// excluding vowels and 'y' (to avoid accidentally generating any random words).
@@ -124,14 +134,17 @@ const (
 	// Regular expression that can match or validate tunnel alias strings.
 	//
 	// Tunnel Aliases are fixed-length and have a limited character set of numbers and
-	// lowercase letters (minus vowels and y).
-	TunnelConstraintsTunnelAliasPattern = "[" + TunnelConstraintsTunnelAliasChars + "]{3,60}"
+	// lowercase letters (minus vowels and y). Limited to 49 characters to ensure tunnel URIs
+	// with ports and inspection suffixes remain within the DNS label limit of 63 characters.
+	TunnelConstraintsTunnelAliasPattern = "[" + TunnelConstraintsTunnelAliasChars + "]{3,49}"
 
 	// Regular expression that can match or validate tunnel names.
 	//
 	// Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
-	// empty string because tunnels may be unnamed.
-	TunnelConstraintsTunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)"
+	// empty string because tunnels may be unnamed. Limited to 49 characters to ensure tunnel
+	// URIs with ports and inspection suffixes remain within the DNS label limit of 63
+	// characters.
+	TunnelConstraintsTunnelNamePattern = "([a-z0-9][a-z0-9-]{1,47}[a-z0-9])|(^$)"
 
 	// Regular expression that can match or validate tunnel or port labels.
 	TunnelConstraintsLabelPattern = "[\\w-=]{1,50}"
