@@ -1732,8 +1732,8 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         ((MockTunnelRelayStreamFactory)relayHost.StreamFactory).StreamFactory = async (accessToken) =>
         {
             reconnectStarted.TrySetResult();
-            // Block indefinitely until cancelled
-            await Task.Delay(-1, CancellationToken.None);
+            // Block indefinitely; the mock will cancel via WaitAsync(cancellation)
+            await Task.Delay(-1);
             throw new InvalidOperationException("Should not reach here");
         };
 
@@ -1743,6 +1743,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         // Wait for the reconnect attempt to start
         await relayHost.WaitForConnectionStatusAsync(
             ConnectionStatus.Connecting, cancellationToken: TimeoutToken);
+        await reconnectStarted.Task.WaitAsync(TimeoutToken);
 
         // Dispose the host while reconnect is in flight
         await relayHost.DisposeAsync();
@@ -1787,6 +1788,10 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         // Wait until host is fully disconnected (reconnect exhausted)
         await relayHost.WaitForConnectionStatusAsync(
             ConnectionStatus.Disconnected, cancellationToken: TimeoutToken);
+
+        // DisposeAsync awaits the reconnectTask, ensuring ReconnectAsync's catch
+        // block (which reports the event) has completed before we check.
+        await relayHost.DisposeAsync();
 
         // Verify the reconnect event was reported as "failed" (error), not "cancelled" (warning)
         var reconnectFailedEvent = managementClient.ReportedEvents.FirstOrDefault(
