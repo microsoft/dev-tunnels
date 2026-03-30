@@ -137,7 +137,7 @@ public class TunnelPort
     /// Should be provided if the <see cref="TunnelProtocol"/> is Ssh.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [StringLength(TunnelNameMaxLength)]
+    [StringLength(SshUserMaxLength)]
     public string? SshUser { get; set; }
 
     /// <summary>

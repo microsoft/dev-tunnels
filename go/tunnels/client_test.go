@@ -21,6 +21,14 @@ import (
 	tunnelstest "github.com/microsoft/dev-tunnels/go/tunnels/test"
 )
 
+func verboseLogger(t *testing.T) *log.Logger {
+	loggerOutput := io.Discard
+	if testing.Verbose() {
+		loggerOutput = os.Stdout
+	}
+	return log.New(loggerOutput, "", log.LstdFlags)
+}
+
 func TestSuccessfulConnect(t *testing.T) {
 	accessToken := "tunnel access-token"
 	relayServer, err := tunnelstest.NewRelayServer(
@@ -45,7 +53,7 @@ func TestSuccessfulConnect(t *testing.T) {
 		},
 	}
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	done := make(chan error)
 	go func() {
 		c, err := NewClient(logger, &tunnel, true)
@@ -95,7 +103,7 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 		},
 	}
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	c, _ := NewClient(logger, &tunnel, true)
 	err = c.Connect(ctx, "")
 	if err == nil {
@@ -104,7 +112,7 @@ func TestReturnsErrWithInvalidAccessToken(t *testing.T) {
 }
 
 func TestReturnsErrWhenTunnelIsNil(t *testing.T) {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	_, err := NewClient(logger, nil, true)
 	if err == nil {
 		t.Error("expected error, got nil")
@@ -112,7 +120,7 @@ func TestReturnsErrWhenTunnelIsNil(t *testing.T) {
 }
 
 func TestReturnsErrWhenEndpointsAreNil(t *testing.T) {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	tunnel := Tunnel{}
 	_, err := NewClient(logger, &tunnel, true)
 	if err == nil {
@@ -129,7 +137,7 @@ func TestReturnsErrWhenTunnelEndpointsDontMatchHostID(t *testing.T) {
 		},
 	}
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	c, _ := NewClient(logger, &tunnel, true)
 	err := c.Connect(ctx, "host2")
 	if err == nil {
@@ -149,7 +157,7 @@ func TestReturnsErrWhenEndpointGroupsContainMultipleHosts(t *testing.T) {
 		},
 	}
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	c, _ := NewClient(logger, &tunnel, true)
 	err := c.Connect(ctx, "host1")
 	if err == nil {
@@ -169,7 +177,7 @@ func TestReturnsErrWhenThereAreMoreThanOneEndpoints(t *testing.T) {
 		},
 	}
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	c, _ := NewClient(logger, &tunnel, true)
 	err := c.Connect(ctx, "")
 	if err == nil {
@@ -216,7 +224,7 @@ func TestPortForwarding(t *testing.T) {
 	ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := verboseLogger(t)
 	done := make(chan error)
 	go func() {
 		c, err := NewClient(logger, &tunnel, true)
@@ -295,3 +303,4 @@ func TestPortForwarding(t *testing.T) {
 		}
 	}
 }
+

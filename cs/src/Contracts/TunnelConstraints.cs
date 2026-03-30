@@ -43,7 +43,11 @@ public static class TunnelConstraints
     /// <summary>
     /// Max length of V2 tunnelId.
     /// </summary>
-    public const int NewTunnelIdMaxLength = 60;
+    /// <remarks>
+    /// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+    /// (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
+    /// </remarks>
+    public const int NewTunnelIdMaxLength = 49;
 
     /// <summary>
     /// Length of a tunnel alias.
@@ -59,8 +63,18 @@ public static class TunnelConstraints
     /// <summary>
     /// Max length of tunnel name.
     /// </summary>
+    /// <remarks>
+    /// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+    /// (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
+    /// </remarks>
     /// <seealso cref="Tunnel.Name"/>
-    public const int TunnelNameMaxLength = 60;
+    public const int TunnelNameMaxLength = 49;
+
+    /// <summary>
+    /// Max length of SSH username.
+    /// </summary>
+    /// <seealso cref="TunnelPort.SshUser"/>
+    public const int SshUserMaxLength = 60;
 
     /// <summary>
     /// Max length of tunnel or port description.
@@ -241,11 +255,12 @@ public static class TunnelConstraints
     /// Regular expression that can match or validate tunnel ID strings.
     /// </summary>
     /// <remarks>
-    /// Tunnel IDs are fixed-length and have a limited character set of
-    /// numbers and lowercase letters (minus vowels and y).
+    /// Tunnel IDs have a limited character set of numbers and lowercase letters.
+    /// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+    /// remain within the DNS label limit of 63 characters.
     /// </remarks>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string NewTunnelIdPattern = "[a-z0-9][a-z0-9-]{1,58}[a-z0-9]";
+    public const string NewTunnelIdPattern = "[a-z0-9][a-z0-9-]{1,47}[a-z0-9]";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel ID strings.
@@ -270,9 +285,11 @@ public static class TunnelConstraints
     /// <remarks>
     /// Tunnel Aliases are fixed-length and have a limited character set of
     /// numbers and lowercase letters (minus vowels and y).
+    /// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+    /// remain within the DNS label limit of 63 characters.
     /// </remarks>
     /// <seealso cref="Tunnel.TunnelId"/>
-    public const string TunnelAliasPattern = "[" + TunnelAliasChars + "]{3,60}";
+    public const string TunnelAliasPattern = "[" + TunnelAliasChars + "]{3,49}";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel alias strings.
@@ -290,9 +307,11 @@ public static class TunnelConstraints
     /// <remarks>
     /// Tunnel names are alphanumeric and may contain hyphens. The pattern also
     /// allows an empty string because tunnels may be unnamed.
+    /// Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+    /// remain within the DNS label limit of 63 characters.
     /// </remarks>
     /// <seealso cref="Tunnel.Name"/>
-    public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)";
+    public const string TunnelNamePattern = "([a-z0-9][a-z0-9-]{1,47}[a-z0-9])|(^$)";
 
     /// <summary>
     /// Regular expression that can match or validate tunnel names.
