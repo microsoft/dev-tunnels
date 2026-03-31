@@ -49,12 +49,13 @@ public class TunnelServiceProperties {
     static final String ppeFirstPartyAppId = "54c45752-bacd-424a-b928-652f3eca2b18";
 
     /**
-     * First-party app ID: `DEV-VSTunnels`
+     * Third-party app ID: `DEV-VSTunnelService-3P`
      *
      * Used for authenticating AAD/MSA users, and service principals outside the AME
-     * tenant, in the DEV service environment
+     * tenant, in the DEV service environment. This is a 3P app registration in the
+     * Microsoft corp tenant, replacing the former 1P FPA.
      */
-    static final String devFirstPartyAppId = "9c63851a-ba2b-40a5-94bd-890be43b9284";
+    static final String devFirstPartyAppId = "906ce216-6f2e-40be-875d-7fe1a9bc288a";
 
     /**
      * Third-party app ID: `tunnels-prod-app-sp`
