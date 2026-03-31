@@ -1710,4 +1710,97 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         wse.Data["HttpStatusCode"] = statusCode;
         throw wse;
     }
+
+    [Fact]
+    public async Task DisposeDuringReconnectReportsCancelledEvent()
+    {
+        var managementClient = new MockTunnelManagementClient
+        {
+            HostRelayUri = MockHostRelayUri,
+        };
+
+        var tunnel = CreateRelayTunnel(addClientEndpoint: false);
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+
+        // Connect the host
+        var multiChannelStream = await ConnectRelayHostAsync(relayHost, tunnel);
+        Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
+
+        // Make the reconnect hang so we can dispose while it's in flight.
+        var reconnectStarted = new TaskCompletionSource();
+        ((MockTunnelRelayStreamFactory)relayHost.StreamFactory).StreamFactory = async (accessToken) =>
+        {
+            reconnectStarted.TrySetResult();
+            // Block indefinitely; the mock will cancel via WaitAsync(cancellation)
+            await Task.Delay(-1);
+            throw new InvalidOperationException("Should not reach here");
+        };
+
+        // Drop the connection to trigger reconnection
+        await this.serverStream.DisposeAsync();
+
+        // Wait for the reconnect attempt to start
+        await relayHost.WaitForConnectionStatusAsync(
+            ConnectionStatus.Connecting, cancellationToken: TimeoutToken);
+        await reconnectStarted.Task.WaitAsync(TimeoutToken);
+
+        // Dispose the host while reconnect is in flight
+        await relayHost.DisposeAsync();
+        Assert.Equal(ConnectionStatus.Disconnected, relayHost.ConnectionStatus);
+
+        // Verify the reconnect event was reported as "cancelled" (warning), not "failed" (error)
+        var reconnectCancelledEvent = managementClient.ReportedEvents.FirstOrDefault(
+            e => e.Name?.Contains("reconnect_cancelled") == true);
+        var reconnectFailedEvent = managementClient.ReportedEvents.FirstOrDefault(
+            e => e.Name?.Contains("reconnect_failed") == true);
+
+        Assert.NotNull(reconnectCancelledEvent);
+        Assert.Equal(TunnelEvent.Warning, reconnectCancelledEvent.Severity);
+        Assert.Null(reconnectFailedEvent);
+    }
+
+    [Fact]
+    public async Task ReconnectFailureReportsFailedEvent()
+    {
+        var managementClient = new MockTunnelManagementClient
+        {
+            HostRelayUri = MockHostRelayUri,
+        };
+
+        var tunnel = CreateRelayTunnel(addClientEndpoint: false);
+        await managementClient.CreateTunnelAsync(tunnel, options: null, default);
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+
+        // Connect the host
+        var multiChannelStream = await ConnectRelayHostAsync(relayHost, tunnel);
+        Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
+
+        // Make every reconnect attempt fail with a non-retryable error
+        ((MockTunnelRelayStreamFactory)relayHost.StreamFactory).StreamFactory = (accessToken) =>
+        {
+            throw new InvalidOperationException("Simulated non-recoverable failure");
+        };
+
+        // Drop the connection to trigger reconnection
+        await this.serverStream.DisposeAsync();
+
+        // Wait until host is fully disconnected (reconnect exhausted)
+        await relayHost.WaitForConnectionStatusAsync(
+            ConnectionStatus.Disconnected, cancellationToken: TimeoutToken);
+
+        // DisposeAsync awaits the reconnectTask, ensuring ReconnectAsync's catch
+        // block (which reports the event) has completed before we check.
+        await relayHost.DisposeAsync();
+
+        // Verify the reconnect event was reported as "failed" (error), not "cancelled" (warning)
+        var reconnectFailedEvent = managementClient.ReportedEvents.FirstOrDefault(
+            e => e.Name?.Contains("reconnect_failed") == true);
+        var reconnectCancelledEvent = managementClient.ReportedEvents.FirstOrDefault(
+            e => e.Name?.Contains("reconnect_cancelled") == true);
+
+        Assert.NotNull(reconnectFailedEvent);
+        Assert.Equal(TunnelEvent.Error, reconnectFailedEvent.Severity);
+        Assert.Null(reconnectCancelledEvent);
+    }
 }
