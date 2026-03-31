@@ -50,7 +50,7 @@
 		"eslint-plugin-jsdoc": "^50.6.9",
 		"eslint-plugin-prettier": "^4.0.0",
 		"eslint-plugin-security": "^1.7.1",
-		"mocha": "^9.2.2",
+		"mocha": "^11.7.5",
 		"mocha-multi-reporters": "^1.1.7",
 		"moment": "^2.29.4",
 		"nerdbank-gitversioning": "^3.6.133",
