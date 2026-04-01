@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
 use thiserror::Error;
@@ -29,6 +29,9 @@ pub enum TunnelError {
 
     #[error("max reconnect attempts ({0}) exceeded")]
     MaxReconnectAttemptsExceeded(u32),
+    #[error("tunnel access token refresh failed")]
+    TokenRefreshFailed,
+
 
     #[error("proxy connection failed: {0}")]
     ProxyConnectionFailed(std::io::Error),
