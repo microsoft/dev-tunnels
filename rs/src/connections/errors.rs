@@ -27,6 +27,9 @@ pub enum TunnelError {
     #[error("port {0} already exists in the relay")]
     PortAlreadyExists(u32),
 
+    #[error("max reconnect attempts ({0}) exceeded")]
+    MaxReconnectAttemptsExceeded(u32),
+
     #[error("proxy connection failed: {0}")]
     ProxyConnectionFailed(std::io::Error),
 
