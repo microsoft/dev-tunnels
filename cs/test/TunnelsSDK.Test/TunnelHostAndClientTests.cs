@@ -1456,7 +1456,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     public async Task ConnectRelayHostThenConnectRelayClientsToForwardedPortStreamsThenSendData()
     {
         const int PortCount = 2;
-        const int ClientConnectionCount = 10;
+        const int ClientConnectionCount = 50;
 
         var managementClient = new MockTunnelManagementClient
         {
@@ -1495,13 +1495,14 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
 
                 Assert.Equal(ConnectionStatus.None, relayClient.ConnectionStatus);
 
-                await relayClient.ConnectAsync(tunnel, TimeoutToken);
+                await relayClient.ConnectAsync(tunnel, TestContext.Current.CancellationToken);
                 Assert.Equal(ConnectionStatus.Connected, relayClient.ConnectionStatus);
 
-                await relayClient.WaitForForwardedPortAsync(port, TimeoutToken);
-                using var stream = await relayClient.ConnectToForwardedPortAsync(port, TimeoutToken);
+                await relayClient.WaitForForwardedPortAsync(port, TestContext.Current.CancellationToken);
+                using var stream = await relayClient.ConnectToForwardedPortAsync(port, TestContext.Current.CancellationToken);
+                Assert.NotNull(stream);
 
-                var actualPort = await stream.ReadIntToEndAsync(TimeoutToken);
+                var actualPort = await stream.ReadIntToEndAsync(TestContext.Current.CancellationToken);
                 if (port != actualPort)
                 {
                     // Debugger.Launch();
@@ -1778,8 +1779,9 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
 
         // Make every reconnect attempt fail with a non-retryable error
-        ((MockTunnelRelayStreamFactory)relayHost.StreamFactory).StreamFactory = (accessToken) =>
+        ((MockTunnelRelayStreamFactory)relayHost.StreamFactory).StreamFactory = async (accessToken) =>
         {
+            await Task.Yield();
             throw new InvalidOperationException("Simulated non-recoverable failure");
         };
 
