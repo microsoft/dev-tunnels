@@ -87,6 +87,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private final Supplier<CompletableFuture<String>> userTokenCallback;
   private final String baseAddress;
   private final String apiVersion;
+  private final boolean isCustomDomain;
 
   public static final String[] ApiVersions = {
     "2023-09-27-preview"
@@ -130,6 +131,35 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     this.baseAddress = tunnelServiceUri != null ? tunnelServiceUri : prodServiceUri;
     this.httpClient = HttpClient.newHttpClient();
     this.apiVersion = apiVersion;
+    try {
+      this.isCustomDomain = new URI(this.baseAddress).getHost().startsWith("cp.");
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException("Invalid tunnel service URI: " + this.baseAddress, e);
+    }
+  }
+
+  /**
+   * Creates a TunnelManagementClient configured for a custom domain.
+   *
+   * <p>When a custom domain is configured (e.g., "app.github.dev"), control plane calls
+   * are routed to "cp.{domain}" and cluster ID hostname manipulation is skipped.
+   *
+   * @param customDomain  The custom domain (e.g., "app.github.dev").
+   * @param userAgents    User agents.
+   * @param userTokenCallback  Optional authentication callback.
+   * @param apiVersion    API version.
+   * @return A configured TunnelManagementClient instance.
+   */
+  public static TunnelManagementClient forCustomDomain(
+      String customDomain,
+      ProductHeaderValue[] userAgents,
+      Supplier<CompletableFuture<String>> userTokenCallback,
+      String apiVersion) {
+    if (StringUtils.isBlank(customDomain)) {
+      throw new IllegalArgumentException("Custom domain cannot be blank");
+    }
+    String serviceUri = "https://cp." + customDomain;
+    return new TunnelManagementClient(userAgents, userTokenCallback, serviceUri, apiVersion);
   }
 
   private <T, U> CompletableFuture<U> requestAsync(
@@ -301,7 +331,7 @@ public class TunnelManagementClient implements ITunnelManagementClient {
     int port = baseAddress.getPort();
 
 		// tunnels.local.api.visualstudio.com resolves to localhost (for local development).
-    if (StringUtils.isNotBlank(clusterId)) {
+    if (StringUtils.isNotBlank(clusterId) && !this.isCustomDomain) {
       if (!baseAddress.getHost().equals("localhost")
           && !baseAddress.getHost().equals("tunnels.local.api.visualstudio.com")
           && !baseAddress.getHost().startsWith(clusterId + ".")) {

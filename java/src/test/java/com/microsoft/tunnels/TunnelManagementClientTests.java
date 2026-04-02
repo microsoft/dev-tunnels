@@ -15,6 +15,8 @@ import com.microsoft.tunnels.contracts.TunnelAccessScopes;
 import com.microsoft.tunnels.contracts.TunnelPort;
 import com.microsoft.tunnels.contracts.TunnelProtocol;
 import com.microsoft.tunnels.management.HttpResponseException;
+import com.microsoft.tunnels.management.ProductHeaderValue;
+import com.microsoft.tunnels.management.TunnelManagementClient;
 import com.microsoft.tunnels.management.TunnelRequestOptions;
 
 import java.util.Arrays;
@@ -26,6 +28,25 @@ import org.junit.Test;
  * TunnelManagementClient tests.
  */
 public class TunnelManagementClientTests extends TunnelTest {
+
+  @Test
+  public void forCustomDomainCreatesClient() {
+    var client = TunnelManagementClient.forCustomDomain(
+        "app.github.dev",
+        new ProductHeaderValue[] { userAgent },
+        null,
+        "2023-09-27-preview");
+    assertNotNull(client);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void forCustomDomainRejectsBlank() {
+    TunnelManagementClient.forCustomDomain(
+        "",
+        new ProductHeaderValue[] { userAgent },
+        null,
+        "2023-09-27-preview");
+  }
 
   @Test
   public void createTunnel() {

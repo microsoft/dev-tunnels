@@ -129,6 +129,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private readonly baseAddress: string;
     private readonly userTokenCallback: () => Promise<string | null>;
     private readonly userAgents: string;
+    private readonly isCustomDomain: boolean;
 
     private readonly reportProgressEmitter = new Emitter<TunnelReportProgressEventArgs>();
 
@@ -243,6 +244,37 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
 
         this.baseAddress = tunnelServiceUri;
+        this.isCustomDomain = new URL(tunnelServiceUri).hostname.startsWith('cp.');
+    }
+
+    /**
+     * Creates a `TunnelManagementHttpClient` configured for a custom domain.
+     *
+     * When a custom domain is configured (e.g., "app.github.dev"), control plane calls
+     * are routed to "cp.{domain}" and cluster ID hostname manipulation is skipped
+     * because routing is handled at the infrastructure level.
+     *
+     * @param customDomain The custom domain (e.g., "app.github.dev").
+     * @param userAgents User agent(s).
+     * @param apiVersion API version.
+     * @param userTokenCallback Optional authentication callback.
+     * @param httpsAgent Optional HTTPS agent.
+     * @param adapter Optional axios adapter.
+     */
+    public static forCustomDomain(
+        customDomain: string,
+        userAgents: (ProductHeaderValue | string)[] | ProductHeaderValue | string,
+        apiVersion: ManagementApiVersions,
+        userTokenCallback?: () => Promise<string | null>,
+        httpsAgent?: https.Agent,
+        adapter?: AxiosAdapter,
+    ): TunnelManagementHttpClient {
+        if (!customDomain) {
+            throw new TypeError('Custom domain must be a non-empty string.');
+        }
+        const serviceUri = `https://cp.${customDomain}/`;
+        return new TunnelManagementHttpClient(
+            userAgents, apiVersion, userTokenCallback, serviceUri, httpsAgent, adapter);
     }
 
     public async listTunnels(
@@ -959,7 +991,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
         }
         let baseAddress = this.baseAddress;
-        if (clusterId) {
+        if (clusterId && !this.isCustomDomain) {
             const url = new URL(baseAddress);
             const portNumber = parseInt(url.port, 10);
 
