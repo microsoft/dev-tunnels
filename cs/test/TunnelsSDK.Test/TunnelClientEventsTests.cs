@@ -103,35 +103,53 @@ public class TunnelClientEventsTests
         var event2 = new TunnelEvent("event-2");
         var event3 = new TunnelEvent("event-3");
 
-        var requestCapture = new List<HttpRequestMessage>();
+        var requestContentCapture = new List<string>();
+        var handlerStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
         var handler = new MockHttpMessageHandler(
-            (message, ct) =>
+            async (message, ct) =>
             {
-                requestCapture.Add(message);
-                var result = new HttpResponseMessage(HttpStatusCode.OK);
-                return Task.FromResult(result);
+                // Signal that the background task has dequeued from the queue and is
+                // now sending. While this handler is blocked, additional events enqueued
+                // by the test will accumulate in the queue and be batched together.
+                handlerStarted.TrySetResult();
+                await gate.Task;
+
+                var content = await message.Content!.ReadAsStringAsync(ct);
+                requestContentCapture.Add(content);
+                return new HttpResponseMessage(HttpStatusCode.OK);
             });
 
         var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
         client.EnableEventsReporting = true;
 
-        // Act - report multiple events for the same tunnel
+        // Report the first event, which starts the background processing task.
         client.ReportEvent(TestTunnel, event1);
+
+        // Wait until the background task has dequeued event1 and entered the handler.
+        await handlerStarted.Task.WaitAsync(this.timeout);
+
+        // Report remaining events while the handler is blocked.
+        // They accumulate in the queue since the processing loop can't drain them yet.
         client.ReportEvent(TestTunnel, event2);
         client.ReportEvent(TestTunnel, event3);
 
-        // Wait for the expected number of requests to be processed
-        await WaitForRequestsAsync(requestCapture, 1);
+        // Release the handler so the first request (event1) completes.
+        gate.SetResult();
 
-        // Assert - should batch into a single request
-        Assert.Single(requestCapture);
-        var request = requestCapture[0];
-        Assert.Equal(HttpMethod.Post, request.Method);
+        // Wait for both requests: first with event1, second with batched event2+event3.
+        var endTime = DateTime.Now.Add(TimeSpan.FromMilliseconds(5000));
+        while (DateTime.Now < endTime && requestContentCapture.Count < 2)
+        {
+            await Task.Delay(10, this.timeout);
+        }
 
-        var content = await request.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("event-1", content);
-        Assert.Contains("event-2", content);
-        Assert.Contains("event-3", content);
+        // Assert - second request should have batched events 2 and 3 together.
+        Assert.Equal(2, requestContentCapture.Count);
+        Assert.Contains("event-1", requestContentCapture[0]);
+        Assert.Contains("event-2", requestContentCapture[1]);
+        Assert.Contains("event-3", requestContentCapture[1]);
     }
 
     [Fact]

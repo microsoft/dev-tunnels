@@ -1784,21 +1784,25 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         Assert.Equal(ConnectionStatus.Connected, relayHost.ConnectionStatus);
 
         // Make every reconnect attempt fail with a non-retryable error
-        ((MockTunnelRelayStreamFactory)relayHost.StreamFactory).StreamFactory = async (accessToken) =>
+        ((MockTunnelRelayStreamFactory)relayHost.StreamFactory).StreamFactory = (accessToken) =>
         {
-            await Task.Yield();
             throw new InvalidOperationException("Simulated non-recoverable failure");
         };
 
         // Drop the connection to trigger reconnection
         await this.serverStream.DisposeAsync();
 
-        // Wait until host is fully disconnected (reconnect exhausted)
-        await relayHost.WaitForConnectionStatusAsync(
-            ConnectionStatus.Disconnected, cancellationToken: TimeoutToken);
+        // Poll for the reconnect outcome event directly, rather than relying on
+        // ConnectionStatus transitions + DisposeAsync synchronization.
+        // The reconnect_failed event is reported by ReconnectAsync's catch block
+        // AFTER ConnectSessionAsync sets ConnectionStatus=Disconnected, so waiting
+        // for Disconnected alone is not sufficient.
+        await TaskExtensions.WaitUntil(
+            () => managementClient.ReportedEvents.Any(
+                e => e.Name?.Contains("reconnect_failed") == true ||
+                     e.Name?.Contains("reconnect_cancelled") == true),
+            TimeoutToken).WithTimeout(Timeout);
 
-        // DisposeAsync awaits the reconnectTask, ensuring ReconnectAsync's catch
-        // block (which reports the event) has completed before we check.
         await relayHost.DisposeAsync();
 
         // Verify the reconnect event was reported as "failed" (error), not "cancelled" (warning)
