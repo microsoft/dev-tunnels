@@ -89,7 +89,7 @@ public class TunnelClientEventsTests
         Assert.Contains("api-version=2023-09-27-preview", request.RequestUri.ToString());
 
         // Verify the request body contains the event
-        var content = await request.Content!.ReadAsStringAsync();
+        var content = await request.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("test-event", content);
         Assert.Contains("Test event details", content);
         Assert.Contains("property1", content);
@@ -128,7 +128,7 @@ public class TunnelClientEventsTests
         var request = requestCapture[0];
         Assert.Equal(HttpMethod.Post, request.Method);
 
-        var content = await request.Content!.ReadAsStringAsync();
+        var content = await request.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("event-1", content);
         Assert.Contains("event-2", content);
         Assert.Contains("event-3", content);
@@ -165,14 +165,14 @@ public class TunnelClientEventsTests
         // Check first request
         var request1 = requestCapture[0];
         Assert.Equal(HttpMethod.Post, request1.Method);
-        var content1 = await request1.Content!.ReadAsStringAsync();
+        var content1 = await request1.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("event-1", content1);
         Assert.DoesNotContain("event-2", content1);
 
         // Check second request
         var request2 = requestCapture[1];
         Assert.Equal(HttpMethod.Post, request2.Method);
-        var content2 = await request2.Content!.ReadAsStringAsync();
+        var content2 = await request2.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("event-2", content2);
         Assert.DoesNotContain("event-1", content2);
     }
@@ -356,7 +356,7 @@ public class TunnelClientEventsTests
 
         // Wait for the expected number of requests to be processed
         // Even though we disposed immediately, the background task should complete
-        Task.WaitAll(
+        await Task.WhenAll(
             disposeTask.AsTask(),
             WaitForRequestsAsync(requestCapture, 1)
         );
@@ -368,7 +368,7 @@ public class TunnelClientEventsTests
         Assert.Contains("/events", request.RequestUri!.ToString());
 
         // Verify the request body contains the event
-        var content = await request.Content!.ReadAsStringAsync();
+        var content = await request.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("test-event-dispose", content);
     }
 
