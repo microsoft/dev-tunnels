@@ -610,6 +610,11 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         var testPort = GetAvailableTcpPort();
         using var remotePortStreamer = await pfs.StreamFromRemotePortAsync(
             IPAddress.Loopback, testPort, CancellationToken.None);
+        Assert.NotNull(remotePortStreamer);
+        Assert.Equal(testPort, remotePortStreamer.RemotePort);
+
+        // Disposing this object stops forwarding the port.
+        remotePortStreamer.Dispose();
 
         // Now a connection attempt should fail.
         await Assert.ThrowsAsync<SocketException>(async () =>
