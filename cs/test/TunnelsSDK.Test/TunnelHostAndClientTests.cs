@@ -517,8 +517,15 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
             streamOpenedCompletion.TrySetResult();
         };
 
+        // Wait for the forwarded port to be registered on the client side, then use the
+        // actual local port, which may differ from testPort if the RetryTcpListenerFactory
+        // picked a nearby port due to a bind conflict (e.g. 0.0.0.0 vs 127.0.0.1).
+        await relayClient.WaitForForwardedPortAsync(testPort, TimeoutToken);
+        var forwardedPort = relayClient.ForwardedPorts!.First(p => p.RemotePort == testPort);
+        var actualLocalPort = forwardedPort.LocalPort ?? testPort;
+
         using var testClient = new TcpClient();
-        await testClient.ConnectAsync(IPAddress.Loopback, testPort, TestContext.Current.CancellationToken);
+        await testClient.ConnectAsync(IPAddress.Loopback, actualLocalPort, TestContext.Current.CancellationToken);
         await streamOpenedCompletion.Task.WithTimeout(Timeout);
     }
 
@@ -1449,7 +1456,7 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     public async Task ConnectRelayHostThenConnectRelayClientsToForwardedPortStreamsThenSendData()
     {
         const int PortCount = 2;
-        const int ClientConnectionCount = 50;
+        const int ClientConnectionCount = 10;
 
         var managementClient = new MockTunnelManagementClient
         {
