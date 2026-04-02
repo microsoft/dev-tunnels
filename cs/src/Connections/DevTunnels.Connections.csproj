@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>Microsoft.DevTunnels.Connections</AssemblyName>
     <RootNamespace>Microsoft.DevTunnels.Connections</RootNamespace>
-    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <IsPackable>true</IsPackable>
     <UseVsSaaSSdk>false</UseVsSaaSSdk>

@@ -38,7 +38,7 @@ public class ContractsGenerator : ISourceGenerator
     public void Execute(GeneratorExecutionContext context)
     {
         // Path of the ThisAssembly type's location will be like:
-        //   cs/bin/obj/[projectname]/Release/net6.0/[assemblyname].Version.cs
+        //   cs/bin/obj/[projectname]/Release/net8.0/[assemblyname].Version.cs
         var thisAssemblyType = context.Compilation.GetSymbolsWithName(
             nameof(ThisAssembly), SymbolFilter.Type).Single();
         var thisAssemblyPath = thisAssemblyType.Locations.Single().GetLineSpan().Path;
