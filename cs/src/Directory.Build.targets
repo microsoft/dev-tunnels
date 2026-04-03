@@ -6,9 +6,9 @@
     <Target
         Name="GenerateDocumentation"
         AfterTargets="Build"
-        Condition="'$(GenerateDocs)'=='true' AND '$(TargetFramework)' == 'net6.0'"
+        Condition="'$(GenerateDocs)'=='true' AND '$(TargetFramework)' == 'net8.0'"
     >
-        <!-- This target only runs for the .NET 6 target; xmldocmd does not yet support .NET 8. -->
+        <!-- This target only runs for the .NET 8 target to avoid running twice in multi-targeted builds. -->
         <!-- It requires the `xmldocmd` tool: dotnet tool install -g xmldocmd -->
         <!-- Invoke this target with: dotnet build -c Release TunnelsSDK.sln -p:GenerateDocs=true -->
 
