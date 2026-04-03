@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Microsoft.DevTunnels.Test</AssemblyName>
     <RootNamespace>Microsoft.DevTunnels.Test</RootNamespace>
@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nerdbank.Streams" Version="2.5.76" />
+    <PackageReference Include="Nerdbank.Streams" Version="$(NerdbankStreamsVersion)" />
     <PackageReference Include="Microsoft.DevTunnels.Ssh.Tcp" Version="$(DevTunnelsSshPackageVersion)" />
   </ItemGroup>
 

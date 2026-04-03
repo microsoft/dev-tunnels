@@ -261,6 +261,65 @@ public class TunnelManagementClientTests
             (r) => Assert.Equal(policyRequirement2, r));
     }
 
+    [Fact]
+    public async Task CustomDomainDoesNotModifyHostname()
+    {
+        Uri capturedUri = null;
+        var tunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+            ClusterId = ClusterId,
+        };
+
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                capturedUri = message.RequestUri;
+                var result = new HttpResponseMessage(HttpStatusCode.OK);
+                result.Content = JsonContent.Create(tunnel);
+                return Task.FromResult(result);
+            });
+
+        var client = TunnelManagementClient.ForCustomDomain(
+            "app.github.dev",
+            new[] { this.userAgent },
+            httpHandler: handler);
+
+        await client.GetTunnelAsync(tunnel, options: null, this.timeout);
+
+        Assert.NotNull(capturedUri);
+        Assert.Equal("cp.app.github.dev", capturedUri.Host);
+    }
+
+    [Fact]
+    public async Task StandardServiceUriReplacesClusterIdInHostname()
+    {
+        Uri capturedUri = null;
+        var tunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+            ClusterId = ClusterId,
+        };
+
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                capturedUri = message.RequestUri;
+                var result = new HttpResponseMessage(HttpStatusCode.OK);
+                result.Content = JsonContent.Create(tunnel);
+                return Task.FromResult(result);
+            });
+
+        var client = new TunnelManagementClient(
+            this.userAgent,
+            tunnelServiceUri: new Uri("https://global.rel.tunnels.api.visualstudio.com/"),
+            httpHandler: handler);
+
+        await client.GetTunnelAsync(tunnel, options: null, this.timeout);
+
+        Assert.NotNull(capturedUri);
+        Assert.StartsWith($"{ClusterId}.", capturedUri.Host);
+    }
 
 
     private sealed class MockHttpMessageHandler : DelegatingHandler

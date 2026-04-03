@@ -346,4 +346,61 @@ export class TunnelManagementTests {
         assert.match(error.message, /firewall/);
         assert.match(error.message, new RegExp(new URL(TunnelManagementTests.testServiceUri).host));
     }
+
+    @test
+    public async customDomainDoesNotModifyHostname() {
+        const client = TunnelManagementHttpClient.forCustomDomain(
+            'app.github.dev',
+            'test/0.0.0',
+            ManagementApiVersions.Version20230927preview,
+        );
+
+        let capturedUri: string | undefined;
+        (<any>client).axiosRequest = async (config: AxiosRequestConfig) => {
+            capturedUri = config.url;
+            return {
+                data: { tunnelId: 'tnnl0001', clusterId: 'usw2' },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config,
+            } as AxiosResponse;
+        };
+
+        const tunnel: Tunnel = { tunnelId: 'tnnl0001', clusterId: 'usw2' };
+        await client.getTunnel(tunnel);
+
+        assert.ok(capturedUri);
+        const url = new URL(capturedUri!);
+        assert.strictEqual(url.hostname, 'cp.app.github.dev');
+    }
+
+    @test
+    public async standardServiceUriReplacesClusterIdInHostname() {
+        const client = new TunnelManagementHttpClient(
+            'test/0.0.0',
+            ManagementApiVersions.Version20230927preview,
+            undefined,
+            TunnelManagementTests.testServiceUri,
+        );
+
+        let capturedUri: string | undefined;
+        (<any>client).axiosRequest = async (config: AxiosRequestConfig) => {
+            capturedUri = config.url;
+            return {
+                data: { tunnelId: 'tnnl0001', clusterId: 'usw2' },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config,
+            } as AxiosResponse;
+        };
+
+        const tunnel: Tunnel = { tunnelId: 'tnnl0001', clusterId: 'usw2' };
+        await client.getTunnel(tunnel);
+
+        assert.ok(capturedUri);
+        const url = new URL(capturedUri!);
+        assert.ok(url.hostname.startsWith('usw2.'), `Expected hostname to start with usw2., got ${url.hostname}`);
+    }
 }

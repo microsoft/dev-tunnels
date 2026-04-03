@@ -1,8 +1,8 @@
 steps:
-- task: NodeTool@0
-  displayName: 'Use Node 18.x'
+- task: UseNode@1
+  displayName: 'Use Node.js 24.x'
   inputs:
-    versionSpec: 18.x
+    version: '24.x'
 
 - task: Npm@1
   displayName: 'Restore npm packages'

@@ -65,7 +65,6 @@ public static class TunnelUserAgent
         var os = RuntimeInformation.OSDescription;
         headerComments.Add("OS" + ":" + os.ToString());
 
-#if NET6_0_OR_GREATER
         if (OperatingSystem.IsWindows())
         {
             string registryKeyName = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows365";
@@ -78,7 +77,7 @@ public static class TunnelUserAgent
                 headerComments.Add("Windows-Partner-Id" + ":" + retrievedValue.ToString());
             }
         }
-#endif
+
         if (headerComments.Any())
         {
             string headerCommentValue = "(" + string.Join("; ", headerComments) + ")";

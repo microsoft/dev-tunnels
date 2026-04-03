@@ -89,6 +89,7 @@ type Manager struct {
 	additionalHeaders map[string]string
 	userAgents        []UserAgent
 	apiVersion        string
+	isCustomDomain    bool
 }
 
 // Creates a new Manager used for interacting with the Tunnels APIs.
@@ -128,7 +129,21 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 		client = httpHandler
 	}
 
-	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents, apiVersion: apiVersion}, nil
+	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents, apiVersion: apiVersion, isCustomDomain: strings.HasPrefix(tunnelServiceUrl.Hostname(), "cp.")}, nil
+}
+
+// NewManagerForCustomDomain creates a Manager configured for a custom domain.
+// When a custom domain is configured (e.g., "app.github.dev"), control plane calls
+// are routed to "cp.{domain}" and cluster ID hostname manipulation is skipped.
+func NewManagerForCustomDomain(customDomain string, userAgents []UserAgent, tp tokenProviderfn, httpHandler *http.Client, apiVersion string) (*Manager, error) {
+	if customDomain == "" {
+		return nil, fmt.Errorf("custom domain cannot be empty")
+	}
+	serviceUrl, err := url.Parse(fmt.Sprintf("https://cp.%s/", customDomain))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing custom domain URL: %w", err)
+	}
+	return NewManager(userAgents, tp, serviceUrl, httpHandler, apiVersion)
 }
 
 // Lists tunnels owned by the authenticated user.
@@ -871,7 +886,7 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 
 func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) *url.URL {
 	baseAddress := m.uri
-	if clusterId != "" {
+	if clusterId != "" && !m.isCustomDomain {
 		// tunnels.local.api.visualstudio.com resolves to localhost (for local development).
 		if baseAddress.Host != "localhost" &&
 			baseAddress.Host != "tunnels.local.api.visualstudio.com" &&

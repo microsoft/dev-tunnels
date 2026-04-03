@@ -5,7 +5,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -110,7 +109,6 @@ namespace Microsoft.DevTunnels.Connections
         {
             get
             {
-#if NET8_0_OR_GREATER
                 var responseHeaders = (this.socket as ClientWebSocket)?.HttpResponseHeaders;
                 if (responseHeaders?.TryGetValue("VsSaaS-Request-ID", out var requestIdValues) == true)
                 {
@@ -120,7 +118,6 @@ namespace Microsoft.DevTunnels.Connections
                         return requestId;
                     }
                 }
-#endif
 
                 return null;
             }
@@ -133,10 +130,8 @@ namespace Microsoft.DevTunnels.Connections
         {
             var socket = new ClientWebSocket();
 
-#if NET8_0_OR_GREATER
             // Enable access to HTTP response headers.
             socket.Options.CollectHttpResponseDetails = true;
-#endif
 
             try
             {
@@ -147,31 +142,10 @@ namespace Microsoft.DevTunnels.Connections
             catch (WebSocketException wse) when (wse.WebSocketErrorCode == WebSocketError.NotAWebSocket)
             {
                 // The http request didn't upgrade to a web socket and instead may have returned an error status code.
-#if NET8_0_OR_GREATER
                 if ((int)socket.HttpStatusCode >= 400)
                 {
                     TunnelConnectionException.SetHttpStatusCode(wse, socket.HttpStatusCode);
                 }
-#else
-                // Socket.HttpStatusCode is not available in older versions of .NET.
-                // As a workaround, check for "'{actual response code}'" pattern in the exception message,
-                // which may look like this: "The server returned status code '403' when status code '101' was expected".
-                int i = wse.Message.IndexOf('\'');
-                if (i >= 0)
-                {
-                    int j = wse.Message.IndexOf('\'', i + 1);
-                    if (j > i + 1 &&
-                        int.TryParse(
-                            wse.Message.Substring(i + 1, j - i - 1),
-                            NumberStyles.None,
-                            CultureInfo.InvariantCulture,
-                            out var statusCode) &&
-                        statusCode != 101)
-                    {
-                        TunnelConnectionException.SetHttpStatusCode(wse, (HttpStatusCode)statusCode);
-                    }
-                }
-#endif
 
                 socket.Dispose();
                 throw;

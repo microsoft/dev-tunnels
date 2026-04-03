@@ -30,20 +30,21 @@
 
   <!-- NuGet Package Versions -->
   <PropertyGroup>
-    <AltcoverVersion>8.9.3</AltcoverVersion>
-    <FluentAssertionsVersion>5.4.1</FluentAssertionsVersion>
-    <FxCopAnalyzersPackageVersion>3.3.0</FxCopAnalyzersPackageVersion>
-    <MicroBuildCoreVersion>0.3.0</MicroBuildCoreVersion>
-    <MicrosoftAspNetCoreWebUtilitiesPackageVersion>1.0.3</MicrosoftAspNetCoreWebUtilitiesPackageVersion>
-    <MicrosoftNETTestSdkVersion>15.8.0</MicrosoftNETTestSdkVersion>
-    <MoqVersion>4.9.0</MoqVersion>
-    <NerdBankGitVersioningVersion>3.6.133</NerdBankGitVersioningVersion>
-    <ReportGeneratorVersion>5.3.9</ReportGeneratorVersion>
-    <SystemTextEncodingsWebPackageVersion>4.7.2</SystemTextEncodingsWebPackageVersion>
-    <VisualStudioValidationVersion>15.5.31</VisualStudioValidationVersion>
-    <DevTunnelsSshPackageVersion>3.12.11</DevTunnelsSshPackageVersion>
-    <XunitRunnerVisualStudioVersion>2.4.0</XunitRunnerVisualStudioVersion>
-    <XunitVersion>2.4.0</XunitVersion>
+    <AltcoverVersion>9.0.102</AltcoverVersion>
+    <FluentAssertionsVersion>8.9.0</FluentAssertionsVersion>
+    <NetAnalyzersPackageVersion>10.0.201</NetAnalyzersPackageVersion>
+    <MicroBuildCoreVersion>1.0.0</MicroBuildCoreVersion>
+    <MicrosoftAspNetCoreWebUtilitiesPackageVersion>8.0.25</MicrosoftAspNetCoreWebUtilitiesPackageVersion>
+    <MicrosoftNETTestSdkVersion>18.3.0</MicrosoftNETTestSdkVersion>
+    <MoqVersion>4.20.72</MoqVersion>
+    <NerdBankGitVersioningVersion>3.9.50</NerdBankGitVersioningVersion>
+    <NerdbankStreamsVersion>2.13.16</NerdbankStreamsVersion>
+    <ReportGeneratorVersion>5.5.4</ReportGeneratorVersion>
+    <VisualStudioValidationVersion>17.13.22</VisualStudioValidationVersion>
+    <DevTunnelsSshPackageVersion>3.12.24</DevTunnelsSshPackageVersion>
+    <XunitRunnerVisualStudioVersion>3.1.5</XunitRunnerVisualStudioVersion>
+    <XunitV3Version>3.2.2</XunitV3Version>
+    <XunitV3ExtensibilityCoreVersion>3.2.2</XunitV3ExtensibilityCoreVersion>
   </PropertyGroup>
 
   <!-- Common project settings (except dirs.proj) -->
@@ -51,7 +52,7 @@
     <When Condition="'$(IsTraversal)'!='true'">
       <!-- Common Package Refs -->
       <ItemGroup>
-        <PackageReference Include="MicroBuild.Core" Version="$(MicroBuildCoreVersion)" PrivateAssets="All" ExcludeAssets="Runtime" />
+        <PackageReference Include="Microsoft.VisualStudioEng.MicroBuild.Core" Version="$(MicroBuildCoreVersion)" PrivateAssets="All" ExcludeAssets="Runtime" />
         <PackageReference Include="Nerdbank.GitVersioning" Version="$(NerdBankGitVersioningVersion)" PrivateAssets="All" />
         <PackageReference Condition="'$(UseVisualStudioValidation)'!='false'" Include="Microsoft.VisualStudio.Validation" Version="$(VisualStudioValidationVersion)" />
       </ItemGroup>
@@ -101,7 +102,8 @@
         <PackageReference Include="Moq" Version="$(MoqVersion)" />
         <PackageReference Include="ReportGenerator" Version="$(ReportGeneratorVersion)" />
         <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVisualStudioVersion)" />
-        <PackageReference Include="xunit" Version="$(XunitVersion)" />
+        <PackageReference Include="xunit.v3" Version="$(XunitV3Version)" />
+        <PackageReference Include="xunit.v3.extensibility.core" Version="$(XunitV3ExtensibilityCoreVersion)" /> 
       </ItemGroup>
     </When>
   </Choose>
@@ -130,7 +132,7 @@
         <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
       </PropertyGroup>
       <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="$(FxCopAnalyzersPackageVersion)">
+        <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="$(NetAnalyzersPackageVersion)">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
