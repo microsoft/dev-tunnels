@@ -995,3 +995,48 @@ func TestValidTokenScopes(t *testing.T) {
 		t.Errorf("Multiple scopes should not be valid without allowMultiple flag")
 	}
 }
+
+func TestCustomDomainDoesNotModifyHostname(t *testing.T) {
+	manager, err := NewManagerForCustomDomain(
+		"app.github.dev",
+		userAgentManagerTest,
+		getUserToken,
+		nil,
+		"2023-09-27-preview",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	tunnel := &Tunnel{
+		TunnelID:  "tnnl0001",
+		ClusterID: "usw2",
+	}
+	uri := manager.buildUri(tunnel.ClusterID, fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID), nil, "")
+	if uri.Hostname() != "cp.app.github.dev" {
+		t.Errorf("Expected hostname cp.app.github.dev, got %s", uri.Hostname())
+	}
+}
+
+func TestStandardServiceUriReplacesClusterId(t *testing.T) {
+	serviceUrl, _ := url.Parse(ServiceProperties.ServiceURI)
+	manager, err := NewManager(
+		userAgentManagerTest,
+		getUserToken,
+		serviceUrl,
+		nil,
+		"2023-09-27-preview",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	tunnel := &Tunnel{
+		TunnelID:  "tnnl0001",
+		ClusterID: "usw2",
+	}
+	uri := manager.buildUri(tunnel.ClusterID, fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID), nil, "")
+	if !strings.HasPrefix(uri.Hostname(), "usw2.") {
+		t.Errorf("Expected hostname to start with usw2., got %s", uri.Hostname())
+	}
+}

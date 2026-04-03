@@ -89,6 +89,7 @@ namespace Microsoft.DevTunnels.Management
 
         private readonly HttpClient httpClient;
         private readonly Func<Task<AuthenticationHeaderValue?>> userTokenCallback;
+        private readonly bool isCustomDomain;
 
         private class EventInfo
         {
@@ -223,6 +224,8 @@ namespace Microsoft.DevTunnels.Management
                     $"Invalid tunnel service URI: {tunnelServiceUri}", nameof(tunnelServiceUri));
             }
 
+            this.isCustomDomain = tunnelServiceUri.Host.StartsWith("cp.");
+
             // The `SocketsHttpHandler` or `HttpClientHandler` automatic redirection is disabled
             // because they do not keep the Authorization header when redirecting. This handler
             // will keep all headers when redirecting, and also supports switching the behavior
@@ -233,6 +236,33 @@ namespace Microsoft.DevTunnels.Management
             {
                 BaseAddress = tunnelServiceUri,
             };
+        }
+
+        /// <summary>
+        /// Creates a <see cref="TunnelManagementClient"/> configured for a custom domain.
+        /// </summary>
+        /// <remarks>
+        /// When a custom domain is configured (e.g., "app.github.dev"), control plane calls
+        /// are routed to "cp.{domain}" and cluster ID hostname manipulation is skipped
+        /// because routing is handled at the infrastructure level.
+        /// </remarks>
+        /// <param name="customDomain">The custom domain (e.g., "app.github.dev").</param>
+        /// <param name="userAgents">User agents.</param>
+        /// <param name="userTokenCallback">Optional authentication callback.</param>
+        /// <param name="httpHandler">Optional HTTP handler.</param>
+        /// <param name="apiVersion">API version.</param>
+        /// <returns>A configured <see cref="TunnelManagementClient"/> instance.</returns>
+        public static TunnelManagementClient ForCustomDomain(
+            string customDomain,
+            ProductInfoHeaderValue[] userAgents,
+            Func<Task<AuthenticationHeaderValue?>>? userTokenCallback = null,
+            HttpMessageHandler? httpHandler = null,
+            ManagementApiVersions apiVersion = DefaultApiVersion)
+        {
+            Requires.NotNullOrEmpty(customDomain, nameof(customDomain));
+            var serviceUri = new Uri($"https://cp.{customDomain}/");
+            return new TunnelManagementClient(
+                userAgents, userTokenCallback, serviceUri, httpHandler, apiVersion);
         }
 
         /// <summary>
@@ -836,7 +866,7 @@ namespace Microsoft.DevTunnels.Management
             var baseAddress = this.httpClient.BaseAddress!;
             var builder = new UriBuilder(baseAddress);
 
-            if (baseAddress.HostNameType == UriHostNameType.Dns)
+            if (baseAddress.HostNameType == UriHostNameType.Dns && !this.isCustomDomain)
             {
                 builder.Host = ReplaceTunnelServiceHostnameClusterId(builder.Host, clusterId);
             }
