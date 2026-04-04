@@ -55,18 +55,20 @@ fn test_reconnect_options_defaults() {
     assert!(opts.token_refresher.is_none(), "token_refresher should be None by default");
 }
 
-// @group UnitTests > ReconnectOptions : max_attempts=0 triggers immediately
+// @group UnitTests > ReconnectOptions : max_attempts=0 is preserved in configuration
 #[cfg(feature = "connections")]
 #[test]
-fn test_max_attempts_zero_triggers_on_first_attempt() {
+fn test_max_attempts_zero_is_preserved_in_options() {
     let opts = ReconnectOptions {
         max_attempts: Some(0),
         ..Default::default()
     };
-    let attempt: u32 = 1;
-    if let Some(max) = opts.max_attempts {
-        assert!(attempt > max, "attempt 1 should exceed max_attempts=0");
-    }
+
+    assert_eq!(opts.max_attempts, Some(0));
+    assert_eq!(opts.initial_delay_ms, 1_000);
+    assert_eq!(opts.max_delay_ms, 13_000);
+    assert!(opts.keep_alive_interval.is_none(), "keep_alive_interval should remain None by default");
+    assert!(opts.token_refresher.is_none(), "token_refresher should remain None by default");
 }
 
 // @group UnitTests > KeepAliveState : All variants construct and compare correctly
