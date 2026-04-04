@@ -32,7 +32,6 @@ pub enum TunnelError {
     #[error("tunnel access token refresh failed")]
     TokenRefreshFailed,
 
-
     #[error("proxy connection failed: {0}")]
     ProxyConnectionFailed(std::io::Error),
 
