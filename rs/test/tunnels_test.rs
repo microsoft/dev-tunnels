@@ -3,7 +3,7 @@
 
 // @group TestSetup : Feature-gated imports for connection tests
 #[cfg(feature = "connections")]
-use tunnels::connections::relay_tunnel_host::{KeepAliveState, ReconnectOptions};
+use tunnels::connections::{KeepAliveState, ReconnectOptions};
 
 // @group UnitTests > Pure Logic : Exponential backoff cap test (no crate types needed)
 #[test]
