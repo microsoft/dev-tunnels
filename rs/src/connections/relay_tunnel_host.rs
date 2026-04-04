@@ -679,7 +679,7 @@ async fn relay_connect_once(
         create_relay_websocket(mgmt, locator, host_id, proxy, host_token).await?;
     let cnx = AsyncRWWebSocket::new(super::ws::AsyncRWWebSocketOptions {
         websocket: cnx,
-        ping_interval: keep_alive.as_ref().map(|(d, _)| *d).unwrap_or(Duration::from_secs(60)),
+        ping_interval: Duration::from_secs(60),
         ping_timeout: Duration::from_secs(10),
     });
 
