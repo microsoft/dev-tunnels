@@ -329,7 +329,11 @@ impl RelayTunnelHost {
                             Err(_) => log::warn!("relay task panicked"),
                         }
                     }
-                    _ = stop_rx.recv() => { break 'reconnect; }
+                    _ = stop_rx.recv() => {
+                        current_join.abort();
+                        let _ = current_join.await;
+                        break 'reconnect;
+                    }
                 }
 
                 // Reconnect inner loop: retry with exponential back-off.
