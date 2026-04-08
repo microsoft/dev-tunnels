@@ -81,6 +81,11 @@ func (s *socket) Write(b []byte) (int, error) {
 	return bytesWritten, err
 }
 
+// Subprotocol returns the negotiated WebSocket subprotocol.
+func (s *socket) Subprotocol() string {
+	return s.conn.Subprotocol()
+}
+
 func (s *socket) Close() error {
 	return s.conn.Close()
 }

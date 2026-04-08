@@ -15,6 +15,14 @@ func readUint32(buf io.Reader) (i uint32, err error) {
 	return i, nil
 }
 
+func readBool(buf io.Reader) (bool, error) {
+	var b [1]byte
+	if _, err := io.ReadFull(buf, b[:]); err != nil {
+		return false, err
+	}
+	return b[0] != 0, nil
+}
+
 func readString(buf io.Reader) (s string, err error) {
 	var l uint32
 	if l, err = readUint32(buf); err != nil {

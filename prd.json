@@ -1,0 +1,436 @@
+{
+  "project": "dev-tunnels",
+  "branchName": "ralph/go-host-e2e-tests",
+  "description": "Go SDK Host E2E Test Suite - Comprehensive end-to-end validation of the Go host implementation covering all public API methods, error paths, data flows, concurrency, reconnection, and edge cases using in-process mock infrastructure",
+  "userStories": [
+    {
+      "id": "US-000",
+      "title": "Verify Go development environment",
+      "description": "As a developer, I need a working Go development environment so that I can build and run the E2E test suite.",
+      "acceptanceCriteria": [
+        "Go is installed and available on PATH (expected at /opt/homebrew/bin/go on macOS ARM64, or install via `brew install go` if missing)",
+        "Go version is 1.17 or later (project go.mod specifies go 1.17; current environment has Go 1.26.0)",
+        "Module dependencies are downloaded: run `go mod download` from the project root",
+        "Required dependencies verified present: github.com/gorilla/websocket v1.4.2, golang.org/x/crypto v0.23.0",
+        "`go vet ./go/tunnels/...` passes (validates existing codebase compiles and is vet-clean)",
+        "`go test -short -v ./go/tunnels/ssh/...` passes (validates existing SSH tests work — confirms test toolchain is functional)",
+        "The -race flag works: `go test -race -short -run TestChannelConn ./go/tunnels/ssh/` passes",
+        "No additional system dependencies required (no C compiler, no CGO, no external services)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-001",
+      "title": "Create shared E2E test infrastructure",
+      "description": "As a developer, I need reusable test helpers so that all 20 E2E scenarios share common setup patterns and avoid code duplication.",
+      "acceptanceCriteria": [
+        "`e2eMockAPI` struct defined in `go/tunnels/host_e2e_test.go` with fields: server *httptest.Server, manager *Manager, deleteEndpointCalls int32 (atomic), createPortCalls int32 (atomic), remotePorts atomic.Value (stores []TunnelPort), relayURI atomic.Value (stores string), unauthorizedOnce int32 (atomic flag for 401 simulation)",
+        "`e2eMockAPI` HTTP handler routes: PUT .../endpoints/... returns TunnelEndpoint with HostRelayURI from relayURI, DELETE .../endpoints/... increments deleteEndpointCalls, GET .../tunnels/... returns Tunnel with remotePorts, PUT .../ports/... increments createPortCalls, DELETE .../ports/... returns 200, GET .../tunnels/.../ports/... returns remotePorts",
+        "`connectClientViaRelay(t, relay)` helper: calls relay.SimulateClientArrival(), performs nested SSH handshake (ssh.NewClientConn with InsecureIgnoreHostKey), drains incoming channels in background, returns ssh.Conn + <-chan *ssh.Request",
+        "`connectClientWithKeyCapture(t, relay)` helper: same as connectClientViaRelay but uses custom HostKeyCallback to capture the received host public key, returns ssh.Conn + <-chan *ssh.Request + ssh.PublicKey",
+        "`startEchoServerE2E(t)` helper: listens on tcp4 127.0.0.1:0, accept loop with io.Copy(conn, conn), t.Cleanup closes listener, returns net.Listener + uint16 port",
+        "`openForwardedChannel(t, sshConn, port)` helper: marshals forwardedTCPIPData{Host: \"127.0.0.1\", Port: uint32(port)}, opens \"forwarded-tcpip\" channel, discards channel requests in background, returns ssh.Channel",
+        "`drainAndReplyRequests(globalReqs, collected)` helper: background goroutine that reads from globalReqs, sends to collected channel (buffered), replies true nil, runs until globalReqs is closed",
+        "All helpers defined in go/tunnels/host_e2e_test.go",
+        "`go vet` and `go build` pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "CRITICAL: Never use net.Pipe() for SSH connections — use RelayHostServer (WebSocket) or tcpConnPair() (TCP loopback). net.Pipe() is unbuffered and deadlocks SSH handshakes. Also: AddPort/RemovePort send SSH global requests with wantReply=true. Without drainAndReplyRequests consuming and replying to these requests, the calls will deadlock."
+    },
+    {
+      "id": "US-002",
+      "title": "Test host lifecycle",
+      "description": "As a developer, I want to verify the complete host lifecycle — construction, connection, status, graceful close, endpoint cleanup, and idempotent close.",
+      "acceptanceCriteria": [
+        "`TestE2E_HostLifecycle` test function in host_e2e_test.go",
+        "Creates RelayHostServer with WithHostAccessToken(\"Tunnel test-token\")",
+        "Creates e2eMockAPI pointing to relay server URL",
+        "NewHost(logger, mgr) succeeds",
+        "Asserts host.ConnectionStatus() == ConnectionStatusNone",
+        "Asserts host.HostPublicKeyBase64() is non-empty and base64-decodable",
+        "host.Connect(ctx, tunnel) succeeds",
+        "relay.WaitForConnection(5s) succeeds",
+        "Asserts host.ConnectionStatus() == ConnectionStatusConnected",
+        "host.Close() succeeds",
+        "Asserts host.ConnectionStatus() == ConnectionStatusDisconnected",
+        "Asserts api.deleteEndpointCalls == 1",
+        "Second host.Close() returns nil (idempotent)",
+        "api.deleteEndpointCalls still 1",
+        "Test passes with `go test -v -run TestE2E_HostLifecycle ./go/tunnels/`"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Test error handling",
+      "description": "As a developer, I want to verify all error sentinels are returned under the correct conditions via table-driven subtests.",
+      "acceptanceCriteria": [
+        "`TestE2E_ErrorHandling` test function with table-driven subtests",
+        "Subtest ErrNoManager: NewHost(nil, nil) returns ErrNoManager",
+        "Subtest ErrAlreadyConnected: connected host, second Connect returns ErrAlreadyConnected",
+        "Subtest ErrNotConnected_Close: unconnected host, Close() returns ErrNotConnected",
+        "Subtest ErrNotConnected_Wait: unconnected host, Wait() returns ErrNotConnected",
+        "Subtest ErrNotConnected_AddPort: unconnected host, AddPort returns ErrNotConnected",
+        "Subtest ErrNotConnected_RemovePort: unconnected host, RemovePort returns ErrNotConnected",
+        "Subtest ErrNotConnected_RefreshPorts: unconnected host, RefreshPorts returns ErrNotConnected",
+        "Subtest ErrPortAlreadyAdded: connected host, port already added, second AddPort returns ErrPortAlreadyAdded",
+        "Subtest ErrTooManyConnections: host with disconnectReason = 11, Connect returns ErrTooManyConnections",
+        "Subtest ErrNoHostRelayURI: mock API returns empty HostRelayURI, Connect returns ErrNoHostRelayURI",
+        "Subtest 409Conflict_Tolerated: mock API returns 409 on port creation, AddPort returns nil",
+        "All subtests use errors.Is() for sentinel checks",
+        "Test passes with `go test -v -run TestE2E_ErrorHandling ./go/tunnels/`"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Test connection status callbacks",
+      "description": "As a developer, I want to verify the ConnectionStatusChanged callback fires for every status transition in the correct order.",
+      "acceptanceCriteria": [
+        "`TestE2E_ConnectionStatusCallbacks` test function",
+        "Registers callback that appends ConnectionStatus values to mutex-guarded slice",
+        "Asserts initial host.ConnectionStatus() == ConnectionStatusNone",
+        "host.Connect(ctx, tunnel) triggers Connecting, Connected",
+        "host.Close() triggers Disconnected",
+        "Asserts transitions == [Connecting, Connected, Disconnected]",
+        "Exactly 3 transitions (no duplicates, no extras)",
+        "Test passes with `go test -v -run TestE2E_ConnectionStatusCallbacks ./go/tunnels/`"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Test port forwarding data flow",
+      "description": "As a developer, I want to verify the complete data path through the tunnel stack — the most critical E2E scenario.",
+      "acceptanceCriteria": [
+        "`TestE2E_PortForwardingDataFlow` test function",
+        "Starts TCP echo server via startEchoServerE2E(t)",
+        "Creates relay, mock API, Host, connects",
+        "host.AddPort(ctx, &TunnelPort{PortNumber: echoPort}) succeeds",
+        "connectClientViaRelay(t, relay) returns sshConn, globalReqs",
+        "Reads tcpip-forward from globalReqs, replies true",
+        "openForwardedChannel(t, sshConn, echoPort) returns channel",
+        "Writes \"hello e2e tunnel\" to channel",
+        "io.ReadFull reads echo response",
+        "Asserts sent bytes == received bytes",
+        "Test passes with `go test -v -run TestE2E_PortForwardingDataFlow ./go/tunnels/`"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Test direct-tcpip and forwarded-tcpip channel types",
+      "description": "As a developer, I want to verify both SSH channel types work for port forwarding and unregistered ports are rejected.",
+      "acceptanceCriteria": [
+        "`TestE2E_DirectTcpipAndForwardedTcpip` test function",
+        "Starts echo server, creates Host, connects, adds echo port",
+        "Connects client, starts drainAndReplyRequests",
+        "Opens forwarded-tcpip channel, sends \"forwarded-test\", verifies echo",
+        "Opens direct-tcpip channel to same port, sends \"direct-test\", verifies echo",
+        "Opens direct-tcpip channel to unregistered port (echoPort + 1000)",
+        "Asserts channel open fails with *ssh.OpenChannelError, reason ssh.Prohibited",
+        "Test passes with `go test -v -run TestE2E_DirectTcpipAndForwardedTcpip ./go/tunnels/`"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Must use drainAndReplyRequests to avoid wantReply=true deadlock when AddPort sends tcpip-forward to the connected client."
+    },
+    {
+      "id": "US-007",
+      "title": "Test multiple ports",
+      "description": "As a developer, I want to verify multiple ports can be registered and data flows correctly through each independently.",
+      "acceptanceCriteria": [
+        "`TestE2E_MultiplePorts` test function",
+        "Starts 3 echo servers on 3 different ports",
+        "Adds all 3 ports via host.AddPort",
+        "Connects client, receives and replies to 3 tcpip-forward requests",
+        "For each port: opens forwarded-tcpip channel, sends unique message (port-A, port-B, port-C), verifies echo",
+        "No cross-contamination between ports",
+        "Test passes with `go test -v -run TestE2E_MultiplePorts ./go/tunnels/`"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Test dynamic port management",
+      "description": "As a developer, I want to verify adding and removing ports while a client is already connected, with real-time SSH notifications.",
+      "acceptanceCriteria": [
+        "`TestE2E_DynamicPortManagement` test function",
+        "Starts echo server A, creates Host, connects, adds port A",
+        "Connects client, starts drainAndReplyRequests background goroutine",
+        "Waits for tcpip-forward for port A in collected channel",
+        "Verifies data flows through port A",
+        "Starts echo server B, host.AddPort for port B",
+        "Waits for tcpip-forward for port B in collected channel",
+        "Verifies data flows through port B",
+        "host.RemovePort(ctx, echoPortA)",
+        "Waits for cancel-tcpip-forward for port A in collected channel",
+        "Attempts to open forwarded-tcpip to port A — expects rejection with ssh.Prohibited",
+        "Test passes with `go test -v -run TestE2E_DynamicPortManagement ./go/tunnels/`"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "CRITICAL: Must use drainAndReplyRequests to avoid wantReply=true deadlock. AddPort/RemovePort send SSH global requests that block until the client replies."
+    },
+    {
+      "id": "US-009",
+      "title": "Test port duplicate handling",
+      "description": "As a developer, I want to verify adding a duplicate port returns the correct error and the port appears exactly once.",
+      "acceptanceCriteria": [
+        "`TestE2E_PortDuplicateHandling` test function",
+        "Creates Host, connects",
+        "host.AddPort(ctx, &TunnelPort{PortNumber: 8080}) succeeds",
+        "host.AddPort(ctx, &TunnelPort{PortNumber: 8080}) returns ErrPortAlreadyAdded",
+        "Accesses SSH session, verifies ssh.Ports() contains 8080 exactly once",
+        "Verifies api.createPortCalls == 1",
+        "Test passes with `go test -v -run TestE2E_PortDuplicateHandling ./go/tunnels/`"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Test RefreshPorts",
+      "description": "As a developer, I want to verify RefreshPorts synchronizes local ports with the management service.",
+      "acceptanceCriteria": [
+        "`TestE2E_RefreshPorts` test function",
+        "Creates Host, connects",
+        "Accesses SSH session via h.mu.Lock(); ssh := h.ssh; h.mu.Unlock()",
+        "Manually adds port 5000 to SSH session: ssh.AddPort(5000)",
+        "Configures mock API: api.remotePorts.Store([]TunnelPort{{PortNumber: 3000}, {PortNumber: 4000}})",
+        "Calls host.RefreshPorts(ctx)",
+        "Asserts ssh.HasPort(3000) == true (added from service)",
+        "Asserts ssh.HasPort(4000) == true (added from service)",
+        "Asserts ssh.HasPort(5000) == false (removed — not on service)",
+        "Calls RefreshPorts again — idempotent (no changes)",
+        "Test passes with `go test -v -run TestE2E_RefreshPorts ./go/tunnels/`"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "This test accesses internal h.mu and h.ssh fields. This is acceptable because the test is in the same package."
+    },
+    {
+      "id": "US-011",
+      "title": "Test large data transfer with SHA256 integrity",
+      "description": "As a developer, I want to verify 1MB+ data passes through the tunnel with SHA256 integrity verification.",
+      "acceptanceCriteria": [
+        "`TestE2E_LargeDataTransfer` test function",
+        "Starts echo server, creates Host, connects, adds port",
+        "Connects client, waits for tcpip-forward, opens forwarded-tcpip channel",
+        "Generates 1MB payload: payload[i] = byte(i % 256)",
+        "Computes expectedHash = sha256.Sum256(payload)",
+        "Goroutine: writes payload to channel, then ch.CloseWrite()",
+        "Main: io.Copy(received, ch) reads all echoed data",
+        "Computes actualHash = sha256.Sum256(received.Bytes())",
+        "Asserts expectedHash == actualHash",
+        "Asserts received.Len() == 1048576",
+        "Test passes with `go test -v -run TestE2E_LargeDataTransfer ./go/tunnels/`"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Depends on the bidirectional copy fix in handleForwardedTCPIP (waits for both copy directions to drain with CloseWrite() propagation)."
+    },
+    {
+      "id": "US-012",
+      "title": "Test bidirectional streaming",
+      "description": "As a developer, I want to verify sequential request-response pattern works reliably through the tunnel.",
+      "acceptanceCriteria": [
+        "`TestE2E_BidirectionalStreaming` test function",
+        "Starts echo server, creates Host, connects, adds port",
+        "Connects client, opens forwarded-tcpip channel",
+        "Sends 10 messages of increasing size (100, 200, 300, ... 1000 bytes)",
+        "For each message: generates deterministic content bytes.Repeat([]byte{byte(i)}, size), writes, reads via io.ReadFull, asserts match",
+        "All 10 messages echo correctly, no ordering issues",
+        "Test passes with `go test -v -run TestE2E_BidirectionalStreaming ./go/tunnels/`"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Test multiple concurrent clients",
+      "description": "As a developer, I want to verify multiple clients connect simultaneously and each independently forwards data.",
+      "acceptanceCriteria": [
+        "`TestE2E_MultipleConcurrentClients` test function",
+        "Starts echo server, creates Host, connects, adds echo port",
+        "Spawns 5 goroutines, each: connects via connectClientViaRelay, starts drainAndReplyRequests, waits for tcpip-forward, opens forwarded-tcpip, writes fmt.Sprintf(\"client-%d\", i), verifies echo",
+        "Uses sync.WaitGroup to wait for all goroutines",
+        "Collects errors via buffered channel",
+        "All 5 clients succeed independently",
+        "Test passes with `go test -v -run TestE2E_MultipleConcurrentClients ./go/tunnels/`"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Test concurrent port operations with race detector",
+      "description": "As a developer, I want to verify thread safety of concurrent AddPort/RemovePort operations.",
+      "acceptanceCriteria": [
+        "`TestE2E_ConcurrentPortOperations` test function",
+        "Creates Host, connects",
+        "Accesses SSH session via h.mu.Lock(); ssh := h.ssh; h.mu.Unlock()",
+        "Launches 10 goroutines: 0-4 add ports 9000-9004, 5-9 add then remove ports 9005-9009",
+        "sync.WaitGroup waits for all",
+        "Verifies ports 9000-9004 exist via ssh.HasPort()",
+        "Verifies ports 9005-9009 do NOT exist",
+        "Verifies len(ssh.Ports()) == 5",
+        "Must pass with `go test -race`",
+        "Test passes with `go test -v -race -run TestE2E_ConcurrentPortOperations ./go/tunnels/`"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "This test accesses internal h.mu and h.ssh fields. Must run with -race flag to validate mutex correctness."
+    },
+    {
+      "id": "US-015",
+      "title": "Test host public key verification",
+      "description": "As a developer, I want to verify the client can capture and verify the host's SSH public key matches what was registered.",
+      "acceptanceCriteria": [
+        "`TestE2E_HostPublicKeyVerification` test function",
+        "Creates Host, connects",
+        "Gets expectedKey := host.HostPublicKeyBase64()",
+        "connectClientWithKeyCapture(t, relay) returns sshConn, globalReqs, receivedKey",
+        "Encodes received key: base64.StdEncoding.EncodeToString(receivedKey.Marshal())",
+        "Asserts receivedKeyBase64 == expectedKey",
+        "Test passes with `go test -v -run TestE2E_HostPublicKeyVerification ./go/tunnels/`"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Test IPv4 and IPv6 port forwarding",
+      "description": "As a developer, I want to verify port forwarding works over both IPv4 and IPv6.",
+      "acceptanceCriteria": [
+        "`TestE2E_IPv4AndIPv6` test function",
+        "Starts IPv4 echo server on 127.0.0.1:0",
+        "Starts IPv6 echo server on [::1]:0 — t.Skip(\"IPv6 not available\") if listen fails",
+        "Creates Host, connects, adds both ports",
+        "Connects client, starts drainAndReplyRequests",
+        "Opens forwarded-tcpip to IPv4 port, sends \"ipv4-test\", verifies echo",
+        "Opens forwarded-tcpip to IPv6 port, sends \"ipv6-test\", verifies echo",
+        "Test passes with `go test -v -run TestE2E_IPv4AndIPv6 ./go/tunnels/`"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Test connection refused graceful handling",
+      "description": "As a developer, I want to verify that when a port is forwarded but no local listener exists, the host handles it gracefully.",
+      "acceptanceCriteria": [
+        "`TestE2E_ConnectionRefused` test function",
+        "Creates Host, connects",
+        "host.AddPort(ctx, &TunnelPort{PortNumber: 19999}) — no listener on this port",
+        "Connects client, waits for tcpip-forward",
+        "Opens forwarded-tcpip channel to port 19999",
+        "Either channel open fails cleanly, or channel opens but read returns io.EOF or error",
+        "No panic",
+        "Host remains functional",
+        "Test passes with `go test -v -run TestE2E_ConnectionRefused ./go/tunnels/`"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Test client disconnect mid-transfer",
+      "description": "As a developer, I want to verify client disconnect during data transfer doesn't crash the host.",
+      "acceptanceCriteria": [
+        "`TestE2E_ClientDisconnectMidTransfer` test function",
+        "Starts echo server, creates Host, connects, adds port",
+        "Connects client 1, opens forwarded-tcpip channel",
+        "Writes \"partial data\" to channel",
+        "Immediately closes client 1 SSH connection (abrupt disconnect)",
+        "No panic after 200ms sleep",
+        "Connects client 2, opens forwarded-tcpip channel",
+        "Writes \"full message\", verifies echo response",
+        "Test passes with `go test -v -run TestE2E_ClientDisconnectMidTransfer ./go/tunnels/`"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Test Wait blocks until disconnect",
+      "description": "As a developer, I want to verify host.Wait() blocks until the relay drops, then returns promptly.",
+      "acceptanceCriteria": [
+        "`TestE2E_WaitBlocksUntilDisconnect` test function",
+        "Creates Host, connects",
+        "Launches host.Wait() in goroutine, sends result to channel",
+        "After 200ms, verifies channel is empty (Wait is still blocking)",
+        "Closes relay server",
+        "Waits for result from channel with 5s timeout",
+        "Verifies Wait returned (non-nil error expected)",
+        "Test passes with `go test -v -run TestE2E_WaitBlocksUntilDisconnect ./go/tunnels/`"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Test reconnection after relay drop",
+      "description": "As a developer, I want to verify that with EnableReconnect=true, the host automatically reconnects when the relay drops.",
+      "acceptanceCriteria": [
+        "`TestE2E_Reconnection` test function",
+        "Creates two RelayHostServer instances",
+        "Creates e2eMockAPI initially pointing to relay 1",
+        "Sets host.EnableReconnect = true",
+        "Tracks status transitions via callback",
+        "Connects to relay 1, verifies connected",
+        "Creates relay 2, updates api.relayURI to relay 2 URL",
+        "Closes relay 1 to simulate disconnect",
+        "relay2.WaitForConnection(30s) — reconnection succeeds",
+        "Status transitions include: Connected → Disconnected → Connecting → Connected",
+        "Close host",
+        "Test passes with `go test -v -run TestE2E_Reconnection -timeout 60s ./go/tunnels/`"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "reconnect() uses 100ms base delay with 2x exponential backoff (max 12.8s). Test uses 30s timeout — generous but necessary."
+    },
+    {
+      "id": "US-021",
+      "title": "Test token refresh during reconnection",
+      "description": "As a developer, I want to verify RefreshTunnelAccessTokenFunc is invoked when the management API returns 401 during reconnection.",
+      "acceptanceCriteria": [
+        "`TestE2E_TokenRefresh` test function",
+        "Sets host.EnableReconnect = true",
+        "Sets host.RefreshTunnelAccessTokenFunc to callback that increments atomic counter and returns \"refreshed-token\", nil",
+        "Connects, verifies connected",
+        "Sets api.unauthorizedOnce = 1 (next UpdateTunnelEndpoint returns 401)",
+        "Creates relay 2, updates api.relayURI",
+        "Closes relay 1 to trigger reconnection",
+        "Reconnection: first attempt gets 401, calls token refresh, retries, succeeds",
+        "Waits for relay 2 connection",
+        "Asserts tokenRefreshCalls >= 1",
+        "Test passes with `go test -v -run TestE2E_TokenRefresh -timeout 60s ./go/tunnels/`"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": "Depends on US-020 reconnection infrastructure. On 401, token refresh is attempted and retry happens immediately (no additional delay)."
+    }
+  ]
+}

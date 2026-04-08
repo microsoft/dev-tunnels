@@ -725,14 +725,12 @@ func (m *Manager) sendRequest(
 
 	// Handle non 200s responses
 	if result.StatusCode > 300 {
-		errorMessage, err := m.readProblemDetails(result)
-		if err == nil && errorMessage != nil {
-			return nil, fmt.Errorf("unsuccessful request, response: %d %s\n\t%s",
-				result.StatusCode, http.StatusText(result.StatusCode), *errorMessage)
-		} else {
-			return nil, fmt.Errorf("unsuccessful request, response: %d: %s",
-				result.StatusCode, http.StatusText(result.StatusCode))
+		msg := fmt.Sprintf("%d %s", result.StatusCode, http.StatusText(result.StatusCode))
+		errorMessage, pdErr := m.readProblemDetails(result)
+		if pdErr == nil && errorMessage != nil {
+			msg = fmt.Sprintf("%s\n\t%s", msg, *errorMessage)
 		}
+		return nil, &TunnelError{StatusCode: result.StatusCode, Message: msg}
 	}
 
 	return io.ReadAll(result.Body)
@@ -793,7 +791,7 @@ func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {
 }
 
 func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelRequestOptions, accessTokenScopes []TunnelAccessScope) (token string) {
-	if tunnelRequestOptions.AccessToken != "" {
+	if tunnelRequestOptions != nil && tunnelRequestOptions.AccessToken != "" {
 		token = fmt.Sprintf("%s %s", tunnelAuthenticationScheme, tunnelRequestOptions.AccessToken)
 	}
 	if token == "" {
