@@ -66,9 +66,20 @@ Add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/rebornix/dev-tunnels-swift.git", from: "0.1.0"),
+    .package(url: "https://github.com/microsoft/dev-tunnels.git", from: "0.1.0"),
+],
+targets: [
+    .target(
+        name: "YourApp",
+        dependencies: [
+            .product(name: "DevTunnelsClient", package: "dev-tunnels"),
+        ]
+    ),
 ]
 ```
+
+> The `Package.swift` at the repository root exposes the Swift library.
+> Source code lives in `swift/Sources/`.
 
 ## Quick Start
 
