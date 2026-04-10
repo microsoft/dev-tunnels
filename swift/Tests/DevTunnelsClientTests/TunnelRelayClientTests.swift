@@ -1,6 +1,24 @@
 import XCTest
 @testable import DevTunnelsClient
 
+/// Thread-safe state collector for use in @Sendable closures.
+private final class StateCollector: @unchecked Sendable {
+    private var _states: [RelayConnectionState] = []
+    private let lock = NSLock()
+
+    func append(_ state: RelayConnectionState) {
+        lock.lock()
+        _states.append(state)
+        lock.unlock()
+    }
+
+    var states: [RelayConnectionState] {
+        lock.lock()
+        defer { lock.unlock() }
+        return _states
+    }
+}
+
 final class TunnelRelayConfigTests: XCTestCase {
 
     // MARK: - Config Validation
@@ -281,15 +299,15 @@ final class TunnelRelayClientTests: XCTestCase {
         let config = TunnelRelayConfig(relayUri: "", accessToken: "t", port: 8080)
         let client = TunnelRelayClient(config: config)
 
-        var observedStates: [RelayConnectionState] = []
+        let collector = StateCollector()
         client.onStateChangeHandler = { state in
-            observedStates.append(state)
+            collector.append(state)
         }
 
         // connect() with invalid config triggers transition to .failed
         _ = try? await client.connect()
 
-        XCTAssertTrue(observedStates.contains(.failed(.invalidConfig(.missingRelayUri))))
+        XCTAssertTrue(collector.states.contains(.failed(.invalidConfig(.missingRelayUri))))
     }
 
     func testDisconnectTriggersStateChange() {
@@ -300,13 +318,13 @@ final class TunnelRelayClientTests: XCTestCase {
         )
         let client = TunnelRelayClient(config: config)
 
-        var observedStates: [RelayConnectionState] = []
+        let collector = StateCollector()
         client.onStateChangeHandler = { state in
-            observedStates.append(state)
+            collector.append(state)
         }
 
         client.disconnect()
-        XCTAssertEqual(observedStates, [.closed])
+        XCTAssertEqual(collector.states, [.closed])
     }
 }
 
