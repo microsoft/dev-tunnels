@@ -56,7 +56,7 @@ export const devDnsName = 'global.ci.tunnels.dev.api.visualstudio.com';
 /**
  * Default host name for the local tunnel service.
  */
-export const localDnsName = 'localhost:9901';
+export const localDnsName = 'tunnels.local.api.visualstudio.com:9901';
 
 /**
  * First-party app ID: `Visual Studio Tunnel Service`
@@ -118,24 +118,24 @@ export const prodGitHubAppClientId = 'Iv1.e7b89e013f801f03';
 /**
  * GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
  *
- * Used by client apps that authenticate tunnel users with GitHub, in the PPE
- * service environment.
+ * Used by client apps that authenticate tunnel users with GitHub, in the PPE service
+ * environment.
  */
 export const ppeGitHubAppClientId = 'Iv1.b231c327f1eaa229';
 
 /**
  * GitHub App Client ID for 'Dev Tunnels Service - Dev'
  *
- * Used by client apps that authenticate tunnel users with GitHub, in the DEV
- * service environment.
+ * Used by client apps that authenticate tunnel users with GitHub, in the DEV service
+ * environment.
  */
 export const devGitHubAppClientId = 'Iv23ctTiak9wLCiTcEbr';
 
 /**
  * GitHub App Client ID for 'Dev Tunnels Service - Local'
  *
- * Used by client apps that authenticate tunnel users with GitHub, when running
- * the service locally.
+ * Used by client apps that authenticate tunnel users with GitHub, when running the
+ * service locally.
  */
 export const localGitHubAppClientId = 'Iv23cttBYzKThF88PiPR';
 

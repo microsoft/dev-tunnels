@@ -30,7 +30,7 @@ public class TunnelServiceProperties
     /// <summary>
     /// Default host name for the local tunnel service.
     /// </summary>
-    internal const string LocalDnsName = "localhost:9901";
+    internal const string LocalDnsName = "tunnels.local.api.visualstudio.com:9901";
 
     /// <summary>
     /// First-party app ID: `Visual Studio Tunnel Service`

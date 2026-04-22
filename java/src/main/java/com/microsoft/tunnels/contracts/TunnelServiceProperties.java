@@ -35,7 +35,7 @@ public class TunnelServiceProperties {
     /**
      * Default host name for the local tunnel service.
      */
-    static final String localDnsName = "localhost:9901";
+    static final String localDnsName = "tunnels.local.api.visualstudio.com:9901";
 
     /**
      * First-party app ID: `Visual Studio Tunnel Service`
@@ -97,24 +97,24 @@ public class TunnelServiceProperties {
     /**
      * GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
      *
-     * Used by client apps that authenticate tunnel users with GitHub, in the PPE
-     * service environment.
+     * Used by client apps that authenticate tunnel users with GitHub, in the PPE service
+     * environment.
      */
     static final String ppeGitHubAppClientId = "Iv1.b231c327f1eaa229";
 
     /**
      * GitHub App Client ID for 'Dev Tunnels Service - Dev'
      *
-     * Used by client apps that authenticate tunnel users with GitHub, in the DEV
-     * service environment.
+     * Used by client apps that authenticate tunnel users with GitHub, in the DEV service
+     * environment.
      */
     static final String devGitHubAppClientId = "Iv23ctTiak9wLCiTcEbr";
 
     /**
      * GitHub App Client ID for 'Dev Tunnels Service - Local'
      *
-     * Used by client apps that authenticate tunnel users with GitHub, when running
-     * the service locally.
+     * Used by client apps that authenticate tunnel users with GitHub, when running the
+     * service locally.
      */
     static final String localGitHubAppClientId = "Iv23cttBYzKThF88PiPR";
 
@@ -135,6 +135,9 @@ public class TunnelServiceProperties {
 
     /**
      * Gets properties for the service when running locally.
+     *
+     * Uses the same service app IDs as the development environment, but a different
+     * GitHub app with localhost callback URLs.
      */
     public static final TunnelServiceProperties local = TunnelServicePropertiesStatics.local;
 
