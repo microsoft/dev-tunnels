@@ -532,6 +532,7 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
                     // Since we have successfully connected after all, clean it up.
                     DisconnectReason = SshDisconnectReason.None;
                     DisconnectException = null;
+                    Trace.TraceInformation($"Connection to {ConnectionRole} tunnel relay restored.");
                 }
 
                 ConnectionStatus = ConnectionStatus.Connected;
@@ -632,10 +633,17 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
         {
             if (Tunnel != null)
             {
-                var connectFailedEvent = new TunnelEvent($"{ConnectionRole}_reconnect_failed");
-                connectFailedEvent.Severity = TunnelEvent.Error;
-                connectFailedEvent.Details = ex.ToString();
-                ManagementClient?.ReportEvent(Tunnel, connectFailedEvent);
+                bool isCancelled = DisposeToken.IsCancellationRequested &&
+                    (ex is ObjectDisposedException || ex is OperationCanceledException);
+
+                var eventName = isCancelled
+                    ? $"{ConnectionRole}_reconnect_cancelled"
+                    : $"{ConnectionRole}_reconnect_failed";
+
+                var reconnectEvent = new TunnelEvent(eventName);
+                reconnectEvent.Severity = isCancelled ? TunnelEvent.Warning : TunnelEvent.Error;
+                reconnectEvent.Details = ex.ToString();
+                ManagementClient?.ReportEvent(Tunnel, reconnectEvent);
             }
 
             // Tracing of the exception has already been done by ConnectSessionAsync.

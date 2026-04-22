@@ -25,8 +25,18 @@ internal static class TcpUtils
     public static async Task<int> ReadIntToEndAsync(this Stream stream, CancellationToken cancellation)
     {
         var buffer = new byte[1024];
-        var length = await stream.ReadAsync(buffer, cancellation);
-        var text = Encoding.UTF8.GetString(buffer, 0, length);
+        int totalLength = 0;
+        int length;
+        while ((length = await stream.ReadAsync(buffer.AsMemory(totalLength), cancellation)) > 0)
+        {
+            totalLength += length;
+            if (buffer.AsSpan(0, totalLength).IndexOf((byte)'\n') >= 0)
+            {
+                break;
+            }
+        }
+
+        var text = Encoding.UTF8.GetString(buffer, 0, totalLength).TrimEnd('\n');
         return int.Parse(text, CultureInfo.InvariantCulture);
     }
 }

@@ -29,7 +29,7 @@ public class MockTunnelRelayStreamFactory : ITunnelRelayStreamFactory
         Assert.NotNull(accessToken);
         Assert.Contains(this.connectionType, subprotocols);
 
-        var stream = await StreamFactory(accessToken);
+        var stream = await StreamFactory(accessToken).WaitAsync(cancellation);
         return (stream, this.connectionType);
     }
 }

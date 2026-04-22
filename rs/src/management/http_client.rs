@@ -32,6 +32,7 @@ pub struct TunnelManagementClient {
     pub(crate) user_agent: HeaderValue,
     environment: TunnelServiceProperties,
     api_version: String,
+    is_custom_domain: bool,
 }
 
 const TUNNELS_API_PATH: &str = "/tunnels";
@@ -52,6 +53,7 @@ impl TunnelManagementClient {
             user_agent: self.user_agent.clone(),
             environment: self.environment.clone(),
             api_version: self.api_version.clone(),
+            is_custom_domain: self.is_custom_domain,
         }
     }
 
@@ -411,7 +413,7 @@ impl TunnelManagementClient {
 
         if let Some(cluster_id) = cluster_id {
             let hostname = uri.host_str().unwrap_or("");
-            if !hostname.starts_with(&format!("{}.", cluster_id)) {
+            if !self.is_custom_domain && !hostname.starts_with(&format!("{}.", cluster_id)) {
                 let new_hostname = format!("{}.{}", cluster_id, hostname).replace("global.", "");
                 uri.set_host(Some(&new_hostname)).unwrap();
             }
@@ -542,6 +544,7 @@ pub struct TunnelClientBuilder {
     user_agent: HeaderValue,
     environment: TunnelServiceProperties,
     api_version: String,
+    is_custom_domain: bool,
 }
 
 /// Creates a new tunnel client builder. You can set options, then use `into()`
@@ -557,7 +560,26 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
         user_agent: HeaderValue::from_str(&full_user_agent).unwrap(),
         environment: env_production(),
         api_version: API_VERSIONS[0].to_owned(),
+        is_custom_domain: false,
     }
+}
+
+/// Creates a new tunnel client builder configured for a custom domain.
+/// When a custom domain is configured (e.g., "app.github.dev"), control plane calls
+/// are routed to "cp.{domain}" and cluster ID hostname manipulation is skipped.
+pub fn new_tunnel_management_for_custom_domain(
+    user_agent: &str,
+    custom_domain: &str,
+) -> TunnelClientBuilder {
+    let mut builder = new_tunnel_management(user_agent);
+    builder.environment = TunnelServiceProperties {
+        service_uri: format!("https://cp.{}", custom_domain),
+        service_app_id: String::new(),
+        service_internal_app_id: String::new(),
+        github_app_client_id: String::new(),
+    };
+    builder.is_custom_domain = true;
+    builder
 }
 
 fn create_full_user_agent(user_agent: &str) -> String {
@@ -607,6 +629,10 @@ impl TunnelClientBuilder {
     }
 
     pub fn environment(&mut self, environment: TunnelServiceProperties) -> &mut Self {
+        self.is_custom_domain = Url::parse(&environment.service_uri)
+            .ok()
+            .and_then(|u| u.host_str().map(|h| h.starts_with("cp.")))
+            .unwrap_or(false);
         self.environment = environment;
         self
     }
@@ -620,6 +646,7 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
             user_agent: builder.user_agent,
             environment: builder.environment,
             api_version: builder.api_version,
+            is_custom_domain: builder.is_custom_domain,
         }
     }
 }
@@ -820,5 +847,28 @@ mod tests {
         super::add_query(&mut url, &options, "2023-09-27-preview");
 
         assert!(url.query().unwrap().contains("includePorts=true"));
+    }
+
+    #[test]
+    fn custom_domain_does_not_modify_hostname() {
+        let mut builder = super::new_tunnel_management_for_custom_domain(
+            "rs-sdk-tests",
+            "app.github.dev",
+        );
+        let client: super::TunnelManagementClient = builder.into();
+        let url = client.build_uri(Some("usw2"), "/tunnels/tnnl0001");
+        assert_eq!(url.host_str().unwrap(), "cp.app.github.dev");
+    }
+
+    #[test]
+    fn standard_service_uri_replaces_cluster_id() {
+        let builder = super::new_tunnel_management("rs-sdk-tests");
+        let client: super::TunnelManagementClient = builder.into();
+        let url = client.build_uri(Some("usw2"), "/tunnels/tnnl0001");
+        assert!(
+            url.host_str().unwrap().starts_with("usw2."),
+            "Expected hostname to start with usw2., got {}",
+            url.host_str().unwrap()
+        );
     }
 }

@@ -30,7 +30,8 @@ public sealed class TcpListeners : IAsyncDisposable
                 try
                 {
                     port = TcpUtils.GetAvailableTcpPort(canReuseAddress: false);
-                    listener = new TcpListener(IPAddress.Loopback, port);
+                    listener = new TcpListener(IPAddress.IPv6Any, port);
+                    listener.Server.DualMode = true;
                     listener.Start();
                     break;
                 }
@@ -133,7 +134,7 @@ public sealed class TcpListeners : IAsyncDisposable
             this.trace.Info($"Accepted client connection to TCP port {port}");
             await using var stream = tcpClient.GetStream();
 
-            var bytes = Encoding.UTF8.GetBytes(port.ToString(CultureInfo.InvariantCulture));
+            var bytes = Encoding.UTF8.GetBytes(port.ToString(CultureInfo.InvariantCulture) + "\n");
             await stream.WriteAsync(bytes);
 
         }

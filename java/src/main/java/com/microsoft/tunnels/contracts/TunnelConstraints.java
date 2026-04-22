@@ -32,8 +32,11 @@ public class TunnelConstraints {
 
     /**
      * Max length of V2 tunnelId.
+     *
+     * Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+     * (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
      */
-    public static final int newTunnelIdMaxLength = 60;
+    public static final int newTunnelIdMaxLength = 49;
 
     /**
      * Length of a tunnel alias.
@@ -47,8 +50,16 @@ public class TunnelConstraints {
 
     /**
      * Max length of tunnel name.
+     *
+     * Limited to 49 characters to ensure tunnel URIs with ports and inspection suffixes
+     * (-&lt;port&gt;-inspect) remain within the DNS label limit of 63 characters.
      */
-    public static final int tunnelNameMaxLength = 60;
+    public static final int tunnelNameMaxLength = 49;
+
+    /**
+     * Max length of SSH username.
+     */
+    public static final int sshUserMaxLength = 60;
 
     /**
      * Max length of tunnel or port description.
@@ -197,10 +208,11 @@ public class TunnelConstraints {
     /**
      * Regular expression that can match or validate tunnel ID strings.
      *
-     * Tunnel IDs are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
+     * Tunnel IDs have a limited character set of numbers and lowercase letters. Limited
+     * to 49 characters to ensure tunnel URIs with ports and inspection suffixes remain
+     * within the DNS label limit of 63 characters.
      */
-    public static final String newTunnelIdPattern = "[a-z0-9][a-z0-9-]{1,58}[a-z0-9]";
+    public static final String newTunnelIdPattern = "[a-z0-9][a-z0-9-]{1,47}[a-z0-9]";
 
     /**
      * Regular expression that can match or validate tunnel ID strings.
@@ -220,9 +232,11 @@ public class TunnelConstraints {
      * Regular expression that can match or validate tunnel alias strings.
      *
      * Tunnel Aliases are fixed-length and have a limited character set of numbers and
-     * lowercase letters (minus vowels and y).
+     * lowercase letters (minus vowels and y). Limited to 49 characters to ensure tunnel
+     * URIs with ports and inspection suffixes remain within the DNS label limit of 63
+     * characters.
      */
-    public static final String tunnelAliasPattern = "[" + TunnelConstraints.tunnelAliasChars + "]{3,60}";
+    public static final String tunnelAliasPattern = "[" + TunnelConstraints.tunnelAliasChars + "]{3,49}";
 
     /**
      * Regular expression that can match or validate tunnel alias strings.
@@ -236,9 +250,11 @@ public class TunnelConstraints {
      * Regular expression that can match or validate tunnel names.
      *
      * Tunnel names are alphanumeric and may contain hyphens. The pattern also allows an
-     * empty string because tunnels may be unnamed.
+     * empty string because tunnels may be unnamed. Limited to 49 characters to ensure
+     * tunnel URIs with ports and inspection suffixes remain within the DNS label limit of
+     * 63 characters.
      */
-    public static final String tunnelNamePattern = "([a-z0-9][a-z0-9-]{1,58}[a-z0-9])|(^$)";
+    public static final String tunnelNamePattern = "([a-z0-9][a-z0-9-]{1,47}[a-z0-9])|(^$)";
 
     /**
      * Regular expression that can match or validate tunnel names.

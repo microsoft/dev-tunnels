@@ -6,7 +6,7 @@
     <UseStyleCop>true</UseStyleCop>
     <UseCodeAnalysis>true</UseCodeAnalysis>
     <RootName>Microsoft.VsSaaS.Services</RootName>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>14.0</LangVersion>
     <Nullable>enable</Nullable>
     <GitVersionBaseDirectory>$(MSBuildThisFileDirectory)</GitVersionBaseDirectory>
   </PropertyGroup>

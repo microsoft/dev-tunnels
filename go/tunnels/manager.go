@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -80,6 +81,15 @@ type UserAgent struct {
 	Version string
 }
 
+type requestError struct {
+	statusCode int
+	message    string
+}
+
+func (e *requestError) Error() string {
+	return e.message
+}
+
 // Manager is used to interact with the Visual Studio Tunnel Service APIs.
 type Manager struct {
 	tokenProvider     tokenProviderfn
@@ -88,6 +98,7 @@ type Manager struct {
 	additionalHeaders map[string]string
 	userAgents        []UserAgent
 	apiVersion        string
+	isCustomDomain    bool
 }
 
 // Creates a new Manager used for interacting with the Tunnels APIs.
@@ -127,7 +138,21 @@ func NewManager(userAgents []UserAgent, tp tokenProviderfn, tunnelServiceUrl *ur
 		client = httpHandler
 	}
 
-	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents, apiVersion: apiVersion}, nil
+	return &Manager{tokenProvider: tp, httpClient: client, uri: tunnelServiceUrl, userAgents: userAgents, apiVersion: apiVersion, isCustomDomain: strings.HasPrefix(tunnelServiceUrl.Hostname(), "cp.")}, nil
+}
+
+// NewManagerForCustomDomain creates a Manager configured for a custom domain.
+// When a custom domain is configured (e.g., "app.github.dev"), control plane calls
+// are routed to "cp.{domain}" and cluster ID hostname manipulation is skipped.
+func NewManagerForCustomDomain(customDomain string, userAgents []UserAgent, tp tokenProviderfn, httpHandler *http.Client, apiVersion string) (*Manager, error) {
+	if customDomain == "" {
+		return nil, fmt.Errorf("custom domain cannot be empty")
+	}
+	serviceUrl, err := url.Parse(fmt.Sprintf("https://cp.%s/", customDomain))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing custom domain URL: %w", err)
+	}
+	return NewManager(userAgents, tp, serviceUrl, httpHandler, apiVersion)
 }
 
 // Lists tunnels owned by the authenticated user.
@@ -191,8 +216,10 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
 	}
+	idGenerated := false
 	if tunnel.TunnelID == "" {
 		tunnel.TunnelID = generateTunnelId()
+		idGenerated = true
 	}
 
 	if options == nil {
@@ -203,10 +230,6 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	}
 	options.AdditionalHeaders["If-Not-Match"] = "*"
 
-	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
-	if err != nil {
-		return nil, fmt.Errorf("error creating request url: %w", err)
-	}
 	convertedTunnel, err := tunnel.requestObject()
 	convertedTunnel.TunnelID = tunnel.TunnelID
 	if err != nil {
@@ -215,11 +238,23 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	var response []byte
 
 	for i := 0; i < createNameRetries; i++ {
-		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+		url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", true)
 		if err != nil {
-			convertedTunnel.TunnelID = generateTunnelId()
-			tunnel.TunnelID = convertedTunnel.TunnelID
+			return nil, fmt.Errorf("error creating request url: %w", err)
 		}
+		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+		if err == nil {
+			break
+		}
+		if !idGenerated {
+			break
+		}
+		var requestErr *requestError
+		if !errors.As(err, &requestErr) || requestErr.statusCode != http.StatusConflict {
+			break
+		}
+		convertedTunnel.TunnelID = generateTunnelId()
+		tunnel.TunnelID = convertedTunnel.TunnelID
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error sending create tunnel request: %w", err)
@@ -239,6 +274,26 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields []string, options *TunnelRequestOptions) (t *Tunnel, err error) {
 	if tunnel == nil {
 		return nil, fmt.Errorf("tunnel must be provided")
+	}
+
+	if len(updateFields) > 0 {
+		// TunnelID and ClusterID are not updatable but must be supplied in the update body.
+		needTunnelID := true
+		needClusterID := true
+		for _, field := range updateFields {
+			if field == "TunnelID" {
+				needTunnelID = false
+			}
+			if field == "ClusterID" {
+				needClusterID = false
+			}
+		}
+		if needTunnelID {
+			updateFields = append(updateFields, "TunnelID")
+		}
+		if needClusterID {
+			updateFields = append(updateFields, "ClusterID")
+		}
 	}
 
 	if options == nil {
@@ -736,11 +791,17 @@ func (m *Manager) sendRequest(
 	if result.StatusCode > 300 {
 		errorMessage, err := m.readProblemDetails(result)
 		if err == nil && errorMessage != nil {
-			return nil, fmt.Errorf("unsuccessful request, response: %d %s\n\t%s",
-				result.StatusCode, http.StatusText(result.StatusCode), *errorMessage)
+			return nil, &requestError{
+				statusCode: result.StatusCode,
+				message: fmt.Sprintf("unsuccessful request, response: %d %s\n\t%s",
+					result.StatusCode, http.StatusText(result.StatusCode), *errorMessage),
+			}
 		} else {
-			return nil, fmt.Errorf("unsuccessful request, response: %d: %s",
-				result.StatusCode, http.StatusText(result.StatusCode))
+			return nil, &requestError{
+				statusCode: result.StatusCode,
+				message: fmt.Sprintf("unsuccessful request, response: %d: %s\n\t%s",
+					result.StatusCode, http.StatusText(result.StatusCode), err.Error()),
+			}
 		}
 	}
 
@@ -834,7 +895,7 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 
 func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) *url.URL {
 	baseAddress := m.uri
-	if clusterId != "" {
+	if clusterId != "" && !m.isCustomDomain {
 		// tunnels.local.api.visualstudio.com resolves to localhost (for local development).
 		if baseAddress.Host != "localhost" &&
 			baseAddress.Host != "tunnels.local.api.visualstudio.com" &&

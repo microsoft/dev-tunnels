@@ -7,10 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -22,18 +25,32 @@ var (
 )
 
 func getUserToken() string {
-	// Example: "github <gh-token>" or "Bearer <aad-token>"
+	// Obtain a token using `devtunnel user show --verbose` and paste it here to enable
+	// integration tests. Format: "github <gh-token>" or "Bearer <aad-token>"
 	return ""
 }
 
+func failIfNoToken(t *testing.T) {
+	if getUserToken() == "" {
+		t.Fatal("No user token configured. Update getUserToken() to enable integration tests.")
+	}
+}
+
+func logVerbose(t *testing.T, logger *log.Logger, format string, args ...interface{}) {
+	if testing.Verbose() {
+		logger.Printf(format, args...)
+	}
+}
+
 // These tests do not automatically run in the PR check github action
-// beacuse they require authentication. If you want to run these tests
+// because they require authentication. If you want to run these tests
 // you must first generate a tunnels access token and paste it in the
 // getUserToken return value.
 func TestTunnelCreateDelete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	url, err := url.Parse(serviceUrl)
@@ -56,8 +73,8 @@ func TestTunnelCreateDelete(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
@@ -65,7 +82,150 @@ func TestTunnelCreateDelete(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
+	}
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
+func responseWithStatus(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     make(http.Header),
+	}
+}
+
+func tunnelIDFromPath(path string) string {
+	trimmed := strings.Trim(path, "/")
+	parts := strings.Split(trimmed, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[len(parts)-1]
+}
+
+func TestCreateTunnelRetriesOnConflictForGeneratedID(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	originalAdjectives := adjectives
+	originalNouns := nouns
+	adjectives = []string{"alpha"}
+	nouns = []string{"one"}
+	defer func() {
+		adjectives = originalAdjectives
+		nouns = originalNouns
+	}()
+
+	var pathIDs []string
+	var bodyIDs []string
+	callCount := 0
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		callCount++
+		pathIDs = append(pathIDs, tunnelIDFromPath(r.URL.Path))
+		bodyBytes, readErr := io.ReadAll(r.Body)
+		if readErr == nil {
+			var payload map[string]string
+			if jsonErr := json.Unmarshal(bodyBytes, &payload); jsonErr == nil {
+				bodyIDs = append(bodyIDs, payload["tunnelId"])
+			}
+		}
+		if callCount == 1 {
+			adjectives = []string{"beta"}
+			nouns = []string{"two"}
+			return responseWithStatus(http.StatusConflict, ""), nil
+		}
+		id := tunnelIDFromPath(r.URL.Path)
+		body := fmt.Sprintf("{\"tunnelId\":\"%s\"}", id)
+		return responseWithStatus(http.StatusOK, body), nil
+	})}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, client, "2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	tunnel := &Tunnel{}
+	createdTunnel, err := managementClient.CreateTunnel(context.Background(), tunnel, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 2 {
+		t.Fatalf("expected 2 requests, got %d", callCount)
+	}
+	if len(pathIDs) != 2 {
+		t.Fatalf("expected 2 path IDs, got %d", len(pathIDs))
+	}
+	if len(bodyIDs) != 2 {
+		t.Fatalf("expected 2 body IDs, got %d", len(bodyIDs))
+	}
+	if pathIDs[0] == pathIDs[1] {
+		t.Fatalf("expected retry to use a different tunnel ID")
+	}
+	if pathIDs[0] != bodyIDs[0] || pathIDs[1] != bodyIDs[1] {
+		t.Fatalf("expected request path ID to match request body tunnelId")
+	}
+	if createdTunnel.TunnelID == "" {
+		t.Fatalf("expected tunnel ID to be set")
+	}
+}
+
+func TestCreateTunnelDoesNotRetryOnNonConflict(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	callCount := 0
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		callCount++
+		return responseWithStatus(http.StatusInternalServerError, ""), nil
+	})}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, client, "2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	_, err = managementClient.CreateTunnel(context.Background(), &Tunnel{}, nil)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if callCount != 1 {
+		t.Fatalf("expected 1 request, got %d", callCount)
+	}
+}
+
+func TestCreateTunnelDoesNotRetryWhenIDProvided(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	callCount := 0
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		callCount++
+		return responseWithStatus(http.StatusConflict, ""), nil
+	})}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, client, "2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	_, err = managementClient.CreateTunnel(context.Background(), &Tunnel{TunnelID: "provided-id"}, nil)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if callCount != 1 {
+		t.Fatalf("expected 1 request, got %d", callCount)
 	}
 }
 
@@ -73,6 +233,7 @@ func TestListTunnels(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	url, err := url.Parse(serviceUrl)
@@ -95,14 +256,14 @@ func TestListTunnels(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 	var token string
 	if createdTunnel.AccessTokens != nil {
 		token = createdTunnel.AccessTokens["manage"]
 	} else {
-		logger.Printf("Did not get token for created tunnel")
+		logVerbose(t, logger, "Did not get token for created tunnel")
 	}
 	options = &TunnelRequestOptions{
 		AccessToken: token,
@@ -115,8 +276,8 @@ func TestListTunnels(t *testing.T) {
 		t.Errorf("tunnel was not successfully listed")
 	}
 	for _, tunnel := range tunnels {
-		logger.Printf("found tunnel with id %s", tunnel.TunnelID)
-		tunnel.Table().Print()
+		logVerbose(t, logger, "found tunnel with id %s", tunnel.TunnelID)
+		logVerbose(t, logger, "%v", tunnel.Table())
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
@@ -124,7 +285,7 @@ func TestListTunnels(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
 	}
 }
 
@@ -134,7 +295,8 @@ func TestGetAccessToken(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, nil, "2023-09-27-preview")
+	emptyTokenProvider := func() string { return "" }
+	managementClient, err := NewManager(userAgentManagerTest, emptyTokenProvider, url, nil, "2023-09-27-preview")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -188,6 +350,7 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	url, err := url.Parse(serviceUrl)
@@ -210,8 +373,8 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
@@ -223,15 +386,15 @@ func TestTunnelCreateUpdateDelete(t *testing.T) {
 	} else if updatedTunnel.Name != generatedName {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
-		logger.Printf("Tunnel updated")
-		updatedTunnel.Table().Print()
+		logVerbose(t, logger, "Tunnel updated")
+		logVerbose(t, logger, "%v", updatedTunnel.Table())
 	}
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
 
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
 	}
 }
 
@@ -239,6 +402,7 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	url, err := url.Parse(serviceUrl)
@@ -261,8 +425,8 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
@@ -274,28 +438,28 @@ func TestTunnelCreateUpdateTwiceDelete(t *testing.T) {
 	} else if updatedTunnel.Name != generatedName {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
-		logger.Printf("Tunnel updated")
-		updatedTunnel.Table().Print()
+		logVerbose(t, logger, "Tunnel updated")
+		logVerbose(t, logger, "%v", updatedTunnel.Table())
 	}
 
 	// In the second update we want to update the description without updating the name
 	createdTunnel.Name = ""
 	createdTunnel.Description = "test description"
-	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Name", "Description"}, options)
+	updatedTunnel, err = managementClient.UpdateTunnel(ctx, createdTunnel, []string{"Description"}, options)
 	if err != nil {
 		t.Errorf("tunnel was not successfully updated: %s", err.Error())
-	} else if updatedTunnel.Name != generatedName || createdTunnel.Description != "test description" {
+	} else if updatedTunnel.Name != generatedName || updatedTunnel.Description != "test description" {
 		t.Errorf("tunnel was not successfully updated")
 	} else {
-		logger.Printf("Tunnel updated")
-		updatedTunnel.Table().Print()
+		logVerbose(t, logger, "Tunnel updated")
+		logVerbose(t, logger, "%v", updatedTunnel.Table())
 	}
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
 
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
 	}
 }
 
@@ -303,6 +467,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	url, err := url.Parse(serviceUrl)
@@ -325,8 +490,8 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -337,7 +502,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
 	}
 
 	err = managementClient.DeleteTunnel(ctx, createdTunnel, options)
@@ -345,7 +510,7 @@ func TestTunnelCreateGetDelete(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", getTunnel.TunnelID)
 	}
 }
 
@@ -353,6 +518,7 @@ func TestTunnelAddPort(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -376,8 +542,8 @@ func TestTunnelAddPort(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -385,8 +551,8 @@ func TestTunnelAddPort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Printf("Created port: %d", port.PortNumber)
-	port.Table().Print()
+	logVerbose(t, logger, "Created port: %d", port.PortNumber)
+	logVerbose(t, logger, "%v", port.Table())
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -396,8 +562,8 @@ func TestTunnelAddPort(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.Table().Print()
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "%v", getTunnel.Table())
 	}
 
 	if len(getTunnel.Ports) != 1 {
@@ -409,7 +575,7 @@ func TestTunnelAddPort(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
 	}
 }
 
@@ -417,6 +583,7 @@ func TestTunnelDeletePort(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -440,8 +607,8 @@ func TestTunnelDeletePort(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -449,8 +616,8 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Printf("Created port: %d", port.PortNumber)
-	port.Table().Print()
+	logVerbose(t, logger, "Created port: %d", port.PortNumber)
+	logVerbose(t, logger, "%v", port.Table())
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -460,8 +627,8 @@ func TestTunnelDeletePort(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.Table().Print()
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "%v", getTunnel.Table())
 	}
 
 	err = managementClient.DeleteTunnelPort(ctx, createdTunnel, 3000, options)
@@ -469,7 +636,7 @@ func TestTunnelDeletePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Printf("Deleted port: %d", port.PortNumber)
+	logVerbose(t, logger, "Deleted port: %d", port.PortNumber)
 
 	getTunnel, err = managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -479,8 +646,8 @@ func TestTunnelDeletePort(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.Table().Print()
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "%v", getTunnel.Table())
 	}
 
 	if len(getTunnel.Ports) != 0 {
@@ -492,7 +659,7 @@ func TestTunnelDeletePort(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
 	}
 }
 
@@ -500,6 +667,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -523,8 +691,8 @@ func TestTunnelUpdatePort(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -532,8 +700,8 @@ func TestTunnelUpdatePort(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Printf("Created port: %d", port.PortNumber)
-	port.Table().Print()
+	logVerbose(t, logger, "Created port: %d", port.PortNumber)
+	logVerbose(t, logger, "%v", port.Table())
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -543,8 +711,8 @@ func TestTunnelUpdatePort(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.Table().Print()
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "%v", getTunnel.Table())
 	}
 	accessEntry := TunnelAccessControlEntry{
 		Type:     TunnelAccessControlEntryTypeAnonymous,
@@ -571,8 +739,8 @@ func TestTunnelUpdatePort(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.Table().Print()
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "%v", getTunnel.Table())
 	}
 	if len(getTunnel.Ports[0].AccessControl.Entries) != 1 {
 		t.Errorf("tunnel port was not successfully updated, access control was not changed")
@@ -592,7 +760,7 @@ func TestTunnelUpdatePort(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
 	}
 }
 
@@ -600,6 +768,7 @@ func TestTunnelListPorts(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -623,8 +792,8 @@ func TestTunnelListPorts(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 	portToAdd := NewTunnelPort(3000, "", "", "auto")
 	port, err := managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -633,8 +802,8 @@ func TestTunnelListPorts(t *testing.T) {
 		return
 	}
 
-	logger.Printf("Created port: %d", port.PortNumber)
-	port.Table().Print()
+	logVerbose(t, logger, "Created port: %d", port.PortNumber)
+	logVerbose(t, logger, "%v", port.Table())
 
 	portToAdd = NewTunnelPort(3001, "", "", "auto")
 	port, err = managementClient.CreateTunnelPort(ctx, createdTunnel, portToAdd, options)
@@ -642,8 +811,8 @@ func TestTunnelListPorts(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Printf("Created port: %d", port.PortNumber)
-	port.Table().Print()
+	logVerbose(t, logger, "Created port: %d", port.PortNumber)
+	logVerbose(t, logger, "%v", port.Table())
 
 	ports, err := managementClient.ListTunnelPorts(ctx, createdTunnel, options)
 	if err != nil {
@@ -663,8 +832,8 @@ func TestTunnelListPorts(t *testing.T) {
 	}
 
 	for _, port := range ports {
-		logger.Printf("Port: %d", port.PortNumber)
-		port.Table().Print()
+		logVerbose(t, logger, "Port: %d", port.PortNumber)
+		logVerbose(t, logger, "%v", port.Table())
 	}
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
@@ -675,8 +844,8 @@ func TestTunnelListPorts(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
-		getTunnel.Table().Print()
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "%v", getTunnel.Table())
 	}
 
 	if len(getTunnel.Ports) != 2 {
@@ -688,7 +857,7 @@ func TestTunnelListPorts(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", createdTunnel.TunnelID)
 	}
 }
 
@@ -696,6 +865,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	failIfNoToken(t)
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -721,8 +891,8 @@ func TestTunnelEndpoints(t *testing.T) {
 	if createdTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully created")
 	} else {
-		logger.Printf("Created tunnel with id %s", createdTunnel.TunnelID)
-		createdTunnel.Table().Print()
+		logVerbose(t, logger, "Created tunnel with id %s", createdTunnel.TunnelID)
+		logVerbose(t, logger, "%v", createdTunnel.Table())
 	}
 
 	// Create and add endpoint
@@ -738,7 +908,7 @@ func TestTunnelEndpoints(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	logger.Printf("updated endpoint %s", updatedEndpoint.HostID)
+	logVerbose(t, logger, "updated endpoint %s", updatedEndpoint.HostID)
 
 	getTunnel, err := managementClient.GetTunnel(ctx, createdTunnel, options)
 	if err != nil {
@@ -748,7 +918,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
 	}
 	if len(getTunnel.Endpoints) != 1 {
 		t.Errorf("endpoint was not successfully updated")
@@ -768,7 +938,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	if getTunnel.TunnelID == "" {
 		t.Errorf("tunnel was not successfully found")
 	} else {
-		logger.Printf("Got tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "Got tunnel with id %s", getTunnel.TunnelID)
 	}
 	if len(getTunnel.Endpoints) != 0 {
 		t.Errorf("endpoint was not successfully deleted")
@@ -779,7 +949,7 @@ func TestTunnelEndpoints(t *testing.T) {
 	if err != nil {
 		t.Errorf("tunnel was not successfully deleted")
 	} else {
-		logger.Printf("Deleted tunnel with id %s", getTunnel.TunnelID)
+		logVerbose(t, logger, "Deleted tunnel with id %s", getTunnel.TunnelID)
 	}
 }
 
@@ -823,5 +993,50 @@ func TestValidTokenScopes(t *testing.T) {
 	}
 	if err := multiScopes.valid(nil, false); err == nil {
 		t.Errorf("Multiple scopes should not be valid without allowMultiple flag")
+	}
+}
+
+func TestCustomDomainDoesNotModifyHostname(t *testing.T) {
+	manager, err := NewManagerForCustomDomain(
+		"app.github.dev",
+		userAgentManagerTest,
+		getUserToken,
+		nil,
+		"2023-09-27-preview",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	tunnel := &Tunnel{
+		TunnelID:  "tnnl0001",
+		ClusterID: "usw2",
+	}
+	uri := manager.buildUri(tunnel.ClusterID, fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID), nil, "")
+	if uri.Hostname() != "cp.app.github.dev" {
+		t.Errorf("Expected hostname cp.app.github.dev, got %s", uri.Hostname())
+	}
+}
+
+func TestStandardServiceUriReplacesClusterId(t *testing.T) {
+	serviceUrl, _ := url.Parse(ServiceProperties.ServiceURI)
+	manager, err := NewManager(
+		userAgentManagerTest,
+		getUserToken,
+		serviceUrl,
+		nil,
+		"2023-09-27-preview",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	tunnel := &Tunnel{
+		TunnelID:  "tnnl0001",
+		ClusterID: "usw2",
+	}
+	uri := manager.buildUri(tunnel.ClusterID, fmt.Sprintf("%s/%s", tunnelsApiPath, tunnel.TunnelID), nil, "")
+	if !strings.HasPrefix(uri.Hostname(), "usw2.") {
+		t.Errorf("Expected hostname to start with usw2., got %s", uri.Hostname())
 	}
 }

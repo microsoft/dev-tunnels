@@ -1,5 +1,5 @@
 pool:
-  name: Azure Pipelines
+  name: VSEngSS-MicroBuild2022-1ES
 
 # Publish only if changes to TypeScript directory are committed to main.
 trigger:
@@ -26,8 +26,6 @@ variables:
   # https://eng.ms/docs/microsoft-security/identity/trust-and-security-services/tss-high-security-environments/tss-esrp-fabric-and-platform-services/esrp-documentation/tsgs/sfi/tsg506-integrating-esrp-release-ado-extension
 
   EsrpConnectedServiceName: 'Devtunnels-esrp-ame-msi' # Service connection with ESRP MSI based authentication
-  EsrpAppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' # Managed identity tenant id for ESRP
-  EsrpAppRegistrationClientId: '01ee3ff5-3b24-4b62-996e-6217f7cf3487' # Managed identity client id for ESRP
   EsrpClientId: '142047f4-eda8-4853-8776-c2e81803ea13' # ESRP Client Id, the Old App Registration Id to which we mapped our Managed Identity Id to
   EsrpAuthAKVName: 'tunnels-ppe-esrp-kv' # Key Vault name where the signing certificate is stored
   EsrpAuthSignCertName: 'esrp-sign' # Code signing certificate name in the Key Vault
@@ -35,20 +33,17 @@ variables:
 steps:
 - template: typescript-build-steps.yaml
 
-- task: EsrpRelease@9
+- task: EsrpRelease@11
   inputs:
-    ConnectedServiceName: '$(EsrpConnectedServiceName)'
-    UseManagedIdentity: true
-    AppRegistrationTenantId: '$(EsrpAppRegistrationTenantId)'
-    AppRegistrationClientId: '$(EsrpAppRegistrationClientId)'
-    DomainTenantId: '$(EsrpAppRegistrationTenantId)'
-    KeyVaultName: '$(EsrpAuthAKVName)'
-    SignCertName: '$(EsrpAuthSignCertName)'
-    ClientId: '$(EsrpClientId)'
-    Intent: 'PackageDistribution'
-    ContentType: 'npm'
-    FolderLocation: '$(System.DefaultWorkingDirectory)/ts/out/pkg'
-    WaitForReleaseCompletion: true
-    Owners: 'plequere@microsoft.com'
-    Approvers: 'jasongin@microsoft.com, jarober@microsoft.com, nkotchar@microsoft.com'
-    MainPublisher: 'ESRPRELPACMAN'
+    connectedservicename: '$(EsrpConnectedServiceName)'
+    usemanagedidentity: true
+    keyvaultname: '$(EsrpAuthAKVName)'
+    signcertname: '$(EsrpAuthSignCertName)'
+    clientid: '$(EsrpClientId)'
+    intent: 'PackageDistribution'
+    contenttype: 'npm'
+    folderlocation: '$(System.DefaultWorkingDirectory)/ts/out/pkg'
+    owners: 'jfullerton@microsoft.com'
+    approvers: 'jasongin@microsoft.com, debekoe@microsoft.com, ilbiryuk@microsoft.com'
+    mainpublisher: 'ESRPRELPACMAN'
+    domaintenantid: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'

@@ -175,7 +175,8 @@ func (s *ClientSSHSession) forwardPort(ctx context.Context, port uint16) error {
 		default:
 		}
 	}
-	fmt.Printf("Client connected at %v to host port %v\n", listener.Addr(), port)
+
+	s.logger.Printf("Client connected at %v to host port %v", listener.Addr(), port)
 
 	go func() {
 		for {
