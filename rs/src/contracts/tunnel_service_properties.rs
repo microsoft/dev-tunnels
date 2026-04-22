@@ -40,6 +40,9 @@ pub const PPE_DNS_NAME: &str = "global.rel.tunnels.ppe.api.visualstudio.com";
 // Global DNS name of the development tunnel service.
 pub const DEV_DNS_NAME: &str = "global.ci.tunnels.dev.api.visualstudio.com";
 
+// Default host name for the local tunnel service.
+pub const LOCAL_DNS_NAME: &str = "localhost:9901";
+
 // First-party app ID: `Visual Studio Tunnel Service`
 //
 // Used for authenticating AAD/MSA users, and service principals outside the AME tenant,

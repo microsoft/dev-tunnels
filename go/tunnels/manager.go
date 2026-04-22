@@ -39,7 +39,7 @@ var DevServiceProperties = TunnelServiceProperties{
 }
 
 var LocalServiceProperties = TunnelServiceProperties{
-	ServiceURI:           fmt.Sprintf("https://%s/", devDnsName),
+	ServiceURI:           fmt.Sprintf("https://%s/", localDnsName),
 	ServiceAppID:         devFirstPartyAppID,
 	ServiceInternalAppID: devThirdPartyAppID,
 	GitHubAppClientID:    localGitHubAppClientID,

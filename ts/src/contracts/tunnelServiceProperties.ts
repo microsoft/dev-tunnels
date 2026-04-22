@@ -54,6 +54,11 @@ export const ppeDnsName = 'global.rel.tunnels.ppe.api.visualstudio.com';
 export const devDnsName = 'global.ci.tunnels.dev.api.visualstudio.com';
 
 /**
+ * Default host name for the local tunnel service.
+ */
+export const localDnsName = 'localhost:9901';
+
+/**
  * First-party app ID: `Visual Studio Tunnel Service`
  *
  * Used for authenticating AAD/MSA users, and service principals outside the AME tenant,

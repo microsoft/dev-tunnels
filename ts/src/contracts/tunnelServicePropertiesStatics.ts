@@ -16,6 +16,7 @@ import {
     prodDnsName,
     ppeDnsName,
     devDnsName,
+    localDnsName,
 } from './tunnelServiceProperties';
 
 /**
@@ -52,7 +53,7 @@ export const development = <ITunnelServiceProperties>{
  * Gets properties for the service when running locally.
  */
 export const local = <ITunnelServiceProperties>{
-    serviceUri: `https://${devDnsName}/`,
+    serviceUri: `https://${localDnsName}/`,
     serviceAppId: devFirstPartyAppId,
     serviceInternalAppId: devThirdPartyAppId,
     gitHubAppClientId: localGitHubAppClientId,

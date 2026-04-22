@@ -28,6 +28,11 @@ public class TunnelServiceProperties
     internal const string DevDnsName = "global.ci.tunnels.dev.api.visualstudio.com";
 
     /// <summary>
+    /// Default host name for the local tunnel service.
+    /// </summary>
+    internal const string LocalDnsName = "localhost:9901";
+
+    /// <summary>
     /// First-party app ID: `Visual Studio Tunnel Service`
     /// </summary>
     /// <remarks>
@@ -165,7 +170,7 @@ public class TunnelServiceProperties
     /// GitHub app with localhost callback URLs.
     /// </remarks>
     public static TunnelServiceProperties Local { get; } = new TunnelServiceProperties(
-        $"https://{DevDnsName}/",
+        $"https://{LocalDnsName}/",
         DevFirstPartyAppId,
         DevThirdPartyAppId,
         LocalGitHubAppClientId);

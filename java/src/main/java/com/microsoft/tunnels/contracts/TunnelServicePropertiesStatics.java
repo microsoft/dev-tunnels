@@ -39,7 +39,7 @@ class TunnelServicePropertiesStatics {
    * Gets properties for the service when running locally.
    */
   static final TunnelServiceProperties local = new TunnelServiceProperties(
-      "https://" + TunnelServiceProperties.devDnsName + "/",
+      "https://" + TunnelServiceProperties.localDnsName + "/",
       TunnelServiceProperties.devFirstPartyAppId,
       TunnelServiceProperties.devThirdPartyAppId,
       TunnelServiceProperties.localGitHubAppClientId);
