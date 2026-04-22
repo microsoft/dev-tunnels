@@ -10,7 +10,9 @@ import {
     ppeThirdPartyAppId,
     devThirdPartyAppId,
     prodGitHubAppClientId,
-    nonProdGitHubAppClientId,
+    ppeGitHubAppClientId,
+    devGitHubAppClientId,
+    localGitHubAppClientId,
     prodDnsName,
     ppeDnsName,
     devDnsName,
@@ -33,7 +35,7 @@ export const staging = <ITunnelServiceProperties>{
     serviceUri: `https://${ppeDnsName}/`,
     serviceAppId: ppeFirstPartyAppId,
     serviceInternalAppId: ppeThirdPartyAppId,
-    gitHubAppClientId: nonProdGitHubAppClientId,
+    gitHubAppClientId: ppeGitHubAppClientId,
 };
 
 /**
@@ -43,7 +45,17 @@ export const development = <ITunnelServiceProperties>{
     serviceUri: `https://${devDnsName}/`,
     serviceAppId: devFirstPartyAppId,
     serviceInternalAppId: devThirdPartyAppId,
-    gitHubAppClientId: nonProdGitHubAppClientId,
+    gitHubAppClientId: devGitHubAppClientId,
+};
+
+/**
+ * Gets properties for the service when running locally.
+ */
+export const local = <ITunnelServiceProperties>{
+    serviceUri: `https://${devDnsName}/`,
+    serviceAppId: devFirstPartyAppId,
+    serviceInternalAppId: devThirdPartyAppId,
+    gitHubAppClientId: localGitHubAppClientId,
 };
 
 /**
@@ -64,6 +76,8 @@ export function environment(environmentName: string): ITunnelServiceProperties {
         case 'dev':
         case 'development':
             return development;
+        case 'local':
+            return local;
         default:
             throw new Error(`Invalid service environment: ${environmentName}`);
     }

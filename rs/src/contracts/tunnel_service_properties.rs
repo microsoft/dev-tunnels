@@ -85,6 +85,18 @@ pub const PROD_GITHUB_APP_CLIENT_ID: &str = "Iv1.e7b89e013f801f03";
 
 // GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
 //
-// Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
-// service environments.
-pub const NON_PROD_GITHUB_APP_CLIENT_ID: &str = "Iv1.b231c327f1eaa229";
+// Used by client apps that authenticate tunnel users with GitHub, in the PPE
+// service environment.
+pub const PPE_GITHUB_APP_CLIENT_ID: &str = "Iv1.b231c327f1eaa229";
+
+// GitHub App Client ID for 'Dev Tunnels Service - Dev'
+//
+// Used by client apps that authenticate tunnel users with GitHub, in the DEV
+// service environment.
+pub const DEV_GITHUB_APP_CLIENT_ID: &str = "Iv23ctTiak9wLCiTcEbr";
+
+// GitHub App Client ID for 'Dev Tunnels Service - Local'
+//
+// Used by client apps that authenticate tunnel users with GitHub, when running
+// the service locally.
+pub const LOCAL_GITHUB_APP_CLIENT_ID: &str = "Iv23cttBYzKThF88PiPR";
