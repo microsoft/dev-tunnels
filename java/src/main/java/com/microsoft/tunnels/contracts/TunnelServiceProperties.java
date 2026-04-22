@@ -33,6 +33,11 @@ public class TunnelServiceProperties {
     static final String devDnsName = "global.ci.tunnels.dev.api.visualstudio.com";
 
     /**
+     * Default host name for the local tunnel service.
+     */
+    static final String localDnsName = "tunnels.local.api.visualstudio.com:9901";
+
+    /**
      * First-party app ID: `Visual Studio Tunnel Service`
      *
      * Used for authenticating AAD/MSA users, and service principals outside the AME
@@ -92,10 +97,26 @@ public class TunnelServiceProperties {
     /**
      * GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
      *
-     * Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
-     * service environments.
+     * Used by client apps that authenticate tunnel users with GitHub, in the PPE service
+     * environment.
      */
-    static final String nonProdGitHubAppClientId = "Iv1.b231c327f1eaa229";
+    static final String ppeGitHubAppClientId = "Iv1.b231c327f1eaa229";
+
+    /**
+     * GitHub App Client ID for 'Dev Tunnels Service - Dev'
+     *
+     * Used by client apps that authenticate tunnel users with GitHub, in the DEV service
+     * environment.
+     */
+    static final String devGitHubAppClientId = "Iv23ctTiak9wLCiTcEbr";
+
+    /**
+     * GitHub App Client ID for 'Dev Tunnels Service - Local'
+     *
+     * Used by client apps that authenticate tunnel users with GitHub, when running the
+     * service locally.
+     */
+    static final String localGitHubAppClientId = "Iv23cttBYzKThF88PiPR";
 
     /**
      * Gets production service properties.
@@ -111,6 +132,14 @@ public class TunnelServiceProperties {
      * Gets properties for the service in the development environment.
      */
     public static final TunnelServiceProperties development = TunnelServicePropertiesStatics.development;
+
+    /**
+     * Gets properties for the service when running locally.
+     *
+     * Uses the same service app IDs as the development environment, but a different
+     * GitHub app with localhost callback URLs.
+     */
+    public static final TunnelServiceProperties local = TunnelServicePropertiesStatics.local;
 
     /**
      * Gets the base URI of the service.

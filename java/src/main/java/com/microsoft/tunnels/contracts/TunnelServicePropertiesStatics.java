@@ -24,7 +24,7 @@ class TunnelServicePropertiesStatics {
       "https://" + TunnelServiceProperties.ppeDnsName + "/",
       TunnelServiceProperties.ppeFirstPartyAppId,
       TunnelServiceProperties.ppeThirdPartyAppId,
-      TunnelServiceProperties.nonProdGitHubAppClientId);
+      TunnelServiceProperties.ppeGitHubAppClientId);
 
   /**
    * Gets properties for the service in the development environment.
@@ -33,7 +33,16 @@ class TunnelServicePropertiesStatics {
       "https://" + TunnelServiceProperties.devDnsName + "/",
       TunnelServiceProperties.devFirstPartyAppId,
       TunnelServiceProperties.devThirdPartyAppId,
-      TunnelServiceProperties.nonProdGitHubAppClientId);
+      TunnelServiceProperties.devGitHubAppClientId);
+
+  /**
+   * Gets properties for the service when running locally.
+   */
+  static final TunnelServiceProperties local = new TunnelServiceProperties(
+      "https://" + TunnelServiceProperties.localDnsName + "/",
+      TunnelServiceProperties.devFirstPartyAppId,
+      TunnelServiceProperties.devThirdPartyAppId,
+      TunnelServiceProperties.localGitHubAppClientId);
 
   public static TunnelServiceProperties environment(String environmentName) {
     if (StringUtils.isBlank(environmentName)) {
@@ -51,6 +60,8 @@ class TunnelServicePropertiesStatics {
       case "dev":
       case "development":
         return TunnelServiceProperties.development;
+      case "local":
+        return TunnelServiceProperties.local;
       default:
         throw new IllegalArgumentException("Invalid service environment: " + environmentName);
     }
