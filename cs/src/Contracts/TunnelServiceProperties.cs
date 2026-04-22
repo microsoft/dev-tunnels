@@ -28,6 +28,11 @@ public class TunnelServiceProperties
     internal const string DevDnsName = "global.ci.tunnels.dev.api.visualstudio.com";
 
     /// <summary>
+    /// Default host name for the local tunnel service.
+    /// </summary>
+    internal const string LocalDnsName = "tunnels.local.api.visualstudio.com:9901";
+
+    /// <summary>
     /// First-party app ID: `Visual Studio Tunnel Service`
     /// </summary>
     /// <remarks>
@@ -95,10 +100,28 @@ public class TunnelServiceProperties
     /// GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
     /// </summary>
     /// <remarks>
-    /// Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
-    /// service environments.
+    /// Used by client apps that authenticate tunnel users with GitHub, in the PPE
+    /// service environment.
     /// </remarks>
-    internal const string NonProdGitHubAppClientId = "Iv1.b231c327f1eaa229";
+    internal const string PpeGitHubAppClientId = "Iv1.b231c327f1eaa229";
+
+    /// <summary>
+    /// GitHub App Client ID for 'Dev Tunnels Service - Dev'
+    /// </summary>
+    /// <remarks>
+    /// Used by client apps that authenticate tunnel users with GitHub, in the DEV
+    /// service environment.
+    /// </remarks>
+    internal const string DevGitHubAppClientId = "Iv23ctTiak9wLCiTcEbr";
+
+    /// <summary>
+    /// GitHub App Client ID for 'Dev Tunnels Service - Local'
+    /// </summary>
+    /// <remarks>
+    /// Used by client apps that authenticate tunnel users with GitHub, when running
+    /// the service locally.
+    /// </remarks>
+    internal const string LocalGitHubAppClientId = "Iv23cttBYzKThF88PiPR";
 
     private TunnelServiceProperties(
         string serviceUri,
@@ -128,7 +151,7 @@ public class TunnelServiceProperties
         $"https://{PpeDnsName}/",
         PpeFirstPartyAppId,
         PpeThirdPartyAppId,
-        NonProdGitHubAppClientId);
+        PpeGitHubAppClientId);
 
     /// <summary>
     /// Gets properties for the service in the development environment.
@@ -137,7 +160,20 @@ public class TunnelServiceProperties
         $"https://{DevDnsName}/",
         DevFirstPartyAppId,
         DevThirdPartyAppId,
-        NonProdGitHubAppClientId);
+        DevGitHubAppClientId);
+
+    /// <summary>
+    /// Gets properties for the service when running locally.
+    /// </summary>
+    /// <remarks>
+    /// Uses the same service app IDs as the development environment, but a different
+    /// GitHub app with localhost callback URLs.
+    /// </remarks>
+    public static TunnelServiceProperties Local { get; } = new TunnelServiceProperties(
+        $"https://{LocalDnsName}/",
+        DevFirstPartyAppId,
+        DevThirdPartyAppId,
+        LocalGitHubAppClientId);
 
     /// <summary>
     /// Gets properties for the service in the specified environment.
@@ -157,6 +193,7 @@ public class TunnelServiceProperties
             "prod" or "production" => TunnelServiceProperties.Production,
             "ppe" or "preprod" or "staging" => TunnelServiceProperties.Staging,
             "dev" or "development" => TunnelServiceProperties.Development,
+            "local" => TunnelServiceProperties.Local,
             _ => throw new ArgumentException($"Invalid service environment: {environmentName}"),
         };
     }

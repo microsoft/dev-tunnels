@@ -54,6 +54,11 @@ export const ppeDnsName = 'global.rel.tunnels.ppe.api.visualstudio.com';
 export const devDnsName = 'global.ci.tunnels.dev.api.visualstudio.com';
 
 /**
+ * Default host name for the local tunnel service.
+ */
+export const localDnsName = 'tunnels.local.api.visualstudio.com:9901';
+
+/**
  * First-party app ID: `Visual Studio Tunnel Service`
  *
  * Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
@@ -113,10 +118,26 @@ export const prodGitHubAppClientId = 'Iv1.e7b89e013f801f03';
 /**
  * GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
  *
- * Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
- * service environments.
+ * Used by client apps that authenticate tunnel users with GitHub, in the PPE service
+ * environment.
  */
-export const nonProdGitHubAppClientId = 'Iv1.b231c327f1eaa229';
+export const ppeGitHubAppClientId = 'Iv1.b231c327f1eaa229';
+
+/**
+ * GitHub App Client ID for 'Dev Tunnels Service - Dev'
+ *
+ * Used by client apps that authenticate tunnel users with GitHub, in the DEV service
+ * environment.
+ */
+export const devGitHubAppClientId = 'Iv23ctTiak9wLCiTcEbr';
+
+/**
+ * GitHub App Client ID for 'Dev Tunnels Service - Local'
+ *
+ * Used by client apps that authenticate tunnel users with GitHub, when running the
+ * service locally.
+ */
+export const localGitHubAppClientId = 'Iv23cttBYzKThF88PiPR';
 
 // Import static members from a non-generated file,
 // and re-export them as an object with the same name as the interface.
@@ -124,6 +145,7 @@ import {
     production,
     staging,
     development,
+    local,
     environment,
 } from './tunnelServicePropertiesStatics';
 
@@ -131,5 +153,6 @@ export const TunnelServiceProperties = {
     production,
     staging,
     development,
+    local,
     environment,
 };
