@@ -28,14 +28,23 @@ var PpeServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", ppeDnsName),
 	ServiceAppID:         ppeFirstPartyAppID,
 	ServiceInternalAppID: ppeThirdPartyAppID,
-	GitHubAppClientID:    nonProdGitHubAppClientID,
+	GitHubAppClientID:    ppeGitHubAppClientID,
 }
 
 var DevServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", devDnsName),
 	ServiceAppID:         devFirstPartyAppID,
 	ServiceInternalAppID: devThirdPartyAppID,
-	GitHubAppClientID:    nonProdGitHubAppClientID,
+	GitHubAppClientID:    devGitHubAppClientID,
+}
+
+// LocalServiceProperties uses the same service app IDs as the development environment,
+// but a different GitHub app with localhost callback URLs.
+var LocalServiceProperties = TunnelServiceProperties{
+	ServiceURI:           fmt.Sprintf("https://%s/", localDnsName),
+	ServiceAppID:         devFirstPartyAppID,
+	ServiceInternalAppID: devThirdPartyAppID,
+	GitHubAppClientID:    localGitHubAppClientID,
 }
 
 type tokenProviderfn func() string
