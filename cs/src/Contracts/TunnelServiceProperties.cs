@@ -28,6 +28,11 @@ public class TunnelServiceProperties
     internal const string DevDnsName = "global.ci.tunnels.dev.api.visualstudio.com";
 
     /// <summary>
+    /// Default host name for the local tunnel service.
+    /// </summary>
+    internal const string LocalDnsName = "tunnels.local.api.visualstudio.com:9901";
+
+    /// <summary>
     /// First-party app ID: `Visual Studio Tunnel Service`
     /// </summary>
     /// <remarks>
@@ -46,13 +51,14 @@ public class TunnelServiceProperties
     internal const string PpeFirstPartyAppId = "54c45752-bacd-424a-b928-652f3eca2b18";
 
     /// <summary>
-    /// First-party app ID: `DEV-VSTunnels`
+    /// Third-party app ID: `DEV-VSTunnelService-3P`
     /// </summary>
     /// <remarks>
     /// Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
-    /// in the DEV service environment
+    /// in the DEV service environment.
+    /// This is a 3P app registration in the Microsoft corp tenant, replacing the former 1P FPA.
     /// </remarks>
-    internal const string DevFirstPartyAppId = "9c63851a-ba2b-40a5-94bd-890be43b9284";
+    internal const string DevFirstPartyAppId = "906ce216-6f2e-40be-875d-7fe1a9bc288a";
 
     /// <summary>
     /// Third-party app ID: `tunnels-prod-app-sp`
@@ -94,10 +100,28 @@ public class TunnelServiceProperties
     /// GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
     /// </summary>
     /// <remarks>
-    /// Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
-    /// service environments.
+    /// Used by client apps that authenticate tunnel users with GitHub, in the PPE
+    /// service environment.
     /// </remarks>
-    internal const string NonProdGitHubAppClientId = "Iv1.b231c327f1eaa229";
+    internal const string PpeGitHubAppClientId = "Iv1.b231c327f1eaa229";
+
+    /// <summary>
+    /// GitHub App Client ID for 'Dev Tunnels Service - Dev'
+    /// </summary>
+    /// <remarks>
+    /// Used by client apps that authenticate tunnel users with GitHub, in the DEV
+    /// service environment.
+    /// </remarks>
+    internal const string DevGitHubAppClientId = "Iv23ctTiak9wLCiTcEbr";
+
+    /// <summary>
+    /// GitHub App Client ID for 'Dev Tunnels Service - Local'
+    /// </summary>
+    /// <remarks>
+    /// Used by client apps that authenticate tunnel users with GitHub, when running
+    /// the service locally.
+    /// </remarks>
+    internal const string LocalGitHubAppClientId = "Iv23cttBYzKThF88PiPR";
 
     private TunnelServiceProperties(
         string serviceUri,
@@ -127,7 +151,7 @@ public class TunnelServiceProperties
         $"https://{PpeDnsName}/",
         PpeFirstPartyAppId,
         PpeThirdPartyAppId,
-        NonProdGitHubAppClientId);
+        PpeGitHubAppClientId);
 
     /// <summary>
     /// Gets properties for the service in the development environment.
@@ -136,7 +160,20 @@ public class TunnelServiceProperties
         $"https://{DevDnsName}/",
         DevFirstPartyAppId,
         DevThirdPartyAppId,
-        NonProdGitHubAppClientId);
+        DevGitHubAppClientId);
+
+    /// <summary>
+    /// Gets properties for the service when running locally.
+    /// </summary>
+    /// <remarks>
+    /// Uses the same service app IDs as the development environment, but a different
+    /// GitHub app with localhost callback URLs.
+    /// </remarks>
+    public static TunnelServiceProperties Local { get; } = new TunnelServiceProperties(
+        $"https://{LocalDnsName}/",
+        DevFirstPartyAppId,
+        DevThirdPartyAppId,
+        LocalGitHubAppClientId);
 
     /// <summary>
     /// Gets properties for the service in the specified environment.
@@ -156,6 +193,7 @@ public class TunnelServiceProperties
             "prod" or "production" => TunnelServiceProperties.Production,
             "ppe" or "preprod" or "staging" => TunnelServiceProperties.Staging,
             "dev" or "development" => TunnelServiceProperties.Development,
+            "local" => TunnelServiceProperties.Local,
             _ => throw new ArgumentException($"Invalid service environment: {environmentName}"),
         };
     }

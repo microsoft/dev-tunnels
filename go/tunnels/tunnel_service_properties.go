@@ -38,6 +38,9 @@ var ppeDnsName = "global.rel.tunnels.ppe.api.visualstudio.com"
 // Global DNS name of the development tunnel service.
 var devDnsName = "global.ci.tunnels.dev.api.visualstudio.com"
 
+// Default host name for the local tunnel service.
+var localDnsName = "tunnels.local.api.visualstudio.com:9901"
+
 // First-party app ID: `Visual Studio Tunnel Service`
 //
 // Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
@@ -50,11 +53,12 @@ var prodFirstPartyAppID = "46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2"
 // in the PPE service environments.
 var ppeFirstPartyAppID = "54c45752-bacd-424a-b928-652f3eca2b18"
 
-// First-party app ID: `DEV-VSTunnels`
+// Third-party app ID: `DEV-VSTunnelService-3P`
 //
 // Used for authenticating AAD/MSA users, and service principals outside the AME tenant,
-// in the DEV service environment
-var devFirstPartyAppID = "9c63851a-ba2b-40a5-94bd-890be43b9284"
+// in the DEV service environment. This is a 3P app registration in the Microsoft corp
+// tenant, replacing the former 1P FPA.
+var devFirstPartyAppID = "906ce216-6f2e-40be-875d-7fe1a9bc288a"
 
 // Third-party app ID: `tunnels-prod-app-sp`
 //
@@ -82,6 +86,18 @@ var prodGitHubAppClientID = "Iv1.e7b89e013f801f03"
 
 // GitHub App Client ID for 'Visual Studio Tunnel Service - Test'
 //
-// Used by client apps that authenticate tunnel users with GitHub, in the PPE and DEV
-// service environments.
-var nonProdGitHubAppClientID = "Iv1.b231c327f1eaa229"
+// Used by client apps that authenticate tunnel users with GitHub, in the PPE service
+// environment.
+var ppeGitHubAppClientID = "Iv1.b231c327f1eaa229"
+
+// GitHub App Client ID for 'Dev Tunnels Service - Dev'
+//
+// Used by client apps that authenticate tunnel users with GitHub, in the DEV service
+// environment.
+var devGitHubAppClientID = "Iv23ctTiak9wLCiTcEbr"
+
+// GitHub App Client ID for 'Dev Tunnels Service - Local'
+//
+// Used by client apps that authenticate tunnel users with GitHub, when running the
+// service locally.
+var localGitHubAppClientID = "Iv23cttBYzKThF88PiPR"
