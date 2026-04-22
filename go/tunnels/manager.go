@@ -27,14 +27,21 @@ var PpeServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", ppeDnsName),
 	ServiceAppID:         ppeFirstPartyAppID,
 	ServiceInternalAppID: ppeThirdPartyAppID,
-	GitHubAppClientID:    nonProdGitHubAppClientID,
+	GitHubAppClientID:    ppeGitHubAppClientID,
 }
 
 var DevServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", devDnsName),
 	ServiceAppID:         devFirstPartyAppID,
 	ServiceInternalAppID: devThirdPartyAppID,
-	GitHubAppClientID:    nonProdGitHubAppClientID,
+	GitHubAppClientID:    devGitHubAppClientID,
+}
+
+var LocalServiceProperties = TunnelServiceProperties{
+	ServiceURI:           fmt.Sprintf("https://%s/", devDnsName),
+	ServiceAppID:         devFirstPartyAppID,
+	ServiceInternalAppID: devThirdPartyAppID,
+	GitHubAppClientID:    localGitHubAppClientID,
 }
 
 type tokenProviderfn func() string
