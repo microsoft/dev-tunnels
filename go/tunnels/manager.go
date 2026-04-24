@@ -33,7 +33,7 @@ var PpeServiceProperties = TunnelServiceProperties{
 
 var DevServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", devDnsName),
-	ServiceAppID:         devFirstPartyAppID,
+	ServiceAppID:         devServiceAppID,
 	ServiceInternalAppID: devThirdPartyAppID,
 	GitHubAppClientID:    devGitHubAppClientID,
 }
@@ -42,7 +42,7 @@ var DevServiceProperties = TunnelServiceProperties{
 // but a different GitHub app with localhost callback URLs.
 var LocalServiceProperties = TunnelServiceProperties{
 	ServiceURI:           fmt.Sprintf("https://%s/", localDnsName),
-	ServiceAppID:         devFirstPartyAppID,
+	ServiceAppID:         devServiceAppID,
 	ServiceInternalAppID: devThirdPartyAppID,
 	GitHubAppClientID:    localGitHubAppClientID,
 }

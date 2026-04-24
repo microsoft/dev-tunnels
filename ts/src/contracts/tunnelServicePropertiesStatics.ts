@@ -5,7 +5,7 @@ import {
     TunnelServiceProperties as ITunnelServiceProperties,
     prodFirstPartyAppId,
     ppeFirstPartyAppId,
-    devFirstPartyAppId,
+    devServiceAppId,
     prodThirdPartyAppId,
     ppeThirdPartyAppId,
     devThirdPartyAppId,
@@ -44,7 +44,7 @@ export const staging = <ITunnelServiceProperties>{
  */
 export const development = <ITunnelServiceProperties>{
     serviceUri: `https://${devDnsName}/`,
-    serviceAppId: devFirstPartyAppId,
+    serviceAppId: devServiceAppId,
     serviceInternalAppId: devThirdPartyAppId,
     gitHubAppClientId: devGitHubAppClientId,
 };
@@ -57,7 +57,7 @@ export const development = <ITunnelServiceProperties>{
  */
 export const local = <ITunnelServiceProperties>{
     serviceUri: `https://${localDnsName}/`,
-    serviceAppId: devFirstPartyAppId,
+    serviceAppId: devServiceAppId,
     serviceInternalAppId: devThirdPartyAppId,
     gitHubAppClientId: localGitHubAppClientId,
 };

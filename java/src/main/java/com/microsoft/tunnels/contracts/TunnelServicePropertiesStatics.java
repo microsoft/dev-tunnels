@@ -31,7 +31,7 @@ class TunnelServicePropertiesStatics {
    */
   static final TunnelServiceProperties development = new TunnelServiceProperties(
       "https://" + TunnelServiceProperties.devDnsName + "/",
-      TunnelServiceProperties.devFirstPartyAppId,
+      TunnelServiceProperties.devServiceAppId,
       TunnelServiceProperties.devThirdPartyAppId,
       TunnelServiceProperties.devGitHubAppClientId);
 
@@ -43,7 +43,7 @@ class TunnelServicePropertiesStatics {
    */
   static final TunnelServiceProperties local = new TunnelServiceProperties(
       "https://" + TunnelServiceProperties.localDnsName + "/",
-      TunnelServiceProperties.devFirstPartyAppId,
+      TunnelServiceProperties.devServiceAppId,
       TunnelServiceProperties.devThirdPartyAppId,
       TunnelServiceProperties.localGitHubAppClientId);
 
