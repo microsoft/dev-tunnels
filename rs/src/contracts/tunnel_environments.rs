@@ -33,7 +33,7 @@ pub fn env_development() -> TunnelServiceProperties {
 pub fn env_local() -> TunnelServiceProperties {
     TunnelServiceProperties {
         service_uri: format!("https://{}", LOCAL_DNS_NAME),
-        service_app_id: DEV_FIRST_PARTY_APP_ID.to_owned(),
+        service_app_id: DEV_SERVICE_APP_ID.to_owned(),
         service_internal_app_id: DEV_THIRD_PARTY_APP_ID.to_owned(),
         github_app_client_id: LOCAL_GITHUB_APP_CLIENT_ID.to_owned(),
     }
