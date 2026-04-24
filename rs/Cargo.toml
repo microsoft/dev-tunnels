@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 jiff = { version = "0.2", default-features = false, features = ["std", "serde"] }
-reqwest = { version = "0.13",default-features = false,  features = ["charset", "system-proxy", "json"] }
+reqwest = { version = "0.13", default-features = false, features = ["charset", "system-proxy", "json"] }
 url = "2"
 opentelemetry = { version = "0.20", features = ["trace"], optional = true }
 serde_json = "1"

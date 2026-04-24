@@ -76,8 +76,8 @@ where
 
 fn tung_to_io_error(e: tungstenite::Error) -> io::Error {
     match e {
-        tungstenite::Error::Io(e) => e.into(),
-        _ => io::Error::new(io::ErrorKind::Other, e.to_string()),
+        tungstenite::Error::Io(e) => e,
+        _ => io::Error::other(e.to_string()),
     }
 }
 
@@ -268,10 +268,13 @@ pub(crate) async fn connect_via_proxy(
         .map_err(TunnelError::ProxyConnectRequestFailed)?;
 
     if !res.status().is_success() {
+        let proxy_url = reqwest::Url::parse(proxy_addr)
+            .or_else(|_| reqwest::Url::parse(&format!("http://{}", proxy_addr)))
+            .map_err(TunnelError::ProxyAddressInvalid)?;
         return Err(TunnelError::HttpError {
             reason: "error sending tunnel CONNECT request",
             error: HttpError::ResponseError(ResponseError {
-                url: reqwest::Url::parse(proxy_addr).unwrap(),
+                url: proxy_url,
                 status_code: res.status(),
                 data: {
                     use http_body_util::BodyExt;
@@ -286,7 +289,16 @@ pub(crate) async fn connect_via_proxy(
         });
     }
 
-    let tcp = conn.await.unwrap().unwrap().io.into_inner();
+    let tcp = conn
+        .await
+        .map_err(|e| {
+            TunnelError::ProxyConnectionFailed(io::Error::other(
+                format!("proxy connection task failed: {e}"),
+            ))
+        })?
+        .map_err(TunnelError::ProxyHandshakeFailed)?
+        .io
+        .into_inner();
     let (ws_stream, _) = tokio_tungstenite::client_async_tls(ws_req, tcp).await?;
     Ok(ws_stream)
 }

@@ -128,7 +128,6 @@ pub struct RelayTunnelHost {
 /// Ports are handled by a client calling `add_port()` or `add_port_raw()`,
 /// which either forward to a local TCP connection or return the
 /// ForwardedPortConnection directly, respectively.
-
 #[allow(dead_code)]
 impl RelayTunnelHost {
     pub fn new(locator: TunnelLocator, mgmt: TunnelManagementClient) -> Self {
@@ -542,7 +541,7 @@ impl AsyncWrite for ForwardedPortWriter {
             }
             Poll::Ready(Err(_)) => {
                 self.is_write_fut_valid = false;
-                Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF")))
+                Poll::Ready(Err(io::Error::other("EOF")))
             }
         }
     }
@@ -573,7 +572,7 @@ impl AsyncRead for ForwardedPortReader {
 
         match self.receiver.poll_recv(cx) {
             Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, msg, 0),
-            Poll::Ready(None) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF"))),
+            Poll::Ready(None) => Poll::Ready(Err(io::Error::other("EOF"))),
             Poll::Pending => Poll::Pending,
         }
     }
@@ -1005,7 +1004,7 @@ impl AsyncWrite for AsyncRWChannel {
             }
             Poll::Ready(Err(_)) => {
                 self.is_write_fut_valid = false;
-                Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF")))
+                Poll::Ready(Err(io::Error::other("EOF")))
             }
         }
     }
@@ -1030,7 +1029,7 @@ impl AsyncRead for AsyncRWChannel {
 
         match self.incoming.poll_recv(cx) {
             Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, msg, 0),
-            Poll::Ready(None) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF"))),
+            Poll::Ready(None) => Poll::Ready(Err(io::Error::other("EOF"))),
             Poll::Pending => Poll::Pending,
         }
     }
