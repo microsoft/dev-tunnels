@@ -854,7 +854,7 @@ mod tests {
 
     #[test]
     fn custom_domain_does_not_modify_hostname() {
-        let mut builder = super::new_tunnel_management_for_custom_domain(
+        let builder = super::new_tunnel_management_for_custom_domain(
             "rs-sdk-tests",
             "app.github.dev",
         );

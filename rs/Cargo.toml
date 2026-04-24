@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 jiff = { version = "0.2", default-features = false, features = ["std", "serde"] }
-reqwest = { version = "0.11", features = ["default", "json"] }
+reqwest = { version = "0.13",default-features = false,  features = ["charset", "system-proxy", "json"] }
 url = "2"
 opentelemetry = { version = "0.20", features = ["trace"], optional = true }
 serde_json = "1"
@@ -15,14 +15,15 @@ thiserror = "1.0"
 log = "0.4"
 tokio = { version = "1.20", features = ["macros", "io-util", "time"], optional = true }
 tokio-util = { version = "0.7", optional = true }
-tokio-tungstenite = { version = "0.20", optional = true, features = ["native-tls"] }
+tokio-tungstenite = { version = "0.26", optional = true, features = ["native-tls"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink"], optional = true }
-tungstenite = { version = "0.20", optional = true, features = ["native-tls"] }
 uuid = { version = "1.4", features = ["v4"], optional = true }
 rand = "0.8.5"
 russh = { version = "0.37.1", default-features = false, features = ["openssl", "flate2"], optional = true }
 russh-keys = { version = "0.37.1", default-features = false, features = ["openssl"], optional = true }
-hyper = { version = "0.14", optional = true }
+hyper = { version = "1.9", optional = true }
+http-body-util = { version = "0.1", optional = true }
+hyper-util = { version = "0.1", features = ["tokio"], optional = true }
 os_info = { version = "3", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
@@ -35,7 +36,7 @@ rand = "0.8"
 regex = "1"
 
 [features]
-default = []
+default = ["reqwest/default-tls"]
 end_to_end = []
 instrumentation = ["dep:opentelemetry"]
 connections = [
@@ -44,8 +45,9 @@ connections = [
   "dep:tokio-util",
   "dep:futures-util",
   "dep:hyper",
+  "dep:http-body-util",
+  "dep:hyper-util",
   "dep:tokio-tungstenite",
-  "dep:tungstenite",
   "dep:uuid",
   "dep:russh",
   "dep:russh-keys",
@@ -53,7 +55,6 @@ connections = [
 vendored-openssl = [
   "reqwest/native-tls-vendored",
   "tokio-tungstenite?/native-tls-vendored",
-  "tungstenite?/native-tls-vendored",
   "russh?/vendored-openssl",
   "russh-keys?/vendored-openssl"
 ]
