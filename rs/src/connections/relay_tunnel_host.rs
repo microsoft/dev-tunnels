@@ -19,7 +19,7 @@ use crate::{
     },
 };
 use async_trait::async_trait;
-use futures::{stream::FuturesUnordered, StreamExt, TryFutureExt};
+use futures_util::{stream::FuturesUnordered, StreamExt};
 use russh::{server::Server as ServerTrait, CryptoVec};
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
@@ -452,8 +452,8 @@ impl ForwardedPortConnection {
     pub async fn send(&mut self, d: &[u8]) -> Result<(), ()> {
         self.handle
             .data(self.channel, CryptoVec::from_slice(d))
-            .map_err(|_| ())
             .await
+            .map_err(|_| ())
     }
 
     /// Receives data from the connection, returning None when it's closed.

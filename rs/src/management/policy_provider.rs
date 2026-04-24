@@ -2,7 +2,7 @@ use std::io;
 
 #[cfg(target_os = "windows")]
 pub fn get_policy_header_value() -> io::Result<Option<String>> {
-    use urlencoding::encode;
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
     use winreg::enums::*;
     use winreg::RegKey;
 
@@ -20,7 +20,7 @@ pub fn get_policy_header_value() -> io::Result<Option<String>> {
     for (name, value) in sub_key.enum_values().filter_map(Result::ok) {
         let value_str: String = value.to_string();
         if !value_str.is_empty() {
-            header_values.push(format!("{}={}", encode(&name), encode(&value_str)));
+            header_values.push(format!("{}={}", utf8_percent_encode(&name, NON_ALPHANUMERIC), utf8_percent_encode(&value_str, NON_ALPHANUMERIC)));
         }
     }
 

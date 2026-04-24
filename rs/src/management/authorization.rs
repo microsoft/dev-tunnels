@@ -1,4 +1,5 @@
-use async_trait::async_trait;
+use std::future::Future;
+use std::pin::Pin;
 
 use super::HttpError;
 
@@ -28,16 +29,15 @@ impl Authorization {
     }
 }
 
-#[async_trait]
 pub trait AuthorizationProvider: Send + Sync {
-    async fn get_authorization(&self) -> Result<Authorization, HttpError>;
+    fn get_authorization(&self) -> Pin<Box<dyn Future<Output = Result<Authorization, HttpError>> + Send + '_>>;
 }
 
 pub(crate) struct StaticAuthorizationProvider(pub Authorization);
 
-#[async_trait]
 impl AuthorizationProvider for StaticAuthorizationProvider {
-    async fn get_authorization(&self) -> Result<Authorization, HttpError> {
-        Ok(self.0.clone())
+    fn get_authorization(&self) -> Pin<Box<dyn Future<Output = Result<Authorization, HttpError>> + Send + '_>> {
+        let auth = self.0.clone();
+        Box::pin(async move { Ok(auth) })
     }
 }

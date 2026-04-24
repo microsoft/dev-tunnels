@@ -688,7 +688,9 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &st
 mod test_end_to_end {
     use std::{env, time::Duration};
 
-    use async_trait::async_trait;
+    use std::future::Future;
+    use std::pin::Pin;
+
     use serde::Deserialize;
     use tokio::time::sleep;
 
@@ -789,16 +791,17 @@ mod test_end_to_end {
 
     struct AuthCodeProvider();
 
-    #[async_trait]
     impl AuthorizationProvider for AuthCodeProvider {
-        async fn get_authorization(&self) -> Result<Authorization, HttpError> {
-            let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
-                Ok(value) => value,
-                _ => do_device_code_flow(&reqwest::Client::new()).await,
-            };
+        fn get_authorization(&self) -> Pin<Box<dyn Future<Output = Result<Authorization, HttpError>> + Send + '_>> {
+            Box::pin(async {
+                let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
+                    Ok(value) => value,
+                    _ => do_device_code_flow(&reqwest::Client::new()).await,
+                };
 
-            env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
-            Ok(Authorization::Bearer(token))
+                env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
+                Ok(Authorization::Bearer(token))
+            })
         }
     }
 

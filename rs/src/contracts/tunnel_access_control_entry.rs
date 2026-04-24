@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntry.cs
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use crate::contracts::TunnelAccessControlEntryType;
 use serde::{Deserialize, Serialize};
 
@@ -82,7 +82,7 @@ pub struct TunnelAccessControlEntry {
     // Gets or sets the expiration for an access control entry.
     //
     // If no value is set then this value is null.
-    pub expiration: Option<DateTime<Utc>>,
+    pub expiration: Option<Timestamp>,
 }
 
 // Constants for well-known identity providers.

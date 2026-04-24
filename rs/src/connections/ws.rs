@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use std::{io, net::SocketAddr, pin::Pin, task::Poll, time::Duration};
+use std::{future::Future, io, net::SocketAddr, pin::Pin, task::Poll, time::Duration};
 
-use futures::{Future, Sink, Stream};
+use futures_util::{Sink, Stream};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpStream,
@@ -321,7 +321,7 @@ pub(crate) fn build_websocket_request(
 mod test {
     use std::time::Duration;
 
-    use futures::{StreamExt, TryStreamExt};
+    use futures_util::{StreamExt, TryStreamExt};
     use rand::RngCore;
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
@@ -393,7 +393,7 @@ mod test {
 
         let (write, read) = ws_stream.split();
         // We should not forward messages other than text or binary.
-        read.try_filter(|msg| futures::future::ready(msg.is_text() || msg.is_binary()))
+        read.try_filter(|msg| futures_util::future::ready(msg.is_text() || msg.is_binary()))
             .forward(write)
             .await
             .ok();
