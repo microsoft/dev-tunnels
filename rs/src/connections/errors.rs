@@ -22,7 +22,7 @@ pub enum TunnelError {
     InvalidHostEndpoint(String),
 
     #[error("websocket error: {0}")]
-    WebSocketError(#[from] tungstenite::Error),
+    WebSocketError(#[from] tokio_tungstenite::tungstenite::error::Error),
 
     #[error("port {0} already exists in the relay")]
     PortAlreadyExists(u32),

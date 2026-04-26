@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/Tunnel.cs
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use crate::contracts::TunnelAccessControl;
 use crate::contracts::TunnelEndpoint;
 use crate::contracts::TunnelOptions;
@@ -68,10 +68,10 @@ pub struct Tunnel {
     pub ports: Vec<TunnelPort>,
 
     // Gets or sets the time in UTC of tunnel creation.
-    pub created: Option<DateTime<Utc>>,
+    pub created: Option<Timestamp>,
 
     // Gets or the time the tunnel will be deleted if it is not used or updated.
-    pub expiration: Option<DateTime<Utc>>,
+    pub expiration: Option<Timestamp>,
 
     // Gets or the custom amount of time the tunnel will be valid if it is not used or
     // updated in seconds.

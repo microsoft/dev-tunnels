@@ -1,15 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use std::{io, net::SocketAddr, pin::Pin, task::Poll, time::Duration};
+use std::{future::Future, io, net::SocketAddr, pin::Pin, task::Poll, time::Duration};
 
-use futures::{Future, Sink, Stream};
+use futures_util::{Sink, Stream};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpStream,
     time::{sleep, Instant, Sleep},
 };
-use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{connect_async, tungstenite, MaybeTlsStream, WebSocketStream};
 
 use crate::management::{HttpError, ResponseError};
 
@@ -77,7 +77,7 @@ where
 fn tung_to_io_error(e: tungstenite::Error) -> io::Error {
     match e {
         tungstenite::Error::Io(e) => e,
-        _ => io::Error::new(io::ErrorKind::Other, e.to_string()),
+        _ => io::Error::other(e.to_string()),
     }
 }
 
@@ -95,7 +95,7 @@ where
         match sm.get_ws().poll_ready(cx) {
             Poll::Ready(Ok(())) => {
                 sm.get_ws()
-                    .start_send(tungstenite::Message::Binary(buf.to_vec()))
+                    .start_send(tungstenite::Message::Binary(buf.to_vec().into()))
                     .map_err(tung_to_io_error)?;
                 Poll::Ready(Ok(buf.len()))
             }
@@ -162,7 +162,7 @@ where
                 }
                 PingState::WillPing => match self.get_ws().poll_ready(cx) {
                     Poll::Ready(Ok(_)) => {
-                        if let Err(e) = self.get_ws().start_send(tungstenite::Message::Ping(vec![]))
+                        if let Err(e) = self.get_ws().start_send(tungstenite::Message::Ping(vec![].into()))
                         {
                             return Poll::Ready(Err(tung_to_io_error(e)));
                         }
@@ -189,10 +189,10 @@ where
 
                     match msg {
                         tungstenite::Message::Text(text) => {
-                            return self.readbuf.put_data(buf, text.into_bytes(), 0);
+                            return self.readbuf.put_data(buf, text.as_bytes().to_vec(), 0);
                         }
                         tungstenite::Message::Binary(bin) => {
-                            return self.readbuf.put_data(buf, bin, 0);
+                            return self.readbuf.put_data(buf, bin.into(), 0);
                         }
                         tungstenite::Message::Close(_) => return Poll::Ready(Ok(())),
                         tungstenite::Message::Pong(_) => {
@@ -251,13 +251,15 @@ pub(crate) async fn connect_via_proxy(
 
     let stream = stream.map_err(TunnelError::ProxyConnectionFailed)?;
 
-    let (mut request_sender, conn) = hyper::client::conn::handshake(stream)
-        .await
-        .map_err(TunnelError::ProxyHandshakeFailed)?;
+    let (mut request_sender, conn) = hyper::client::conn::http1::handshake(
+        hyper_util::rt::TokioIo::new(stream),
+    )
+    .await
+    .map_err(TunnelError::ProxyHandshakeFailed)?;
 
     let conn = tokio::spawn(conn.without_shutdown());
     let connect_req = hyper::Request::connect(&authority)
-        .body(hyper::Body::empty())
+        .body(http_body_util::Empty::<hyper::body::Bytes>::new())
         .expect("expected to make connect request");
 
     let res = request_sender
@@ -266,21 +268,37 @@ pub(crate) async fn connect_via_proxy(
         .map_err(TunnelError::ProxyConnectRequestFailed)?;
 
     if !res.status().is_success() {
+        let proxy_url = reqwest::Url::parse(proxy_addr)
+            .or_else(|_| reqwest::Url::parse(&format!("http://{}", proxy_addr)))
+            .map_err(TunnelError::ProxyAddressInvalid)?;
         return Err(TunnelError::HttpError {
             reason: "error sending tunnel CONNECT request",
             error: HttpError::ResponseError(ResponseError {
-                url: reqwest::Url::parse(proxy_addr).unwrap(),
+                url: proxy_url,
                 status_code: res.status(),
-                data: hyper::body::to_bytes(res.into_body())
-                    .await
-                    .map(|b| String::from_utf8_lossy(&b).to_string())
-                    .ok(),
+                data: {
+                    use http_body_util::BodyExt;
+                    res.into_body()
+                        .collect()
+                        .await
+                        .map(|b| String::from_utf8_lossy(&b.to_bytes()).to_string())
+                        .ok()
+                },
                 request_id: None,
             }),
         });
     }
 
-    let tcp = conn.await.unwrap().unwrap().io;
+    let tcp = conn
+        .await
+        .map_err(|e| {
+            TunnelError::ProxyConnectionFailed(io::Error::other(
+                format!("proxy connection task failed: {e}"),
+            ))
+        })?
+        .map_err(TunnelError::ProxyHandshakeFailed)?
+        .io
+        .into_inner();
     let (ws_stream, _) = tokio_tungstenite::client_async_tls(ws_req, tcp).await?;
     Ok(ws_stream)
 }
@@ -321,7 +339,7 @@ pub(crate) fn build_websocket_request(
 mod test {
     use std::time::Duration;
 
-    use futures::{StreamExt, TryStreamExt};
+    use futures_util::{StreamExt, TryStreamExt};
     use rand::RngCore;
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
@@ -393,7 +411,7 @@ mod test {
 
         let (write, read) = ws_stream.split();
         // We should not forward messages other than text or binary.
-        read.try_filter(|msg| futures::future::ready(msg.is_text() || msg.is_binary()))
+        read.try_filter(|msg| futures_util::future::ready(msg.is_text() || msg.is_binary()))
             .forward(write)
             .await
             .ok();

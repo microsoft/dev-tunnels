@@ -688,14 +688,14 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &st
 mod test_end_to_end {
     use std::{env, time::Duration};
 
-    use async_trait::async_trait;
     use serde::Deserialize;
     use tokio::time::sleep;
 
     use crate::{
         contracts::{Tunnel, PROD_FIRST_PARTY_APP_ID},
         management::{
-            Authorization, AuthorizationProvider, HttpError, TunnelLocator, NO_REQUEST_OPTIONS,
+            Authorization, AuthorizationProvider, BoxFuture, HttpError, TunnelLocator,
+            NO_REQUEST_OPTIONS,
         },
     };
 
@@ -789,16 +789,17 @@ mod test_end_to_end {
 
     struct AuthCodeProvider();
 
-    #[async_trait]
     impl AuthorizationProvider for AuthCodeProvider {
-        async fn get_authorization(&self) -> Result<Authorization, HttpError> {
-            let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
-                Ok(value) => value,
-                _ => do_device_code_flow(&reqwest::Client::new()).await,
-            };
+        fn get_authorization(&self) -> BoxFuture<'_, Result<Authorization, HttpError>> {
+            Box::pin(async {
+                let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
+                    Ok(value) => value,
+                    _ => do_device_code_flow(&reqwest::Client::new()).await,
+                };
 
-            env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
-            Ok(Authorization::Bearer(token))
+                env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
+                Ok(Authorization::Bearer(token))
+            })
         }
     }
 
@@ -851,7 +852,7 @@ mod tests {
 
     #[test]
     fn custom_domain_does_not_modify_hostname() {
-        let mut builder = super::new_tunnel_management_for_custom_domain(
+        let builder = super::new_tunnel_management_for_custom_domain(
             "rs-sdk-tests",
             "app.github.dev",
         );

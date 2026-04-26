@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelEvent.cs
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelEvent {
     // Gets or sets the UTC timestamp of the event (using the client's clock).
-    pub timestamp: Option<DateTime<Utc>>,
+    pub timestamp: Option<Timestamp>,
 
     // Gets or sets name of the event. This should be a short descriptive identifier.
     pub name: String,
