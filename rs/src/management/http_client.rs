@@ -15,7 +15,7 @@ use rand::Rng;
 
 use crate::contracts::{
     env_production, NamedRateStatus, Tunnel, TunnelEndpoint, TunnelListByRegionResponse,
-    TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint, TunnelServiceProperties,
+    TunnelPort, TunnelPortListResponse, TunnelServiceProperties,
 };
 
 use super::{
@@ -177,15 +177,15 @@ impl TunnelManagementClient {
     pub async fn update_tunnel_relay_endpoints(
         &self,
         locator: &TunnelLocator,
-        endpoint: &TunnelRelayTunnelEndpoint,
+        endpoint: &TunnelEndpoint,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<TunnelRelayTunnelEndpoint> {
+    ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id.as_deref().unwrap())),
+            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id.as_deref().unwrap())),
         );
         url.query_pairs_mut()
-            .append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
+            .append_pair("connectionMode", &endpoint.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_relay_endpoints", request)

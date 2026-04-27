@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/ResourceStatus.cs
 
+use crate::contracts::RateStatus;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -35,4 +36,7 @@ pub struct DetailedResourceStatus {
     // Gets or sets an optional source of the `ResourceStatus.Limit`, or null if there is
     // no limit.
     pub limit_source: Option<String>,
+
+    #[serde(flatten)]
+    pub rate_status: RateStatus,
 }

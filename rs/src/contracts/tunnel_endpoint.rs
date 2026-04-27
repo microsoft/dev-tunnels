@@ -2,7 +2,9 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelEndpoint.cs
 
+use crate::contracts::LocalNetworkTunnelEndpoint;
 use crate::contracts::TunnelConnectionMode;
+use crate::contracts::TunnelRelayTunnelEndpoint;
 use serde::{Deserialize, Serialize};
 
 // Base class for tunnel connection parameters.
@@ -59,6 +61,12 @@ pub struct TunnelEndpoint {
     // Gets or sets the Ssh gateway public key which should be added to the
     // authorized_keys file so that tunnel service can connect to the shared ssh server.
     pub ssh_gateway_public_key: Option<String>,
+
+    #[serde(flatten)]
+    pub local_network_tunnel_endpoint: LocalNetworkTunnelEndpoint,
+
+    #[serde(flatten)]
+    pub tunnel_relay_tunnel_endpoint: TunnelRelayTunnelEndpoint,
 }
 
 // Token included in `TunnelEndpoint.PortUriFormat` and

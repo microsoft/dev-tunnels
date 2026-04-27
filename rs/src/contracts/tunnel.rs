@@ -2,12 +2,12 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/Tunnel.cs
 
-use jiff::Timestamp;
 use crate::contracts::TunnelAccessControl;
 use crate::contracts::TunnelEndpoint;
 use crate::contracts::TunnelOptions;
 use crate::contracts::TunnelPort;
 use crate::contracts::TunnelStatus;
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

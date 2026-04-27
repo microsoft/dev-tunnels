@@ -138,6 +138,12 @@ where
             return self.readbuf.put_data(buf, v, s);
         }
 
+        match self.get_ws().poll_flush(cx) {
+            Poll::Ready(Ok(())) => {}
+            Poll::Ready(Err(e)) => return Poll::Ready(Err(tung_to_io_error(e))),
+            Poll::Pending => return Poll::Pending,
+        }
+
         // The following blocks implement the state machine for liveness checks
         // via a websocket ping/pong. There is a "sleep" on the struct, which
         // is bumped every time we get a new message, along with a "state".

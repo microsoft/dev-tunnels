@@ -38,4 +38,7 @@ pub enum TunnelError {
 
     #[error("proxy connect request failed: {0}")]
     ProxyConnectRequestFailed(hyper::Error),
+
+    #[error("no tunnel endpoint has a client relay URI")]
+    MissingClientEndpoint,
 }
