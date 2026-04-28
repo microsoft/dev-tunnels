@@ -11,9 +11,11 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelListByRegion {
     // Azure region name.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub region_name: Option<String>,
 
     // Cluster id in the region.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cluster_id: Option<String>,
 
     // List of tunnels.
@@ -21,5 +23,6 @@ pub struct TunnelListByRegion {
     pub value: Vec<Tunnel>,
 
     // Error detail if getting list of tunnels in the region failed.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ErrorDetail>,
 }
