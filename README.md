@@ -7,15 +7,15 @@ Dev tunnels allows developers to securely expose local web services to the Inter
 
 ## SDK Feature Matrix
 
-| Feature | C# | TypeScript | Java | Go | Rust |
-|---|---|---|---|---|---|
-| Management API | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Tunnel Client Connections | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Tunnel Host Connections | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SSH-level Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Automatic tunnel access token refresh | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Ssh Keep-alive | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Feature | C# | TypeScript | Java | Go | Rust | Swift |
+|---|---|---|---|---|---|---|
+| Management API | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tunnel Client Connections | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tunnel Host Connections | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| SSH-level Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Automatic tunnel access token refresh | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Ssh Keep-alive | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 
 ✅ - Supported  
 🚧 - In Progress  

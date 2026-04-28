@@ -1,0 +1,21 @@
+name: Swift
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: macos-14
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cd swift && swift build -v
+    - name: Build Release
+      run: cd swift && swift build -c release
+    - name: Run tests
+      run: cd swift && swift test -v
