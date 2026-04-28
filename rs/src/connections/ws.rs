@@ -168,7 +168,9 @@ where
                 }
                 PingState::WillPing => match self.get_ws().poll_ready(cx) {
                     Poll::Ready(Ok(_)) => {
-                        if let Err(e) = self.get_ws().start_send(tungstenite::Message::Ping(vec![].into()))
+                        if let Err(e) = self
+                            .get_ws()
+                            .start_send(tungstenite::Message::Ping(vec![].into()))
                         {
                             return Poll::Ready(Err(tung_to_io_error(e)));
                         }
@@ -257,11 +259,10 @@ pub(crate) async fn connect_via_proxy(
 
     let stream = stream.map_err(TunnelError::ProxyConnectionFailed)?;
 
-    let (mut request_sender, conn) = hyper::client::conn::http1::handshake(
-        hyper_util::rt::TokioIo::new(stream),
-    )
-    .await
-    .map_err(TunnelError::ProxyHandshakeFailed)?;
+    let (mut request_sender, conn) =
+        hyper::client::conn::http1::handshake(hyper_util::rt::TokioIo::new(stream))
+            .await
+            .map_err(TunnelError::ProxyHandshakeFailed)?;
 
     let conn = tokio::spawn(conn.without_shutdown());
     let connect_req = hyper::Request::connect(&authority)
@@ -298,9 +299,9 @@ pub(crate) async fn connect_via_proxy(
     let tcp = conn
         .await
         .map_err(|e| {
-            TunnelError::ProxyConnectionFailed(io::Error::other(
-                format!("proxy connection task failed: {e}"),
-            ))
+            TunnelError::ProxyConnectionFailed(io::Error::other(format!(
+                "proxy connection task failed: {e}"
+            )))
         })?
         .map_err(TunnelError::ProxyHandshakeFailed)?
         .io

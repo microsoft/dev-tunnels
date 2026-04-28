@@ -21,6 +21,7 @@ use crate::{
 use async_trait::async_trait;
 use futures_util::{stream::FuturesUnordered, StreamExt};
 use russh::{server::Server as ServerTrait, CryptoVec};
+use russh_keys::PublicKeyBase64;
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::TcpStream,
@@ -350,6 +351,10 @@ impl RelayTunnelHost {
         Server { config }
     }
 
+    fn host_public_keys_for_endpoint(&self) -> Vec<String> {
+        encode_host_public_keys(&self.host_keypair)
+    }
+
     async fn make_ssh_client(
         rw: impl AsyncRead + AsyncWrite + Unpin + Send + 'static,
     ) -> Result<
@@ -387,13 +392,7 @@ impl RelayTunnelHost {
     async fn create_websocket(
         &self,
         host_token: &str,
-    ) -> Result<
-        (
-            WebSocketStream<MaybeTlsStream<TcpStream>>,
-            TunnelEndpoint,
-        ),
-        TunnelError,
-    > {
+    ) -> Result<(WebSocketStream<MaybeTlsStream<TcpStream>>, TunnelEndpoint), TunnelError> {
         let endpoint = self
             .mgmt
             .update_tunnel_relay_endpoints(
@@ -402,7 +401,7 @@ impl RelayTunnelHost {
                     id: Some(format!("{}-relay", self.host_id)),
                     connection_mode: TunnelConnectionMode::TunnelRelay,
                     host_id: self.host_id.to_string(),
-                    host_public_keys: vec![],
+                    host_public_keys: self.host_public_keys_for_endpoint(),
                     port_uri_format: None,
                     port_ssh_command_format: None,
                     ssh_gateway_public_key: None,
@@ -446,6 +445,25 @@ impl RelayTunnelHost {
 
         Ok((cnx, endpoint))
     }
+}
+
+/// Encodes the host's public key(s) for advertisement in a TunnelEndpoint.
+///
+/// We use the canonical SSH wire-format encoding of the public key (for RSA,
+/// this is the "ssh-rsa" blob, regardless of which signature-hash variant the
+/// keypair was generated with). This is the same form the russh client
+/// recovers from the server's host key during key exchange and base64-encodes
+/// via `PublicKey::public_key_base64()`, which is what `RelayTunnelClient`
+/// compares against.
+///
+/// Note: `KeyPair::public_key_base64()` is *not* equivalent — for RSA it
+/// includes the hash variant (e.g. "rsa-sha2-256") in the blob, which would
+/// never match what the client sees on the wire.
+fn encode_host_public_keys(keypair: &russh_keys::key::KeyPair) -> Vec<String> {
+    let public_key = keypair
+        .clone_public_key()
+        .expect("expected to clone host public key");
+    vec![public_key.public_key_base64()]
 }
 
 /// Type returned in a channel from `add_forwarded_port_raw`, implementing
@@ -536,8 +554,11 @@ impl AsyncWrite for ForwardedPortWriter {
             let id = self.channel;
             let write_len = buf.len().min(CHANNEL_WRITE_CHUNK_SIZE);
             self.write_len = write_len;
-            self.write_fut
-                .set(make_server_write_fut(Some((handle, id, buf[..write_len].to_vec()))));
+            self.write_fut.set(make_server_write_fut(Some((
+                handle,
+                id,
+                buf[..write_len].to_vec(),
+            ))));
             self.is_write_fut_valid = true;
         }
 
@@ -1034,8 +1055,11 @@ impl AsyncWrite for AsyncRWChannel {
             let id = self.id;
             let write_len = buf.len().min(CHANNEL_WRITE_CHUNK_SIZE);
             self.write_len = write_len;
-            self.write_fut
-                .set(make_client_write_fut(Some((session, id, buf[..write_len].to_vec()))));
+            self.write_fut.set(make_client_write_fut(Some((
+                session,
+                id,
+                buf[..write_len].to_vec(),
+            ))));
             self.is_write_fut_valid = true;
         }
 
@@ -1126,3 +1150,36 @@ impl std::future::Future for RelayHandle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use russh_keys::key::{KeyPair, SignatureHash};
+
+    /// Regression test for an interop bug where the host advertised RSA
+    /// public keys using `KeyPair::public_key_base64()` (which encodes the
+    /// hash-variant name like "rsa-sha2-256") while the client compared
+    /// against `PublicKey::public_key_base64()` (which always encodes the
+    /// canonical SSH wire name "ssh-rsa"). The two never matched and all
+    /// connections failed with "Unknown server key".
+    #[test]
+    fn encodes_rsa_public_key_in_canonical_ssh_wire_form() {
+        // Generate an RSA keypair with a non-default hash variant — this is
+        // what `RelayTunnelHost::new` does (SHA2_512).
+        let keypair = KeyPair::generate_rsa(2048, SignatureHash::SHA2_512)
+            .expect("generate rsa keypair");
+
+        let advertised = encode_host_public_keys(&keypair);
+        assert_eq!(advertised.len(), 1, "expected exactly one host public key");
+
+        // The advertised key must equal the base64 encoding of the
+        // corresponding `PublicKey` — this is what `RelayTunnelClient`
+        // computes from the server's host key during SSH key exchange.
+        let public_key_b64 = keypair
+            .clone_public_key()
+            .expect("clone public key")
+            .public_key_base64();
+        assert_eq!(advertised[0], public_key_b64);
+    }
+}
+

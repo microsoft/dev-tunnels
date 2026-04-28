@@ -3,4 +3,7 @@
         "ts"
     ],
     "rust-analyzer.cargo.features": ["connections", "vendored-openssl"],
+	"rust-analyzer.linkedProjects": [
+		"rs/Cargo.toml"
+	],
 }

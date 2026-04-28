@@ -13,6 +13,7 @@ use std::{
 use crate::{contracts::TunnelEndpoint, management::TunnelManagementClient};
 use async_trait::async_trait;
 use russh::ChannelMsg;
+use russh_keys::PublicKeyBase64;
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::TcpListener,
@@ -102,7 +103,7 @@ impl RelayTunnelClient {
             ping_timeout: Duration::from_secs(10),
         });
 
-        let mut session = Self::make_ssh_session(cnx)
+        let mut session = Self::make_ssh_session(cnx, endpoint.host_public_keys.clone())
             .await
             .map_err(TunnelError::TunnelRelayDisconnected)?;
 
@@ -131,6 +132,7 @@ impl RelayTunnelClient {
 
     async fn make_ssh_session(
         rw: impl AsyncRead + AsyncWrite + Unpin + Send + 'static,
+        host_public_keys: Vec<String>,
     ) -> Result<russh::client::Handle<TunnelClientHandler>, russh::Error> {
         let config = russh::client::Config {
             window_size: 1024 * 1024,
@@ -147,7 +149,7 @@ impl RelayTunnelClient {
         };
 
         let config = Arc::new(config);
-        let handler = TunnelClientHandler;
+        let handler = TunnelClientHandler { host_public_keys };
         russh::client::connect_stream(config, rw, handler).await
     }
 }
@@ -180,23 +182,10 @@ impl ClientRelayHandle {
     /// The listener will be stopped when `close()` is called on this handle.
     pub async fn forward_port_locally(&self, port: u16) -> Result<SocketAddr, TunnelError> {
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
-        let listener = match TcpListener::bind(addr).await {
-            Ok(l) => l,
-            Err(e) => {
-                log::warn!(
-                    "Failed to bind port {} ({}), falling back to ephemeral port",
-                    port,
-                    e
-                );
-                TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0))
-                    .await
-                    .map_err(TunnelError::ProxyConnectionFailed)?
-            }
-        };
-
+        let listener = TcpListener::bind(addr).await.map_err(TunnelError::ErrorListeningOnAddress)?;
         let local_addr = listener
             .local_addr()
-            .map_err(TunnelError::ProxyConnectionFailed)?;
+            .map_err(TunnelError::ErrorListeningOnAddress)?;
 
         let session = self.session.clone();
         let mut close_rx = self.close_rx.clone();
@@ -269,6 +258,7 @@ async fn relay_tcp_to_channel(
                 Ok(n) => {
                     if conn.send(&read_buf[..n]).await.is_err() {
                         log::debug!("channel closed while writing on port {}", port);
+                        stream.shutdown().await.ok();
                         break;
                     }
                 }
@@ -282,11 +272,13 @@ async fn relay_tcp_to_channel(
                 Some(data) => {
                     if let Err(e) = stream.write_all(&data).await {
                         log::debug!("error writing to local TCP on port {}: {}", port, e);
+                        conn.close().await;
                         break;
                     }
                 }
                 None => {
                     log::debug!("channel closed on port {}", port);
+                    stream.shutdown().await.ok();
                     break;
                 }
             },
@@ -304,8 +296,8 @@ pub struct PortConnection {
 
 impl PortConnection {
     /// Sends data on the connection.
-    pub async fn send(&mut self, d: &[u8]) -> Result<(), ()> {
-        self.channel.data(d).await.map_err(|_| ())
+    pub async fn send(&mut self, d: &[u8]) -> Result<(), TunnelError> {
+        self.channel.data(d).await.map_err(|e| e.into())
     }
 
     /// Receives data from the connection, returning None when it's closed.
@@ -369,7 +361,18 @@ impl AsyncWrite for PortConnectionRW {
 }
 
 /// SSH client handler for the tunnel client connection.
-struct TunnelClientHandler;
+struct TunnelClientHandler {
+    host_public_keys: Vec<String>,
+}
+
+impl TunnelClientHandler {
+    fn is_server_key_allowed(&self, server_public_key: &russh_keys::key::PublicKey) -> bool {
+        let server_public_key = server_public_key.public_key_base64();
+        self.host_public_keys
+            .iter()
+            .any(|host_public_key| host_public_key == &server_public_key)
+    }
+}
 
 #[async_trait]
 impl russh::client::Handler for TunnelClientHandler {
@@ -377,10 +380,60 @@ impl russh::client::Handler for TunnelClientHandler {
 
     async fn check_server_key(
         self,
-        _server_public_key: &russh_keys::key::PublicKey,
+        server_public_key: &russh_keys::key::PublicKey,
     ) -> Result<(Self, bool), Self::Error> {
-        // The relay authenticates via the access token; we don't need to
-        // verify the host key.
-        Ok((self, true))
+        let verified = self.is_server_key_allowed(server_public_key);
+        if verified {
+            log::debug!("verified relay tunnel host public key");
+        } else if self.host_public_keys.is_empty() {
+            log::warn!("relay tunnel host public key could not be verified because no endpoint host keys were provided");
+        } else {
+            log::warn!("relay tunnel host public key verification failed");
+        }
+
+        Ok((self, verified))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn public_key() -> russh_keys::key::PublicKey {
+        russh_keys::key::KeyPair::generate_ed25519()
+            .unwrap()
+            .clone_public_key()
+            .unwrap()
+    }
+
+    #[test]
+    fn allows_expected_server_key() {
+        let key = public_key();
+        let handler = TunnelClientHandler {
+            host_public_keys: vec![key.public_key_base64()],
+        };
+
+        assert!(handler.is_server_key_allowed(&key));
+    }
+
+    #[test]
+    fn rejects_missing_server_keys() {
+        let key = public_key();
+        let handler = TunnelClientHandler {
+            host_public_keys: Vec::new(),
+        };
+
+        assert!(!handler.is_server_key_allowed(&key));
+    }
+
+    #[test]
+    fn rejects_unexpected_server_key() {
+        let expected_key = public_key();
+        let actual_key = public_key();
+        let handler = TunnelClientHandler {
+            host_public_keys: vec![expected_key.public_key_base64()],
+        };
+
+        assert!(!handler.is_server_key_allowed(&actual_key));
     }
 }

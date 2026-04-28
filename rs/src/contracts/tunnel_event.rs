@@ -11,6 +11,7 @@ use std::collections::HashMap;
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelEvent {
     // Gets or sets the UTC timestamp of the event (using the client's clock).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<Timestamp>,
 
     // Gets or sets name of the event. This should be a short descriptive identifier.
@@ -20,13 +21,16 @@ pub struct TunnelEvent {
     // `TunnelEvent.Warning`, or `TunnelEvent.Error`.
     //
     // If not specified, the default severity is "info".
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub severity: Option<String>,
 
     // Gets or sets optional unstructured details about the event, such as a message or
     // description. For warning or error events this may include a stack trace.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<String>,
 
     // Gets or sets semi-structured event properties.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub properties: Option<HashMap<String, String>>,
 }
 

@@ -467,6 +467,11 @@ internal class RustContractWriter : ContractWriter
             serdeDeclarations.Add("default");
         }
 
+        if (isNullable)
+        {
+            serdeDeclarations.Add("skip_serializing_if = \"Option::is_none\"");
+        }
+
         if (serdeDeclarations.Count > 0)
         {
             s.AppendLine($"    #[serde({string.Join(", ", serdeDeclarations)})]");

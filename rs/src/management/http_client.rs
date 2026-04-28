@@ -164,7 +164,11 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.connection_mode.to_string());
@@ -182,7 +186,11 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.connection_mode.to_string());
@@ -852,10 +860,8 @@ mod tests {
 
     #[test]
     fn custom_domain_does_not_modify_hostname() {
-        let builder = super::new_tunnel_management_for_custom_domain(
-            "rs-sdk-tests",
-            "app.github.dev",
-        );
+        let builder =
+            super::new_tunnel_management_for_custom_domain("rs-sdk-tests", "app.github.dev");
         let client: super::TunnelManagementClient = builder.into();
         let url = client.build_uri(Some("usw2"), "/tunnels/tnnl0001");
         assert_eq!(url.host_str().unwrap(), "cp.app.github.dev");

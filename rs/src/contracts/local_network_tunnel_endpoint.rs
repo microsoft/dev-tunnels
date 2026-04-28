@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 //
 // While a direct connection is technically not "tunneling", tunnel hosts may accept
 // connections via the local network as an optional more-efficient alternative to a relay.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct LocalNetworkTunnelEndpoint {
     // Gets or sets a list of IP endpoints where the host may accept connections.

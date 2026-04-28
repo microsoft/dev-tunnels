@@ -31,10 +31,12 @@ pub struct DetailedResourceStatus {
     // Any requests that would cause the limit to be exceeded may be denied by the
     // service. For HTTP requests, the response is generally a 403 Forbidden status, with
     // details about the limit in the response body.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u64>,
 
     // Gets or sets an optional source of the `ResourceStatus.Limit`, or null if there is
     // no limit.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_source: Option<String>,
 
     #[serde(flatten)]

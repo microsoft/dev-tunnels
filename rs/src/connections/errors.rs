@@ -41,4 +41,7 @@ pub enum TunnelError {
 
     #[error("no tunnel endpoint has a client relay URI")]
     MissingClientEndpoint,
+
+    #[error("error listening on address: {0}")]
+    ErrorListeningOnAddress(std::io::Error),
 }

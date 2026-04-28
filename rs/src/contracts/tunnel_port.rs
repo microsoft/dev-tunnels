@@ -13,9 +13,11 @@ use std::collections::HashMap;
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct TunnelPort {
     // Gets or sets the ID of the cluster the tunnel was created in.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cluster_id: Option<String>,
 
     // Gets or sets the generated ID of the tunnel, unique within the cluster.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tunnel_id: Option<String>,
 
     // Gets or sets the IP port number of the tunnel port.
@@ -24,9 +26,11 @@ pub struct TunnelPort {
     // Gets or sets the optional short name of the port.
     //
     // The name must be unique among named ports of the same tunnel.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
     // Gets or sets the optional description of the port.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
     // Gets or sets the labels of the port.
@@ -36,6 +40,7 @@ pub struct TunnelPort {
     // Gets or sets the protocol of the tunnel port.
     //
     // Should be one of the string constants from `TunnelProtocol`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol: Option<String>,
 
     // Gets or sets a value indicating whether this port is a default port for the tunnel.
@@ -43,7 +48,7 @@ pub struct TunnelPort {
     // A client that connects to a tunnel (by ID or name) without specifying a port number
     // will connect to the default port for the tunnel, if a default is configured. Or if
     // the tunnel has only one port then the single port is the implicit default.
-    //
+    // 
     // Selection of a default port for a connection also depends on matching the
     // connection to the port `TunnelPort.Protocol`, so it is possible to configure
     // separate defaults for distinct protocols like `TunnelProtocol.Http` and
@@ -55,22 +60,27 @@ pub struct TunnelPort {
     //
     // Unlike the tokens in `Tunnel.AccessTokens`, these tokens are restricted to the
     // individual port.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub access_tokens: Option<HashMap<String, String>>,
 
     // Gets or sets access control settings for the tunnel port.
     //
     // See `TunnelAccessControl` documentation for details about the access control model.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub access_control: Option<TunnelAccessControl>,
 
     // Gets or sets options for the tunnel port.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<TunnelOptions>,
 
     // Gets or sets current connection status of the tunnel port.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<TunnelPortStatus>,
 
     // Gets or sets the username for the ssh service user is trying to forward.
     //
     // Should be provided if the `TunnelProtocol` is Ssh.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ssh_user: Option<String>,
 
     // Gets or sets web forwarding URIs. If set, it's a list of absolute URIs where the
@@ -80,5 +90,6 @@ pub struct TunnelPort {
 
     // Gets or sets inspection URI. If set, it's an absolute URIs where the port's traffic
     // can be inspected.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub inspection_uri: Option<String>,
 }

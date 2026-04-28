@@ -1,4 +1,0 @@
-{
-  "rust-analyzer.cargo.features": ["connections", "vendored-openssl"],
-  "editor.formatOnSave": true
-}
