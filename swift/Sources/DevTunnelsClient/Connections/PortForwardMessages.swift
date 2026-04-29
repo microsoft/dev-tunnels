@@ -152,7 +152,9 @@ private func writeUInt32(_ data: inout Data, _ value: UInt32) {
 /// Reads an SSH string from data at the given offset.
 private func readString(from data: Data, offset: inout Int) -> String? {
     guard let length = readUInt32(from: data, offset: &offset) else { return nil }
-    let len = Int(length)
+    // Defensive: guard against UInt32 → Int overflow on (hypothetical) 32-bit
+    // platforms where Int.max < UInt32.max. On 64-bit this always succeeds.
+    guard let len = Int(exactly: length) else { return nil }
     guard offset + len <= data.count else { return nil }
     let string = String(data: data[offset..<offset + len], encoding: .utf8)
     offset += len

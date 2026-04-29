@@ -79,6 +79,37 @@ final class TunnelRelayConfigTests: XCTestCase {
         XCTAssertEqual(config.authorizationHeader, "tunnel eyJ...")
     }
 
+    /// Regression: substring match wrongly treated tokens containing the
+    /// literal "tunnel" as already-prefixed. With prefix matching, an
+    /// arbitrary token whose body happens to include "tunnel" must still get
+    /// the "Tunnel " scheme prepended.
+    func testAuthHeaderPrefixesTokenContainingTunnelSubstring() {
+        let config = TunnelRelayConfig(
+            relayUri: "wss://x",
+            accessToken: "abctunnelxyz",
+            port: 1
+        )
+        XCTAssertEqual(config.authorizationHeader, "Tunnel abctunnelxyz")
+    }
+
+    func testAuthHeaderTrimsWhitespace() {
+        let config = TunnelRelayConfig(
+            relayUri: "wss://x",
+            accessToken: "  eyJ...  ",
+            port: 1
+        )
+        XCTAssertEqual(config.authorizationHeader, "Tunnel eyJ...")
+    }
+
+    func testAuthHeaderPrefixCaseInsensitive() {
+        let config = TunnelRelayConfig(
+            relayUri: "wss://x",
+            accessToken: "TUNNEL eyJ...",
+            port: 1
+        )
+        XCTAssertEqual(config.authorizationHeader, "TUNNEL eyJ...")
+    }
+
     // MARK: - Default Values
 
     func testDefaultSubprotocol() {

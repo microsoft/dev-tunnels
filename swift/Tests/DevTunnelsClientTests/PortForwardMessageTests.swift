@@ -107,6 +107,17 @@ final class PortForwardMessageTests: XCTestCase {
         XCTAssertNil(decoded)
     }
 
+    /// Regression: a hostile peer that declares a string length > Int.max
+    /// (or just absurdly large) must not crash decoding. The reader returns
+    /// nil so the surrounding `unmarshal` rejects the message.
+    func testChannelOpenUnmarshalRejectsHugeStringLength() {
+        // Length prefix = UInt32.max followed by no data
+        var data = Data()
+        data.append(contentsOf: [0xFF, 0xFF, 0xFF, 0xFF])
+        let decoded = PortForwardChannelOpen.unmarshal(from: data)
+        XCTAssertNil(decoded)
+    }
+
     func testChannelOpenUnmarshalEmptyData() {
         let decoded = PortForwardChannelOpen.unmarshal(from: Data())
         XCTAssertNil(decoded)

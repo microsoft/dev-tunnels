@@ -192,23 +192,44 @@ public final class TunnelRelayClient: Sendable {
     }
 
     /// Disconnects from the relay, closing all channels.
+    ///
+    /// State transitions to `.closed` synchronously. The underlying
+    /// ``TunnelRelayStream`` (which owns an `EventLoopGroup`) is closed
+    /// asynchronously in a detached task. Use ``disconnectAsync()`` if you
+    /// need to wait for the underlying resources to be released.
     public func disconnect() {
+        let stream = beginDisconnect()
+        if let stream {
+            Task { try? await stream.close() }
+        }
+    }
+
+    /// Asynchronous form of ``disconnect()`` that awaits the close of the
+    /// underlying stream and its `EventLoopGroup`. Prefer this when correct
+    /// resource cleanup matters (tests, app shutdown).
+    public func disconnectAsync() async {
+        let stream = beginDisconnect()
+        if let stream {
+            try? await stream.close()
+        }
+    }
+
+    /// Synchronously transitions to `.closed`, detaches the current stream,
+    /// and signals the reconnect loop. Returns the detached stream so the
+    /// caller can decide how to await its close.
+    private func beginDisconnect() -> TunnelRelayStream? {
         transition(to: .closed)
         let stream = _stream.withLockedValue { s -> TunnelRelayStream? in
             let old = s
             s = nil
             return old
         }
-        if let stream {
-            Task {
-                try? await stream.close()
-            }
-        }
         // Signal the reconnect loop to stop
         _disconnectContinuation.withLockedValue { c in
             c?.resume()
             c = nil
         }
+        return stream
     }
 
     // MARK: - Internal
@@ -233,15 +254,26 @@ public final class TunnelRelayClient: Sendable {
     }
 
     /// Suspends until the current stream disconnects.
+    ///
+    /// Atomically: if the state is already terminal (`.disconnected` /
+    /// `.closed`), resume immediately under the lock — otherwise stash the
+    /// continuation under the same lock that `disconnect` / `wireDisconnect`
+    /// use to wake it. Without this lock-coupling, a disconnect that races
+    /// with this call could resume an empty slot and we'd then suspend
+    /// indefinitely.
     private func waitForDisconnect() async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            // If already disconnected, resume immediately
-            let currentState = self.state
-            if currentState == .disconnected || currentState == .closed {
-                continuation.resume()
-                return
+            let resumeNow: Bool = _disconnectContinuation.withLockedValue { slot in
+                let currentState = self.state
+                if currentState == .disconnected || currentState == .closed {
+                    return true
+                }
+                slot = continuation
+                return false
             }
-            self._disconnectContinuation.withLockedValue { $0 = continuation }
+            if resumeNow {
+                continuation.resume()
+            }
         }
     }
 }

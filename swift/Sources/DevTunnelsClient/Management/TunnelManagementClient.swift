@@ -293,9 +293,12 @@ public struct TunnelManagementClient: Sendable {
     /// Generates a tunnel ID in the same format as the official SDKs.
     /// Format: `{adjective}-{noun}-{7 random chars}` (e.g., "swift-lake-bcd3f7k")
     static func generateTunnelId() -> String {
-        let adj = adjectives.randomElement()!
-        let noun = nouns.randomElement()!
-        let suffix = String((0..<7).map { _ in idChars.randomElement()! })
+        // The static arrays are non-empty, but `randomElement()` returns
+        // Optional. Fall back to deterministic values rather than crashing if
+        // the arrays were ever emptied.
+        let adj = adjectives.randomElement() ?? "tunnel"
+        let noun = nouns.randomElement() ?? "id"
+        let suffix = String((0..<7).compactMap { _ in idChars.randomElement() })
         return "\(adj)-\(noun)-\(suffix)"
     }
 

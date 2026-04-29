@@ -5,6 +5,12 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      run_integration_tests:
+        description: "Run live integration tests (requires DEV_TUNNELS_TOKEN secret)"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -12,10 +18,23 @@ jobs:
     runs-on: macos-14
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Build
-      run: cd swift && swift build -v
+      run: swift build -v
     - name: Build Release
-      run: cd swift && swift build -c release
-    - name: Run tests
-      run: cd swift && swift test -v
+      run: swift build -c release
+    - name: Run unit tests
+      # Always exclude live IntegrationTests on PR / push runs.
+      # IntegrationTests hit the production Dev Tunnels service and require
+      # DEV_TUNNELS_TOKEN, which is not available on fork PRs.
+      run: swift test -v --skip IntegrationTests
+
+  integration:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration_tests }}
+    runs-on: macos-14
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run integration tests
+      env:
+        DEV_TUNNELS_TOKEN: ${{ secrets.DEV_TUNNELS_TOKEN }}
+      run: swift test -v --filter IntegrationTests

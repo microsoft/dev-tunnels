@@ -1,4 +1,5 @@
 import Foundation
+import NIOSSH
 
 /// Configuration for a tunnel relay connection.
 public struct TunnelRelayConfig: Sendable, Equatable {
@@ -20,13 +21,31 @@ public struct TunnelRelayConfig: Sendable, Equatable {
     /// Interval in seconds between WebSocket keepalive pings. Set to 0 to disable.
     public let keepaliveInterval: TimeInterval
 
+    /// Optional SSH host key validator.
+    ///
+    /// Invoked during the SSH handshake with the server's `NIOSSHPublicKey`.
+    /// Return `true` to accept the key, `false` to reject and abort the
+    /// connection. Callers can compare the supplied key against a known
+    /// `NIOSSHPublicKey` (parsed via `init(openSSHPublicKey:)`) using its
+    /// `Hashable` conformance for pinning.
+    ///
+    /// **Security note:** When this is `nil` (the default), the SDK accepts
+    /// **any** SSH host key presented by the relay — connection security relies
+    /// entirely on the WebSocket TLS layer and the tunnel access token. This
+    /// matches the behavior of the Go SDK's `InsecureIgnoreHostKey`, but means
+    /// a man-in-the-middle who can present a valid TLS certificate (e.g. via a
+    /// compromised CA) could intercept tunnel traffic. Pass a validator that
+    /// pins known fingerprints for stronger defense in depth.
+    public let hostKeyValidator: (@Sendable (_ hostKey: NIOSSHPublicKey) -> Bool)?
+
     public init(
         relayUri: String,
         accessToken: String,
         port: UInt16,
         subprotocol: String = TunnelRelayConstants.clientWebSocketSubProtocol,
         connectionTimeout: TimeInterval = 30,
-        keepaliveInterval: TimeInterval = TunnelRelayConstants.defaultKeepaliveInterval
+        keepaliveInterval: TimeInterval = TunnelRelayConstants.defaultKeepaliveInterval,
+        hostKeyValidator: (@Sendable (_ hostKey: NIOSSHPublicKey) -> Bool)? = nil
     ) {
         self.relayUri = relayUri
         self.accessToken = accessToken
@@ -34,6 +53,7 @@ public struct TunnelRelayConfig: Sendable, Equatable {
         self.subprotocol = subprotocol
         self.connectionTimeout = connectionTimeout
         self.keepaliveInterval = keepaliveInterval
+        self.hostKeyValidator = hostKeyValidator
     }
 
     /// Validates that the config has all required fields.
@@ -58,11 +78,26 @@ public struct TunnelRelayConfig: Sendable, Equatable {
 
     /// Builds the Authorization header value.
     /// Prefixes "Tunnel " if not already present.
+    ///
+    /// Uses a case-insensitive prefix check (not substring) so that tokens which
+    /// happen to contain the substring "tunnel" anywhere in their body are not
+    /// mistakenly treated as already-prefixed.
     var authorizationHeader: String {
-        if accessToken.contains("Tunnel") || accessToken.contains("tunnel") {
-            return accessToken
+        let trimmed = accessToken.trimmingCharacters(in: .whitespaces)
+        if trimmed.lowercased().hasPrefix("tunnel ") {
+            return trimmed
         }
-        return "Tunnel \(accessToken)"
+        return "Tunnel \(trimmed)"
+    }
+
+    /// Equatable conformance ignores `hostKeyValidator` (closures are not equatable).
+    public static func == (lhs: TunnelRelayConfig, rhs: TunnelRelayConfig) -> Bool {
+        lhs.relayUri == rhs.relayUri
+            && lhs.accessToken == rhs.accessToken
+            && lhs.port == rhs.port
+            && lhs.subprotocol == rhs.subprotocol
+            && lhs.connectionTimeout == rhs.connectionTimeout
+            && lhs.keepaliveInterval == rhs.keepaliveInterval
     }
 }
 

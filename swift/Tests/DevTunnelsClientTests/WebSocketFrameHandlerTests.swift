@@ -203,6 +203,58 @@ final class WebSocketFrameHandlerTests: XCTestCase {
         XCTAssertTrue(succeeded)
     }
 
+    func testSSHServerAuthDelegateUsesValidatorWhenProvided() throws {
+        var receivedKey: NIOSSHPublicKey?
+        let delegate = TunnelSSHServerAuthDelegate { key in
+            receivedKey = key
+            return true
+        }
+        let loop = EmbeddedEventLoop()
+        let promise = loop.makePromise(of: Void.self)
+
+        let key = try NIOSSHPrivateKey(ed25519Key: .init()).publicKey
+        delegate.validateHostKey(hostKey: key, validationCompletePromise: promise)
+
+        var succeeded = false
+        promise.futureResult.whenSuccess { succeeded = true }
+        try loop.syncShutdownGracefully()
+
+        XCTAssertTrue(succeeded)
+        XCTAssertEqual(receivedKey, key)
+    }
+
+    func testSSHServerAuthDelegateRejectsWhenValidatorReturnsFalse() throws {
+        let delegate = TunnelSSHServerAuthDelegate { _ in false }
+        let loop = EmbeddedEventLoop()
+        let promise = loop.makePromise(of: Void.self)
+
+        let key = try NIOSSHPrivateKey(ed25519Key: .init()).publicKey
+        delegate.validateHostKey(hostKey: key, validationCompletePromise: promise)
+
+        var failed: Error?
+        promise.futureResult.whenFailure { failed = $0 }
+        try loop.syncShutdownGracefully()
+
+        XCTAssertNotNil(failed)
+        if case RelayConnectionError.authenticationFailed = failed! {
+            // expected
+        } else {
+            XCTFail("Expected authenticationFailed, got \(String(describing: failed))")
+        }
+    }
+
+    func testPongFrameInvokesOnPong() throws {
+        let (channel, handler) = makeChannel()
+        var pongs = 0
+        handler.onPong = { pongs += 1 }
+
+        let pongData = channel.allocator.buffer(capacity: 0)
+        try channel.writeInbound(WebSocketFrame(fin: true, opcode: .pong, data: pongData))
+
+        XCTAssertEqual(pongs, 1)
+        try channel.finish()
+    }
+
     // MARK: - SSHPortForwardDataHandler
 
     func testPortForwardHandlerExtractsChannelData() throws {

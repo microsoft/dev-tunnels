@@ -30,8 +30,12 @@ final class MockHTTPClient: HTTPClient, @unchecked Sendable {
             }
         }
         let resp = response ?? defaultResponse ?? CannedResponse(data: Data(), statusCode: 200)
+        // Fall back to a placeholder URL rather than crashing; if a test
+        // constructs a request with no URL, the assertions on the recorded
+        // request will surface that with a clear failure message.
+        let responseURL = request.url ?? URL(string: "about:blank")!
         let httpResponse = HTTPURLResponse(
-            url: request.url!,
+            url: responseURL,
             statusCode: resp.statusCode,
             httpVersion: nil,
             headerFields: nil
@@ -111,7 +115,7 @@ final class ManagementClientTests: XCTestCase {
         _ = try await client.listTunnels()
 
         XCTAssertEqual(mockHttp.requests.count, 1)
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("global=true"), "Should include global=true when no clusterId")
     }
 
@@ -147,7 +151,7 @@ final class ManagementClientTests: XCTestCase {
         let client = makeClient()
         _ = try await client.listTunnels()
 
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("api-version=2023-09-27-preview"))
     }
 
@@ -224,7 +228,7 @@ final class ManagementClientTests: XCTestCase {
         let client = makeClient()
         _ = try await client.getTunnel(clusterId: "usw2", tunnelId: "t1")
 
-        let host = mockHttp.requests[0].url!.host()
+        let host = (try XCTUnwrap(mockHttp.requests[0].url)).host()
         XCTAssertEqual(host, "usw2.rel.tunnels.api.visualstudio.com")
     }
 
@@ -240,7 +244,7 @@ final class ManagementClientTests: XCTestCase {
             options: TunnelRequestOptions(includePorts: true)
         )
 
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("includePorts=true"))
     }
 
@@ -256,7 +260,7 @@ final class ManagementClientTests: XCTestCase {
             options: TunnelRequestOptions(tokenScopes: [TunnelAccessScopes.connect])
         )
 
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("tokenScopes=connect"))
     }
 
@@ -272,7 +276,7 @@ final class ManagementClientTests: XCTestCase {
             options: TunnelRequestOptions(tokenScopes: [TunnelAccessScopes.connect, TunnelAccessScopes.host])
         )
 
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("tokenScopes=connect"))
         XCTAssertTrue(url.contains("tokenScopes=host"))
     }
@@ -382,7 +386,7 @@ final class ManagementClientTests: XCTestCase {
         )
         XCTAssertNotNil(mockHttp.requests[0].httpBody)
         // URL should contain a generated tunnel ID
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("/tunnels/"), "URL should contain /tunnels/{id}")
     }
 
@@ -397,7 +401,7 @@ final class ManagementClientTests: XCTestCase {
             options: TunnelRequestOptions(tokenScopes: [TunnelAccessScopes.connect])
         )
 
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("tokenScopes=connect"))
     }
 
@@ -479,7 +483,7 @@ final class ManagementClientTests: XCTestCase {
 
         XCTAssertEqual(mockHttp.requests.count, 1)
         XCTAssertEqual(mockHttp.requests[0].httpMethod, "DELETE")
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("/tunnels/t1"))
     }
 
@@ -520,7 +524,7 @@ final class ManagementClientTests: XCTestCase {
         XCTAssertEqual(port.portNumber, 8080)
         XCTAssertEqual(port.name, "web")
         XCTAssertEqual(mockHttp.requests[0].httpMethod, "PUT")
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("/tunnels/t1/ports/8080"))
     }
 
@@ -533,7 +537,7 @@ final class ManagementClientTests: XCTestCase {
         try await client.deleteTunnelPort(clusterId: "usw2", tunnelId: "t1", portNumber: 8080)
 
         XCTAssertEqual(mockHttp.requests[0].httpMethod, "DELETE")
-        let url = mockHttp.requests[0].url!.absoluteString
+        let url = (try XCTUnwrap(mockHttp.requests[0].url)).absoluteString
         XCTAssertTrue(url.contains("/tunnels/t1/ports/8080"))
     }
 }

@@ -18,12 +18,25 @@ import Network
 /// 5. Bidirectional data streaming through the SSH channel
 ///
 /// Sends periodic WebSocket pings to keep the connection alive.
+///
+/// **Lifecycle:** This stream owns an `EventLoopGroup` created during
+/// `connect()`. Callers **must** call ``close()`` to release it; relying on
+/// `deinit` is not sufficient because shutting an `EventLoopGroup` down
+/// synchronously from deinit can deadlock when the deinit runs on one of the
+/// group's own event loops. ``TunnelRelayClient`` always calls ``close()`` for
+/// you when reconnecting or disconnecting.
 public final class TunnelRelayStream: @unchecked Sendable {
     private let parentChannel: Channel
     private let sshChildChannel: Channel
     private let group: EventLoopGroup
     private var _isClosed = false
     private var keepaliveTask: Scheduled<Void>?
+    /// Pings sent for which we have not yet seen a pong. Mutated only on the
+    /// parent channel's event loop.
+    private var _unansweredPings: Int = 0
+    /// Maximum unanswered pings before we declare the peer dead.
+    /// 2 means we tolerate one missed pong; on the third we close.
+    private static let maxUnansweredPings = 2
 
     /// Callback invoked when the connection drops unexpectedly.
     /// Not called for explicit `close()` calls.
@@ -98,7 +111,10 @@ public final class TunnelRelayStream: @unchecked Sendable {
             onStateChange(.connectingSSH)
 
             // Step 2: SSH handshake over WebSocket
-            let sshHandler = try await addSSHHandlers(to: channel)
+            let sshHandler = try await addSSHHandlers(
+                to: channel,
+                hostKeyValidator: config.hostKeyValidator
+            )
 
             onStateChange(.openingChannel)
 
@@ -127,6 +143,12 @@ public final class TunnelRelayStream: @unchecked Sendable {
                 stream.onDisconnect?()
             }
 
+            // Wire pong handling: every pong resets the unanswered-ping counter.
+            // Runs on the parent channel's event loop.
+            wsFrameHandler.onPong = { [weak stream] in
+                stream?._unansweredPings = 0
+            }
+
             return stream
         } catch {
             try? await group.shutdownGracefully()
@@ -139,12 +161,15 @@ public final class TunnelRelayStream: @unchecked Sendable {
 
     /// Adds NIO SSH client handlers to the channel pipeline.
     @discardableResult
-    private static func addSSHHandlers(to channel: Channel) async throws -> NIOSSHHandler {
+    private static func addSSHHandlers(
+        to channel: Channel,
+        hostKeyValidator: (@Sendable (NIOSSHPublicKey) -> Bool)?
+    ) async throws -> NIOSSHHandler {
         let sshHandler = NIOSSHHandler(
             role: .client(
                 .init(
                     userAuthDelegate: TunnelSSHClientAuthDelegate(),
-                    serverAuthDelegate: TunnelSSHServerAuthDelegate()
+                    serverAuthDelegate: TunnelSSHServerAuthDelegate(validator: hostKeyValidator)
                 )
             ),
             allocator: channel.allocator,
@@ -186,12 +211,27 @@ public final class TunnelRelayStream: @unchecked Sendable {
     }
 
     /// Starts periodic WebSocket ping frames to keep the connection alive.
+    ///
+    /// Also detects half-dead peers: each scheduled tick increments an
+    /// unanswered-ping counter, and a pong (handled in
+    /// ``WebSocketBinaryFrameHandler``) resets it. After
+    /// ``maxUnansweredPings`` ticks with no pong, the parent channel is
+    /// closed, which fires the disconnect path.
     func startKeepalive(interval: TimeInterval) {
         let eventLoop = parentChannel.eventLoop
         func schedulePing() {
             guard !_isClosed, parentChannel.isActive else { return }
             keepaliveTask = eventLoop.scheduleTask(in: .seconds(Int64(interval))) { [weak self] in
                 guard let self, !self._isClosed, self.parentChannel.isActive else { return }
+                // Note: this closure runs on the parent channel's event loop,
+                // so _unansweredPings access is single-threaded.
+                if self._unansweredPings >= Self.maxUnansweredPings {
+                    // Peer is unresponsive — close the channel. The
+                    // channelInactive path will trigger reconnect (if wired).
+                    self.parentChannel.close(promise: nil)
+                    return
+                }
+                self._unansweredPings += 1
                 let emptyBuffer = self.parentChannel.allocator.buffer(capacity: 0)
                 let ping = WebSocketFrame(fin: true, opcode: .ping, data: emptyBuffer)
                 self.parentChannel.writeAndFlush(ping, promise: nil)
@@ -220,11 +260,24 @@ public final class TunnelRelayStream: @unchecked Sendable {
         keepaliveTask = nil
         try? await sshChildChannel.close()
         try? await parentChannel.close()
-        try await group.shutdownGracefully()
+        // Always shut down the group; swallow shutdown errors here so that
+        // callers always see the close as successful once channels are down.
+        try? await group.shutdownGracefully()
     }
 
     deinit {
-        try? group.syncShutdownGracefully()
+        // The EventLoopGroup is owned by this stream. Callers are expected to
+        // call `close()` explicitly; we cannot reliably invoke async APIs from
+        // deinit, and calling `syncShutdownGracefully()` here would deadlock
+        // on certain platforms (notably when the deinit runs on one of the
+        // group's own event loops). If close() was never called we leak the
+        // group rather than risk a deadlock — this is documented in
+        // TunnelRelayStream's class docs.
+        if !_isClosed {
+            // Best effort: cancel any scheduled keepalive so it stops touching
+            // the channel after we go away.
+            keepaliveTask?.cancel()
+        }
     }
 }
 
@@ -273,15 +326,42 @@ final class TunnelSSHClientAuthDelegate: NIOSSHClientUserAuthenticationDelegate 
     }
 }
 
-/// SSH server auth delegate that accepts any host key.
-/// The WebSocket TLS + tunnel access token provide sufficient authentication.
+/// SSH server auth delegate.
+///
+/// If a `validator` is supplied, the server's host key is passed to it; the
+/// connection is rejected when the validator returns `false`.
+///
+/// **Security note:** When `validator` is `nil` (the default), this delegate
+/// accepts any host key — equivalent to Go's `InsecureIgnoreHostKey`. Callers
+/// that need defense in depth against TLS-layer MITM should supply a validator
+/// that pins known keys (compare via `NIOSSHPublicKey`'s `Hashable`
+/// conformance, e.g. against a key parsed with `init(openSSHPublicKey:)`).
 final class TunnelSSHServerAuthDelegate: NIOSSHClientServerAuthenticationDelegate {
+    private let validator: (@Sendable (NIOSSHPublicKey) -> Bool)?
+
+    init(validator: (@Sendable (NIOSSHPublicKey) -> Bool)? = nil) {
+        self.validator = validator
+    }
+
     func validateHostKey(
         hostKey: NIOSSHPublicKey,
         validationCompletePromise: EventLoopPromise<Void>
     ) {
-        // Accept any host key — same as Go SDK's InsecureIgnoreHostKey
-        validationCompletePromise.succeed(())
+        guard let validator else {
+            // No validator configured — accept any host key (matches Go SDK's
+            // InsecureIgnoreHostKey). See TunnelRelayConfig.hostKeyValidator
+            // for the security implications.
+            validationCompletePromise.succeed(())
+            return
+        }
+
+        if validator(hostKey) {
+            validationCompletePromise.succeed(())
+        } else {
+            validationCompletePromise.fail(
+                RelayConnectionError.authenticationFailed("SSH host key rejected by validator")
+            )
+        }
     }
 }
 
@@ -376,6 +456,10 @@ final class WebSocketBinaryFrameHandler: ChannelDuplexHandler {
     /// Called when the channel goes inactive (connection lost).
     var onChannelInactive: (@Sendable () -> Void)?
 
+    /// Called on the channel's event loop when a pong frame arrives.
+    /// Used by ``TunnelRelayStream`` to detect half-dead peers.
+    var onPong: (() -> Void)?
+
     init(upgradePromise: EventLoopPromise<Void>) {
         self.upgradePromise = upgradePromise
     }
@@ -392,6 +476,8 @@ final class WebSocketBinaryFrameHandler: ChannelDuplexHandler {
             let pongData = context.channel.allocator.buffer(capacity: 0)
             let pong = WebSocketFrame(fin: true, opcode: .pong, data: pongData)
             context.writeAndFlush(wrapOutboundOut(pong), promise: nil)
+        case .pong:
+            onPong?()
         default:
             break
         }
