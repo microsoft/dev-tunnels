@@ -19,7 +19,7 @@ pub struct TunnelOptions {
     // "localhost" to rewrite the header. Web-fowarding will use this property instead if
     // it is not null or empty. Port-level option, if set, takes precedence over this
     // option on the tunnel level. The option is ignored if IsHostHeaderUnchanged is true.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host_header: Option<String>,
 
     // Gets or sets a value indicating whether `Host` header is rewritten or the header
@@ -37,7 +37,7 @@ pub struct TunnelOptions {
     // instead if it is not null or empty. Port-level option, if set, takes precedence
     // over this option on the tunnel level. The option is ignored if
     // IsOriginHeaderUnchanged is true.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub origin_header: Option<String>,
 
     // Gets or sets a value indicating whether `Origin` header is rewritten or the header
@@ -58,7 +58,7 @@ pub struct TunnelOptions {
     // controls whether the tunnel web-forwarding authentication cookie is marked as
     // SameSite=None. The default is false, which means the cookie is marked as
     // SameSite=Lax. This only applies to tunnels that require authentication.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_cross_site_authentication_enabled: Option<bool>,
 
     // Gets or sets a value indicating whether the tunnel web-forwarding authentication
@@ -67,7 +67,7 @@ pub struct TunnelOptions {
     //
     // A partitioned cookie always also has SameSite=None for compatbility with browsers
     // that do not support partitioning.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_partitioned_site_authentication_enabled: Option<bool>,
 
     // Gets or sets a value indicating whether web requests to the tunnel or port can be
@@ -88,7 +88,7 @@ pub struct TunnelOptions {
     // implement bearer token authentication, which is why this option is disabled by
     // default.  This option does not apply to the tunnel management API, which always
     // supports bearer token authentication using the `Authorization` header.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_bearer_token_authentication_enabled: Option<bool>,
 
     // Gets or sets the timeout for HTTP requests to the tunnel or port.
@@ -99,6 +99,6 @@ pub struct TunnelOptions {
     // keep-alives and HTTP/2 protocol pings will not reset the timeout, but WebSocket
     // pings will. When a request times out, the tunnel relay aborts the request and
     // returns 504 Gateway Timeout.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub request_timeout_seconds: Option<i32>,
 }

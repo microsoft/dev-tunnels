@@ -188,7 +188,12 @@ internal class RustContractWriter : ContractWriter
 
         s.Append(FormatDocComment(type.GetDocumentationCommentXml(), ""));
         s.Append("#[derive(Clone, Debug, Deserialize, Serialize");
-        if (DefaultDerivers.Contains(rsName))
+        // Add Default for types in the explicit list, and for types that will be
+        // embedded into their base type via #[serde(flatten)].
+        var willBeEmbedded = type.BaseType?.ToString() is string bt &&
+            bt.StartsWith(this.csNamespace) &&
+            allTypes.Any((t) => SymbolEqualityComparer.Default.Equals(t.BaseType, type.BaseType));
+        if (DefaultDerivers.Contains(rsName) || willBeEmbedded)
         {
             s.Append(", Default");
         }
@@ -196,8 +201,20 @@ internal class RustContractWriter : ContractWriter
         s.AppendLine("#[serde(rename_all(serialize = \"camelCase\", deserialize = \"camelCase\"))]");
         s.Append($"pub struct {rsName} {{");
 
+        // Check if this type has derived types. If so, we embed the derived types
+        // into this base type (like Go's struct embedding) rather than having
+        // derived types embed the base.
+        var derivedTypes = allTypes.Where(
+            (t) => SymbolEqualityComparer.Default.Equals(t.BaseType, type)).ToArray();
+
         var fullBaseType = type.BaseType?.ToString();
-        if (fullBaseType != null && fullBaseType.StartsWith(this.csNamespace))
+        // Only add #[serde(flatten)] pub base if the base type does NOT embed
+        // derived types. When a base type has derived types, it embeds them
+        // (like Go's struct embedding), so derived types must not embed back.
+        var baseEmbedsDerived = fullBaseType != null &&
+            fullBaseType.StartsWith(this.csNamespace) &&
+            allTypes.Any((t) => SymbolEqualityComparer.Default.Equals(t.BaseType, type.BaseType));
+        if (fullBaseType != null && fullBaseType.StartsWith(this.csNamespace) && !baseEmbedsDerived)
         {
             var rsBaseType = fullBaseType.Substring(this.csNamespace.Length + 1);
             s.AppendLine();
@@ -205,6 +222,10 @@ internal class RustContractWriter : ContractWriter
             s.AppendLine($"    pub base: {rsBaseType},");
             imports.Add($"crate::contracts::{rsBaseType}");
         }
+
+        // A type is "embedded" if its base type embeds it via #[serde(flatten)].
+        // In that case, all fields must tolerate missing values in JSON.
+        var isEmbeddedType = baseEmbedsDerived;
 
         var properties = type.GetMembers()
             .OfType<IPropertySymbol>()
@@ -216,7 +237,19 @@ internal class RustContractWriter : ContractWriter
         {
             s.AppendLine();
             s.Append(FormatDocComment(property.GetDocumentationCommentXml(), "    "));
-            AppendStructProperty(type, property, imports, s);
+            AppendStructProperty(type, property, imports, s, isEmbeddedType);
+        }
+
+        // Embed derived types via #[serde(flatten)], similar to Go's struct
+        // embedding. This allows the base type to deserialize fields from all
+        // derived types.
+        foreach (var derivedType in derivedTypes.OrderBy((t) => t.Name))
+        {
+            var fieldName = ToSnakeCase(derivedType.Name);
+            s.AppendLine();
+            s.AppendLine("    #[serde(flatten)]");
+            s.AppendLine($"    pub {fieldName}: {derivedType.Name},");
+            imports.Add($"crate::contracts::{derivedType.Name}");
         }
 
         s.AppendLine("}");
@@ -394,7 +427,7 @@ internal class RustContractWriter : ContractWriter
 
         return s.ToString();
     }
-    private void AppendStructProperty(ITypeSymbol parentType, IPropertySymbol property, SortedSet<string> imports, StringBuilder s)
+    private void AppendStructProperty(ITypeSymbol parentType, IPropertySymbol property, SortedSet<string> imports, StringBuilder s, bool isEmbeddedType = false)
     {
         var csType = property.Type.ToString();
         var isNullable = csType.EndsWith("?");
@@ -418,7 +451,9 @@ internal class RustContractWriter : ContractWriter
         if (isArray)
         {
             csType = csType.Substring(0, csType.Length - 2);
-            if (isNullable || ignoreWhenDefault)
+            // When a type is embedded (flattened) into a base type, all array
+            // fields must default to empty since they may not be present in JSON.
+            if (isNullable || ignoreWhenDefault || isEmbeddedType)
             {
                 serdeDeclarations.Add("skip_serializing_if = \"Vec::is_empty\"");
                 serdeDeclarations.Add("default");
@@ -430,6 +465,11 @@ internal class RustContractWriter : ContractWriter
         if (ignoreWhenDefault)
         {
             serdeDeclarations.Add("default");
+        }
+
+        if (isNullable)
+        {
+            serdeDeclarations.Add("skip_serializing_if = \"Option::is_none\"");
         }
 
         if (serdeDeclarations.Count > 0)
@@ -472,7 +512,7 @@ internal class RustContractWriter : ContractWriter
                 "long" => "i64",
                 "ulong" => "u64",
                 "string" => "String",
-                "System.DateTime" => "DateTime<Utc>",
+                "System.DateTime" => "Timestamp",
                 "System.Text.RegularExpressions.Regex" => "regexp.Regexp",
                 "System.Collections.Generic.IDictionary<string, string>"
                     => "HashMap<String, String>",
@@ -494,7 +534,7 @@ internal class RustContractWriter : ContractWriter
 
         if (csType == "System.DateTime")
         {
-            imports.Add("chrono::{DateTime, Utc}");
+            imports.Add("jiff::Timestamp");
         }
         else if (csType.Contains("IDictionary<"))
         {
