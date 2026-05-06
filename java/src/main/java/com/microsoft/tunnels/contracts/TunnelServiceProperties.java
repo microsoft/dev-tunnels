@@ -35,7 +35,7 @@ public class TunnelServiceProperties {
     /**
      * Default host name for the local tunnel service.
      */
-    static final String localDnsName = "tunnels.local.api.visualstudio.com:9901";
+    static final String localDnsName = "global.tunnels.local.api.visualstudio.com";
 
     /**
      * First-party app ID: `Visual Studio Tunnel Service`
