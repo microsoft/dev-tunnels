@@ -39,7 +39,7 @@ var ppeDnsName = "global.rel.tunnels.ppe.api.visualstudio.com"
 var devDnsName = "global.ci.tunnels.dev.api.visualstudio.com"
 
 // Default host name for the local tunnel service.
-var localDnsName = "tunnels.local.api.visualstudio.com:9901"
+var localDnsName = "global.tunnels.local.api.visualstudio.com"
 
 // First-party app ID: `Visual Studio Tunnel Service`
 //

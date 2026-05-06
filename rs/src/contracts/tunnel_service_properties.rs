@@ -41,7 +41,7 @@ pub const PPE_DNS_NAME: &str = "global.rel.tunnels.ppe.api.visualstudio.com";
 pub const DEV_DNS_NAME: &str = "global.ci.tunnels.dev.api.visualstudio.com";
 
 // Default host name for the local tunnel service.
-pub const LOCAL_DNS_NAME: &str = "tunnels.local.api.visualstudio.com:9901";
+pub const LOCAL_DNS_NAME: &str = "global.tunnels.local.api.visualstudio.com";
 
 // First-party app ID: `Visual Studio Tunnel Service`
 //
