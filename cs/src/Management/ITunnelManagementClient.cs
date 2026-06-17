@@ -396,6 +396,25 @@ namespace Microsoft.DevTunnels.Management
         Task<ClusterDetails[]> ListClustersAsync(CancellationToken cancellation = default);
 
         /// <summary>
+        /// Gets cluster recommendations for tunnel creation based on capacity and
+        /// availability.
+        /// </summary>
+        /// <param name="preferredClusterId">
+        /// Optional preferred cluster ID. When omitted, defaults to the cluster
+        /// serving the request.
+        /// </param>
+        /// <param name="requiredGeo">
+        /// Optional Azure geography filter. When specified, only clusters in
+        /// this geo are eligible for recommendation.
+        /// </param>
+        /// <param name="cancellation">Cancellation token.</param>
+        /// <returns>Cluster recommendation response with ranked clusters.</returns>
+        Task<ClusterRecommendationResponse> GetClusterRecommendationsAsync(
+            string? preferredClusterId = null,
+            string? requiredGeo = null,
+            CancellationToken cancellation = default);
+
+        /// <summary>
         /// Checks for tunnel name availability.
         /// </summary>
         /// <param name="name">Tunnel name to check.</param>

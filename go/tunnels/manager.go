@@ -54,6 +54,7 @@ const (
 	userLimitsApiPath          = "/userlimits"
 	subjectsApiPath            = "/subjects"
 	clustersApiPath            = "/clusters"
+	recommendationsApiSubPath  = "/recommendations"
 	checkNameAvailabilityPath  = ":checkNameAvailability"
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
@@ -229,6 +230,15 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		options.AdditionalHeaders = map[string]string{}
 	}
 	options.AdditionalHeaders["If-Not-Match"] = "*"
+
+	// If the caller didn't specify a cluster, auto-select one via the
+	// recommendations API. Failures fall back to global routing.
+	if tunnel.ClusterID == "" {
+		recommendations, recErr := m.GetClusterRecommendations(ctx, "", options.RequiredGeo)
+		if recErr == nil && recommendations != nil && recommendations.RecommendedClusterID != "" {
+			tunnel.ClusterID = recommendations.RecommendedClusterID
+		}
+	}
 
 	convertedTunnel, err := tunnel.requestObject()
 	convertedTunnel.TunnelID = tunnel.TunnelID
@@ -705,6 +715,35 @@ func (m *Manager) ListClusters(ctx context.Context) (clusters []*ClusterDetails,
 	return clusters, nil
 }
 
+// Gets cluster recommendations for tunnel creation based on capacity and availability.
+// preferredClusterId and requiredGeo are optional; pass an empty string to omit them.
+func (m *Manager) GetClusterRecommendations(
+	ctx context.Context, preferredClusterId string, requiredGeo string,
+) (recommendations *ClusterRecommendationResponse, err error) {
+	queryValues := url.Values{}
+	if preferredClusterId != "" {
+		queryValues.Set("preferredClusterId", preferredClusterId)
+	}
+	if requiredGeo != "" {
+		queryValues.Set("requiredGeo", requiredGeo)
+	}
+
+	path := clustersApiPath + recommendationsApiSubPath
+	url := m.buildUri("", path, nil, queryValues.Encode())
+	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting cluster recommendations: %w", err)
+	}
+
+	err = json.Unmarshal(response, &recommendations)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response json to ClusterRecommendationResponse: %w", err)
+	}
+
+	return recommendations, nil
+}
+
 // Checks if tunnel name is available
 // Returns true if name is available
 func (m *Manager) CheckNameAvailability(
@@ -894,7 +933,10 @@ func (m *Manager) getAccessToken(tunnel *Tunnel, tunnelRequestOptions *TunnelReq
 }
 
 func (m *Manager) buildUri(clusterId string, path string, options *TunnelRequestOptions, query string) *url.URL {
-	baseAddress := m.uri
+	// Copy the URL by value so that mutations below (Host, Path, RawQuery) do
+	// not corrupt the shared manager URI (m.uri is a pointer).
+	baseAddressValue := *m.uri
+	baseAddress := &baseAddressValue
 	if clusterId != "" && !m.isCustomDomain {
 		// tunnels.local.api.visualstudio.com resolves to localhost (for local development).
 		if baseAddress.Host != "localhost" &&

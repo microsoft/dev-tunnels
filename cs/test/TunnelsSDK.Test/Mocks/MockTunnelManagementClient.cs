@@ -333,6 +333,25 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         throw new NotImplementedException();
     }
 
+    public Task<ClusterRecommendationResponse> GetClusterRecommendationsAsync(
+        string preferredClusterId = null,
+        string requiredGeo = null,
+        CancellationToken cancellation = default)
+    {
+        return Task.FromResult(new ClusterRecommendationResponse
+        {
+            RecommendedClusterId = "localhost",
+            Recommendations = new[]
+            {
+                new ClusterRecommendation
+                {
+                    ClusterId = "localhost",
+                    Availability = ClusterAvailability.Available,
+                },
+            },
+        });
+    }
+
     public Task<bool> CheckNameAvailabilityAsync(string name, CancellationToken cancellation = default)
     {
         throw new NotImplementedException();
