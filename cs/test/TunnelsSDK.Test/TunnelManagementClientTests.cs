@@ -322,6 +322,319 @@ public class TunnelManagementClientTests
     }
 
 
+    [Fact]
+    public async Task GetClusterRecommendationsAsync_ReturnsDeserializedResponse()
+    {
+        const string responseJson = @"{
+            ""preferredClusterId"": ""usw2"",
+            ""recommendedClusterId"": ""usw4"",
+            ""isFallback"": true,
+            ""recommendations"": [
+                {
+                    ""clusterId"": ""usw4"",
+                    ""azureLocation"": ""WestUs2"",
+                    ""azureGeo"": ""United States"",
+                    ""clusterUri"": ""https://usw4.ci.tunnels.dev.api.visualstudio.com"",
+                    ""availability"": ""Available"",
+                    ""utilizationPercent"": 12.5,
+                    ""reason"": ""Preferred cluster available""
+                },
+                {
+                    ""clusterId"": ""usw2"",
+                    ""azureLocation"": ""WestUs2"",
+                    ""azureGeo"": ""United States"",
+                    ""clusterUri"": ""https://usw2.ci.tunnels.dev.api.visualstudio.com"",
+                    ""availability"": ""Degraded"",
+                    ""utilizationPercent"": 87.0,
+                    ""reason"": ""Near capacity""
+                }
+            ]
+        }";
+
+        Uri capturedUri = null;
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                capturedUri = message.RequestUri;
+                var result = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = message,
+                    Content = new StringContent(
+                        responseJson, System.Text.Encoding.UTF8, "application/json"),
+                };
+                return Task.FromResult(result);
+            });
+
+        var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
+
+        var response = await client.GetClusterRecommendationsAsync(cancellation: this.timeout);
+
+        Assert.NotNull(response);
+        Assert.Equal("usw2", response.PreferredClusterId);
+        Assert.Equal("usw4", response.RecommendedClusterId);
+        Assert.True(response.IsFallback);
+        Assert.Equal(2, response.Recommendations.Length);
+        Assert.Equal("usw4", response.Recommendations[0].ClusterId);
+        Assert.Equal(ClusterAvailability.Available, response.Recommendations[0].Availability);
+        Assert.Equal(12.5, response.Recommendations[0].UtilizationPercent);
+        Assert.Equal(ClusterAvailability.Degraded, response.Recommendations[1].Availability);
+        Assert.NotNull(capturedUri);
+        Assert.Contains("/clusters/recommendations", capturedUri.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GetClusterRecommendationsAsync_PassesQueryParameters()
+    {
+        Uri capturedUri = null;
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                capturedUri = message.RequestUri;
+                var result = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = message,
+                    Content = new StringContent(
+                        "{\"recommendations\":[]}",
+                        System.Text.Encoding.UTF8,
+                        "application/json"),
+                };
+                return Task.FromResult(result);
+            });
+
+        var client = new TunnelManagementClient(this.userAgent, null, this.tunnelServiceUri, handler);
+
+        await client.GetClusterRecommendationsAsync(
+            preferredClusterId: "usw2", requiredGeo: "us", cancellation: this.timeout);
+
+        Assert.NotNull(capturedUri);
+        Assert.Contains("preferredClusterId=usw2", capturedUri.Query);
+        Assert.Contains("requiredGeo=us", capturedUri.Query);
+    }
+
+    [Fact]
+    public async Task CreateTunnelAsync_AutoRecommendsWhenClusterIdNotSet()
+    {
+        var requestTunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+
+            // ClusterId intentionally not set, so the client auto-recommends.
+        };
+
+        var recommendationCalls = 0;
+        var createCalls = 0;
+        Uri createUri = null;
+
+        var handler = new MockHttpMessageHandler(
+            async (message, ct) =>
+            {
+                if (message.RequestUri!.AbsolutePath.EndsWith("/recommendations"))
+                {
+                    recommendationCalls++;
+                    var recResult = new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        RequestMessage = message,
+                        Content = new StringContent(
+                            "{\"recommendedClusterId\":\"usw4\",\"recommendations\":[]}",
+                            System.Text.Encoding.UTF8,
+                            "application/json"),
+                    };
+                    return recResult;
+                }
+
+                createCalls++;
+                createUri = message.RequestUri;
+                var sentTunnel = await message.Content!.ReadFromJsonAsync<Tunnel>(
+                    cancellationToken: ct);
+                var responseTunnel = new Tunnel
+                {
+                    TunnelId = sentTunnel!.TunnelId,
+                    ClusterId = "usw4",
+                };
+                var result = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = message,
+                    Content = JsonContent.Create(responseTunnel),
+                };
+                return result;
+            });
+
+        var client = new TunnelManagementClient(
+            this.userAgent,
+            tunnelServiceUri: new Uri("https://global.rel.tunnels.api.visualstudio.com/"),
+            httpHandler: handler);
+
+        var resultTunnel = await client.CreateTunnelAsync(
+            requestTunnel, options: null, this.timeout);
+
+        Assert.Equal(1, recommendationCalls);
+        Assert.Equal(1, createCalls);
+        Assert.Equal("usw4", requestTunnel.ClusterId);
+        Assert.NotNull(createUri);
+        Assert.StartsWith("usw4.", createUri.Host);
+        Assert.NotNull(resultTunnel);
+    }
+
+    [Fact]
+    public async Task CreateTunnelAsync_ForwardsRequiredGeoFromOptionsToRecommendation()
+    {
+        var requestTunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+
+            // ClusterId intentionally not set, so the client auto-recommends.
+        };
+
+        Uri recommendationUri = null;
+        Uri createUri = null;
+
+        var handler = new MockHttpMessageHandler(
+            async (message, ct) =>
+            {
+                if (message.RequestUri!.AbsolutePath.EndsWith("/recommendations"))
+                {
+                    recommendationUri = message.RequestUri;
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        RequestMessage = message,
+                        Content = new StringContent(
+                            "{\"recommendedClusterId\":\"usw4\",\"recommendations\":[]}",
+                            System.Text.Encoding.UTF8,
+                            "application/json"),
+                    };
+                }
+
+                createUri = message.RequestUri;
+                var sentTunnel = await message.Content!.ReadFromJsonAsync<Tunnel>(
+                    cancellationToken: ct);
+                var responseTunnel = new Tunnel
+                {
+                    TunnelId = sentTunnel!.TunnelId,
+                    ClusterId = "usw4",
+                };
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = message,
+                    Content = JsonContent.Create(responseTunnel),
+                };
+            });
+
+        var client = new TunnelManagementClient(
+            this.userAgent,
+            tunnelServiceUri: new Uri("https://global.rel.tunnels.api.visualstudio.com/"),
+            httpHandler: handler);
+
+        var options = new TunnelRequestOptions { RequiredGeo = "us" };
+        await client.CreateTunnelAsync(requestTunnel, options, this.timeout);
+
+        // requiredGeo flows to the recommendations request...
+        Assert.NotNull(recommendationUri);
+        Assert.Contains("requiredGeo=us", recommendationUri.Query);
+
+        // ...but is NOT included on the create-tunnel request itself.
+        Assert.NotNull(createUri);
+        Assert.DoesNotContain("requiredGeo", createUri.Query);
+    }
+
+    [Fact]
+    public async Task CreateTunnelAsync_SkipsRecommendWhenClusterIdSet()
+    {
+        var requestTunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+            ClusterId = "usw2",
+        };
+
+        var recommendationCalls = 0;
+        var createCalls = 0;
+        Uri createUri = null;
+
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                if (message.RequestUri!.AbsolutePath.EndsWith("/recommendations"))
+                {
+                    recommendationCalls++;
+                }
+                else
+                {
+                    createCalls++;
+                    createUri = message.RequestUri;
+                }
+
+                var result = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = message,
+                    Content = JsonContent.Create(requestTunnel),
+                };
+                return Task.FromResult(result);
+            });
+
+        var client = new TunnelManagementClient(
+            this.userAgent,
+            tunnelServiceUri: new Uri("https://global.rel.tunnels.api.visualstudio.com/"),
+            httpHandler: handler);
+
+        await client.CreateTunnelAsync(requestTunnel, options: null, this.timeout);
+
+        Assert.Equal(0, recommendationCalls);
+        Assert.Equal(1, createCalls);
+        Assert.NotNull(createUri);
+        Assert.StartsWith("usw2.", createUri.Host);
+    }
+
+    [Fact]
+    public async Task CreateTunnelAsync_FallsBackOnRecommendFailure()
+    {
+        var requestTunnel = new Tunnel
+        {
+            TunnelId = TunnelId,
+
+            // ClusterId not set; recommendations call will fail.
+        };
+
+        var createCalls = 0;
+        Uri createUri = null;
+
+        var handler = new MockHttpMessageHandler(
+            (message, ct) =>
+            {
+                if (message.RequestUri!.AbsolutePath.EndsWith("/recommendations"))
+                {
+                    var failure = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    {
+                        RequestMessage = message,
+                    };
+                    return Task.FromResult(failure);
+                }
+
+                createCalls++;
+                createUri = message.RequestUri;
+                var result = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = message,
+                    Content = JsonContent.Create(requestTunnel),
+                };
+                return Task.FromResult(result);
+            });
+
+        var client = new TunnelManagementClient(
+            this.userAgent,
+            tunnelServiceUri: new Uri("https://global.rel.tunnels.api.visualstudio.com/"),
+            httpHandler: handler);
+
+        var resultTunnel = await client.CreateTunnelAsync(
+            requestTunnel, options: null, this.timeout);
+
+        Assert.Equal(1, createCalls);
+        Assert.Null(requestTunnel.ClusterId);
+        Assert.NotNull(createUri);
+
+        // No cluster prefix was added: routing falls back to the global hostname.
+        Assert.Equal("global.rel.tunnels.api.visualstudio.com", createUri.Host);
+        Assert.NotNull(resultTunnel);
+    }
+
     private sealed class MockHttpMessageHandler : DelegatingHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler;

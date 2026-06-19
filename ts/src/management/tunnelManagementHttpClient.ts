@@ -13,6 +13,7 @@ import {
     ProblemDetails,
     TunnelServiceProperties,
     ClusterDetails,
+    ClusterRecommendationResponse,
     NamedRateStatus,
     TunnelListByRegionResponse,
     TunnelPortListResponse,
@@ -41,6 +42,7 @@ const endpointsApiSubPath = '/endpoints';
 const portsApiSubPath = '/ports';
 const eventsApiSubPath = '/events';
 const clustersApiPath = '/clusters';
+const recommendationsSubPath = '/recommendations';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
 const createNameRetries = 3;
@@ -328,6 +330,25 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         const tunnelId = tunnel.tunnelId;
         const idGenerated = tunnelId === undefined || tunnelId === null || tunnelId === '';
         options = options || {};
+
+        // If the caller didn't specify a cluster, auto-select one via the
+        // recommendations API. Failures fall back to global routing.
+        if (!tunnel.clusterId) {
+            try {
+                const recommendations = await this.getClusterRecommendations(
+                    undefined,
+                    options.requiredGeo,
+                    cancellation,
+                );
+                if (recommendations?.recommendedClusterId) {
+                    tunnel.clusterId = recommendations.recommendedClusterId;
+                }
+            } catch {
+                // Fall through to global (Traffic Manager) routing if the
+                // recommendations request fails for any reason.
+            }
+        }
+
         options.additionalHeaders = options.additionalHeaders || {};
         options.additionalHeaders['If-Not-Match'] = "*";
 
@@ -690,6 +711,32 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             undefined,
             clustersApiPath,
             undefined,
+            undefined,
+            undefined,
+            false,
+            cancellation,
+        ))!;
+    }
+
+    public async getClusterRecommendations(
+        preferredClusterId?: string,
+        requiredGeo?: string,
+        cancellation?: CancellationToken,
+    ): Promise<ClusterRecommendationResponse> {
+        const queryParts: string[] = [];
+        if (preferredClusterId) {
+            queryParts.push(`preferredClusterId=${encodeURIComponent(preferredClusterId)}`);
+        }
+        if (requiredGeo) {
+            queryParts.push(`requiredGeo=${encodeURIComponent(requiredGeo)}`);
+        }
+        const query = queryParts.length > 0 ? queryParts.join('&') : undefined;
+
+        return (await this.sendRequest<ClusterRecommendationResponse>(
+            'GET',
+            undefined,
+            clustersApiPath + recommendationsSubPath,
+            query,
             undefined,
             undefined,
             false,
