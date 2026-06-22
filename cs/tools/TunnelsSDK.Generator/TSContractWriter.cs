@@ -413,6 +413,8 @@ internal class TSContractWriter : ContractWriter
                 "uint" => "number",
                 "long" => "number",
                 "ulong" => "number",
+                "float" => "number",
+                "double" => "number",
                 "string" => "string",
                 "System.DateTime" => "Date",
                 "System.Text.RegularExpressions.Regex" => "RegExp",

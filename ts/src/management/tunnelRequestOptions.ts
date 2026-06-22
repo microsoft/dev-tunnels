@@ -94,4 +94,16 @@ export interface TunnelRequestOptions {
      * Limits the number of tunnels returned when searching or listing tunnels.
      */
     limit?: number;
+
+    /**
+     * Gets or sets an optional Azure geography filter used when a cluster is
+     * automatically recommended during tunnel creation.
+     *
+     * This option only applies to `TunnelManagementClient.createTunnel` when the tunnel does
+     * not already specify a `clusterId`. In that case the value is forwarded to the cluster
+     * recommendations request so that only clusters in the specified geo are eligible for
+     * automatic selection. It has no effect when a cluster is explicitly set or on any other
+     * request, and it is not sent as part of the create-tunnel request itself.
+     */
+    requiredGeo?: string;
 }
