@@ -3,6 +3,7 @@
 
 import {
     ClusterDetails,
+    ClusterRecommendationResponse,
     NamedRateStatus,
     Tunnel,
     TunnelEndpoint,
@@ -207,6 +208,21 @@ export interface TunnelManagementClient {
      * @param cancellation Optional cancellation token for the request.
      */
     listClusters(cancellation?: CancellationToken): Promise<ClusterDetails[]>;
+
+    /**
+     * Gets cluster recommendations for tunnel creation based on capacity and
+     * availability.
+     * @param preferredClusterId Optional preferred cluster ID. When omitted, defaults to
+     * the cluster serving the request.
+     * @param requiredGeo Optional Azure geography filter. When specified, only clusters in
+     * this geo are eligible for recommendation.
+     * @param cancellation Optional cancellation token for the request.
+     */
+    getClusterRecommendations(
+        preferredClusterId?: string,
+        requiredGeo?: string,
+        cancellation?: CancellationToken,
+    ): Promise<ClusterRecommendationResponse>;
 
     /**
      * Checks if the tunnel name is available.

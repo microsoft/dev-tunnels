@@ -15,7 +15,7 @@ use rand::Rng;
 
 use crate::contracts::{
     env_production, NamedRateStatus, Tunnel, TunnelEndpoint, TunnelListByRegionResponse,
-    TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint, TunnelServiceProperties,
+    TunnelPort, TunnelPortListResponse, TunnelServiceProperties,
 };
 
 use super::{
@@ -164,7 +164,11 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.connection_mode.to_string());
@@ -177,15 +181,19 @@ impl TunnelManagementClient {
     pub async fn update_tunnel_relay_endpoints(
         &self,
         locator: &TunnelLocator,
-        endpoint: &TunnelRelayTunnelEndpoint,
+        endpoint: &TunnelEndpoint,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<TunnelRelayTunnelEndpoint> {
+    ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
-            .append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
+            .append_pair("connectionMode", &endpoint.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_relay_endpoints", request)
@@ -688,14 +696,14 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &st
 mod test_end_to_end {
     use std::{env, time::Duration};
 
-    use async_trait::async_trait;
     use serde::Deserialize;
     use tokio::time::sleep;
 
     use crate::{
         contracts::{Tunnel, PROD_FIRST_PARTY_APP_ID},
         management::{
-            Authorization, AuthorizationProvider, HttpError, TunnelLocator, NO_REQUEST_OPTIONS,
+            Authorization, AuthorizationProvider, BoxFuture, HttpError, TunnelLocator,
+            NO_REQUEST_OPTIONS,
         },
     };
 
@@ -789,16 +797,17 @@ mod test_end_to_end {
 
     struct AuthCodeProvider();
 
-    #[async_trait]
     impl AuthorizationProvider for AuthCodeProvider {
-        async fn get_authorization(&self) -> Result<Authorization, HttpError> {
-            let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
-                Ok(value) => value,
-                _ => do_device_code_flow(&reqwest::Client::new()).await,
-            };
+        fn get_authorization(&self) -> BoxFuture<'_, Result<Authorization, HttpError>> {
+            Box::pin(async {
+                let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
+                    Ok(value) => value,
+                    _ => do_device_code_flow(&reqwest::Client::new()).await,
+                };
 
-            env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
-            Ok(Authorization::Bearer(token))
+                env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
+                Ok(Authorization::Bearer(token))
+            })
         }
     }
 
@@ -851,10 +860,8 @@ mod tests {
 
     #[test]
     fn custom_domain_does_not_modify_hostname() {
-        let mut builder = super::new_tunnel_management_for_custom_domain(
-            "rs-sdk-tests",
-            "app.github.dev",
-        );
+        let builder =
+            super::new_tunnel_management_for_custom_domain("rs-sdk-tests", "app.github.dev");
         let client: super::TunnelManagementClient = builder.into();
         let url = client.build_uri(Some("usw2"), "/tunnels/tnnl0001");
         assert_eq!(url.host_str().unwrap(), "cp.app.github.dev");

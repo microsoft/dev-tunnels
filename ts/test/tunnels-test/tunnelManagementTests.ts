@@ -6,7 +6,7 @@ import axios, { Axios, AxiosHeaders, AxiosError, AxiosPromise, AxiosRequestConfi
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
-import { Tunnel, TunnelProgress, TunnelReportProgressEventArgs } from '@microsoft/dev-tunnels-contracts';
+import { Tunnel, TunnelProgress, TunnelReportProgressEventArgs, ClusterRecommendationResponse, ClusterAvailability } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken, CancellationTokenSource } from 'vscode-jsonrpc';
 
 @suite
@@ -310,6 +310,255 @@ export class TunnelManagementTests {
             assert.notStrictEqual(firstTunnelId, secondTunnelId);
             assert.strictEqual(resultTunnel.tunnelId, secondTunnelId);
             assert.strictEqual(requestTunnel.tunnelId, secondTunnelId);
+        } finally {
+            (<any>this.managementClient).axiosRequest = originalAxiosRequest;
+        }
+    }
+
+    @test
+    public async getClusterRecommendationsReturnsResponse() {
+        const response = <ClusterRecommendationResponse>{
+            preferredClusterId: 'usw2',
+            recommendedClusterId: 'usw4',
+            isFallback: true,
+            recommendations: [
+                {
+                    clusterId: 'usw4',
+                    azureLocation: 'WestUs2',
+                    azureGeo: 'United States',
+                    clusterUri: 'https://usw4.ci.tunnels.dev.api.visualstudio.com',
+                    availability: ClusterAvailability.Available,
+                    utilizationPercent: 12.5,
+                    reason: 'Preferred cluster available',
+                },
+            ],
+        };
+        this.nextResponse = response;
+
+        const result = await this.managementClient.getClusterRecommendations();
+
+        assert(this.lastRequest && this.lastRequest.uri);
+        assert(this.lastRequest.uri.includes('/clusters/recommendations'));
+        assert(result);
+        assert.strictEqual(result.recommendedClusterId, 'usw4');
+        assert.strictEqual(result.recommendations.length, 1);
+        assert.strictEqual(result.recommendations[0].availability, ClusterAvailability.Available);
+        assert.strictEqual(result.recommendations[0].utilizationPercent, 12.5);
+    }
+
+    @test
+    public async getClusterRecommendationsPassesQueryParameters() {
+        this.nextResponse = <ClusterRecommendationResponse>{ recommendations: [] };
+
+        await this.managementClient.getClusterRecommendations('usw2', 'us');
+
+        assert(this.lastRequest && this.lastRequest.uri);
+        assert(this.lastRequest.uri.includes('preferredClusterId=usw2'));
+        assert(this.lastRequest.uri.includes('requiredGeo=us'));
+    }
+
+    @test
+    public async createTunnelAutoRecommendsWhenClusterIdNotSet() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            // clusterId intentionally not set, so the client auto-recommends.
+        };
+
+        let recommendationCalls = 0;
+        let createCalls = 0;
+        let createUri = '';
+
+        const originalAxiosRequest = (<any>this.managementClient).axiosRequest;
+        (<any>this.managementClient).axiosRequest = async (
+            config: AxiosRequestConfig,
+            cancellation: CancellationToken,
+        ): Promise<AxiosResponse> => {
+            const uri = config.url || '';
+            if (uri.includes('/recommendations')) {
+                recommendationCalls++;
+                return {
+                    data: { recommendedClusterId: 'usw4', recommendations: [] },
+                    status: 200,
+                    statusText: 'OK',
+                    headers: {},
+                    config,
+                } as AxiosResponse;
+            }
+
+            createCalls++;
+            createUri = uri;
+            const sentTunnel = config.data as Tunnel;
+            return {
+                data: <Tunnel>{ tunnelId: sentTunnel?.tunnelId, clusterId: 'usw4' },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config,
+            } as AxiosResponse;
+        };
+
+        try {
+            const result = await this.managementClient.createTunnel(requestTunnel);
+
+            assert.strictEqual(recommendationCalls, 1);
+            assert.strictEqual(createCalls, 1);
+            assert.strictEqual(requestTunnel.clusterId, 'usw4');
+            assert(createUri.includes('usw4.tunnels.test'));
+            assert(result);
+        } finally {
+            (<any>this.managementClient).axiosRequest = originalAxiosRequest;
+        }
+    }
+
+    @test
+    public async createTunnelForwardsRequiredGeoFromOptionsToRecommendation() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            // clusterId intentionally not set, so the client auto-recommends.
+        };
+
+        let recommendationUri = '';
+        let createUri = '';
+
+        const originalAxiosRequest = (<any>this.managementClient).axiosRequest;
+        (<any>this.managementClient).axiosRequest = async (
+            config: AxiosRequestConfig,
+            cancellation: CancellationToken,
+        ): Promise<AxiosResponse> => {
+            const uri = config.url || '';
+            if (uri.includes('/recommendations')) {
+                recommendationUri = uri;
+                return {
+                    data: { recommendedClusterId: 'usw4', recommendations: [] },
+                    status: 200,
+                    statusText: 'OK',
+                    headers: {},
+                    config,
+                } as AxiosResponse;
+            }
+
+            createUri = uri;
+            const sentTunnel = config.data as Tunnel;
+            return {
+                data: <Tunnel>{ tunnelId: sentTunnel?.tunnelId, clusterId: 'usw4' },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config,
+            } as AxiosResponse;
+        };
+
+        try {
+            await this.managementClient.createTunnel(requestTunnel, { requiredGeo: 'us' });
+
+            // requiredGeo flows to the recommendations request...
+            assert(recommendationUri.includes('requiredGeo=us'));
+
+            // ...but is NOT included on the create-tunnel request itself.
+            assert(!createUri.includes('requiredGeo'));
+        } finally {
+            (<any>this.managementClient).axiosRequest = originalAxiosRequest;
+        }
+    }
+
+    @test
+    public async createTunnelSkipsRecommendWhenClusterIdSet() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'usw2',
+        };
+
+        let recommendationCalls = 0;
+        let createCalls = 0;
+        let createUri = '';
+
+        const originalAxiosRequest = (<any>this.managementClient).axiosRequest;
+        (<any>this.managementClient).axiosRequest = async (
+            config: AxiosRequestConfig,
+            cancellation: CancellationToken,
+        ): Promise<AxiosResponse> => {
+            const uri = config.url || '';
+            if (uri.includes('/recommendations')) {
+                recommendationCalls++;
+            } else {
+                createCalls++;
+                createUri = uri;
+            }
+            const sentTunnel = config.data as Tunnel;
+            return {
+                data: <Tunnel>{ tunnelId: sentTunnel?.tunnelId, clusterId: 'usw2' },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config,
+            } as AxiosResponse;
+        };
+
+        try {
+            await this.managementClient.createTunnel(requestTunnel);
+
+            assert.strictEqual(recommendationCalls, 0);
+            assert.strictEqual(createCalls, 1);
+            assert(createUri.includes('usw2.tunnels.test'));
+        } finally {
+            (<any>this.managementClient).axiosRequest = originalAxiosRequest;
+        }
+    }
+
+    @test
+    public async createTunnelFallsBackOnRecommendFailure() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            // clusterId not set; recommendations call will fail.
+        };
+
+        let createCalls = 0;
+        let createUri = '';
+
+        const recommendError = new AxiosError();
+        recommendError.config = {
+            url: TunnelManagementTests.testServiceUri,
+            headers: new AxiosHeaders(),
+        };
+        recommendError.response = {
+            status: 500,
+            statusText: 'Internal Server Error',
+            headers: new AxiosHeaders(),
+            data: undefined,
+            config: recommendError.config,
+        };
+
+        const originalAxiosRequest = (<any>this.managementClient).axiosRequest;
+        (<any>this.managementClient).axiosRequest = async (
+            config: AxiosRequestConfig,
+            cancellation: CancellationToken,
+        ): Promise<AxiosResponse> => {
+            const uri = config.url || '';
+            if (uri.includes('/recommendations')) {
+                throw recommendError;
+            }
+
+            createCalls++;
+            createUri = uri;
+            const sentTunnel = config.data as Tunnel;
+            return {
+                data: <Tunnel>{ tunnelId: sentTunnel?.tunnelId },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config,
+            } as AxiosResponse;
+        };
+
+        try {
+            const result = await this.managementClient.createTunnel(requestTunnel);
+
+            assert.strictEqual(createCalls, 1);
+            assert.strictEqual(requestTunnel.clusterId, undefined);
+
+            // No cluster prefix was added: routing falls back to the global hostname.
+            assert(createUri.includes('global.tunnels.test'));
+            assert(result);
         } finally {
             (<any>this.managementClient).axiosRequest = originalAxiosRequest;
         }

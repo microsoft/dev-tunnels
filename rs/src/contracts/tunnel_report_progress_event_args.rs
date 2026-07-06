@@ -14,5 +14,6 @@ pub struct TunnelReportProgressEventArgs {
     pub progress: String,
 
     // The session number associated with an SSH session progress event.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub session_number: Option<i32>,
 }

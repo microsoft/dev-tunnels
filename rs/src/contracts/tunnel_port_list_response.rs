@@ -13,5 +13,6 @@ pub struct TunnelPortListResponse {
     pub value: Vec<TunnelPort>,
 
     // Link to get next page of results
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }

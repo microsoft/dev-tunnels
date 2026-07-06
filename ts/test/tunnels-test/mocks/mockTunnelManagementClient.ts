@@ -10,6 +10,8 @@ import {
     TunnelEndpoint,
     TunnelEvent,
     ClusterDetails,
+    ClusterAvailability,
+    ClusterRecommendationResponse,
     NamedRateStatus,
 } from '@microsoft/dev-tunnels-contracts';
 
@@ -270,6 +272,27 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
 
     listClusters(): Promise<ClusterDetails[]> {
         throw new Error('Method not implemented.');
+    }
+
+    getClusterRecommendations(
+        preferredClusterId?: string,
+        requiredGeo?: string,
+    ): Promise<ClusterRecommendationResponse> {
+        return Promise.resolve({
+            recommendedClusterId: 'localhost',
+            isFallback: false,
+            recommendations: [
+                {
+                    clusterId: 'localhost',
+                    azureLocation: '',
+                    azureGeo: '',
+                    clusterUri: '',
+                    availability: ClusterAvailability.Available,
+                    utilizationPercent: 0,
+                    reason: '',
+                },
+            ],
+        });
     }
 
     checkNameAvailablility(tunnelName: string): Promise<boolean> {        

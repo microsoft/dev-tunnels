@@ -41,7 +41,7 @@
     <NerdbankStreamsVersion>2.13.16</NerdbankStreamsVersion>
     <ReportGeneratorVersion>5.5.4</ReportGeneratorVersion>
     <VisualStudioValidationVersion>17.13.22</VisualStudioValidationVersion>
-    <DevTunnelsSshPackageVersion>3.12.24</DevTunnelsSshPackageVersion>
+    <DevTunnelsSshPackageVersion>3.12.36</DevTunnelsSshPackageVersion>
     <XunitRunnerVisualStudioVersion>3.1.5</XunitRunnerVisualStudioVersion>
     <XunitV3Version>3.2.2</XunitV3Version>
     <XunitV3ExtensibilityCoreVersion>3.2.2</XunitV3ExtensibilityCoreVersion>

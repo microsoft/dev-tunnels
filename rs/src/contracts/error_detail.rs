@@ -16,6 +16,7 @@ pub struct ErrorDetail {
     pub message: String,
 
     // The target of the error.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
 
     // An array of details about specific errors that led to this reported error.
@@ -24,6 +25,6 @@ pub struct ErrorDetail {
 
     // An object containing more specific information than the current object about the
     // error.
-    #[serde(rename = "innererror")]
+    #[serde(rename = "innererror", skip_serializing_if = "Option::is_none")]
     pub inner_error: Option<InnerErrorDetail>,
 }

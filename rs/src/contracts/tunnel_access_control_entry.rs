@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/TunnelAccessControlEntry.cs
 
-use chrono::{DateTime, Utc};
 use crate::contracts::TunnelAccessControlEntryType;
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
 // Data contract for an access control entry on a `Tunnel` or `TunnelPort`.
@@ -30,6 +30,7 @@ pub struct TunnelAccessControlEntry {
     // For IP address range ACEs, this value is the IP address version, "ipv4" or "ipv6",
     // or "service-tag" if the range is defined by an Azure service tag.  For anonymous
     // ACEs, this value is null.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
 
     // Gets or sets a value indicating whether this is an access control entry on a tunnel
@@ -67,6 +68,7 @@ pub struct TunnelAccessControlEntry {
     //
     // For AAD users and group ACEs, this value is the AAD tenant ID. It is not currently
     // used with any other types of ACEs.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub organization: Option<String>,
 
     // Gets or sets the subjects for the entry, such as user or group IDs. The format of
@@ -82,7 +84,8 @@ pub struct TunnelAccessControlEntry {
     // Gets or sets the expiration for an access control entry.
     //
     // If no value is set then this value is null.
-    pub expiration: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration: Option<Timestamp>,
 }
 
 // Constants for well-known identity providers.

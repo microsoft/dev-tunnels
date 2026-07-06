@@ -42,6 +42,7 @@ namespace Microsoft.DevTunnels.Management
         private const string EventsApiSubPath = "/events";
         private const string ClustersApiPath = "/clusters";
         private const string ClustersV1ApiPath = ApiV1Path + "/clusters";
+        private const string RecommendationsSubPath = "/recommendations";
         private const string TunnelAuthenticationScheme = "Tunnel";
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
         private const string CheckAvailableSubPath = ":checkNameAvailability";
@@ -1084,6 +1085,29 @@ namespace Microsoft.DevTunnels.Management
         {
             Requires.NotNull(tunnel, nameof(tunnel));
             options ??= new TunnelRequestOptions();
+
+            // If the caller didn't specify a cluster, auto-select one via the
+            // recommendations API. Failures fall back to global routing.
+            if (string.IsNullOrEmpty(tunnel.ClusterId))
+            {
+                try
+                {
+                    var recommendations = await GetClusterRecommendationsAsync(
+                        preferredClusterId: null,
+                        requiredGeo: options.RequiredGeo,
+                        cancellation);
+                    if (!string.IsNullOrEmpty(recommendations?.RecommendedClusterId))
+                    {
+                        tunnel.ClusterId = recommendations!.RecommendedClusterId;
+                    }
+                }
+                catch (Exception) when (!cancellation.IsCancellationRequested)
+                {
+                    // Fall through to global (Traffic Manager) routing if the
+                    // recommendations request fails for any reason.
+                }
+            }
+
             options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(
                 new KeyValuePair<string, string>("If-None-Match", "*"));
@@ -1593,6 +1617,46 @@ namespace Microsoft.DevTunnels.Management
                 body: null,
                 cancellation);
             return clusterDetails!;
+        }
+
+        /// <inheritdoc/>
+        public async Task<ClusterRecommendationResponse> GetClusterRecommendationsAsync(
+            string? preferredClusterId = null,
+            string? requiredGeo = null,
+            CancellationToken cancellation = default)
+        {
+            var baseAddress = this.httpClient.BaseAddress!;
+            var builder = new UriBuilder(baseAddress);
+            builder.Path = ClustersPath + RecommendationsSubPath;
+
+            var queryParts = new List<string>();
+            var apiQuery = GetApiQuery();
+            if (!string.IsNullOrEmpty(apiQuery))
+            {
+                queryParts.Add(apiQuery!);
+            }
+
+            if (!string.IsNullOrEmpty(preferredClusterId))
+            {
+                queryParts.Add(
+                    $"preferredClusterId={Uri.EscapeDataString(preferredClusterId!)}");
+            }
+
+            if (!string.IsNullOrEmpty(requiredGeo))
+            {
+                queryParts.Add($"requiredGeo={Uri.EscapeDataString(requiredGeo!)}");
+            }
+
+            builder.Query = string.Join("&", queryParts);
+
+            var response = await SendRequestAsync<object, ClusterRecommendationResponse>(
+                HttpMethod.Get,
+                builder.Uri,
+                options: null,
+                authHeader: null,
+                body: null,
+                cancellation);
+            return response!;
         }
 
         /// <inheritdoc/>

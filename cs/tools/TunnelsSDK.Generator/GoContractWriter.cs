@@ -447,6 +447,8 @@ internal class GoContractWriter : ContractWriter
                 "uint" => "uint32",
                 "long" => "int64",
                 "ulong" => "uint64",
+                "float" => "float32",
+                "double" => "float64",
                 "string" => "string",
                 "System.DateTime" => "time.Time",
                 "System.Text.RegularExpressions.Regex" => "regexp.Regexp",

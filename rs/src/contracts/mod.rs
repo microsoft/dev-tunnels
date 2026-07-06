@@ -2,7 +2,10 @@
 // Licensed under the MIT license.
 // Generated from RustContractWriter.cs
 
+mod cluster_availability;
 mod cluster_details;
+mod cluster_recommendation;
+mod cluster_recommendation_response;
 mod error_codes;
 mod error_detail;
 mod inner_error_detail;
@@ -38,7 +41,10 @@ mod tunnel_report_progress_event_args;
 mod tunnel_service_properties;
 mod tunnel_status;
 
+pub use cluster_availability::*;
 pub use cluster_details::*;
+pub use cluster_recommendation::*;
+pub use cluster_recommendation_response::*;
 pub use error_codes::*;
 pub use error_detail::*;
 pub use inner_error_detail::*;

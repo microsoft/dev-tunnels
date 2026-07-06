@@ -128,6 +128,9 @@ func TestCreateTunnelRetriesOnConflictForGeneratedID(t *testing.T) {
 	var bodyIDs []string
 	callCount := 0
 	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "recommendations") {
+			return responseWithStatus(http.StatusOK, "{}"), nil
+		}
 		callCount++
 		pathIDs = append(pathIDs, tunnelIDFromPath(r.URL.Path))
 		bodyBytes, readErr := io.ReadAll(r.Body)
@@ -185,6 +188,9 @@ func TestCreateTunnelDoesNotRetryOnNonConflict(t *testing.T) {
 
 	callCount := 0
 	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "recommendations") {
+			return responseWithStatus(http.StatusOK, "{}"), nil
+		}
 		callCount++
 		return responseWithStatus(http.StatusInternalServerError, ""), nil
 	})}
@@ -211,6 +217,9 @@ func TestCreateTunnelDoesNotRetryWhenIDProvided(t *testing.T) {
 
 	callCount := 0
 	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "recommendations") {
+			return responseWithStatus(http.StatusOK, "{}"), nil
+		}
 		callCount++
 		return responseWithStatus(http.StatusConflict, ""), nil
 	})}
@@ -226,6 +235,166 @@ func TestCreateTunnelDoesNotRetryWhenIDProvided(t *testing.T) {
 	}
 	if callCount != 1 {
 		t.Fatalf("expected 1 request, got %d", callCount)
+	}
+}
+
+func TestCreateTunnelAutoRecommendsWhenClusterIDNotSet(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	recommendationCalls := 0
+	createCalls := 0
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "recommendations") {
+			recommendationCalls++
+			return responseWithStatus(http.StatusOK, "{\"recommendedClusterId\":\"usw4\",\"recommendations\":[]}"), nil
+		}
+		createCalls++
+		id := tunnelIDFromPath(r.URL.Path)
+		body := fmt.Sprintf("{\"tunnelId\":\"%s\",\"clusterId\":\"usw4\"}", id)
+		return responseWithStatus(http.StatusOK, body), nil
+	})}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, client, "2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	tunnel := &Tunnel{}
+	createdTunnel, err := managementClient.CreateTunnel(context.Background(), tunnel, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if recommendationCalls != 1 {
+		t.Fatalf("expected 1 recommendation request, got %d", recommendationCalls)
+	}
+	if createCalls != 1 {
+		t.Fatalf("expected 1 create request, got %d", createCalls)
+	}
+	if tunnel.ClusterID != "usw4" {
+		t.Fatalf("expected tunnel ClusterID to be set to usw4, got %q", tunnel.ClusterID)
+	}
+	if createdTunnel.ClusterID != "usw4" {
+		t.Fatalf("expected created tunnel ClusterID usw4, got %q", createdTunnel.ClusterID)
+	}
+}
+
+func TestCreateTunnelForwardsRequiredGeoFromOptionsToRecommendation(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	recommendationQuery := ""
+	createQuery := ""
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "recommendations") {
+			recommendationQuery = r.URL.RawQuery
+			return responseWithStatus(http.StatusOK, "{\"recommendedClusterId\":\"usw4\",\"recommendations\":[]}"), nil
+		}
+		createQuery = r.URL.RawQuery
+		id := tunnelIDFromPath(r.URL.Path)
+		body := fmt.Sprintf("{\"tunnelId\":\"%s\",\"clusterId\":\"usw4\"}", id)
+		return responseWithStatus(http.StatusOK, body), nil
+	})}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, client, "2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	options := &TunnelRequestOptions{RequiredGeo: "us"}
+	_, err = managementClient.CreateTunnel(context.Background(), &Tunnel{}, options)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// requiredGeo flows to the recommendations request...
+	if !strings.Contains(recommendationQuery, "requiredGeo=us") {
+		t.Fatalf("expected recommendations query to contain requiredGeo=us, got %q", recommendationQuery)
+	}
+	// ...but is NOT included on the create-tunnel request itself.
+	if strings.Contains(createQuery, "requiredGeo") {
+		t.Fatalf("expected create query to NOT contain requiredGeo, got %q", createQuery)
+	}
+}
+
+func TestCreateTunnelSkipsRecommendWhenClusterIDSet(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	recommendationCalls := 0
+	createCalls := 0
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "recommendations") {
+			recommendationCalls++
+			return responseWithStatus(http.StatusOK, "{}"), nil
+		}
+		createCalls++
+		id := tunnelIDFromPath(r.URL.Path)
+		body := fmt.Sprintf("{\"tunnelId\":\"%s\",\"clusterId\":\"usw2\"}", id)
+		return responseWithStatus(http.StatusOK, body), nil
+	})}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, client, "2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	_, err = managementClient.CreateTunnel(context.Background(), &Tunnel{ClusterID: "usw2"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if recommendationCalls != 0 {
+		t.Fatalf("expected 0 recommendation requests, got %d", recommendationCalls)
+	}
+	if createCalls != 1 {
+		t.Fatalf("expected 1 create request, got %d", createCalls)
+	}
+}
+
+// Regression test: auto-recommend sets tunnel.ClusterID, which routes the
+// create request through buildUri. buildUri must NOT mutate the shared
+// manager base URI (m.uri); otherwise subsequent requests would be pinned to
+// the recommended cluster's host.
+func TestCreateTunnelDoesNotMutateManagerBaseURI(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	createHost := ""
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "recommendations") {
+			return responseWithStatus(http.StatusOK, "{\"recommendedClusterId\":\"usw4\",\"recommendations\":[]}"), nil
+		}
+		createHost = r.URL.Host
+		id := tunnelIDFromPath(r.URL.Path)
+		body := fmt.Sprintf("{\"tunnelId\":\"%s\",\"clusterId\":\"usw4\"}", id)
+		return responseWithStatus(http.StatusOK, body), nil
+	})}
+
+	managementClient, err := NewManager(userAgentManagerTest, getUserToken, url, client, "2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	_, err = managementClient.CreateTunnel(context.Background(), &Tunnel{}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The create request should have been routed to the cluster-prefixed host.
+	if createHost != "usw4.example.test" {
+		t.Fatalf("expected create request host usw4.example.test, got %q", createHost)
+	}
+	// But the shared manager base URI must remain unchanged.
+	if managementClient.uri.Host != "example.test" {
+		t.Fatalf("expected manager base URI host to remain example.test, got %q", managementClient.uri.Host)
 	}
 }
 
