@@ -19,7 +19,7 @@ use crate::{
     },
 };
 use async_trait::async_trait;
-use futures::{future::BoxFuture, stream::FuturesUnordered, StreamExt, TryFutureExt};
+use futures::{future::BoxFuture, stream::FuturesUnordered, StreamExt};
 use russh::{server::Server as ServerTrait, CryptoVec};
 use russh_keys::PublicKeyBase64;
 use tokio::{
