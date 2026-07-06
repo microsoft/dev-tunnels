@@ -12,10 +12,10 @@ Dev tunnels allows developers to securely expose local web services to the Inter
 | Management API | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Tunnel Client Connections | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Tunnel Host Connections | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SSH-level Reconnection | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Automatic tunnel access token refresh | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Ssh Keep-alive | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Reconnection | ✅ | ✅ | ❌ | ❌ | ✅ |
+| SSH-level Reconnection | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Automatic tunnel access token refresh | ✅ | ✅ | ❌ | ❌ | ✅ |
+| SSH keep-alive | ✅ | ✅ | ❌ | ❌ | ✅ |
 
 ✅ - Supported  
 🚧 - In Progress  
