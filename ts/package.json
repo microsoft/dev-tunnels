@@ -27,7 +27,7 @@
 		"axios": "^1.13.5",
 		"buffer": "^5.2.1",
 		"debug": "^4.1.1",
-		"uuid": "^3.3.3",
+		"uuid": "^14.0.0",
 		"vscode-jsonrpc": "^4.0.0"
 	},
 	"devDependencies": {
