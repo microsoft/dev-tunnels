@@ -26,7 +26,7 @@
 		"es5-ext": "0.10.64"
 	},
 	"peerDependencies": {
-		"@microsoft/dev-tunnels-ssh": "^3.12.29",
-		"@microsoft/dev-tunnels-ssh-tcp": "^3.12.29"
+		"@microsoft/dev-tunnels-ssh": "^3.12.42",
+		"@microsoft/dev-tunnels-ssh-tcp": "^3.12.42"
 	}
 }
