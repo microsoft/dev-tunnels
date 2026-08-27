@@ -6,7 +6,7 @@ import axios, { Axios, AxiosHeaders, AxiosError, AxiosPromise, AxiosRequestConfi
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
 import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
-import { Tunnel, TunnelProgress, TunnelReportProgressEventArgs, ClusterRecommendationResponse, ClusterAvailability } from '@microsoft/dev-tunnels-contracts';
+import { Tunnel, TunnelPort, TunnelProgress, TunnelReportProgressEventArgs, ClusterRecommendationResponse, ClusterAvailability } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken, CancellationTokenSource } from 'vscode-jsonrpc';
 
 @suite
@@ -282,6 +282,7 @@ export class TunnelManagementTests {
             callCount++;
 
             const sentTunnel = config.data as Tunnel;
+            assert.strictEqual(config.headers?.['If-None-Match'], '*');
             if (callCount === 1) {
                 firstTunnelId = sentTunnel?.tunnelId;
                 throw conflictError;
@@ -313,6 +314,66 @@ export class TunnelManagementTests {
         } finally {
             (<any>this.managementClient).axiosRequest = originalAxiosRequest;
         }
+    }
+
+    @test
+    public async createTunnelSendsIfNoneMatchHeader() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+        };
+        this.nextResponse = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+        };
+        const options = {
+            additionalHeaders: {
+                'X-Test': 'value',
+            },
+        };
+
+        await this.managementClient.createTunnel(requestTunnel, options);
+
+        assert(this.lastRequest);
+        const headers = this.lastRequest!.config.headers as { [name: string]: string };
+        assert.strictEqual(headers['If-None-Match'], '*');
+        assert.strictEqual(headers['If-Not-Match'], undefined);
+        assert.strictEqual(headers['X-Test'], 'value');
+        assert.strictEqual(
+            Object.prototype.hasOwnProperty.call(options.additionalHeaders, 'If-None-Match'),
+            false,
+        );
+    }
+
+    @test
+    public async createTunnelPortSendsIfNoneMatchHeader() {
+        const requestTunnel = <Tunnel>{
+            tunnelId: 'tunnelid',
+            clusterId: 'clusterId',
+        };
+        const requestPort = <TunnelPort>{
+            portNumber: 9900,
+        };
+        this.nextResponse = <TunnelPort>{
+            portNumber: 9900,
+        };
+        const options = {
+            additionalHeaders: {
+                'X-Test': 'value',
+            },
+        };
+
+        await this.managementClient.createTunnelPort(requestTunnel, requestPort, options);
+
+        assert(this.lastRequest);
+        const headers = this.lastRequest!.config.headers as { [name: string]: string };
+        assert.strictEqual(headers['If-None-Match'], '*');
+        assert.strictEqual(headers['If-Not-Match'], undefined);
+        assert.strictEqual(headers['X-Test'], 'value');
+        assert.strictEqual(
+            Object.prototype.hasOwnProperty.call(options.additionalHeaders, 'If-None-Match'),
+            false,
+        );
     }
 
     @test

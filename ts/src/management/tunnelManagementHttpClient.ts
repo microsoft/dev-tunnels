@@ -349,8 +349,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             }
         }
 
-        options.additionalHeaders = options.additionalHeaders || {};
-        options.additionalHeaders['If-Not-Match'] = "*";
+        options = {
+            ...options,
+            additionalHeaders: {
+                ...options.additionalHeaders,
+                'If-None-Match': '*',
+            },
+        };
 
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
@@ -578,9 +583,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         this.raiseReportProgress(TunnelProgress.StartingCreateTunnelPort);
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
         const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
-        options = options || {};
-        options.additionalHeaders = options.additionalHeaders || {};
-        options.additionalHeaders['If-Not-Match'] = "*";
+        options = {
+            ...options,
+            additionalHeaders: {
+                ...options?.additionalHeaders,
+                'If-None-Match': '*',
+            },
+        };
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'PUT',
             tunnel,
