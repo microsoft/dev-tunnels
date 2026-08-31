@@ -5,7 +5,7 @@ import * as assert from 'assert';
 import axios, { Axios, AxiosHeaders, AxiosError, AxiosPromise, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as https from 'https';
 import { suite, test, slow, timeout } from '@testdeck/mocha';
-import { ManagementApiVersions, TunnelManagementHttpClient } from '@microsoft/dev-tunnels-management';
+import { ManagementApiVersions, TunnelManagementHttpClient, TunnelClusterSource, TunnelClusterSelectionEventArgs, isClusterFallback } from '@microsoft/dev-tunnels-management';
 import { Tunnel, TunnelPort, TunnelProgress, TunnelReportProgressEventArgs, ClusterRecommendationResponse, ClusterAvailability } from '@microsoft/dev-tunnels-contracts';
 import { CancellationToken, CancellationTokenSource } from 'vscode-jsonrpc';
 
@@ -712,5 +712,277 @@ export class TunnelManagementTests {
         assert.ok(capturedUri);
         const url = new URL(capturedUri!);
         assert.ok(url.hostname.startsWith('usw2.'), `Expected hostname to start with usw2., got ${url.hostname}`);
+    }
+
+    private static readonly clusterSourceHeaderName = 'X-Tunnel-Cluster-Source';
+
+    /**
+     * Creates a client whose transport is driven by the given handler and records every
+     * request it makes, so tests can assert on the auth and cluster-source headers.
+     */
+    private createRecordingClient(
+        token: string | undefined,
+        handler: (config: AxiosRequestConfig) => AxiosResponse,
+    ): { client: TunnelManagementHttpClient; requests: AxiosRequestConfig[] } {
+        const requests: AxiosRequestConfig[] = [];
+        const client = new TunnelManagementHttpClient(
+            'test/0.0.0',
+            ManagementApiVersions.Version20230927preview,
+            token ? async () => token : undefined,
+            TunnelManagementTests.testServiceUri,
+        );
+        (<any>client).axiosRequest = async (config: AxiosRequestConfig) => {
+            requests.push(config);
+            return handler(config);
+        };
+        return { client, requests };
+    }
+
+    private static isRecommendationsRequest(config: AxiosRequestConfig): boolean {
+        return (config.url ?? '').includes('/clusters/recommendations');
+    }
+
+    private static okResponse(config: AxiosRequestConfig, data: any): AxiosResponse {
+        return { data, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }
+
+    private static failure(config: AxiosRequestConfig, status: number): AxiosError {
+        const error = new AxiosError('request failed');
+        error.response = {
+            data: {},
+            status,
+            statusText: '',
+            headers: {} as AxiosHeaders,
+            config,
+        } as AxiosResponse;
+        return error;
+    }
+
+    private static authorizationOf(config: AxiosRequestConfig): string | undefined {
+        return (config.headers as { [name: string]: string })?.['Authorization'];
+    }
+
+    private static clusterSourceOf(config: AxiosRequestConfig): string | undefined {
+        return (config.headers as { [name: string]: string })?.[
+            TunnelManagementTests.clusterSourceHeaderName
+        ];
+    }
+
+    // The recommendations call must send the caller's token so the service can identify
+    // them and apply their service tier.
+    @test
+    public async getClusterRecommendationsSendsAuthorizationHeader() {
+        const { client, requests } = this.createRecordingClient('Bearer test-token', (config) =>
+            TunnelManagementTests.okResponse(config, <ClusterRecommendationResponse>{
+                recommendedClusterId: 'euw',
+            }),
+        );
+
+        const result = await client.getClusterRecommendations();
+
+        assert.strictEqual(result.recommendedClusterId, 'euw');
+        assert.strictEqual(requests.length, 1);
+        assert.strictEqual(TunnelManagementTests.authorizationOf(requests[0]), 'Bearer test-token');
+    }
+
+    // With no token configured the call must still work anonymously, and must not send an
+    // empty Authorization header, which the service would reject.
+    @test
+    public async getClusterRecommendationsWithoutTokenSendsNoAuthorizationHeader() {
+        const { client, requests } = this.createRecordingClient(undefined, (config) =>
+            TunnelManagementTests.okResponse(config, <ClusterRecommendationResponse>{
+                recommendedClusterId: 'euw',
+            }),
+        );
+
+        await client.getClusterRecommendations();
+
+        assert.strictEqual(requests.length, 1);
+        assert.strictEqual(TunnelManagementTests.authorizationOf(requests[0]), undefined);
+    }
+
+    // The service rejects a bad token before the controller runs, so it never falls back to
+    // treating the caller as anonymous. Without the retry, one expired token would silently
+    // disable recommendation-based routing for that caller.
+    @test
+    public async getClusterRecommendationsRetriesAnonymouslyAfterUnauthorized() {
+        const { client, requests } = this.createRecordingClient('Bearer expired-token', (config) => {
+            if (TunnelManagementTests.authorizationOf(config)) {
+                throw TunnelManagementTests.failure(config, 401);
+            }
+            return TunnelManagementTests.okResponse(config, <ClusterRecommendationResponse>{
+                recommendedClusterId: 'euw',
+            });
+        });
+
+        const result = await client.getClusterRecommendations();
+
+        assert.strictEqual(result.recommendedClusterId, 'euw');
+        assert.strictEqual(requests.length, 2);
+        assert.strictEqual(TunnelManagementTests.authorizationOf(requests[1]), undefined);
+    }
+
+    // A non-auth failure must not trigger the anonymous retry; retrying would not help and
+    // would double the latency of every failure.
+    @test
+    public async getClusterRecommendationsDoesNotRetryOnServerError() {
+        const { client, requests } = this.createRecordingClient('Bearer test-token', (config) => {
+            throw TunnelManagementTests.failure(config, 500);
+        });
+
+        await assert.rejects(async () => await client.getClusterRecommendations());
+        assert.strictEqual(requests.length, 1);
+    }
+
+    // When the caller specifies a cluster there is nothing to recommend, so no call is made
+    // and the create reports that the cluster was chosen explicitly.
+    @test
+    public async createTunnelWithExplicitClusterReportsExplicitSource() {
+        const selections: TunnelClusterSelectionEventArgs[] = [];
+        const { client, requests } = this.createRecordingClient('Bearer test-token', (config) => {
+            assert.ok(
+                !TunnelManagementTests.isRecommendationsRequest(config),
+                'recommendations should not be requested when a cluster is specified',
+            );
+            return TunnelManagementTests.okResponse(config, <Tunnel>{ tunnelId: 'tnnl0001' });
+        });
+        client.onClusterSelected((e) => selections.push(e));
+
+        await client.createTunnel(<Tunnel>{ clusterId: 'euw' });
+
+        assert.strictEqual(selections.length, 0);
+        assert.strictEqual(
+            TunnelManagementTests.clusterSourceOf(requests[requests.length - 1]),
+            'explicit',
+        );
+    }
+
+    // The happy path: the recommendation is used and reported as such.
+    @test
+    public async createTunnelReportsRecommendedCluster() {
+        const selections: TunnelClusterSelectionEventArgs[] = [];
+        const { client, requests } = this.createRecordingClient('Bearer test-token', (config) => {
+            if (TunnelManagementTests.isRecommendationsRequest(config)) {
+                return TunnelManagementTests.okResponse(config, <ClusterRecommendationResponse>{
+                    recommendedClusterId: 'euw',
+                });
+            }
+            return TunnelManagementTests.okResponse(config, <Tunnel>{ tunnelId: 'tnnl0001' });
+        });
+        client.onClusterSelected((e) => selections.push(e));
+
+        await client.createTunnel(<Tunnel>{});
+
+        assert.strictEqual(selections.length, 1);
+        assert.strictEqual(selections[0].source, TunnelClusterSource.recommended);
+        assert.strictEqual(selections[0].clusterId, 'euw');
+        assert.strictEqual(
+            TunnelManagementTests.clusterSourceOf(requests[requests.length - 1]),
+            'recommended',
+        );
+    }
+
+    // Routing is correct here but the caller was not identified, so they cannot be assigned
+    // a service tier. That is a token problem the caller would otherwise never learn about.
+    @test
+    public async createTunnelReportsRecommendationAfterAuthRejected() {
+        const selections: TunnelClusterSelectionEventArgs[] = [];
+        const { client, requests } = this.createRecordingClient('Bearer expired-token', (config) => {
+            if (TunnelManagementTests.isRecommendationsRequest(config)) {
+                if (TunnelManagementTests.authorizationOf(config)) {
+                    throw TunnelManagementTests.failure(config, 401);
+                }
+                return TunnelManagementTests.okResponse(config, <ClusterRecommendationResponse>{
+                    recommendedClusterId: 'euw',
+                });
+            }
+            return TunnelManagementTests.okResponse(config, <Tunnel>{ tunnelId: 'tnnl0001' });
+        });
+        client.onClusterSelected((e) => selections.push(e));
+
+        await client.createTunnel(<Tunnel>{});
+
+        assert.strictEqual(selections.length, 1);
+        assert.strictEqual(
+            selections[0].source,
+            TunnelClusterSource.recommendedAfterAuthRejected,
+        );
+        assert.strictEqual(
+            TunnelManagementTests.clusterSourceOf(requests[requests.length - 1]),
+            'recommended-after-auth-rejected',
+        );
+    }
+
+    // The create still succeeds via global routing, so the fallback is invisible without
+    // the event and the header.
+    @test
+    public async createTunnelReportsFallbackOnRecommendationError() {
+        const selections: TunnelClusterSelectionEventArgs[] = [];
+        const { client, requests } = this.createRecordingClient('Bearer test-token', (config) => {
+            if (TunnelManagementTests.isRecommendationsRequest(config)) {
+                throw TunnelManagementTests.failure(config, 500);
+            }
+            return TunnelManagementTests.okResponse(config, <Tunnel>{ tunnelId: 'tnnl0001' });
+        });
+        client.onClusterSelected((e) => selections.push(e));
+
+        const tunnel = await client.createTunnel(<Tunnel>{});
+
+        assert.ok(tunnel, 'create should still succeed via global routing');
+        assert.strictEqual(selections.length, 1);
+        assert.strictEqual(selections[0].source, TunnelClusterSource.fallbackError);
+        assert.ok(selections[0].error, 'expected the underlying error to be reported');
+        assert.ok(isClusterFallback(selections[0].source));
+        assert.strictEqual(
+            TunnelManagementTests.clusterSourceOf(requests[requests.length - 1]),
+            'fallback-error',
+        );
+    }
+
+    // An auth failure that survives the anonymous retry is distinguished from a generic
+    // failure, because it points at the service rejecting the request rather than being
+    // down.
+    @test
+    public async createTunnelReportsFallbackWhenAuthFailsEvenAnonymously() {
+        const selections: TunnelClusterSelectionEventArgs[] = [];
+        const { client, requests } = this.createRecordingClient('Bearer test-token', (config) => {
+            if (TunnelManagementTests.isRecommendationsRequest(config)) {
+                throw TunnelManagementTests.failure(config, 401);
+            }
+            return TunnelManagementTests.okResponse(config, <Tunnel>{ tunnelId: 'tnnl0001' });
+        });
+        client.onClusterSelected((e) => selections.push(e));
+
+        await client.createTunnel(<Tunnel>{});
+
+        assert.strictEqual(selections.length, 1);
+        assert.strictEqual(selections[0].source, TunnelClusterSource.fallbackAuthFailed);
+        assert.strictEqual(
+            TunnelManagementTests.clusterSourceOf(requests[requests.length - 1]),
+            'fallback-auth-failed',
+        );
+    }
+
+    // A successful call that recommends nothing is a distinct condition from a failure, and
+    // means the service had no cluster to offer.
+    @test
+    public async createTunnelReportsFallbackOnEmptyRecommendation() {
+        const selections: TunnelClusterSelectionEventArgs[] = [];
+        const { client, requests } = this.createRecordingClient('Bearer test-token', (config) => {
+            if (TunnelManagementTests.isRecommendationsRequest(config)) {
+                return TunnelManagementTests.okResponse(config, <ClusterRecommendationResponse>{});
+            }
+            return TunnelManagementTests.okResponse(config, <Tunnel>{ tunnelId: 'tnnl0001' });
+        });
+        client.onClusterSelected((e) => selections.push(e));
+
+        await client.createTunnel(<Tunnel>{});
+
+        assert.strictEqual(selections.length, 1);
+        assert.strictEqual(selections[0].source, TunnelClusterSource.fallbackEmpty);
+        assert.strictEqual(
+            TunnelManagementTests.clusterSourceOf(requests[requests.length - 1]),
+            'fallback-empty',
+        );
     }
 }
