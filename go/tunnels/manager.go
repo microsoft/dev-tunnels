@@ -59,6 +59,7 @@ const (
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
+	clusterSourceHeaderName    = "X-Tunnel-Cluster-Source"
 	goUserAgent                = "Dev-Tunnels-Service-Go-SDK/" + PackageVersion
 	createNameRetries          = 3
 )
@@ -100,6 +101,15 @@ type Manager struct {
 	userAgents        []UserAgent
 	apiVersion        string
 	isCustomDomain    bool
+
+	// OnClusterSelected is an optional callback invoked when a create request selected a
+	// cluster via the recommendations API, reporting which path was taken.
+	//
+	// Set it to surface recommendation failures. When the recommendations call fails the
+	// create still succeeds via global routing, so without this a caller has no way to tell
+	// that recommendation-based placement stopped working. Invoked only when the caller did
+	// not specify a cluster.
+	OnClusterSelected func(ClusterSelection)
 }
 
 // Creates a new Manager used for interacting with the Tunnels APIs.
@@ -233,12 +243,45 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 
 	// If the caller didn't specify a cluster, auto-select one via the
 	// recommendations API. Failures fall back to global routing.
+	clusterSource := ClusterSourceExplicit
 	if tunnel.ClusterID == "" {
-		recommendations, recErr := m.GetClusterRecommendations(ctx, "", options.RequiredGeo)
-		if recErr == nil && recommendations != nil && recommendations.RecommendedClusterID != "" {
+		recommendations, authRejected, recErr := m.getClusterRecommendations(ctx, "", options.RequiredGeo)
+		switch {
+		case recErr != nil:
+			// Global routing still succeeds, so without reporting this the caller has no
+			// indication that recommendation-based placement stopped working.
+			if isUnauthorized(recErr) {
+				clusterSource = ClusterSourceFallbackAuthFailed
+			} else {
+				clusterSource = ClusterSourceFallbackError
+			}
+		case recommendations != nil && recommendations.RecommendedClusterID != "":
 			tunnel.ClusterID = recommendations.RecommendedClusterID
+			if authRejected {
+				clusterSource = ClusterSourceRecommendedAfterAuthRejected
+			} else {
+				clusterSource = ClusterSourceRecommended
+			}
+		default:
+			clusterSource = ClusterSourceFallbackEmpty
+		}
+
+		if m.OnClusterSelected != nil {
+			m.OnClusterSelected(ClusterSelection{
+				Source:    clusterSource,
+				ClusterID: tunnel.ClusterID,
+				Err:       recErr,
+			})
 		}
 	}
+
+	// Report the client-side selection path to the service. Recommendation fallbacks are
+	// otherwise invisible in service telemetry: a create that fell back looks identical to
+	// one that was never recommended at all.
+	//
+	// This is passed explicitly rather than via options.AdditionalHeaders because that map
+	// is never read when the request is built.
+	clusterSourceHeader := map[string]string{clusterSourceHeaderName: string(clusterSource)}
 
 	convertedTunnel, err := tunnel.requestObject()
 	convertedTunnel.TunnelID = tunnel.TunnelID
@@ -252,7 +295,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		if err != nil {
 			return nil, fmt.Errorf("error creating request url: %w", err)
 		}
-		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false, clusterSourceHeader)
 		if err == nil {
 			break
 		}
@@ -720,6 +763,21 @@ func (m *Manager) ListClusters(ctx context.Context) (clusters []*ClusterDetails,
 func (m *Manager) GetClusterRecommendations(
 	ctx context.Context, preferredClusterId string, requiredGeo string,
 ) (recommendations *ClusterRecommendationResponse, err error) {
+	recommendations, _, err = m.getClusterRecommendations(ctx, preferredClusterId, requiredGeo)
+	return recommendations, err
+}
+
+// getClusterRecommendations requests cluster recommendations, reporting whether the
+// caller's token was rejected.
+//
+// The token is sent so the service can identify the caller and apply its service tier.
+// If the token is rejected the request is retried without it, because the service rejects
+// a bad token before the controller runs and does not fall back to treating the caller as
+// anonymous. Without the retry, one expired token would silently disable
+// recommendation-based routing for that caller.
+func (m *Manager) getClusterRecommendations(
+	ctx context.Context, preferredClusterId string, requiredGeo string,
+) (recommendations *ClusterRecommendationResponse, authRejected bool, err error) {
 	queryValues := url.Values{}
 	if preferredClusterId != "" {
 		queryValues.Set("preferredClusterId", preferredClusterId)
@@ -730,18 +788,34 @@ func (m *Manager) GetClusterRecommendations(
 
 	path := clustersApiPath + recommendationsApiSubPath
 	url := m.buildUri("", path, nil, queryValues.Encode())
-	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
+
+	token := m.tokenProvider()
+	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, token, false)
+	if err != nil && token != "" && isUnauthorized(err) {
+		response, err = m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
+		authRejected = err == nil
+	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting cluster recommendations: %w", err)
+		return nil, authRejected, fmt.Errorf("error getting cluster recommendations: %w", err)
 	}
 
 	err = json.Unmarshal(response, &recommendations)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing response json to ClusterRecommendationResponse: %w", err)
+		return nil, authRejected, fmt.Errorf("error parsing response json to ClusterRecommendationResponse: %w", err)
 	}
 
-	return recommendations, nil
+	return recommendations, authRejected, nil
+}
+
+// isUnauthorized reports whether the error is a 401 or 403 from the service.
+func isUnauthorized(err error) bool {
+	var requestErr *requestError
+	if !errors.As(err, &requestErr) {
+		return false
+	}
+	return requestErr.statusCode == http.StatusUnauthorized ||
+		requestErr.statusCode == http.StatusForbidden
 }
 
 // Checks if tunnel name is available
@@ -775,11 +849,14 @@ func (m *Manager) sendTunnelRequest(
 	partialFields []string,
 	accessTokenScopes []TunnelAccessScope,
 	allowNotFound bool,
+	extraHeaders ...map[string]string,
 ) ([]byte, error) {
 	authHeaderValue := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes)
-	return m.sendRequest(ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound)
+	return m.sendRequest(ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound, extraHeaders...)
 }
 
+// sendRequest sends a request to the service. extraHeaders is optional and adds
+// per-request headers on top of the manager-wide ones.
 func (m *Manager) sendRequest(
 	ctx context.Context,
 	method string,
@@ -788,6 +865,7 @@ func (m *Manager) sendRequest(
 	partialFields []string,
 	authHeaderValue string,
 	allowNotFound bool,
+	extraHeaders ...map[string]string,
 ) ([]byte, error) {
 	request, err := m.createRequest(ctx, method, uri, requestObject, partialFields)
 	if err != nil {
@@ -817,6 +895,12 @@ func (m *Manager) sendRequest(
 	// Add additional headers
 	for header, headerValue := range m.additionalHeaders {
 		request.Header.Add(header, headerValue)
+	}
+
+	for _, headers := range extraHeaders {
+		for header, headerValue := range headers {
+			request.Header.Set(header, headerValue)
+		}
 	}
 
 	result, err := m.httpClient.Do(request)
