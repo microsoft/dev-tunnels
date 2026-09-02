@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -110,6 +111,55 @@ type Manager struct {
 	// that recommendation-based placement stopped working. Invoked only when the caller did
 	// not specify a cluster.
 	OnClusterSelected func(ClusterSelection)
+}
+
+func withPreconditionHeader(
+	options *TunnelRequestOptions,
+	name string,
+	value string,
+	preserveExisting bool,
+) *TunnelRequestOptions {
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+
+	result := *options
+	result.AdditionalHeaders = make(map[string]string, len(options.AdditionalHeaders)+1)
+	headers := sortedHeaderNames(options.AdditionalHeaders)
+	existingValue := ""
+	existingValueFound := false
+	for _, header := range headers {
+		headerValue := options.AdditionalHeaders[header]
+		if strings.EqualFold(header, name) && preserveExisting {
+			existingValue = headerValue
+			existingValueFound = true
+		} else if !strings.EqualFold(header, "If-Match") &&
+			!strings.EqualFold(header, "If-None-Match") &&
+			!strings.EqualFold(header, "If-Not-Match") {
+			result.AdditionalHeaders[header] = headerValue
+		}
+	}
+	if existingValueFound {
+		result.AdditionalHeaders[name] = existingValue
+	} else {
+		result.AdditionalHeaders[name] = value
+	}
+	return &result
+}
+
+func sortedHeaderNames(headers map[string]string) []string {
+	names := make([]string, 0, len(headers))
+	for name := range headers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func setHeaders(destination http.Header, headers map[string]string) {
+	for _, name := range sortedHeaderNames(headers) {
+		destination.Set(name, headers[name])
+	}
 }
 
 // Creates a new Manager used for interacting with the Tunnels APIs.
@@ -233,13 +283,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		idGenerated = true
 	}
 
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Not-Match"] = "*"
+	options = withPreconditionHeader(options, "If-None-Match", "*", false)
 
 	// If the caller didn't specify a cluster, auto-select one via the
 	// recommendations API. Failures fall back to global routing.
@@ -279,8 +323,8 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 	// otherwise invisible in service telemetry: a create that fell back looks identical to
 	// one that was never recommended at all.
 	//
-	// This is passed explicitly rather than via options.AdditionalHeaders because that map
-	// is never read when the request is built.
+	// This is passed explicitly so SDK-generated telemetry takes precedence over a
+	// caller-provided header with the same name.
 	clusterSourceHeader := map[string]string{clusterSourceHeaderName: string(clusterSource)}
 
 	convertedTunnel, err := tunnel.requestObject()
@@ -349,13 +393,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 		}
 	}
 
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Match"] = "*"
+	options = withPreconditionHeader(options, "If-Match", "*", true)
 
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
@@ -560,13 +598,7 @@ func (m *Manager) GetTunnelPort(
 func (m *Manager) CreateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Not-Match"] = "*"
+	options = withPreconditionHeader(options, "If-None-Match", "*", false)
 
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
@@ -612,13 +644,7 @@ func (m *Manager) UpdateTunnelPort(
 		return nil, fmt.Errorf("cluster ids do not match")
 	}
 
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Match"] = "*"
+	options = withPreconditionHeader(options, "If-Match", "*", true)
 
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
@@ -852,11 +878,17 @@ func (m *Manager) sendTunnelRequest(
 	extraHeaders ...map[string]string,
 ) ([]byte, error) {
 	authHeaderValue := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes)
-	return m.sendRequest(ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound, extraHeaders...)
+	requestHeaders := make([]map[string]string, 0, len(extraHeaders)+1)
+	if tunnelRequestOptions != nil {
+		requestHeaders = append(requestHeaders, tunnelRequestOptions.AdditionalHeaders)
+	}
+	requestHeaders = append(requestHeaders, extraHeaders...)
+	return m.sendRequest(
+		ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound, requestHeaders...)
 }
 
-// sendRequest sends a request to the service. extraHeaders is optional and adds
-// per-request headers on top of the manager-wide ones.
+// sendRequest sends a request to the service. requestHeaders are applied in order
+// on top of manager-wide headers.
 func (m *Manager) sendRequest(
 	ctx context.Context,
 	method string,
@@ -865,19 +897,26 @@ func (m *Manager) sendRequest(
 	partialFields []string,
 	authHeaderValue string,
 	allowNotFound bool,
-	extraHeaders ...map[string]string,
+	requestHeaders ...map[string]string,
 ) ([]byte, error) {
 	request, err := m.createRequest(ctx, method, uri, requestObject, partialFields)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	// Add authorization header
-	if authHeaderValue != "" {
-		request.Header.Add("Authorization", authHeaderValue)
+	// Add manager-level and per-request headers before SDK-owned headers so callers
+	// cannot replace authentication or SDK identity values.
+	setHeaders(request.Header, m.additionalHeaders)
+	for _, headers := range requestHeaders {
+		setHeaders(request.Header, headers)
 	}
 
-	// Add user agent header
+	if authHeaderValue != "" {
+		request.Header.Set("Authorization", authHeaderValue)
+	} else {
+		request.Header.Del("Authorization")
+	}
+
 	userAgentString := ""
 	for _, userAgent := range m.userAgents {
 		if len(userAgent.Version) == 0 {
@@ -889,19 +928,8 @@ func (m *Manager) sendRequest(
 		userAgentString = fmt.Sprintf("%s%s/%s ", userAgentString, userAgent.Name, userAgent.Version)
 	}
 	userAgentString = strings.TrimSpace(userAgentString)
-	request.Header.Add("User-Agent", fmt.Sprintf("%s %s", goUserAgent, userAgentString))
-	request.Header.Add("Content-Type", "application/json;charset=UTF-8")
-
-	// Add additional headers
-	for header, headerValue := range m.additionalHeaders {
-		request.Header.Add(header, headerValue)
-	}
-
-	for _, headers := range extraHeaders {
-		for header, headerValue := range headers {
-			request.Header.Set(header, headerValue)
-		}
-	}
+	request.Header.Set("User-Agent", fmt.Sprintf("%s %s", goUserAgent, userAgentString))
+	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
 
 	result, err := m.httpClient.Do(request)
 	if err != nil {
