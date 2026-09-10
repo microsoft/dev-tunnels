@@ -3,7 +3,7 @@ module github.com/microsoft/dev-tunnels
 go 1.17
 
 require (
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.3
 	github.com/rodaine/table v1.0.1
 	golang.org/x/crypto v0.23.0
 )
