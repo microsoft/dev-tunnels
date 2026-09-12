@@ -6,14 +6,17 @@ package tunnels
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -97,6 +100,106 @@ func responseWithStatus(status int, body string) *http.Response {
 		StatusCode: status,
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     make(http.Header),
+	}
+}
+
+func TestManagerRequestContext(t *testing.T) {
+	for _, operation := range []struct {
+		name string
+		call func(context.Context, *Manager) error
+	}{
+		{"list", func(ctx context.Context, manager *Manager) error {
+			_, err := manager.ListClusters(ctx)
+			return err
+		}},
+		{"update", func(ctx context.Context, manager *Manager) error {
+			_, err := manager.UpdateTunnel(ctx, &Tunnel{Name: "test-tunnel"}, nil, nil)
+			return err
+		}},
+	} {
+		t.Run(operation.name, func(t *testing.T) {
+			for _, test := range []struct {
+				name    string
+				wantErr error
+			}{
+				{"active", nil},
+				{"canceled", context.Canceled},
+				{"deadline", context.DeadlineExceeded},
+				{"in-flight", context.Canceled},
+			} {
+				t.Run(test.name, func(t *testing.T) {
+					var requests int32
+					received := make(chan struct{}, 1)
+					release := make(chan struct{})
+					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						if _, err := io.Copy(io.Discard, r.Body); err != nil {
+							t.Errorf("error reading request body: %v", err)
+							return
+						}
+						atomic.AddInt32(&requests, 1)
+						received <- struct{}{}
+						if test.name == "in-flight" {
+							select {
+							case <-r.Context().Done():
+								return
+							case <-release:
+							}
+						}
+						if r.Method == http.MethodGet {
+							fmt.Fprint(w, "[]")
+						} else {
+							fmt.Fprint(w, `{"name":"test-tunnel"}`)
+						}
+					}))
+					defer server.Close()
+					defer close(release)
+					uri, err := url.Parse(server.URL)
+					if err != nil {
+						t.Fatal(err)
+					}
+					client := server.Client()
+					client.Timeout = 5 * time.Second
+					manager, err := NewManager(userAgentManagerTest, nil, uri, client, "2023-09-27-preview")
+					if err != nil {
+						t.Fatal(err)
+					}
+					ctx, cancel := context.WithCancel(context.Background())
+					if test.name == "deadline" {
+						cancel()
+						ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+					} else if test.name == "canceled" {
+						cancel()
+					}
+					defer cancel()
+
+					result := make(chan error, 1)
+					go func() { result <- operation.call(ctx, manager) }()
+					if test.name == "in-flight" {
+						select {
+						case <-received:
+							cancel()
+						case <-time.After(5 * time.Second):
+							t.Fatal("request did not reach server")
+						}
+					}
+					select {
+					case err = <-result:
+						if !errors.Is(err, test.wantErr) {
+							t.Fatalf("expected %v, got %v", test.wantErr, err)
+						}
+					case <-time.After(5 * time.Second):
+						t.Fatal("request did not complete")
+					}
+					wantRequests := int32(1)
+					if test.name == "canceled" || test.name == "deadline" {
+						wantRequests = 0
+					}
+					if got := atomic.LoadInt32(&requests); got != wantRequests {
+						t.Fatalf("expected %d requests, got %d", wantRequests, got)
+					}
+				})
+			}
+		})
 	}
 }
 
