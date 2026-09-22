@@ -39,7 +39,7 @@ type TunnelPort struct {
 	// 
 	// Selection of a default port for a connection also depends on matching the connection
 	// to the port `TunnelPort.Protocol`, so it is possible to configure separate defaults
-	// for distinct protocols like `TunnelProtocol.Http` and `TunnelProtocol.Ssh`.
+	// for distinct protocols like `TunnelProtocol.Http` and `TunnelProtocol.Tcp`.
 	IsDefault          bool `json:"isDefault,omitempty"`
 
 	// Gets or sets a dictionary mapping from scopes to tunnel access tokens.
@@ -61,7 +61,7 @@ type TunnelPort struct {
 
 	// Gets or sets the username for the ssh service user is trying to forward.
 	//
-	// Should be provided if the `TunnelProtocol` is Ssh.
+	// This property is retained for compatibility with legacy SSH tunnel ports.
 	SshUser            string `json:"sshUser,omitempty"`
 
 	// Gets or sets web forwarding URIs. If set, it's a list of absolute URIs where the port
