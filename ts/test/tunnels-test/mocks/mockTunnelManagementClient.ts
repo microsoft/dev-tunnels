@@ -143,6 +143,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
     }
 
     public tunnelEndpointsUpdated: number = 0;
+    public lastTunnelEndpointUpdateOptions?: TunnelRequestOptions;
 
     updateTunnelEndpoint(
         tunnel: Tunnel,
@@ -150,6 +151,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
     ): Promise<TunnelEndpoint> {
         this.tunnelEndpointsUpdated++;
+        this.lastTunnelEndpointUpdateOptions = options;
         if (!tunnel.endpoints) {
             tunnel.endpoints = [];
         }
