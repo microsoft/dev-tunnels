@@ -130,12 +130,10 @@ public class TunnelRelayTunnelHost : TunnelHost
         Requires.Argument(this.accessToken != null, nameof(Tunnel), $"There is no access token for {TunnelAccessScope} scope on the tunnel.");
 
         var hostPublicKey = HostPrivateKey.GetPublicKeyBytes(HostPrivateKey.KeyAlgorithmName).ToBase64();
-        var tunnelHasSshPort = Tunnel.Ports != null &&
-            Tunnel.Ports.Any((p) => p.Protocol == TunnelProtocol.Ssh);
         var endpointSignature =
             $"{Tunnel.TunnelId}.{Tunnel.ClusterId}:" +
             $"{Tunnel.Name}.{Tunnel.Domain}:" +
-            $"{tunnelHasSshPort}:{this.hostId}:{hostPublicKey}";
+            $"{this.hostId}:{hostPublicKey}";
 
         if (!string.Equals(endpointSignature, EndpointSignature, StringComparison.OrdinalIgnoreCase) ||
             RelayUri == null)
@@ -147,19 +145,10 @@ public class TunnelRelayTunnelHost : TunnelHost
                 HostPublicKeys = new[] { hostPublicKey },
             };
 
-            List<KeyValuePair<string, string>>? additionalQueryParams = null;
-            if (tunnelHasSshPort)
-            {
-                additionalQueryParams = new () {new KeyValuePair<string, string>("includeSshGatewayPublicKey", "true")};
-            }
-
             endpoint = (TunnelRelayTunnelEndpoint)await ManagementClient!.UpdateTunnelEndpointAsync(
                 Tunnel,
                 endpoint,
-                options: new TunnelRequestOptions()
-                {
-                    AdditionalQueryParameters = additionalQueryParams,
-                },
+                options: null,
                 cancellation);
 
             EndpointSignature = endpointSignature;
