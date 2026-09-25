@@ -109,5 +109,8 @@
 		"trailingComma": "all",
 		"arrowParens": "always",
 		"parser": "typescript"
+	},
+	"overrides": {
+		"es5-ext": "npm:@unes/es5-ext@0.10.64-1"
 	}
 }
