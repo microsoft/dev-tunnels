@@ -81,14 +81,36 @@ impl RelayTunnelClient {
             .as_deref()
             .ok_or(TunnelError::MissingClientEndpoint)?;
 
-        let req = build_websocket_request(
-            client_relay_uri,
-            &[
-                ("Sec-WebSocket-Protocol", "tunnel-relay-client"),
-                ("Authorization", &format!("tunnel {}", access_token)),
-                ("User-Agent", self.mgmt.user_agent.to_str().unwrap()),
-            ],
-        )?;
+        let mut headers = vec![
+            (
+                "Sec-WebSocket-Protocol".to_string(),
+                "tunnel-relay-client".to_string(),
+            ),
+            (
+                "Authorization".to_string(),
+                format!("tunnel {}", access_token),
+            ),
+            (
+                "User-Agent".to_string(),
+                self.mgmt.user_agent.to_str().unwrap().to_string(),
+            ),
+        ];
+        headers.extend(
+            self.mgmt
+                .request_headers()
+                .into_iter()
+                .filter_map(|(name, value)| {
+                    value
+                        .to_str()
+                        .ok()
+                        .map(|value| (name.as_str().to_string(), value.to_string()))
+                }),
+        );
+        let header_refs: Vec<(&str, &str)> = headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        let req = build_websocket_request(client_relay_uri, &header_refs)?;
 
         let cnx = if let Some(proxy) = &self.proxy {
             log::debug!("connecting via http_proxy on {}", proxy);
@@ -182,7 +204,9 @@ impl ClientRelayHandle {
     /// The listener will be stopped when `close()` is called on this handle.
     pub async fn forward_port_locally(&self, port: u16) -> Result<SocketAddr, TunnelError> {
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
-        let listener = TcpListener::bind(addr).await.map_err(TunnelError::ErrorListeningOnAddress)?;
+        let listener = TcpListener::bind(addr)
+            .await
+            .map_err(TunnelError::ErrorListeningOnAddress)?;
         let local_addr = listener
             .local_addr()
             .map_err(TunnelError::ErrorListeningOnAddress)?;

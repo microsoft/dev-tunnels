@@ -130,6 +130,50 @@ export class TunnelManagementTests {
     }
 
     @test
+    public async additionalRequestHeaders() {
+        this.managementClient.additionalRequestHeaders = {
+            'X-Tunnels-VSCode-Session-Id': 'session-id',
+            'X-Tunnels-VSCode-Client-Operation-Id': 'operation-id',
+            'X-Tunnels-VSCode-Client-Request-Id': 'request-id',
+        };
+        this.nextResponse = [];
+
+        await this.managementClient.listUserLimits();
+
+        assert.deepStrictEqual(this.lastRequest?.config.headers, {
+            'X-Tunnels-VSCode-Session-Id': 'session-id',
+            'X-Tunnels-VSCode-Client-Operation-Id': 'operation-id',
+            'X-Tunnels-VSCode-Client-Request-Id': 'request-id',
+            'User-Agent': this.lastRequest?.config.headers?.['User-Agent'],
+        });
+    }
+
+    @test
+    public async generatesRequestHeadersForEachServiceRequest() {
+        let requestNumber = 0;
+        const headers: { [header: string]: string } = {
+            'X-Tunnels-VSCode-Session-Id': 'session-id',
+            'X-Tunnels-VSCode-Client-Operation-Id': 'operation-id',
+        };
+        Object.defineProperty(headers, 'X-Tunnels-VSCode-Client-Request-Id', {
+            enumerable: true,
+            get: () => `request-${++requestNumber}`,
+        });
+        this.managementClient.additionalRequestHeaders = headers;
+        this.nextResponse = [];
+
+        await this.managementClient.listUserLimits();
+        const firstRequestId = this.lastRequest?.config.headers?.['X-Tunnels-VSCode-Client-Request-Id'];
+        await this.managementClient.listUserLimits();
+        const secondRequestId = this.lastRequest?.config.headers?.['X-Tunnels-VSCode-Client-Request-Id'];
+
+        assert.strictEqual(this.lastRequest?.config.headers?.['X-Tunnels-VSCode-Session-Id'], 'session-id');
+        assert.strictEqual(this.lastRequest?.config.headers?.['X-Tunnels-VSCode-Client-Operation-Id'], 'operation-id');
+        assert.strictEqual(firstRequestId, 'request-1');
+        assert.strictEqual(secondRequestId, 'request-2');
+    }
+
+    @test
     public async timeoutServerResponse() {
         this.nextResponse = [];
 

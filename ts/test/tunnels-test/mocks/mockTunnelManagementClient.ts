@@ -17,6 +17,7 @@ import {
 
 export class MockTunnelManagementClient implements TunnelManagementClient {
     private idCounter: number = 0;
+    public additionalRequestHeaders?: { [header: string]: string };
     public tunnels: Tunnel[] = [];
     public hostRelayUri?: string;
     public clientRelayUri?: string;

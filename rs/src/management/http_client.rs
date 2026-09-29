@@ -33,6 +33,9 @@ pub struct TunnelManagementClient {
     environment: TunnelServiceProperties,
     api_version: String,
     is_custom_domain: bool,
+    additional_headers: Vec<(HeaderName, HeaderValue)>,
+    additional_headers_provider:
+        Option<Arc<dyn Fn() -> Vec<(HeaderName, HeaderValue)> + Send + Sync>>,
 }
 
 const TUNNELS_API_PATH: &str = "/tunnels";
@@ -57,7 +60,23 @@ impl TunnelManagementClient {
             environment: self.environment.clone(),
             api_version: self.api_version.clone(),
             is_custom_domain: self.is_custom_domain,
+            additional_headers: self.additional_headers.clone(),
+            additional_headers_provider: self.additional_headers_provider.clone(),
         }
+    }
+
+    /// Gets headers applied to every tunnel service request.
+    pub fn additional_headers(&self) -> &[(HeaderName, HeaderValue)] {
+        &self.additional_headers
+    }
+
+    /// Gets headers applied to this tunnel service request.
+    pub fn request_headers(&self) -> Vec<(HeaderName, HeaderValue)> {
+        let mut headers = self.additional_headers.clone();
+        if let Some(provider) = &self.additional_headers_provider {
+            headers.extend(provider());
+        }
+        headers
     }
 
     /// Lists tunnels owned by the user.
@@ -595,6 +614,9 @@ impl TunnelManagementClient {
         for (name, value) in &tunnel_opts.headers {
             headers.append(name, value.to_owned());
         }
+        for (name, value) in self.request_headers() {
+            headers.append(name, value);
+        }
 
         request
     }
@@ -715,6 +737,9 @@ pub struct TunnelClientBuilder {
     environment: TunnelServiceProperties,
     api_version: String,
     is_custom_domain: bool,
+    additional_headers: Vec<(HeaderName, HeaderValue)>,
+    additional_headers_provider:
+        Option<Arc<dyn Fn() -> Vec<(HeaderName, HeaderValue)> + Send + Sync>>,
 }
 
 /// Creates a new tunnel client builder. You can set options, then use `into()`
@@ -731,6 +756,8 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
         environment: env_production(),
         api_version: API_VERSIONS[0].to_owned(),
         is_custom_domain: false,
+        additional_headers: Vec::new(),
+        additional_headers_provider: None,
     }
 }
 
@@ -806,6 +833,21 @@ impl TunnelClientBuilder {
         self.environment = environment;
         self
     }
+
+    /// Adds headers to every tunnel service request and relay WebSocket handshake.
+    pub fn additional_headers(&mut self, headers: Vec<(HeaderName, HeaderValue)>) -> &mut Self {
+        self.additional_headers = headers;
+        self
+    }
+
+    /// Provides headers for each tunnel service request and relay WebSocket handshake.
+    pub fn additional_headers_provider(
+        &mut self,
+        provider: impl Fn() -> Vec<(HeaderName, HeaderValue)> + Send + Sync + 'static,
+    ) -> &mut Self {
+        self.additional_headers_provider = Some(Arc::new(provider));
+        self
+    }
 }
 
 impl From<TunnelClientBuilder> for TunnelManagementClient {
@@ -817,6 +859,8 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
             environment: builder.environment,
             api_version: builder.api_version,
             is_custom_domain: builder.is_custom_domain,
+            additional_headers: builder.additional_headers,
+            additional_headers_provider: builder.additional_headers_provider,
         }
     }
 }
@@ -989,7 +1033,10 @@ mod tests {
     };
 
     use regex::Regex;
-    use reqwest::Url;
+    use reqwest::{
+        header::{HeaderName, HeaderValue},
+        Url,
+    };
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::{TcpListener, TcpStream},
@@ -1291,6 +1338,80 @@ mod tests {
         assert_eq!(
             requests[0].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
             ["explicit"]
+        );
+    }
+
+    #[tokio::test]
+    async fn applies_additional_headers_to_tunnel_requests() {
+        let server = TestServer::start(vec![TestResponse::ok("{\"value\":[]}".to_string())]).await;
+        let client = test_client(&server, Authorization::Anonymous);
+        let mut builder = client.build();
+        builder.additional_headers(vec![
+            (
+                HeaderName::from_static("x-tunnels-vscode-session-id"),
+                HeaderValue::from_static("session-id"),
+            ),
+            (
+                HeaderName::from_static("x-tunnels-vscode-client-operation-id"),
+                HeaderValue::from_static("operation-id"),
+            ),
+            (
+                HeaderName::from_static("x-tunnels-vscode-client-request-id"),
+                HeaderValue::from_static("request-id"),
+            ),
+        ]);
+        let client: super::TunnelManagementClient = builder.into();
+
+        client.list_all_tunnels(NO_REQUEST_OPTIONS).await.unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-session-id"),
+            ["session-id"]
+        );
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-client-operation-id"),
+            ["operation-id"]
+        );
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-client-request-id"),
+            ["request-id"]
+        );
+    }
+
+    #[tokio::test]
+    async fn generates_additional_headers_for_each_tunnel_request() {
+        let server = TestServer::start(vec![
+            TestResponse::ok("{\"value\":[]}".to_string()),
+            TestResponse::ok("{\"value\":[]}".to_string()),
+        ])
+        .await;
+        let client = test_client(&server, Authorization::Anonymous);
+        let mut builder = client.build();
+        let request_number = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        builder.additional_headers_provider({
+            let request_number = request_number.clone();
+            move || {
+                let request_id = request_number.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                vec![(
+                    HeaderName::from_static("x-tunnels-vscode-client-request-id"),
+                    HeaderValue::from_str(&format!("request-{request_id}")).unwrap(),
+                )]
+            }
+        });
+        let client: super::TunnelManagementClient = builder.into();
+
+        client.list_all_tunnels(NO_REQUEST_OPTIONS).await.unwrap();
+        client.list_all_tunnels(NO_REQUEST_OPTIONS).await.unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-client-request-id"),
+            ["request-0"]
+        );
+        assert_eq!(
+            requests[1].header_values("x-tunnels-vscode-client-request-id"),
+            ["request-1"]
         );
     }
 
