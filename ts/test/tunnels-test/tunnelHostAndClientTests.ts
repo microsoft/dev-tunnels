@@ -503,6 +503,27 @@ export class TunnelHostAndClientTests {
     }
 
     @test
+    public async forwardsTunnelHeadersToRelayHandshake() {
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.additionalRequestHeaders = {
+            'X-Tunnels-VSCode-Session-Id': 'session-id',
+            'X-Tunnels-VSCode-Client-Operation-Id': 'operation-id',
+            'X-Tunnels-VSCode-Client-Request-Id': 'request-id',
+        };
+        const relayClient = new TestTunnelRelayTunnelClient(managementClient);
+        const serverSession = await this.connectRelayClient({
+            relayClient,
+            tunnel: this.createRelayTunnel(),
+        });
+
+        const factory = relayClient.streamFactory as MockTunnelRelayStreamFactory;
+        assert.deepStrictEqual(factory.lastAdditionalHeaders, managementClient.additionalRequestHeaders);
+
+        relayClient.dispose();
+        serverSession.dispose();
+    }
+
+    @test
     async connectRelayClientWithStaleHostKey() {
         // A good tunnel with the correct host public key.
         const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
