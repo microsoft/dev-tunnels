@@ -29,6 +29,7 @@ pub enum TunnelError {
 
     #[error("max reconnect attempts ({0}) exceeded")]
     MaxReconnectAttemptsExceeded(u32),
+
     #[error("tunnel access token refresh failed")]
     TokenRefreshFailed,
 
