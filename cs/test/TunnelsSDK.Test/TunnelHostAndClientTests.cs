@@ -715,6 +715,35 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
     }
 
     [Fact]
+    public async Task ConnectRelayHostWithLegacySshPortDoesNotRequestSshGatewayKey()
+    {
+        var managementClient = new MockTunnelManagementClient
+        {
+            HostRelayUri = MockHostRelayUri,
+        };
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        var tunnel = CreateRelayTunnel();
+        tunnel.Ports =
+        [
+            new TunnelPort
+            {
+                PortNumber = 22,
+                Protocol = "ssh",
+            },
+        ];
+
+        using var serverSshSession = await ConnectRelayHostAsync(
+            relayHost,
+            tunnel,
+            cancellation: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, managementClient.TunnelEndpointsUpdated);
+        Assert.Null(managementClient.LastTunnelEndpointUpdateOptions);
+
+        await relayHost.DisposeAsync();
+    }
+
+    [Fact]
     public async Task ConnectRelayHostAfterDisconnect()
     {
         var managementClient = new MockTunnelManagementClient();

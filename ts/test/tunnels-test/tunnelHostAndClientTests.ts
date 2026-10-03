@@ -770,6 +770,22 @@ export class TunnelHostAndClientTests {
     }
 
     @test
+    public async connectRelayHostWithLegacySshPortDoesNotRequestSshGatewayKey() {
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        const tunnel = this.createRelayTunnel();
+        tunnel.ports = [{ portNumber: 22, protocol: 'ssh' }];
+
+        await this.connectRelayHost({ relayHost, tunnel });
+
+        assert.equal(1, managementClient.tunnelEndpointsUpdated);
+        assert.strictEqual(managementClient.lastTunnelEndpointUpdateOptions, undefined);
+
+        await relayHost.dispose();
+    }
+
+    @test
     public async connectRelayHostAfterDisconnect() {
         const managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;

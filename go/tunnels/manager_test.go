@@ -131,6 +131,12 @@ func TestCreateTunnelRetriesOnConflictForGeneratedID(t *testing.T) {
 		if strings.Contains(r.URL.Path, "recommendations") {
 			return responseWithStatus(http.StatusOK, "{}"), nil
 		}
+		if r.Header.Get("If-None-Match") != "*" {
+			t.Fatalf("expected If-None-Match header on every create attempt")
+		}
+		if r.Header.Get("If-Not-Match") != "" {
+			t.Fatalf("did not expect If-Not-Match header")
+		}
 		callCount++
 		pathIDs = append(pathIDs, tunnelIDFromPath(r.URL.Path))
 		bodyBytes, readErr := io.ReadAll(r.Body)
@@ -177,6 +183,254 @@ func TestCreateTunnelRetriesOnConflictForGeneratedID(t *testing.T) {
 	}
 	if createdTunnel.TunnelID == "" {
 		t.Fatalf("expected tunnel ID to be set")
+	}
+}
+
+func TestTunnelRequestHeadersAndPreconditions(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	var requests []*http.Request
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		requests = append(requests, r.Clone(r.Context()))
+		switch r.Method {
+		case http.MethodPut:
+			return responseWithStatus(
+				http.StatusOK,
+				"{\"tunnelId\":\"tunnel-id\",\"clusterId\":\"usw2\"}"), nil
+		case http.MethodDelete:
+			return responseWithStatus(http.StatusOK, "true"), nil
+		default:
+			return responseWithStatus(http.StatusMethodNotAllowed, ""), nil
+		}
+	})}
+
+	managementClient, err := NewManager(
+		userAgentManagerTest,
+		getUserToken,
+		url,
+		client,
+		"2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+	managementClient.additionalHeaders = map[string]string{
+		"X-Manager":  "manager",
+		"X-Override": "manager",
+	}
+
+	options := &TunnelRequestOptions{
+		AccessToken: "expected-token",
+		AdditionalHeaders: map[string]string{
+			"Authorization":         "caller-token",
+			"Content-Type":          "caller-content-type",
+			"User-Agent":            "caller-user-agent",
+			"X-Override":            "request",
+			"X-Request":             "request",
+			"X-Case-Duplicate":      "canonical",
+			"x-case-duplicate":      "lowercase",
+			"if-match":              "caller-match",
+			"IF-NONE-MATCH":         "caller-none-match",
+			"If-Not-Match":          "caller-nonstandard",
+			clusterSourceHeaderName: "caller-source",
+		},
+	}
+	tunnel := &Tunnel{TunnelID: "tunnel-id", ClusterID: "usw2"}
+
+	if _, err = managementClient.CreateTunnel(context.Background(), tunnel, options); err != nil {
+		t.Fatalf("unexpected create error: %v", err)
+	}
+	if _, err = managementClient.UpdateTunnel(context.Background(), tunnel, nil, options); err != nil {
+		t.Fatalf("unexpected update error: %v", err)
+	}
+	if err = managementClient.DeleteTunnel(context.Background(), tunnel, options); err != nil {
+		t.Fatalf("unexpected delete error: %v", err)
+	}
+
+	if len(requests) != 3 {
+		t.Fatalf("expected 3 requests, got %d", len(requests))
+	}
+	for _, request := range requests {
+		if request.Header.Get("X-Manager") != "manager" {
+			t.Fatalf("expected manager-level header")
+		}
+		if request.Header.Get("X-Override") != "request" {
+			t.Fatalf("expected per-request header to override manager-level header")
+		}
+		if request.Header.Get("X-Request") != "request" {
+			t.Fatalf("expected per-request header")
+		}
+		if request.Header.Get("X-Case-Duplicate") != "lowercase" {
+			t.Fatalf("expected deterministic resolution of case-only duplicate headers")
+		}
+		if request.Header.Get("Authorization") != "Tunnel expected-token" {
+			t.Fatalf("expected SDK authorization header")
+		}
+		if request.Header.Get("Content-Type") != "application/json;charset=UTF-8" {
+			t.Fatalf("expected SDK content type")
+		}
+		if request.Header.Get("User-Agent") == "caller-user-agent" {
+			t.Fatalf("expected SDK user agent")
+		}
+	}
+
+	if requests[0].Header.Get("If-None-Match") != "*" ||
+		requests[0].Header.Get("If-Match") != "" ||
+		requests[0].Header.Get("If-Not-Match") != "" {
+		t.Fatalf("expected create-only precondition on create")
+	}
+	if requests[0].Header.Get(clusterSourceHeaderName) != string(ClusterSourceExplicit) {
+		t.Fatalf("expected SDK cluster-source header")
+	}
+	if requests[1].Header.Get("If-Match") != "caller-match" ||
+		requests[1].Header.Get("If-None-Match") != "" ||
+		requests[1].Header.Get("If-Not-Match") != "" {
+		t.Fatalf("expected update-only precondition on update")
+	}
+	if requests[2].Header.Get("If-Match") != "caller-match" ||
+		requests[2].Header.Get("If-None-Match") != "caller-none-match" ||
+		requests[2].Header.Get("If-Not-Match") != "caller-nonstandard" {
+		t.Fatalf("expected delete to preserve caller-provided preconditions")
+	}
+	if options.AdditionalHeaders["IF-NONE-MATCH"] != "caller-none-match" {
+		t.Fatalf("create mutated caller-owned If-None-Match header")
+	}
+	if options.AdditionalHeaders["if-match"] != "caller-match" {
+		t.Fatalf("update mutated caller-owned If-Match header")
+	}
+}
+
+func TestCreateOrUpdateTunnelDoesNotAddPrecondition(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	var requests []*http.Request
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		requests = append(requests, r.Clone(r.Context()))
+		if len(requests) < createNameRetries {
+			return responseWithStatus(http.StatusConflict, ""), nil
+		}
+		return responseWithStatus(
+			http.StatusOK,
+			"{\"tunnelId\":\"tunnel-id\",\"clusterId\":\"usw2\"}"), nil
+	})}
+
+	managementClient, err := NewManager(
+		userAgentManagerTest,
+		getUserToken,
+		url,
+		client,
+		"2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	options := &TunnelRequestOptions{
+		AdditionalHeaders: map[string]string{"X-Request": "request"},
+	}
+	tunnel := &Tunnel{TunnelID: "tunnel-id", ClusterID: "usw2"}
+	if _, err = managementClient.CreateOrUpdateTunnel(
+		context.Background(), tunnel, options); err != nil {
+		t.Fatalf("unexpected create-or-update error: %v", err)
+	}
+
+	if len(requests) != createNameRetries {
+		t.Fatalf("expected %d requests, got %d", createNameRetries, len(requests))
+	}
+	for _, request := range requests {
+		if request.Header.Get("If-Match") != "" ||
+			request.Header.Get("If-None-Match") != "" ||
+			request.Header.Get("If-Not-Match") != "" {
+			t.Fatalf("did not expect an automatic precondition on create-or-update")
+		}
+		if request.Header.Get("X-Request") != "request" {
+			t.Fatalf("expected per-request header on create-or-update")
+		}
+	}
+}
+
+func TestTunnelPortRequestPreconditions(t *testing.T) {
+	url, err := url.Parse("https://example.test/")
+	if err != nil {
+		t.Fatalf("error parsing url: %v", err)
+	}
+
+	var requests []*http.Request
+	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		requests = append(requests, r.Clone(r.Context()))
+		return responseWithStatus(http.StatusOK, "{\"portNumber\":3000}"), nil
+	})}
+
+	managementClient, err := NewManager(
+		userAgentManagerTest,
+		getUserToken,
+		url,
+		client,
+		"2023-09-27-preview")
+	if err != nil {
+		t.Fatalf("error creating manager: %v", err)
+	}
+
+	options := &TunnelRequestOptions{
+		AdditionalHeaders: map[string]string{
+			"Authorization": "caller-token",
+			"X-Request":     "request",
+		},
+	}
+	tunnel := &Tunnel{TunnelID: "tunnel-id", ClusterID: "usw2"}
+	port := &TunnelPort{PortNumber: 3000}
+
+	if _, err = managementClient.CreateTunnelPort(
+		context.Background(), tunnel, port, options); err != nil {
+		t.Fatalf("unexpected create port error: %v", err)
+	}
+	if _, err = managementClient.UpdateTunnelPort(
+		context.Background(), tunnel, port, nil, options); err != nil {
+		t.Fatalf("unexpected update port error: %v", err)
+	}
+	if _, err = managementClient.CreateOrUpdateTunnelPort(
+		context.Background(), tunnel, port, options); err != nil {
+		t.Fatalf("unexpected create-or-update port error: %v", err)
+	}
+	if err = managementClient.DeleteTunnelPort(
+		context.Background(), tunnel, port.PortNumber, options); err != nil {
+		t.Fatalf("unexpected delete port error: %v", err)
+	}
+
+	if len(requests) != 4 {
+		t.Fatalf("expected 4 requests, got %d", len(requests))
+	}
+	if requests[0].Header.Get("If-None-Match") != "*" ||
+		requests[0].Header.Get("If-Not-Match") != "" {
+		t.Fatalf("expected create-only precondition on create port")
+	}
+	if requests[1].Header.Get("If-Match") != "*" ||
+		requests[1].Header.Get("If-None-Match") != "" {
+		t.Fatalf("expected update-only precondition on update port")
+	}
+	for i, request := range requests[2:] {
+		if request.Header.Get("If-Match") != "" ||
+			request.Header.Get("If-None-Match") != "" {
+			t.Fatalf("did not expect an automatic precondition on request %d", i+2)
+		}
+	}
+	for _, request := range requests {
+		if request.Header.Get("X-Request") != "request" {
+			t.Fatalf("expected per-request header on port requests")
+		}
+		if request.Header.Get("Authorization") != "" {
+			t.Fatalf("expected caller authorization header to be removed")
+		}
+	}
+	if _, ok := options.AdditionalHeaders["If-None-Match"]; ok {
+		t.Fatalf("create port mutated caller-owned headers")
+	}
+	if _, ok := options.AdditionalHeaders["If-Match"]; ok {
+		t.Fatalf("update port mutated caller-owned headers")
 	}
 }
 

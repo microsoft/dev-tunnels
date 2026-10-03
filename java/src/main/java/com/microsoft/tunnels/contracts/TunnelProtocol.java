@@ -24,11 +24,6 @@ public class TunnelProtocol {
     public static final String udp = "udp";
 
     /**
-     * SSH protocol.
-     */
-    public static final String ssh = "ssh";
-
-    /**
      * Remote desktop protocol.
      */
     public static final String rdp = "rdp";

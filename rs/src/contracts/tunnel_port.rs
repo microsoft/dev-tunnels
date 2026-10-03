@@ -52,7 +52,7 @@ pub struct TunnelPort {
     // Selection of a default port for a connection also depends on matching the
     // connection to the port `TunnelPort.Protocol`, so it is possible to configure
     // separate defaults for distinct protocols like `TunnelProtocol.Http` and
-    // `TunnelProtocol.Ssh`.
+    // `TunnelProtocol.Tcp`.
     #[serde(default)]
     pub is_default: bool,
 
@@ -79,7 +79,7 @@ pub struct TunnelPort {
 
     // Gets or sets the username for the ssh service user is trying to forward.
     //
-    // Should be provided if the `TunnelProtocol` is Ssh.
+    // This property is retained for compatibility with legacy SSH tunnel ports.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssh_user: Option<String>,
 
