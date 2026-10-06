@@ -330,7 +330,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             this.relayUri,
             this.connectionProtocols,
             this.accessToken,
-            clientConfig
+            clientConfig,
+            this.managementClient?.additionalRequestHeaders,
         );
 
         this.trace(
