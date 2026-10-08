@@ -967,13 +967,13 @@ func (m *Manager) createRequest(
 	partialFields []string,
 ) (*http.Request, error) {
 	if requestObject == nil {
-		return http.NewRequest(method, uri.String(), nil)
+		return http.NewRequestWithContext(ctx, method, uri.String(), nil)
 	}
 	requestJson, err := partialMarshal(requestObject, partialFields)
 	if err != nil {
 		return nil, fmt.Errorf("error converting request object to json: %w", err)
 	}
-	return http.NewRequest(method, uri.String(), bytes.NewBuffer(requestJson))
+	return http.NewRequestWithContext(ctx, method, uri.String(), bytes.NewBuffer(requestJson))
 }
 
 func (m *Manager) readProblemDetails(response *http.Response) (*string, error) {
