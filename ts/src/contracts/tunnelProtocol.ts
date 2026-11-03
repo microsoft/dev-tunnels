@@ -23,11 +23,6 @@ export enum TunnelProtocol {
     Udp = 'udp',
 
     /**
-     * SSH protocol.
-     */
-    Ssh = 'ssh',
-
-    /**
      * Remote desktop protocol.
      */
     Rdp = 'rdp',

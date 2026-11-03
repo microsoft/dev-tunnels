@@ -29,6 +29,7 @@ export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory
         protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
+        additionalHeaders?: { [header: string]: string },
         hostId?: string,
     ): Promise<{ stream: Stream, protocol: string }> {
         if (isNode()) {
@@ -37,6 +38,7 @@ export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory
                 relayUri,
                 protocols,
                 {
+                    ...additionalHeaders,
                     ...(accessToken && { Authorization: `tunnel ${accessToken}` }),
                     ...(isHostConnection &&
                         hostId && {
@@ -47,9 +49,7 @@ export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory
             );
             return { stream, protocol: stream.protocol! };
         } else {
-            // Web sockets don't support auth. Authenticate TunnelRelay by sending accessToken as a subprotocol.
-            // Request headers aren't available here either, so a host running in the browser cannot
-            // identify its process to the relay.
+            // Browser WebSocket APIs cannot set auth or custom handshake headers.
             if (accessToken) {
                 protocols = [...protocols, accessToken];
             }

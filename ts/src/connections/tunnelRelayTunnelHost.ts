@@ -3,7 +3,6 @@
 
 import {
     TunnelConnectionMode,
-    TunnelProtocol,
     TunnelRelayTunnelEndpoint,
     TunnelPort,
     Tunnel,
@@ -288,11 +287,10 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
             this.hostPublicKeys = [buffer.toString('base64')];
         }
 
-        const tunnelHasSshPort = this.tunnel?.ports != null && this.tunnel.ports.find((v) => v.protocol === TunnelProtocol.Ssh);
         const endpointSignature = 
             `${this.tunnel?.tunnelId}.${this.tunnel?.clusterId}:` +
             `${this.tunnel?.name}.${this.tunnel?.domain}:` +
-            `${tunnelHasSshPort}:${this.hostId}:${this.hostPublicKeys}`;
+            `${this.hostId}:${this.hostPublicKeys}`;
 
         if (!this.relayUri || this.endpointSignature !== endpointSignature) {
             if (!this.tunnel) {
@@ -306,14 +304,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
                 connectionMode: TunnelConnectionMode.TunnelRelay,
             };
             
-            let additionalQueryParameters = undefined;
-            if (tunnelHasSshPort) {
-                additionalQueryParameters = { includeSshGatewayPublicKey: 'true' };
-            }
-    
-            endpoint = await this.managementClient!.updateTunnelEndpoint(this.tunnel, endpoint, {
-                additionalQueryParameters: additionalQueryParameters,
-            });
+            endpoint = await this.managementClient!.updateTunnelEndpoint(this.tunnel, endpoint);
 
             this.relayUri = endpoint.hostRelayUri!;
             this.endpointSignature = endpointSignature;

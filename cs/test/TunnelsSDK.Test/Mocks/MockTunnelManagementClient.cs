@@ -121,6 +121,7 @@ public class MockTunnelManagementClient : ITunnelManagementClient
         CancellationToken cancellation = default)
     {
         TunnelEndpointsUpdated++;
+        LastTunnelEndpointUpdateOptions = options;
         tunnel.Endpoints ??= Array.Empty<TunnelEndpoint>();
 
         for (int i = 0; i < tunnel.Endpoints.Length; i++)
@@ -152,6 +153,8 @@ public class MockTunnelManagementClient : ITunnelManagementClient
     }
 
     public int TunnelEndpointsUpdated { get; private set; }
+
+    public TunnelRequestOptions LastTunnelEndpointUpdateOptions { get; private set; }
 
     public Task<bool> DeleteTunnelEndpointsAsync(
         Tunnel tunnel,

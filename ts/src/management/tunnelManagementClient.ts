@@ -25,6 +25,13 @@ export interface TunnelManagementClient {
     httpsAgent?: https.Agent;
 
     /**
+     * Additional headers included in every tunnel service request, including
+     * Node.js relay WebSocket connection requests made with this client.
+     * Browser WebSocket APIs cannot set custom relay handshake headers.
+     */
+    additionalRequestHeaders?: { [header: string]: string };
+
+    /**
      * Lists tunnels that are owned by the caller.
      *
      * The list can be filtered by setting `TunnelRequestOptions.labels`. Ports will not be

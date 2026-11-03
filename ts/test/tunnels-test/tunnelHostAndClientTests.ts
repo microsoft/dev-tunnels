@@ -504,6 +504,28 @@ export class TunnelHostAndClientTests {
     }
 
     @test
+    public async forwardsTunnelHeadersToRelayHandshake() {
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.additionalRequestHeaders = {
+            'X-Tunnels-VSCode-Session-Id': 'session-id',
+            'X-Tunnels-VSCode-Client-Operation-Id': 'operation-id',
+            'X-Tunnels-VSCode-Client-Request-Id': 'request-id',
+        };
+        const relayClient = new TestTunnelRelayTunnelClient(managementClient);
+        const serverSession = await this.connectRelayClient({
+            relayClient,
+            tunnel: this.createRelayTunnel(),
+        });
+
+        const factory = relayClient.streamFactory as MockTunnelRelayStreamFactory;
+        assert.deepStrictEqual(factory.lastAdditionalHeaders, managementClient.additionalRequestHeaders);
+        assert.strictEqual(factory.hostId, undefined);
+
+        relayClient.dispose();
+        serverSession.dispose();
+    }
+
+    @test
     async connectRelayClientWithStaleHostKey() {
         // A good tunnel with the correct host public key.
         const serverSshKey = await SshAlgorithms.publicKey.ecdsaSha2Nistp384!.generateKeyPair();
@@ -775,6 +797,9 @@ export class TunnelHostAndClientTests {
         const originalHostId = MultiModeTunnelHost.hostId;
         const managementClient = new MockTunnelManagementClient();
         managementClient.hostRelayUri = this.mockHostRelayUri;
+        managementClient.additionalRequestHeaders = {
+            'X-Tunnels-VSCode-Session-Id': 'host-session-id',
+        };
         const relayHost = new TunnelRelayTunnelHost(managementClient);
         let multiChannelStream: TestMultiChannelStream | undefined;
         try {
@@ -784,9 +809,11 @@ export class TunnelHostAndClientTests {
             const tunnel = this.createRelayTunnel();
             multiChannelStream = await this.connectRelayHost({ relayHost, tunnel });
 
-            const sentHostId = (relayHost.streamFactory as MockTunnelRelayStreamFactory).hostId;
+            const factory = relayHost.streamFactory as MockTunnelRelayStreamFactory;
+            const sentHostId = factory.hostId;
             assert.strictEqual(sentHostId, originalHostId);
             assert.notStrictEqual(sentHostId, MultiModeTunnelHost.hostId);
+            assert.deepStrictEqual(factory.lastAdditionalHeaders, managementClient.additionalRequestHeaders);
 
             const hostEndpoints = (tunnel.endpoints ?? []).filter((e) => e.hostId);
             assert.strictEqual(hostEndpoints.length, 1);
@@ -799,6 +826,22 @@ export class TunnelHostAndClientTests {
                 multiChannelStream?.dispose();
             }
         }
+    }
+
+    @test
+    public async connectRelayHostWithLegacySshPortDoesNotRequestSshGatewayKey() {
+        const managementClient = new MockTunnelManagementClient();
+        managementClient.hostRelayUri = this.mockHostRelayUri;
+        const relayHost = new TunnelRelayTunnelHost(managementClient);
+        const tunnel = this.createRelayTunnel();
+        tunnel.ports = [{ portNumber: 22, protocol: 'ssh' }];
+
+        await this.connectRelayHost({ relayHost, tunnel });
+
+        assert.equal(1, managementClient.tunnelEndpointsUpdated);
+        assert.strictEqual(managementClient.lastTunnelEndpointUpdateOptions, undefined);
+
+        await relayHost.dispose();
     }
 
     @test

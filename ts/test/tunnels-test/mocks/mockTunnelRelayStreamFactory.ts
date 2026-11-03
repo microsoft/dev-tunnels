@@ -14,6 +14,7 @@ import { IClientConfig } from 'websocket';
 export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
     private readonly connectionType: string;
     private readonly stream: Stream;
+    public lastAdditionalHeaders?: { [header: string]: string };
 
     /**
      * Host ID that was passed to the most recent `createRelayStream` call, i.e. the value
@@ -38,12 +39,14 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
         protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
+        additionalHeaders?: { [header: string]: string },
         hostId?: string,
     ) => {
         if (!relayUri || !accessToken || !protocols.includes(this.connectionType)) {
             throw new Error('Invalid params');
         }
         this.hostId = hostId;
+        this.lastAdditionalHeaders = additionalHeaders;
         return Promise.resolve({ stream: this.stream, protocol: this.connectionType });
     };
 

@@ -346,7 +346,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             this.connectionProtocols,
             this.accessToken,
             clientConfig,
-            this.hostProcessId
+            this.managementClient?.additionalRequestHeaders,
+            this.hostProcessId,
         );
 
         this.trace(

@@ -17,9 +17,6 @@ const (
 	// Unknown UDP protocol.
 	TunnelProtocolUdp   TunnelProtocol = "udp"
 
-	// SSH protocol.
-	TunnelProtocolSsh   TunnelProtocol = "ssh"
-
 	// Remote desktop protocol.
 	TunnelProtocolRdp   TunnelProtocol = "rdp"
 
