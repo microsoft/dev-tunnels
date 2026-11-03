@@ -17,6 +17,20 @@ namespace Microsoft.DevTunnels.Connections
     /// </summary>
     public class TunnelRelayStreamFactory : ITunnelRelayStreamFactory
     {
+        private readonly string? hostId;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TunnelRelayStreamFactory"/> class.
+        /// </summary>
+        public TunnelRelayStreamFactory()
+        {
+        }
+
+        internal TunnelRelayStreamFactory(string hostId)
+        {
+            this.hostId = hostId;
+        }
+
         /// <inheritdoc/>
         public virtual async Task<(Stream Stream, string SubProtocol)> CreateRelayStreamAsync(
             Uri relayUri,
@@ -41,10 +55,10 @@ namespace Microsoft.DevTunnels.Connections
                     options.SetRequestHeader("Authorization", "tunnel " + accessToken);
                 }
 
-                if (isHostConnection && !string.IsNullOrEmpty(MultiModeTunnelHost.HostId))
+                if (isHostConnection && !string.IsNullOrEmpty(hostId))
                 {
                     options.SetRequestHeader(
-                        TunnelRelayConnection.HostIdHeaderName, MultiModeTunnelHost.HostId);
+                        TunnelRelayConnection.HostIdHeaderName, hostId);
                 }
             }
 

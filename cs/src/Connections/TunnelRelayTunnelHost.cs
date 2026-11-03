@@ -57,6 +57,7 @@ public class TunnelRelayTunnelHost : TunnelHost
         : base(managementClient, trace)
     {
         this.hostId = MultiModeTunnelHost.HostId;
+        StreamFactory = new TunnelRelayStreamFactory(this.hostId);
     }
 
     /// <inheritdoc/>
