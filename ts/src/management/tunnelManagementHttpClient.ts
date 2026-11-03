@@ -33,6 +33,10 @@ import axios, { AxiosAdapter, AxiosError, AxiosRequestConfig, AxiosResponse, Met
 import * as https from 'https';
 import { TunnelPlanTokenProperties } from './tunnelPlanTokenProperties';
 import { IdGeneration } from './idGeneration';
+import {
+    TunnelClusterSelectionEventArgs,
+    TunnelClusterSource,
+} from './tunnelClusterSelection';
 
 type NullableIfNotBoolean<T> = T extends boolean ? T : T | null;
 
@@ -43,6 +47,7 @@ const portsApiSubPath = '/ports';
 const eventsApiSubPath = '/events';
 const clustersApiPath = '/clusters';
 const recommendationsSubPath = '/recommendations';
+const clusterSourceHeaderName = 'X-Tunnel-Cluster-Source';
 const tunnelAuthentication = 'Authorization';
 const checkAvailablePath = ':checkNameAvailability';
 const createNameRetries = 3;
@@ -52,6 +57,14 @@ export enum ManagementApiVersions {
 
 function comparePorts(a: TunnelPort, b: TunnelPort) {
     return (a.portNumber ?? Number.MAX_SAFE_INTEGER) - (b.portNumber ?? Number.MAX_SAFE_INTEGER);
+}
+
+/**
+ * Gets whether the error is a 401 or 403 from the service.
+ */
+function isUnauthorizedError(error: unknown): boolean {
+    const status = (error as AxiosError)?.response?.status;
+    return status === 401 || status === 403;
 }
 
 function parseDate(value?: string | Date) {
@@ -134,6 +147,20 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
     private readonly isCustomDomain: boolean;
 
     private readonly reportProgressEmitter = new Emitter<TunnelReportProgressEventArgs>();
+
+    private readonly clusterSelectedEmitter = new Emitter<TunnelClusterSelectionEventArgs>();
+
+    /**
+     * Event that is raised when a create request selected a cluster via the
+     * recommendations API, reporting which path was taken.
+     *
+     * Subscribe to surface recommendation failures. When the recommendations call fails the
+     * create still succeeds via global routing, so without this a caller has no way to tell
+     * that recommendation-based placement stopped working. Raised only when the caller did
+     * not specify a cluster.
+     */
+    public readonly onClusterSelected: Event<TunnelClusterSelectionEventArgs> =
+        this.clusterSelectedEmitter.event;
 
     /**
      * Event that is raised to report tunnel management progress.
@@ -333,24 +360,50 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
 
         // If the caller didn't specify a cluster, auto-select one via the
         // recommendations API. Failures fall back to global routing.
+        let clusterSource = TunnelClusterSource.explicit;
         if (!tunnel.clusterId) {
+            let error: Error | undefined;
             try {
-                const recommendations = await this.getClusterRecommendations(
+                const { response, authRejected } = await this.getClusterRecommendationsInternal(
                     undefined,
                     options.requiredGeo,
                     cancellation,
                 );
-                if (recommendations?.recommendedClusterId) {
-                    tunnel.clusterId = recommendations.recommendedClusterId;
+                if (response?.recommendedClusterId) {
+                    tunnel.clusterId = response.recommendedClusterId;
+                    clusterSource = authRejected
+                        ? TunnelClusterSource.recommendedAfterAuthRejected
+                        : TunnelClusterSource.recommended;
+                } else {
+                    clusterSource = TunnelClusterSource.fallbackEmpty;
                 }
-            } catch {
-                // Fall through to global (Traffic Manager) routing if the
-                // recommendations request fails for any reason.
+            } catch (e) {
+                // Global routing still succeeds, so without reporting this the caller has
+                // no indication that recommendation-based placement stopped working.
+                error = e as Error;
+                clusterSource = isUnauthorizedError(e)
+                    ? TunnelClusterSource.fallbackAuthFailed
+                    : TunnelClusterSource.fallbackError;
             }
+
+            this.clusterSelectedEmitter.fire({
+                source: clusterSource,
+                clusterId: tunnel.clusterId,
+                error,
+            });
         }
 
-        options.additionalHeaders = options.additionalHeaders || {};
-        options.additionalHeaders['If-Not-Match'] = "*";
+        options = {
+            ...options,
+            additionalHeaders: {
+                ...options.additionalHeaders,
+                'If-None-Match': '*',
+                // Report the client-side selection path to the service. Recommendation
+                // fallbacks are otherwise invisible in service telemetry: a create that
+                // fell back looks identical to one that was never recommended at all.
+                [clusterSourceHeaderName]: clusterSource,
+            },
+        };
 
         if (idGenerated) {
             tunnel.tunnelId = IdGeneration.generateTunnelId();
@@ -578,9 +631,13 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         this.raiseReportProgress(TunnelProgress.StartingCreateTunnelPort);
         tunnelPort = this.convertTunnelPortForRequest(tunnel, tunnelPort);
         const path = `${portsApiSubPath}/${tunnelPort.portNumber}`;
-        options = options || {};
-        options.additionalHeaders = options.additionalHeaders || {};
-        options.additionalHeaders['If-Not-Match'] = "*";
+        options = {
+            ...options,
+            additionalHeaders: {
+                ...options?.additionalHeaders,
+                'If-None-Match': '*',
+            },
+        };
         const result = (await this.sendTunnelRequest<TunnelPort>(
             'PUT',
             tunnel,
@@ -723,6 +780,27 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         requiredGeo?: string,
         cancellation?: CancellationToken,
     ): Promise<ClusterRecommendationResponse> {
+        return (await this.getClusterRecommendationsInternal(
+            preferredClusterId,
+            requiredGeo,
+            cancellation,
+        )).response;
+    }
+
+    /**
+     * Requests cluster recommendations, reporting whether the caller's token was rejected.
+     *
+     * The token is sent so the service can identify the caller and apply its service tier.
+     * If the token is rejected the request is retried without it, because the service
+     * rejects a bad token before the controller runs and does not fall back to treating the
+     * caller as anonymous. Without the retry, one expired token would silently disable
+     * recommendation-based routing for that caller.
+     */
+    private async getClusterRecommendationsInternal(
+        preferredClusterId?: string,
+        requiredGeo?: string,
+        cancellation?: CancellationToken,
+    ): Promise<{ response: ClusterRecommendationResponse; authRejected: boolean }> {
         const queryParts: string[] = [];
         if (preferredClusterId) {
             queryParts.push(`preferredClusterId=${encodeURIComponent(preferredClusterId)}`);
@@ -732,13 +810,44 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         }
         const query = queryParts.length > 0 ? queryParts.join('&') : undefined;
 
-        return (await this.sendRequest<ClusterRecommendationResponse>(
-            'GET',
+        try {
+            return {
+                response: await this.sendClusterRecommendationsRequest(query, false, cancellation),
+                authRejected: false,
+            };
+        } catch (error) {
+            if (!isUnauthorizedError(error)) {
+                throw error;
+            }
+
+            return {
+                response: await this.sendClusterRecommendationsRequest(query, true, cancellation),
+                authRejected: true,
+            };
+        }
+    }
+
+    private async sendClusterRecommendationsRequest(
+        query: string | undefined,
+        suppressUserToken: boolean,
+        cancellation?: CancellationToken,
+    ): Promise<ClusterRecommendationResponse> {
+        const uri = await this.buildUri(
             undefined,
             clustersApiPath + recommendationsSubPath,
             query,
+        );
+        const config = await this.getAxiosRequestConfig(
             undefined,
             undefined,
+            undefined,
+            suppressUserToken,
+        );
+        return (await this.request<ClusterRecommendationResponse>(
+            'GET',
+            uri,
+            undefined,
+            config,
             false,
             cancellation,
         ))!;
@@ -1127,6 +1236,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
         tunnel?: Tunnel,
         options?: TunnelRequestOptions,
         accessTokenScopes?: string[],
+        suppressUserToken?: boolean,
     ): Promise<AxiosRequestConfig> {
         // Get access token header
         const headers: { [name: string]: string } = {};
@@ -1137,7 +1247,7 @@ export class TunnelManagementHttpClient implements TunnelManagementClient {
             ] = `${TunnelAuthenticationSchemes.tunnel} ${options.accessToken}`;
         }
 
-        if (!(tunnelAuthentication in headers) && this.userTokenCallback) {
+        if (!(tunnelAuthentication in headers) && this.userTokenCallback && !suppressUserToken) {
             const token = await this.userTokenCallback();
             if (token) {
                 headers[tunnelAuthentication] = token;

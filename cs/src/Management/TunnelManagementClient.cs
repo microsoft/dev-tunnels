@@ -47,6 +47,7 @@ namespace Microsoft.DevTunnels.Management
         private const string RequestIdHeaderName = "VsSaaS-Request-Id";
         private const string CheckAvailableSubPath = ":checkNameAvailability";
         private const string EnterprisePolicyFailureHeaderName = "X-Enterprise-Policy-Failure";
+        private const string ClusterSourceHeaderName = "X-Tunnel-Cluster-Source";
         private const int CreateNameRetries = 3;
 
         private static readonly string[] ManageAccessTokenScope =
@@ -79,6 +80,18 @@ namespace Microsoft.DevTunnels.Management
         /// Event raised to report tunnel management progress.
         /// </summary>
         public event EventHandler<TunnelReportProgressEventArgs>? ReportProgress;
+
+        /// <summary>
+        /// Event raised when a tunnel create request selected a cluster via the recommendations
+        /// API, reporting which path was taken.
+        /// </summary>
+        /// <remarks>
+        /// Subscribe to surface recommendation failures. When the recommendations call fails the
+        /// create still succeeds via global routing, so without this event a caller has no way to
+        /// tell that recommendation-based placement stopped working. Raised only when the caller
+        /// did not specify a cluster.
+        /// </remarks>
+        public event EventHandler<TunnelClusterSelectionEventArgs>? ClusterSelected;
 
         /// <summary>
         /// ApiVersion that will be used if one is not specified
@@ -1088,29 +1101,59 @@ namespace Microsoft.DevTunnels.Management
 
             // If the caller didn't specify a cluster, auto-select one via the
             // recommendations API. Failures fall back to global routing.
+            var clusterSource = TunnelClusterSource.Explicit;
             if (string.IsNullOrEmpty(tunnel.ClusterId))
             {
+                Exception? recommendationError = null;
                 try
                 {
-                    var recommendations = await GetClusterRecommendationsAsync(
-                        preferredClusterId: null,
-                        requiredGeo: options.RequiredGeo,
-                        cancellation);
+                    var (recommendations, authRejected) =
+                        await GetClusterRecommendationsInternalAsync(
+                            preferredClusterId: null,
+                            requiredGeo: options.RequiredGeo,
+                            cancellation);
                     if (!string.IsNullOrEmpty(recommendations?.RecommendedClusterId))
                     {
                         tunnel.ClusterId = recommendations!.RecommendedClusterId;
+                        clusterSource = authRejected
+                            ? TunnelClusterSource.RecommendedAfterAuthRejected
+                            : TunnelClusterSource.Recommended;
+                    }
+                    else
+                    {
+                        clusterSource = TunnelClusterSource.FallbackEmpty;
                     }
                 }
-                catch (Exception) when (!cancellation.IsCancellationRequested)
+                catch (Exception ex) when (!cancellation.IsCancellationRequested)
                 {
                     // Fall through to global (Traffic Manager) routing if the
-                    // recommendations request fails for any reason.
+                    // recommendations request fails for any reason. The failure is reported
+                    // rather than swallowed, because global routing still succeeds and the
+                    // caller would otherwise have no indication that the cluster it asked for
+                    // was not the cluster it got.
+                    recommendationError = ex;
+                    clusterSource = ex is UnauthorizedAccessException
+                        ? TunnelClusterSource.FallbackAuthFailed
+                        : TunnelClusterSource.FallbackError;
                 }
+
+                this.ClusterSelected?.Invoke(
+                    this,
+                    new TunnelClusterSelectionEventArgs(
+                        clusterSource, tunnel.ClusterId, recommendationError));
             }
 
             options.AdditionalHeaders ??= new List<KeyValuePair<string, string>>();
             options.AdditionalHeaders = options.AdditionalHeaders.Append(
                 new KeyValuePair<string, string>("If-None-Match", "*"));
+
+            // Report the client-side selection path to the service. Recommendation fallbacks
+            // are otherwise invisible in service telemetry: a create that fell back looks
+            // identical to one that was never recommended at all.
+            options.AdditionalHeaders = options.AdditionalHeaders.Append(
+                new KeyValuePair<string, string>(
+                    ClusterSourceHeaderName,
+                    TunnelClusterSelectionEventArgs.ToHeaderValue(clusterSource)));
             var tunnelId = tunnel.TunnelId;
             var idGenerated = string.IsNullOrEmpty(tunnelId);
             if (idGenerated)
@@ -1625,6 +1668,57 @@ namespace Microsoft.DevTunnels.Management
             string? requiredGeo = null,
             CancellationToken cancellation = default)
         {
+            var (response, _) = await GetClusterRecommendationsInternalAsync(
+                preferredClusterId, requiredGeo, cancellation);
+            return response!;
+        }
+
+        /// <summary>
+        /// Requests cluster recommendations, reporting whether the caller's token was rejected.
+        /// </summary>
+        /// <remarks>
+        /// The token is sent so the service can identify the caller and apply its service tier.
+        /// If the token is rejected the request is retried without it, because the service
+        /// rejects a bad token before the controller runs and does not fall back to treating the
+        /// caller as anonymous. Without the retry, one expired token would silently disable
+        /// recommendation-based routing for that caller.
+        /// </remarks>
+        private async Task<(ClusterRecommendationResponse? Response, bool AuthRejected)>
+            GetClusterRecommendationsInternalAsync(
+                string? preferredClusterId,
+                string? requiredGeo,
+                CancellationToken cancellation)
+        {
+            var uri = BuildClusterRecommendationsUri(preferredClusterId, requiredGeo);
+
+            var authHeader = await this.userTokenCallback();
+            if (authHeader == null)
+            {
+                // No token to offer, so this is an ordinary anonymous request rather than a
+                // rejected one.
+                var anonymous = await SendRequestAsync<object, ClusterRecommendationResponse>(
+                    HttpMethod.Get, uri, options: null, authHeader: null, body: null, cancellation);
+                return (anonymous, false);
+            }
+
+            try
+            {
+                var response = await SendRequestAsync<object, ClusterRecommendationResponse>(
+                    HttpMethod.Get, uri, options: null, authHeader, body: null, cancellation);
+                return (response, false);
+            }
+            catch (UnauthorizedAccessException) when (!cancellation.IsCancellationRequested)
+            {
+                var response = await SendRequestAsync<object, ClusterRecommendationResponse>(
+                    HttpMethod.Get, uri, options: null, authHeader: null, body: null, cancellation);
+                return (response, true);
+            }
+        }
+
+        private Uri BuildClusterRecommendationsUri(
+            string? preferredClusterId,
+            string? requiredGeo)
+        {
             var baseAddress = this.httpClient.BaseAddress!;
             var builder = new UriBuilder(baseAddress);
             builder.Path = ClustersPath + RecommendationsSubPath;
@@ -1648,15 +1742,7 @@ namespace Microsoft.DevTunnels.Management
             }
 
             builder.Query = string.Join("&", queryParts);
-
-            var response = await SendRequestAsync<object, ClusterRecommendationResponse>(
-                HttpMethod.Get,
-                builder.Uri,
-                options: null,
-                authHeader: null,
-                body: null,
-                cancellation);
-            return response!;
+            return builder.Uri;
         }
 
         /// <inheritdoc/>

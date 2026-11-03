@@ -4,6 +4,7 @@
 package com.microsoft.tunnels.management;
 
 import com.microsoft.tunnels.contracts.ClusterDetails;
+import com.microsoft.tunnels.contracts.ClusterRecommendationResponse;
 import com.microsoft.tunnels.contracts.NamedRateStatus;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelConnectionMode;
@@ -251,4 +252,21 @@ public interface ITunnelManagementClient {
    * @return Array of {@link NamedRateStatus}.
    */
   public CompletableFuture<Collection<NamedRateStatus>> listUserLimitsAsync();
+
+  /**
+   * Requests cluster recommendations for placing a new tunnel, ranked by preference.
+   *
+   * <p>The request is authenticated with the token from the user token callback when one is
+   * configured. If the service rejects that token with a 401 or 403, the request is retried
+   * once anonymously, because the service rejects a bad token before evaluating the request
+   * rather than falling back to treating the caller as anonymous on its own.</p>
+   *
+   * @param preferredClusterId Preferred cluster ID, or null for no preference.
+   * @param requiredGeo        Optional Azure geography filter; only clusters in this geo are
+   *                           eligible for recommendation, or null for no filter.
+   * @return The cluster recommendation response.
+   */
+  public CompletableFuture<ClusterRecommendationResponse> getClusterRecommendationsAsync(
+      String preferredClusterId,
+      String requiredGeo);
 }

@@ -6,6 +6,7 @@ package com.microsoft.tunnels.management;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.tunnels.contracts.ClusterDetails;
+import com.microsoft.tunnels.contracts.ClusterRecommendationResponse;
 import com.microsoft.tunnels.contracts.NamedRateStatus;
 import com.microsoft.tunnels.contracts.Tunnel;
 import com.microsoft.tunnels.contracts.TunnelAccessControlEntry;
@@ -31,6 +32,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -57,8 +60,10 @@ public class TunnelManagementClient implements ITunnelManagementClient {
   private static final String endpointsApiSubPath = "/endpoints";
   private static final String portsApiSubPath = "/ports";
   private String clustersApiPath = "/clusters";
+  private static final String recommendationsApiSubPath = "/recommendations";
   private static final String tunnelAuthenticationScheme = "Tunnel";
   private static final String checkTunnelNamePath = ":checkNameAvailability";
+  private static final String clusterSourceHeaderName = "X-Tunnel-Cluster-Source";
   private static final int CreateNameRetries = 3;
 
   // Access Scopes
@@ -171,21 +176,34 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       T requestObject,
       Type responseType) {
     return createHttpRequest(tunnel, options, requestMethod, uri, requestObject, scopes)
-      .thenCompose(request -> {
-        long startTime = System.nanoTime();
-        return this.httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-          .thenApply(response -> {
-            long stopTime = System.nanoTime();
-            long durationMs = (stopTime - startTime) / 1000000;
-            var statusCode = response.statusCode();
-            var message = requestMethod + " " + uri + " -> " + statusCode + " (" + durationMs + " ms)";
-            if (statusCode >= 200 && statusCode < 300) {
-              logger.info(message);
-            } else {
-              logger.warn(message);
-            }
-            return response;
-          });
+      .thenCompose(request -> sendAndParseAsync(request, requestMethod, uri, responseType));
+  }
+
+  /**
+   * Sends an already-built request and parses the response, logging the outcome.
+   *
+   * <p>Split out of {@link #requestAsync} so that callers that build their own request (such
+   * as cluster recommendations, which needs to send an explicit auth override and retry with
+   * a different one) can reuse the same send/log/parse logic.</p>
+   */
+  private <U> CompletableFuture<U> sendAndParseAsync(
+      HttpRequest request,
+      HttpMethod requestMethod,
+      URI uri,
+      Type responseType) {
+    long startTime = System.nanoTime();
+    return this.httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+      .thenApply(response -> {
+        long stopTime = System.nanoTime();
+        long durationMs = (stopTime - startTime) / 1000000;
+        var statusCode = response.statusCode();
+        var message = requestMethod + " " + uri + " -> " + statusCode + " (" + durationMs + " ms)";
+        if (statusCode >= 200 && statusCode < 300) {
+          logger.info(message);
+        } else {
+          logger.warn(message);
+        }
+        return response;
       })
       .thenApply(response -> parseResponse(response, responseType));
   }
@@ -243,35 +261,54 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       URI uri,
       T requestObject,
       String[] accessTokenScopes) {
-    return getAuthHeaderValue(tunnel, options, accessTokenScopes).thenApply(authHeaderValue -> {
-      String userAgentString = "";
-      for (ProductHeaderValue userAgent : this.userAgents) {
-        userAgentString = userAgent.productName
-            + "/" + userAgent.version + " " + userAgentString;
-      }
-      userAgentString = userAgentString + SDK_USER_AGENT;
-      var requestBuilder = HttpRequest.newBuilder()
-          .uri(uri)
-          .header(USER_AGENT_HEADER, userAgentString)
-          .header(CONTENT_TYPE_HEADER, "application/json");
-      if (StringUtils.isNotBlank(authHeaderValue)) {
-        requestBuilder.header(AUTH_HEADER, authHeaderValue);
-      }
+    return getAuthHeaderValue(tunnel, options, accessTokenScopes).thenApply(authHeaderValue ->
+        buildHttpRequest(options, requestMethod, uri, requestObject, authHeaderValue));
+  }
 
-      if (options != null && options.additionalHeaders != null) {
-        options.additionalHeaders.forEach(
-          (key, value) -> requestBuilder.header(key, value)
-        );
-      }
+  /**
+   * Builds an HTTP request using an already-resolved authorization header value.
+   *
+   * <p>Split out of {@link #createHttpRequest} so that callers that need to resolve
+   * authorization themselves (such as cluster recommendations, which sends an explicit token
+   * and retries once without it if rejected) can build a request without going through
+   * {@link #getAuthHeaderValue}'s tunnel/options-based resolution.</p>
+   *
+   * @param authHeaderValue The resolved value for the Authorization header, or null/blank to
+   *                        send the request unauthenticated.
+   */
+  private <T> HttpRequest buildHttpRequest(
+      TunnelRequestOptions options,
+      HttpMethod requestMethod,
+      URI uri,
+      T requestObject,
+      String authHeaderValue) {
+    String userAgentString = "";
+    for (ProductHeaderValue userAgent : this.userAgents) {
+      userAgentString = userAgent.productName
+          + "/" + userAgent.version + " " + userAgentString;
+    }
+    userAgentString = userAgentString + SDK_USER_AGENT;
+    var requestBuilder = HttpRequest.newBuilder()
+        .uri(uri)
+        .header(USER_AGENT_HEADER, userAgentString)
+        .header(CONTENT_TYPE_HEADER, "application/json");
+    if (StringUtils.isNotBlank(authHeaderValue)) {
+      requestBuilder.header(AUTH_HEADER, authHeaderValue);
+    }
 
-      Gson gson = TunnelContracts.getGson();
-      var requestJson = gson.toJson(requestObject);
-      var bodyPublisher = requestMethod == HttpMethod.POST || requestMethod == HttpMethod.PUT
-          ? BodyPublishers.ofString(requestJson)
-          : BodyPublishers.noBody();
-      requestBuilder.method(requestMethod.toString(), bodyPublisher);
-      return requestBuilder.build();
-    });
+    if (options != null && options.additionalHeaders != null) {
+      options.additionalHeaders.forEach(
+        (key, value) -> requestBuilder.header(key, value)
+      );
+    }
+
+    Gson gson = TunnelContracts.getGson();
+    var requestJson = gson.toJson(requestObject);
+    var bodyPublisher = requestMethod == HttpMethod.POST || requestMethod == HttpMethod.PUT
+        ? BodyPublishers.ofString(requestJson)
+        : BodyPublishers.noBody();
+    requestBuilder.method(requestMethod.toString(), bodyPublisher);
+    return requestBuilder.build();
   }
 
   private <T> T parseResponse(HttpResponse<String> response, Type typeOfT) {
@@ -413,43 +450,143 @@ public class TunnelManagementClient implements ITunnelManagementClient {
       tunnel.tunnelId = IdGeneration.generateTunnelId();
     }
 
-    options = options == null ? new TunnelRequestOptions() : options;
-    options.additionalHeaders = options.additionalHeaders == null
-        ? new HashMap<>() : options.additionalHeaders;
-    options.additionalHeaders.put("If-Not-Match", "*");
+    // Never mutate the caller's options (or its additionalHeaders map): create needs to add
+    // its own headers, including one that must not be spoofable by the caller.
+    var requestOptions = copyRequestOptionsForCreate(options);
 
-    var uri = buildUri(tunnel, options, true);
-    final Type responseType = new TypeToken<Tunnel>() {
-    }.getType();
-    for (int i = 0; i <= CreateNameRetries; i++){
-      try {
-        return requestAsync(
-          tunnel,
-          options,
-          HttpMethod.PUT,
-          uri,
-          ManageAccessTokenScope,
-          convertTunnelForRequest(tunnel),
-          responseType);
-      }
-      catch (Exception e) {
-        if (generatedId) {
-          tunnel.tunnelId = IdGeneration.generateTunnelId();;
+    // If the caller didn't specify a cluster, auto-select one via the recommendations API.
+    // Failures fall back to global routing.
+    CompletableFuture<TunnelClusterSource> clusterSourceFuture =
+        StringUtils.isBlank(tunnel.clusterId)
+            ? selectClusterAsync(tunnel, requestOptions.requiredGeo)
+            : CompletableFuture.completedFuture(TunnelClusterSource.EXPLICIT);
+
+    return clusterSourceFuture.thenCompose(clusterSource -> {
+      // Report the client-side selection path to the service. Recommendation fallbacks are
+      // otherwise invisible in service telemetry: a create that fell back looks identical to
+      // one that was never recommended at all.
+      requestOptions.additionalHeaders.put(
+          clusterSourceHeaderName, clusterSource.toHeaderValue());
+
+      var uri = buildUri(tunnel, requestOptions, true);
+      final Type responseType = new TypeToken<Tunnel>() {
+      }.getType();
+      for (int i = 0; i <= CreateNameRetries; i++){
+        try {
+          return requestAsync(
+            tunnel,
+            requestOptions,
+            HttpMethod.PUT,
+            uri,
+            ManageAccessTokenScope,
+            convertTunnelForRequest(tunnel),
+            responseType);
         }
-        else{
-          throw e;
+        catch (Exception e) {
+          if (generatedId) {
+            tunnel.tunnelId = IdGeneration.generateTunnelId();;
+          }
+          else{
+            throw e;
+          }
         }
       }
+
+      return requestAsync(
+            tunnel,
+            requestOptions,
+            HttpMethod.PUT,
+            uri,
+            ManageAccessTokenScope,
+            convertTunnelForRequest(tunnel),
+            responseType);
+    });
+  }
+
+  /**
+   * Makes a copy of the given request options suitable for a create request, without
+   * mutating the caller's instance.
+   *
+   * <p>The copy gets the "If-Not-Match" header that tunnel creation has always sent
+   * (preserving the existing header name as-is; it does not match the standard
+   * "If-None-Match" precondition header, but fixing that is a separate, unrelated behavior
+   * change). Any caller-supplied {@code X-Tunnel-Cluster-Source} header is removed
+   * case-insensitively so it cannot be spoofed — the client always sets that header itself,
+   * to report how the cluster was actually selected.</p>
+   */
+  private TunnelRequestOptions copyRequestOptionsForCreate(TunnelRequestOptions options) {
+    var copy = copyRequestOptions(options);
+    copy.additionalHeaders.put("If-Not-Match", "*");
+    return copy;
+  }
+
+  /**
+   * Makes a shallow copy of the given request options (or a fresh default instance if null),
+   * with a new, mutable {@code additionalHeaders} map that excludes any caller-supplied
+   * {@code X-Tunnel-Cluster-Source} header (case-insensitively), so a copy is always safe to
+   * mutate without affecting the caller or letting the caller spoof that header.
+   */
+  private TunnelRequestOptions copyRequestOptions(TunnelRequestOptions options) {
+    var copy = new TunnelRequestOptions();
+    if (options != null) {
+      copy.accessToken = options.accessToken;
+      copy.additionalQueryParameters = options.additionalQueryParameters == null
+          ? null : new HashMap<>(options.additionalQueryParameters);
+      copy.followRedirects = options.followRedirects;
+      copy.includePorts = options.includePorts;
+      copy.includeAccessControl = options.includeAccessControl;
+      copy.labels = options.labels;
+      copy.requireAllLabels = options.requireAllLabels;
+      copy.tokenScopes = options.tokenScopes;
+      copy.forceRename = options.forceRename;
+      copy.limit = options.limit;
+      copy.requiredGeo = options.requiredGeo;
     }
 
-    return requestAsync(
-          tunnel,
-          options,
-          HttpMethod.PUT,
-          uri,
-          ManageAccessTokenScope,
-          convertTunnelForRequest(tunnel),
-          responseType);
+    copy.additionalHeaders = new HashMap<>();
+    if (options != null && options.additionalHeaders != null) {
+      options.additionalHeaders.forEach((key, value) -> {
+        if (!clusterSourceHeaderName.equalsIgnoreCase(key)) {
+          copy.additionalHeaders.put(key, value);
+        }
+      });
+    }
+    return copy;
+  }
+
+  /**
+   * Attempts to auto-select a cluster for a new tunnel via the recommendations API, setting
+   * {@code tunnel.clusterId} when a usable recommendation comes back.
+   *
+   * <p>Failures fall back to global (Traffic Manager) routing, which still succeeds but
+   * picks the nearest cluster by latency rather than the recommended one — a silent fallback
+   * that would otherwise look identical to normal operation. This never fails: the outcome is
+   * instead reported via the returned {@link TunnelClusterSource}, which becomes the create
+   * request's {@code X-Tunnel-Cluster-Source} header.</p>
+   */
+  private CompletableFuture<TunnelClusterSource> selectClusterAsync(
+      Tunnel tunnel, String requiredGeo) {
+    return getClusterRecommendationsInternalAsync(null /* preferredClusterId */, requiredGeo)
+        .handle((result, throwable) -> {
+          if (throwable != null) {
+            Throwable cause = unwrapAsyncException(throwable);
+            TunnelClusterSource source = cause instanceof HttpResponseException
+                && isUnauthorizedOrForbidden((HttpResponseException) cause)
+                ? TunnelClusterSource.FALLBACK_AUTH_FAILED
+                : TunnelClusterSource.FALLBACK_ERROR;
+            return source;
+          }
+
+          if (result.response != null
+              && StringUtils.isNotBlank(result.response.recommendedClusterId)) {
+            tunnel.clusterId = result.response.recommendedClusterId;
+            return result.authRejected
+                ? TunnelClusterSource.RECOMMENDED_AFTER_AUTH_REJECTED
+                : TunnelClusterSource.RECOMMENDED;
+          }
+
+          return TunnelClusterSource.FALLBACK_EMPTY;
+        });
   }
 
   private Tunnel convertTunnelForRequest(Tunnel tunnel) {
@@ -957,6 +1094,152 @@ public class TunnelManagementClient implements ITunnelManagementClient {
           responseType);
     } catch (URISyntaxException e) {
       throw new Error("Error parsing URI: " + this.baseAddress + TunnelManagementClient.userLimitsApiPath);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public CompletableFuture<ClusterRecommendationResponse> getClusterRecommendationsAsync(
+      String preferredClusterId,
+      String requiredGeo) {
+    return getClusterRecommendationsInternalAsync(preferredClusterId, requiredGeo)
+        .thenApply(result -> result.response);
+  }
+
+  /**
+   * Requests cluster recommendations, reporting whether the caller's token was rejected.
+   *
+   * <p>The token from the user token callback is resolved once and sent explicitly on the
+   * request (rather than through {@link #getAuthHeaderValue}/{@link #createHttpRequest}, so
+   * that it can be retried with a different, explicit auth override). This is so the service
+   * can identify the caller and apply their service tier. If the token is rejected with a 401
+   * or 403 the request is retried once without it, because the service rejects a bad token
+   * before the controller runs and does not fall back to treating the caller as anonymous.
+   * Without the retry, one expired token would silently disable recommendation-based routing
+   * for that caller. A response with no token to offer is an ordinary anonymous request, not
+   * a rejected one, so it is not retried. Failures other than a 401/403 on the authenticated
+   * attempt (500s, network errors, parse failures) are also not retried.</p>
+   *
+   * <p>Uses {@code handle} plus {@code thenCompose} rather than {@code exceptionallyCompose}
+   * (Java 12+) to stay on the Java 11 API surface this project targets.</p>
+   */
+  private CompletableFuture<ClusterRecommendationResult> getClusterRecommendationsInternalAsync(
+      String preferredClusterId,
+      String requiredGeo) {
+    var uri = buildClusterRecommendationsUri(preferredClusterId, requiredGeo);
+    final Type responseType = new TypeToken<ClusterRecommendationResponse>() {
+    }.getType();
+
+    CompletableFuture<String> userTokenFuture;
+    try {
+      userTokenFuture = this.userTokenCallback.get();
+    } catch (RuntimeException exception) {
+      userTokenFuture = new CompletableFuture<>();
+      userTokenFuture.completeExceptionally(exception);
+    }
+
+    return userTokenFuture.thenCompose(userAuthHeader -> {
+      if (StringUtils.isBlank(userAuthHeader)) {
+        // No token to offer, so this is an ordinary anonymous request rather than a
+        // rejected one.
+        var request = buildHttpRequest(null, HttpMethod.GET, uri, null, null);
+        CompletableFuture<ClusterRecommendationResponse> response =
+            sendAndParseAsync(request, HttpMethod.GET, uri, responseType);
+        return response.thenApply(r -> new ClusterRecommendationResult(r, false));
+      }
+
+      var authedRequest = buildHttpRequest(null, HttpMethod.GET, uri, null, userAuthHeader);
+      CompletableFuture<ClusterRecommendationResponse> authedResponse =
+          sendAndParseAsync(authedRequest, HttpMethod.GET, uri, responseType);
+
+      CompletableFuture<CompletableFuture<ClusterRecommendationResult>> handled =
+          authedResponse.handle((response, throwable) -> {
+            if (throwable == null) {
+              return CompletableFuture.completedFuture(
+                  new ClusterRecommendationResult(response, false));
+            }
+
+            Throwable cause = unwrapAsyncException(throwable);
+            if (cause instanceof HttpResponseException
+                && isUnauthorizedOrForbidden((HttpResponseException) cause)) {
+              // The service rejects a bad token before the controller runs rather than
+              // falling back to treating the caller as anonymous, so retry without it.
+              var anonymousRequest = buildHttpRequest(null, HttpMethod.GET, uri, null, null);
+              CompletableFuture<ClusterRecommendationResponse> anonymousResponse =
+                  sendAndParseAsync(anonymousRequest, HttpMethod.GET, uri, responseType);
+              return anonymousResponse.thenApply(r -> new ClusterRecommendationResult(r, true));
+            }
+
+            // 500s, network errors, and parse failures are not retried: only an actual
+            // auth rejection justifies falling back to an anonymous attempt.
+            CompletableFuture<ClusterRecommendationResult> failed = new CompletableFuture<>();
+            failed.completeExceptionally(cause);
+            return failed;
+          });
+      return handled.thenCompose(future -> future);
+    });
+  }
+
+  private URI buildClusterRecommendationsUri(String preferredClusterId, String requiredGeo) {
+    var queryParts = new ArrayList<String>();
+    if (StringUtils.isNotBlank(preferredClusterId)) {
+      queryParts.add("preferredClusterId=" + urlEncode(preferredClusterId));
+    }
+    if (StringUtils.isNotBlank(requiredGeo)) {
+      queryParts.add("requiredGeo=" + urlEncode(requiredGeo));
+    }
+    var query = queryParts.isEmpty() ? null : String.join("&", queryParts);
+    return buildUri(
+        null /* clusterId */, clustersApiPath + recommendationsApiSubPath, null /* options */,
+        query);
+  }
+
+  private static String urlEncode(String value) {
+    try {
+      return URLEncoder.encode(value, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      throw new Error("Error encoding value: " + value);
+    }
+  }
+
+  /**
+   * Reports whether the given exception is an {@link HttpResponseException} carrying a 401
+   * or 403 status code from the service.
+   */
+  private static boolean isUnauthorizedOrForbidden(HttpResponseException exception) {
+    return exception.statusCode == 401 || exception.statusCode == 403;
+  }
+
+  /**
+   * Unwraps {@link CompletionException} and {@link ExecutionException} wrappers that
+   * {@link CompletableFuture} chains add around the exception that actually caused a stage
+   * to fail, so callers can inspect the real cause (for example an
+   * {@link HttpResponseException} status code) regardless of how many async stages it
+   * propagated through.
+   */
+  private static Throwable unwrapAsyncException(Throwable throwable) {
+    Throwable current = throwable;
+    while ((current instanceof CompletionException || current instanceof ExecutionException)
+        && current.getCause() != null) {
+      current = current.getCause();
+    }
+    return current;
+  }
+
+  /**
+   * Result of an internal cluster-recommendations request, additionally reporting whether
+   * the caller's token was rejected and a retry without it was needed.
+   */
+  private static final class ClusterRecommendationResult {
+    private final ClusterRecommendationResponse response;
+    private final boolean authRejected;
+
+    private ClusterRecommendationResult(
+        ClusterRecommendationResponse response, boolean authRejected) {
+      this.response = response;
+      this.authRejected = authRejected;
     }
   }
 }

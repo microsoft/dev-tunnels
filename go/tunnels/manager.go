@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -59,6 +60,7 @@ const (
 	endpointsApiSubPath        = "/endpoints"
 	portsApiSubPath            = "/ports"
 	tunnelAuthenticationScheme = "Tunnel"
+	clusterSourceHeaderName    = "X-Tunnel-Cluster-Source"
 	goUserAgent                = "Dev-Tunnels-Service-Go-SDK/" + PackageVersion
 	createNameRetries          = 3
 )
@@ -100,6 +102,64 @@ type Manager struct {
 	userAgents        []UserAgent
 	apiVersion        string
 	isCustomDomain    bool
+
+	// OnClusterSelected is an optional callback invoked when a create request selected a
+	// cluster via the recommendations API, reporting which path was taken.
+	//
+	// Set it to surface recommendation failures. When the recommendations call fails the
+	// create still succeeds via global routing, so without this a caller has no way to tell
+	// that recommendation-based placement stopped working. Invoked only when the caller did
+	// not specify a cluster.
+	OnClusterSelected func(ClusterSelection)
+}
+
+func withPreconditionHeader(
+	options *TunnelRequestOptions,
+	name string,
+	value string,
+	preserveExisting bool,
+) *TunnelRequestOptions {
+	if options == nil {
+		options = &TunnelRequestOptions{}
+	}
+
+	result := *options
+	result.AdditionalHeaders = make(map[string]string, len(options.AdditionalHeaders)+1)
+	headers := sortedHeaderNames(options.AdditionalHeaders)
+	existingValue := ""
+	existingValueFound := false
+	for _, header := range headers {
+		headerValue := options.AdditionalHeaders[header]
+		if strings.EqualFold(header, name) && preserveExisting {
+			existingValue = headerValue
+			existingValueFound = true
+		} else if !strings.EqualFold(header, "If-Match") &&
+			!strings.EqualFold(header, "If-None-Match") &&
+			!strings.EqualFold(header, "If-Not-Match") {
+			result.AdditionalHeaders[header] = headerValue
+		}
+	}
+	if existingValueFound {
+		result.AdditionalHeaders[name] = existingValue
+	} else {
+		result.AdditionalHeaders[name] = value
+	}
+	return &result
+}
+
+func sortedHeaderNames(headers map[string]string) []string {
+	names := make([]string, 0, len(headers))
+	for name := range headers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func setHeaders(destination http.Header, headers map[string]string) {
+	for _, name := range sortedHeaderNames(headers) {
+		destination.Set(name, headers[name])
+	}
 }
 
 // Creates a new Manager used for interacting with the Tunnels APIs.
@@ -223,22 +283,49 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		idGenerated = true
 	}
 
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Not-Match"] = "*"
+	options = withPreconditionHeader(options, "If-None-Match", "*", false)
 
 	// If the caller didn't specify a cluster, auto-select one via the
 	// recommendations API. Failures fall back to global routing.
+	clusterSource := ClusterSourceExplicit
 	if tunnel.ClusterID == "" {
-		recommendations, recErr := m.GetClusterRecommendations(ctx, "", options.RequiredGeo)
-		if recErr == nil && recommendations != nil && recommendations.RecommendedClusterID != "" {
+		recommendations, authRejected, recErr := m.getClusterRecommendations(ctx, "", options.RequiredGeo)
+		switch {
+		case recErr != nil:
+			// Global routing still succeeds, so without reporting this the caller has no
+			// indication that recommendation-based placement stopped working.
+			if isUnauthorized(recErr) {
+				clusterSource = ClusterSourceFallbackAuthFailed
+			} else {
+				clusterSource = ClusterSourceFallbackError
+			}
+		case recommendations != nil && recommendations.RecommendedClusterID != "":
 			tunnel.ClusterID = recommendations.RecommendedClusterID
+			if authRejected {
+				clusterSource = ClusterSourceRecommendedAfterAuthRejected
+			} else {
+				clusterSource = ClusterSourceRecommended
+			}
+		default:
+			clusterSource = ClusterSourceFallbackEmpty
+		}
+
+		if m.OnClusterSelected != nil {
+			m.OnClusterSelected(ClusterSelection{
+				Source:    clusterSource,
+				ClusterID: tunnel.ClusterID,
+				Err:       recErr,
+			})
 		}
 	}
+
+	// Report the client-side selection path to the service. Recommendation fallbacks are
+	// otherwise invisible in service telemetry: a create that fell back looks identical to
+	// one that was never recommended at all.
+	//
+	// This is passed explicitly so SDK-generated telemetry takes precedence over a
+	// caller-provided header with the same name.
+	clusterSourceHeader := map[string]string{clusterSourceHeaderName: string(clusterSource)}
 
 	convertedTunnel, err := tunnel.requestObject()
 	convertedTunnel.TunnelID = tunnel.TunnelID
@@ -252,7 +339,7 @@ func (m *Manager) CreateTunnel(ctx context.Context, tunnel *Tunnel, options *Tun
 		if err != nil {
 			return nil, fmt.Errorf("error creating request url: %w", err)
 		}
-		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false)
+		response, err = m.sendTunnelRequest(ctx, tunnel, options, http.MethodPut, url, convertedTunnel, nil, manageAccessTokenScope, false, clusterSourceHeader)
 		if err == nil {
 			break
 		}
@@ -306,13 +393,7 @@ func (m *Manager) UpdateTunnel(ctx context.Context, tunnel *Tunnel, updateFields
 		}
 	}
 
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Match"] = "*"
+	options = withPreconditionHeader(options, "If-Match", "*", true)
 
 	url, err := m.buildTunnelSpecificUri(tunnel, "", options, "", false)
 	if err != nil {
@@ -517,13 +598,7 @@ func (m *Manager) GetTunnelPort(
 func (m *Manager) CreateTunnelPort(
 	ctx context.Context, tunnel *Tunnel, port *TunnelPort, options *TunnelRequestOptions,
 ) (tp *TunnelPort, err error) {
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Not-Match"] = "*"
+	options = withPreconditionHeader(options, "If-None-Match", "*", false)
 
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
@@ -569,13 +644,7 @@ func (m *Manager) UpdateTunnelPort(
 		return nil, fmt.Errorf("cluster ids do not match")
 	}
 
-	if options == nil {
-		options = &TunnelRequestOptions{}
-	}
-	if options.AdditionalHeaders == nil {
-		options.AdditionalHeaders = map[string]string{}
-	}
-	options.AdditionalHeaders["If-Match"] = "*"
+	options = withPreconditionHeader(options, "If-Match", "*", true)
 
 	path := fmt.Sprintf("%s/%d", portsApiSubPath, port.PortNumber)
 	url, err := m.buildTunnelSpecificUri(tunnel, path, options, "", false)
@@ -720,6 +789,21 @@ func (m *Manager) ListClusters(ctx context.Context) (clusters []*ClusterDetails,
 func (m *Manager) GetClusterRecommendations(
 	ctx context.Context, preferredClusterId string, requiredGeo string,
 ) (recommendations *ClusterRecommendationResponse, err error) {
+	recommendations, _, err = m.getClusterRecommendations(ctx, preferredClusterId, requiredGeo)
+	return recommendations, err
+}
+
+// getClusterRecommendations requests cluster recommendations, reporting whether the
+// caller's token was rejected.
+//
+// The token is sent so the service can identify the caller and apply its service tier.
+// If the token is rejected the request is retried without it, because the service rejects
+// a bad token before the controller runs and does not fall back to treating the caller as
+// anonymous. Without the retry, one expired token would silently disable
+// recommendation-based routing for that caller.
+func (m *Manager) getClusterRecommendations(
+	ctx context.Context, preferredClusterId string, requiredGeo string,
+) (recommendations *ClusterRecommendationResponse, authRejected bool, err error) {
 	queryValues := url.Values{}
 	if preferredClusterId != "" {
 		queryValues.Set("preferredClusterId", preferredClusterId)
@@ -730,18 +814,34 @@ func (m *Manager) GetClusterRecommendations(
 
 	path := clustersApiPath + recommendationsApiSubPath
 	url := m.buildUri("", path, nil, queryValues.Encode())
-	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
+
+	token := m.tokenProvider()
+	response, err := m.sendRequest(ctx, http.MethodGet, url, nil, nil, token, false)
+	if err != nil && token != "" && isUnauthorized(err) {
+		response, err = m.sendRequest(ctx, http.MethodGet, url, nil, nil, "", false)
+		authRejected = err == nil
+	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting cluster recommendations: %w", err)
+		return nil, authRejected, fmt.Errorf("error getting cluster recommendations: %w", err)
 	}
 
 	err = json.Unmarshal(response, &recommendations)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing response json to ClusterRecommendationResponse: %w", err)
+		return nil, authRejected, fmt.Errorf("error parsing response json to ClusterRecommendationResponse: %w", err)
 	}
 
-	return recommendations, nil
+	return recommendations, authRejected, nil
+}
+
+// isUnauthorized reports whether the error is a 401 or 403 from the service.
+func isUnauthorized(err error) bool {
+	var requestErr *requestError
+	if !errors.As(err, &requestErr) {
+		return false
+	}
+	return requestErr.statusCode == http.StatusUnauthorized ||
+		requestErr.statusCode == http.StatusForbidden
 }
 
 // Checks if tunnel name is available
@@ -775,11 +875,20 @@ func (m *Manager) sendTunnelRequest(
 	partialFields []string,
 	accessTokenScopes []TunnelAccessScope,
 	allowNotFound bool,
+	extraHeaders ...map[string]string,
 ) ([]byte, error) {
 	authHeaderValue := m.getAccessToken(tunnel, tunnelRequestOptions, accessTokenScopes)
-	return m.sendRequest(ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound)
+	requestHeaders := make([]map[string]string, 0, len(extraHeaders)+1)
+	if tunnelRequestOptions != nil {
+		requestHeaders = append(requestHeaders, tunnelRequestOptions.AdditionalHeaders)
+	}
+	requestHeaders = append(requestHeaders, extraHeaders...)
+	return m.sendRequest(
+		ctx, method, uri, requestObject, partialFields, authHeaderValue, allowNotFound, requestHeaders...)
 }
 
+// sendRequest sends a request to the service. requestHeaders are applied in order
+// on top of manager-wide headers.
 func (m *Manager) sendRequest(
 	ctx context.Context,
 	method string,
@@ -788,18 +897,26 @@ func (m *Manager) sendRequest(
 	partialFields []string,
 	authHeaderValue string,
 	allowNotFound bool,
+	requestHeaders ...map[string]string,
 ) ([]byte, error) {
 	request, err := m.createRequest(ctx, method, uri, requestObject, partialFields)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	// Add authorization header
-	if authHeaderValue != "" {
-		request.Header.Add("Authorization", authHeaderValue)
+	// Add manager-level and per-request headers before SDK-owned headers so callers
+	// cannot replace authentication or SDK identity values.
+	setHeaders(request.Header, m.additionalHeaders)
+	for _, headers := range requestHeaders {
+		setHeaders(request.Header, headers)
 	}
 
-	// Add user agent header
+	if authHeaderValue != "" {
+		request.Header.Set("Authorization", authHeaderValue)
+	} else {
+		request.Header.Del("Authorization")
+	}
+
 	userAgentString := ""
 	for _, userAgent := range m.userAgents {
 		if len(userAgent.Version) == 0 {
@@ -811,13 +928,8 @@ func (m *Manager) sendRequest(
 		userAgentString = fmt.Sprintf("%s%s/%s ", userAgentString, userAgent.Name, userAgent.Version)
 	}
 	userAgentString = strings.TrimSpace(userAgentString)
-	request.Header.Add("User-Agent", fmt.Sprintf("%s %s", goUserAgent, userAgentString))
-	request.Header.Add("Content-Type", "application/json;charset=UTF-8")
-
-	// Add additional headers
-	for header, headerValue := range m.additionalHeaders {
-		request.Header.Add(header, headerValue)
-	}
+	request.Header.Set("User-Agent", fmt.Sprintf("%s %s", goUserAgent, userAgentString))
+	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
 
 	result, err := m.httpClient.Do(request)
 	if err != nil {

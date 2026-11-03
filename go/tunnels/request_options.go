@@ -13,7 +13,8 @@ type TunnelRequestOptions struct {
 	// Token used for authentication for service.
 	AccessToken string
 
-	// Additional headers to be included in the request.
+	// Additional headers to be included in the request. SDK-owned Authorization,
+	// User-Agent, and Content-Type headers cannot be overridden.
 	AdditionalHeaders map[string]string
 
 	// Additional qurey parameters to be included in the request.
