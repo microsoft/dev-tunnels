@@ -139,6 +139,10 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         return this.hostId;
     }
 
+    protected override get hostProcessId(): string | undefined {
+        return this.hostId;
+    }
+
     /**
      * A value indicating whether the port-forwarding service forwards connections to local TCP sockets.
      * Forwarded connections are not possible if the host is not NodeJS (e.g. browser).

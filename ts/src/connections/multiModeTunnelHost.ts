@@ -12,6 +12,18 @@ import { TunnelConnectionOptions } from './tunnelConnectionOptions';
  * Aggregation of multiple tunnel hosts.
  */
 export class MultiModeTunnelHost extends TunnelConnectionBase implements TunnelHost {
+    /**
+     * Gets or sets a host ID. An initial value is automatically generated for the process.
+     *
+     * The host ID uniquely identifies one host process that is accepting connections on a
+     * tunnel. If the host supports multiple connection modes, the host's ID is the same for
+     * all the endpoints it supports.
+     *
+     * Each host captures this value when it is constructed and uses the captured value for
+     * the rest of its lifetime, both for the endpoints it publishes and for the host ID it
+     * sends to the relay. Set it before constructing any hosts; changing it afterwards does
+     * not affect hosts that already exist.
+     */
     public static hostId: string = uuidv4();
     public hosts: TunnelHost[];
 

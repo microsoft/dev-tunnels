@@ -106,6 +106,21 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     }
 
     /**
+     * Gets the host process ID that this connection advertises to the relay via the
+     * `X-Tunnels-Host-Process-Id` header, or `undefined` to not advertise one.
+     *
+     * Host connections override this to return the ID they captured when they were
+     * constructed, which is the same value they publish as `TunnelEndpoint.hostId`.
+     * Reading `MultiModeTunnelHost.hostId` at connect time instead would let the two
+     * diverge if an application changed that setting after constructing a host, so the
+     * relay could see a host advertise one ID and connect with another. Client
+     * connections return `undefined`; they do not send the header.
+     */
+    protected get hostProcessId(): string | undefined {
+        return undefined;
+    }
+
+    /**
      * A value indicating if this is a client tunnel connection (as opposed to host connection).
      */
     protected get isClientConnection(): boolean {
@@ -330,7 +345,8 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
             this.relayUri,
             this.connectionProtocols,
             this.accessToken,
-            clientConfig
+            clientConfig,
+            this.hostProcessId
         );
 
         this.trace(

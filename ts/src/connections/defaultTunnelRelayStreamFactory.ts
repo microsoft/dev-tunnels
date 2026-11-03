@@ -4,16 +4,15 @@
 import { Stream } from '@microsoft/dev-tunnels-ssh';
 import { TunnelRelayStreamFactory } from './tunnelRelayStreamFactory';
 import { isNode, SshHelpers } from './sshHelpers';
-import { MultiModeTunnelHost } from './multiModeTunnelHost';
 import { IClientConfig } from 'websocket';
 
 /**
  * Request header that a host sends to the relay to identify its own process.
  *
- * The value is `MultiModeTunnelHost.hostId`, which stays the same for the lifetime of the
- * process. It lets the relay recognize a host that is reconnecting to a tunnel it already
- * holds, rather than treating it as a different host taking the tunnel over. Clients do not
- * send this header.
+ * The value is the host's ID, captured from `MultiModeTunnelHost.hostId` when the host was
+ * constructed, and is the same value the host publishes as `TunnelEndpoint.hostId`. It lets
+ * the relay recognize a host that is reconnecting to a tunnel it already holds, rather than
+ * treating it as a different host taking the tunnel over. Clients do not send this header.
  */
 const hostIdHeaderName = 'X-Tunnels-Host-Process-Id';
 
@@ -30,6 +29,7 @@ export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory
         protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
+        hostId?: string,
     ): Promise<{ stream: Stream, protocol: string }> {
         if (isNode()) {
             const isHostConnection = protocols.some((p) => hostSubProtocols.includes(p));
@@ -39,8 +39,8 @@ export class DefaultTunnelRelayStreamFactory implements TunnelRelayStreamFactory
                 {
                     ...(accessToken && { Authorization: `tunnel ${accessToken}` }),
                     ...(isHostConnection &&
-                        MultiModeTunnelHost.hostId && {
-                            [hostIdHeaderName]: MultiModeTunnelHost.hostId,
+                        hostId && {
+                            [hostIdHeaderName]: hostId,
                         }),
                 },
                 clientConfig,

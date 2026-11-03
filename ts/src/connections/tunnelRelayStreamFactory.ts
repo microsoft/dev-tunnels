@@ -14,11 +14,15 @@ export interface TunnelRelayStreamFactory {
      * @param protocols Array of supported connection protocols (websocket sub-protocols).
      * @param accessToken Tunnel host access token, or null if anonymous.
      * @param clientConfig Client config for websocket.
+     * @param hostId ID of the connecting host process, sent to the relay as the
+     * `X-Tunnels-Host-Process-Id` header, or undefined for client connections and for hosts
+     * that have no ID to advertise.
      */
     createRelayStream(
         relayUri: string,
         protocols: string[],
         accessToken?: string,
         clientConfig?: IClientConfig,
+        hostId?: string,
     ): Promise<{ stream: Stream, protocol: string }>;
 }
