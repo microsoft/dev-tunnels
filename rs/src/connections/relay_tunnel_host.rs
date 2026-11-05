@@ -49,6 +49,12 @@ type PortMap = HashMap<u32, mpsc::UnboundedSender<ForwardedPortConnection>>;
 // large responses continue making progress.
 const CHANNEL_WRITE_CHUNK_SIZE: usize = 32 * 1024;
 
+// Identifies the host process to the relay, so it can tell a host reconnecting
+// from a genuinely different host competing for the same tunnel. The value is
+// the same `host_id` reported on the TunnelEndpoint and stays constant for the
+// lifetime of a RelayTunnelHost. Only host connections send it; clients do not.
+const HOST_ID_HEADER_NAME: &str = "X-Tunnels-Host-Process-Id";
+
 /// The RelayTunnelHost can host connections via the tunneling service. After
 /// creating it, you will generally want to run `connect()` to create a new
 /// a new connection.
@@ -452,6 +458,7 @@ impl RelayTunnelHost {
                         .map(|value| (name.as_str().to_string(), value.to_string()))
                 }),
         );
+        headers.push((HOST_ID_HEADER_NAME.to_string(), self.host_id.to_string()));
         let header_refs: Vec<(&str, &str)> = headers
             .iter()
             .map(|(name, value)| (name.as_str(), value.as_str()))

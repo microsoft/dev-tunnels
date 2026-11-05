@@ -16,6 +16,12 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
     private readonly stream: Stream;
     public lastAdditionalHeaders?: { [header: string]: string };
 
+    /**
+     * Host ID that was passed to the most recent `createRelayStream` call, i.e. the value
+     * that would have been sent as the host ID request header.
+     */
+    public hostId?: string;
+
     constructor(
         connectionType: string,
         stream: Stream,
@@ -34,10 +40,12 @@ export class MockTunnelRelayStreamFactory implements TunnelRelayStreamFactory {
         accessToken?: string,
         clientConfig?: IClientConfig,
         additionalHeaders?: { [header: string]: string },
+        hostId?: string,
     ) => {
         if (!relayUri || !accessToken || !protocols.includes(this.connectionType)) {
             throw new Error('Invalid params');
         }
+        this.hostId = hostId;
         this.lastAdditionalHeaders = additionalHeaders;
         return Promise.resolve({ stream: this.stream, protocol: this.connectionType });
     };

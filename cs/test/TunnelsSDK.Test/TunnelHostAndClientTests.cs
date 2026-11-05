@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Claims;
+using System.Text;
 using Microsoft.DevTunnels.Connections;
 using Microsoft.DevTunnels.Contracts;
 using Microsoft.DevTunnels.Ssh;
@@ -712,6 +713,181 @@ public class TunnelHostAndClientTests : IClassFixture<LocalPortsFixture>
         using var clientSshSession = CreateSshClientSession();
         var pfs = clientSshSession.ActivateService<PortForwardingService>();
         await clientSshSession.ConnectAsync(clientRelayStream, TestContext.Current.CancellationToken);
+    }
+
+    [Theory]
+    [InlineData(TunnelRelayConnection.HostWebSocketSubProtocol)]
+    [InlineData(TunnelRelayConnection.HostWebSocketSubProtocolV2)]
+    public async Task ConnectRelayHostSendsHostIdCapturedAtConstruction(string protocol)
+    {
+        var originalHostId = MultiModeTunnelHost.HostId;
+        var managementClient = new MockTunnelManagementClient();
+        managementClient.HostRelayUri = MockHostRelayUri;
+        var relayHost = new TunnelRelayTunnelHost(managementClient, TestTS);
+        var defaultFactory = relayHost.StreamFactory;
+        TestMultiChannelStream multiChannelStream = null;
+        try
+        {
+            // The endpoint and connection must keep the ID captured before this change.
+            MultiModeTunnelHost.HostId = Guid.NewGuid().ToString();
+
+            var tunnel = CreateRelayTunnel();
+            multiChannelStream = await ConnectRelayHostAsync(
+                relayHost, tunnel, cancellation: TestContext.Current.CancellationToken);
+
+            var headers = await CaptureRelayRequestHeadersAsync(defaultFactory, protocol);
+            var sentHostId = headers[TunnelRelayConnection.HostIdHeaderName];
+            Assert.Equal(originalHostId, sentHostId);
+            Assert.NotEqual(MultiModeTunnelHost.HostId, sentHostId);
+            Assert.Equal("tunnel mock-host-token", headers["Authorization"]);
+            Assert.Equal(protocol, headers["Sec-WebSocket-Protocol"]);
+
+            var hostEndpoint = Assert.Single(tunnel.Endpoints, e => e.HostId != null);
+            Assert.Equal(hostEndpoint.HostId, sentHostId);
+
+            MultiModeTunnelHost.HostId = Guid.NewGuid().ToString();
+            var reconnectHeaders = await CaptureRelayRequestHeadersAsync(defaultFactory, protocol);
+            Assert.Equal(sentHostId, reconnectHeaders[TunnelRelayConnection.HostIdHeaderName]);
+        }
+        finally
+        {
+            try
+            {
+                await relayHost.DisposeAsync();
+            }
+            finally
+            {
+                MultiModeTunnelHost.HostId = originalHostId;
+                multiChannelStream?.Dispose();
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(TunnelRelayConnection.ClientWebSocketSubProtocol)]
+    [InlineData(TunnelRelayConnection.ClientWebSocketSubProtocolV2)]
+    [InlineData(TunnelRelayConnection.HostWebSocketSubProtocol)]
+    [InlineData(TunnelRelayConnection.HostWebSocketSubProtocolV2)]
+    public async Task RelayFactoryOmitsHostIdWithoutHostIdentity(string protocol)
+    {
+        var headers = await CaptureRelayRequestHeadersAsync(new TunnelRelayStreamFactory(), protocol);
+        Assert.False(headers.ContainsKey(TunnelRelayConnection.HostIdHeaderName));
+        Assert.Equal("tunnel mock-host-token", headers["Authorization"]);
+        Assert.Equal(protocol, headers["Sec-WebSocket-Protocol"]);
+    }
+
+    [Theory]
+    [InlineData(TunnelRelayConnection.ClientWebSocketSubProtocol)]
+    [InlineData(TunnelRelayConnection.ClientWebSocketSubProtocolV2)]
+    public async Task HostRelayFactoryOmitsHostIdForClientProtocols(string protocol)
+    {
+        await using var host = new TunnelRelayTunnelHost(new MockTunnelManagementClient(), TestTS);
+        var headers = await CaptureRelayRequestHeadersAsync(host.StreamFactory, protocol);
+        Assert.False(headers.ContainsKey(TunnelRelayConnection.HostIdHeaderName));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RelayConnectionUsesLegacyFactoryOverride(bool isHost)
+    {
+        var protocol = isHost
+            ? TunnelRelayConnection.HostWebSocketSubProtocol
+            : TunnelRelayConnection.ClientWebSocketSubProtocol;
+        var factory = new LegacyRelayStreamFactory(
+            new MockTunnelRelayStreamFactory(protocol, this.clientStream));
+        var tunnel = CreateRelayTunnel();
+        if (isHost)
+        {
+            using var server = new TestMultiChannelStream(this.serverStream);
+            var serverConnect = server.ConnectAsync(TestContext.Current.CancellationToken);
+            var managementClient = new MockTunnelManagementClient { HostRelayUri = MockHostRelayUri };
+            await using var host = new TunnelRelayTunnelHost(managementClient, TestTS)
+            {
+                StreamFactory = factory,
+            };
+            await host.ConnectAsync(tunnel, cancellation: TestContext.Current.CancellationToken)
+                .WithTimeout(Timeout);
+            await serverConnect.WithTimeout(Timeout);
+            Assert.Equal(ConnectionStatus.Connected, host.ConnectionStatus);
+            Assert.Equal(1, factory.Calls);
+        }
+        else
+        {
+            using var server = CreateSshServerSession();
+            var serverConnect = server.ConnectAsync(this.serverStream, TestContext.Current.CancellationToken);
+            await using var client = new TunnelRelayTunnelClient(TestTS)
+            {
+                StreamFactory = factory,
+            };
+            await client.ConnectAsync(tunnel, cancellation: TestContext.Current.CancellationToken)
+                .WithTimeout(Timeout);
+            await serverConnect.WithTimeout(Timeout);
+            Assert.Equal(ConnectionStatus.Connected, client.ConnectionStatus);
+            Assert.Equal(1, factory.Calls);
+        }
+    }
+
+    private async Task<Dictionary<string, string>> CaptureRelayRequestHeadersAsync(
+        ITunnelRelayStreamFactory factory, string protocol)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(
+            TestContext.Current.CancellationToken);
+        timeout.CancelAfter(Timeout);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        async Task<Dictionary<string, string>> ReceiveRequestAsync()
+        {
+            using var client = await listener.AcceptTcpClientAsync(timeout.Token);
+            var stream = client.GetStream();
+            using var reader = new StreamReader(stream, Encoding.ASCII, leaveOpen: true);
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            while (await reader.ReadLineAsync(timeout.Token) is { Length: > 0 } line)
+            {
+                var separator = line.IndexOf(':');
+                if (separator > 0)
+                {
+                    headers.Add(line[..separator], line[(separator + 1)..].Trim());
+                }
+            }
+
+            // Reject after capturing the handshake; no live relay or SSH server is needed.
+            var response = Encoding.ASCII.GetBytes(
+                "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            await stream.WriteAsync(response, timeout.Token);
+            return headers;
+        }
+
+        var request = ReceiveRequestAsync();
+        var connection = Assert.ThrowsAsync<WebSocketException>(() =>
+            factory.CreateRelayStreamAsync(
+                new Uri($"ws://127.0.0.1:{port}/tunnel"), "mock-host-token",
+                new[] { protocol }, TestTS, timeout.Token));
+        await Task.WhenAll(request, connection);
+        return await request;
+    }
+
+    private sealed class LegacyRelayStreamFactory : TunnelRelayStreamFactory
+    {
+        private readonly ITunnelRelayStreamFactory innerFactory;
+
+        public LegacyRelayStreamFactory(ITunnelRelayStreamFactory innerFactory)
+        {
+            this.innerFactory = innerFactory;
+        }
+
+        public int Calls { get; private set; }
+
+        public override Task<(Stream Stream, string SubProtocol)> CreateRelayStreamAsync(
+            Uri relayUri, string accessToken, string[] subprotocols,
+            TraceSource trace, CancellationToken cancellation)
+        {
+            Calls++;
+            return innerFactory.CreateRelayStreamAsync(
+                relayUri, accessToken, subprotocols, trace, cancellation);
+        }
     }
 
     [Fact]
