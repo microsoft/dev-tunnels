@@ -51,6 +51,18 @@ public abstract class TunnelRelayConnection : TunnelConnection, IRelayClient, IP
     #endregion
 
     /// <summary>
+    /// Request header that a host sends to the relay to identify its own process.
+    /// </summary>
+    /// <remarks>
+    /// The value is the host's ID, captured from <see cref="MultiModeTunnelHost.HostId" />
+    /// when the host was constructed, and is the same value the host publishes as
+    /// <see cref="Contracts.TunnelEndpoint.HostId" />. It lets the relay recognize a host that
+    /// is reconnecting to a tunnel it already holds, rather than treating it as a different
+    /// host taking the tunnel over. Clients do not send this header.
+    /// </remarks>
+    public const string HostIdHeaderName = "X-Tunnels-Host-Process-Id";
+
+    /// <summary>
     /// Maximum retry delay, ms.
     /// After the 6th attempt the delay will reach 2^7 * 100ms = 12.8s and stop doubling
     /// </summary>

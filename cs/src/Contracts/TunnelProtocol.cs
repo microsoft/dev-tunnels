@@ -28,11 +28,6 @@ public static class TunnelProtocol
     public const string Udp = "udp";
 
     /// <summary>
-    /// SSH protocol.
-    /// </summary>
-    public const string Ssh = "ssh";
-
-    /// <summary>
     /// Remote desktop protocol.
     /// </summary>
     public const string Rdp = "rdp";

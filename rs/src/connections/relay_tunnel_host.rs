@@ -49,6 +49,12 @@ type PortMap = HashMap<u32, mpsc::UnboundedSender<ForwardedPortConnection>>;
 // large responses continue making progress.
 const CHANNEL_WRITE_CHUNK_SIZE: usize = 32 * 1024;
 
+// Identifies the host process to the relay, so it can tell a host reconnecting
+// from a genuinely different host competing for the same tunnel. The value is
+// the same `host_id` reported on the TunnelEndpoint and stays constant for the
+// lifetime of a RelayTunnelHost. Only host connections send it; clients do not.
+const HOST_ID_HEADER_NAME: &str = "X-Tunnels-Host-Process-Id";
+
 /// The RelayTunnelHost can host connections via the tunneling service. After
 /// creating it, you will generally want to run `connect()` to create a new
 /// a new connection.
@@ -427,14 +433,37 @@ impl RelayTunnelHost {
             .as_deref()
             .ok_or(TunnelError::MissingHostEndpoint)?;
 
-        let req = build_websocket_request(
-            url,
-            &[
-                ("Sec-WebSocket-Protocol", "tunnel-relay-host"),
-                ("Authorization", &format!("tunnel {}", host_token)),
-                ("User-Agent", self.mgmt.user_agent.to_str().unwrap()),
-            ],
-        )?;
+        let mut headers = vec![
+            (
+                "Sec-WebSocket-Protocol".to_string(),
+                "tunnel-relay-host".to_string(),
+            ),
+            (
+                "Authorization".to_string(),
+                format!("tunnel {}", host_token),
+            ),
+            (
+                "User-Agent".to_string(),
+                self.mgmt.user_agent.to_str().unwrap().to_string(),
+            ),
+        ];
+        headers.extend(
+            self.mgmt
+                .request_headers()
+                .into_iter()
+                .filter_map(|(name, value)| {
+                    value
+                        .to_str()
+                        .ok()
+                        .map(|value| (name.as_str().to_string(), value.to_string()))
+                }),
+        );
+        headers.push((HOST_ID_HEADER_NAME.to_string(), self.host_id.to_string()));
+        let header_refs: Vec<(&str, &str)> = headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        let req = build_websocket_request(url, &header_refs)?;
 
         let cnx = if let Some(proxy) = &self.proxy {
             log::debug!("connecting via http_proxy on {}", proxy);
@@ -1166,8 +1195,8 @@ mod tests {
     fn encodes_rsa_public_key_in_canonical_ssh_wire_form() {
         // Generate an RSA keypair with a non-default hash variant — this is
         // what `RelayTunnelHost::new` does (SHA2_512).
-        let keypair = KeyPair::generate_rsa(2048, SignatureHash::SHA2_512)
-            .expect("generate rsa keypair");
+        let keypair =
+            KeyPair::generate_rsa(2048, SignatureHash::SHA2_512).expect("generate rsa keypair");
 
         let advertised = encode_host_public_keys(&keypair);
         assert_eq!(advertised.len(), 1, "expected exactly one host public key");
@@ -1182,4 +1211,3 @@ mod tests {
         assert_eq!(advertised[0], public_key_b64);
     }
 }
-

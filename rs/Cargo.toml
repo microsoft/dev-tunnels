@@ -18,7 +18,7 @@ tokio-util = { version = "0.7", optional = true }
 tokio-tungstenite = { version = "0.29", optional = true, features = ["native-tls"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink"], optional = true }
 uuid = { version = "1.4", features = ["v4"], optional = true }
-rand = "0.8.5"
+rand = "0.9.4"
 russh = { version = "0.37.1", default-features = false, features = ["openssl", "flate2"], optional = true }
 russh-keys = { version = "0.37.1", default-features = false, features = ["openssl"], optional = true }
 hyper = { version = "1.9", optional = true }
@@ -32,7 +32,7 @@ percent-encoding = "2.3"
 
 [dev-dependencies]
 tokio = { version = "1.20", features = ["full"] }
-rand = "0.8"
+rand = "0.9"
 regex = "1"
 
 [features]
