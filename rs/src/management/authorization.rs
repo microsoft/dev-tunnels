@@ -1,6 +1,10 @@
-use async_trait::async_trait;
+use std::future::Future;
+use std::pin::Pin;
 
 use super::HttpError;
+
+/// A boxed future type for async trait methods that need to be object-safe.
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 #[derive(Clone)]
 pub enum Authorization {
@@ -28,16 +32,15 @@ impl Authorization {
     }
 }
 
-#[async_trait]
 pub trait AuthorizationProvider: Send + Sync {
-    async fn get_authorization(&self) -> Result<Authorization, HttpError>;
+    fn get_authorization(&self) -> BoxFuture<'_, Result<Authorization, HttpError>>;
 }
 
 pub(crate) struct StaticAuthorizationProvider(pub Authorization);
 
-#[async_trait]
 impl AuthorizationProvider for StaticAuthorizationProvider {
-    async fn get_authorization(&self) -> Result<Authorization, HttpError> {
-        Ok(self.0.clone())
+    fn get_authorization(&self) -> BoxFuture<'_, Result<Authorization, HttpError>> {
+        let auth = self.0.clone();
+        Box::pin(async move { Ok(auth) })
     }
 }

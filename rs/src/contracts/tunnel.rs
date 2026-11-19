@@ -2,12 +2,12 @@
 // Licensed under the MIT license.
 // Generated from ../../../cs/src/Contracts/Tunnel.cs
 
-use chrono::{DateTime, Utc};
 use crate::contracts::TunnelAccessControl;
 use crate::contracts::TunnelEndpoint;
 use crate::contracts::TunnelOptions;
 use crate::contracts::TunnelPort;
 use crate::contracts::TunnelStatus;
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -16,18 +16,22 @@ use std::collections::HashMap;
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct Tunnel {
     // Gets or sets the ID of the cluster the tunnel was created in.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cluster_id: Option<String>,
 
     // Gets or sets the generated ID of the tunnel, unique within the cluster.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tunnel_id: Option<String>,
 
     // Gets or sets the optional short name (alias) of the tunnel.
     //
     // The name must be globally unique within the parent domain, and must be a valid
     // subdomain.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
     // Gets or sets the description of the tunnel.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
     // Gets or sets the labels of the tunnel.
@@ -36,20 +40,25 @@ pub struct Tunnel {
 
     // Gets or sets the optional parent domain of the tunnel, if it is not using the
     // default parent domain.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub domain: Option<String>,
 
     // Gets or sets a dictionary mapping from scopes to tunnel access tokens.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub access_tokens: Option<HashMap<String, String>>,
 
     // Gets or sets access control settings for the tunnel.
     //
     // See `TunnelAccessControl` documentation for details about the access control model.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub access_control: Option<TunnelAccessControl>,
 
     // Gets or sets default options for the tunnel.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<TunnelOptions>,
 
     // Gets or sets current connection status of the tunnel.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<TunnelStatus>,
 
     // Gets or sets an array of endpoints where hosts are currently accepting client
@@ -68,12 +77,15 @@ pub struct Tunnel {
     pub ports: Vec<TunnelPort>,
 
     // Gets or sets the time in UTC of tunnel creation.
-    pub created: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<Timestamp>,
 
     // Gets or the time the tunnel will be deleted if it is not used or updated.
-    pub expiration: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration: Option<Timestamp>,
 
     // Gets or the custom amount of time the tunnel will be valid if it is not used or
     // updated in seconds.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_expiration: Option<u32>,
 }

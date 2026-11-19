@@ -27,6 +27,11 @@ namespace Microsoft.DevTunnels.Connections
         /// The host ID uniquely identifies one host process that is accepting connections on a
         /// tunnel. If the host supports multiple connection modes, the host's ID is the same for
         /// all the endpoints it supports.
+        /// <para/>
+        /// Each host captures this value when it is constructed and uses the captured value for
+        /// the rest of its lifetime, both for the endpoints it publishes and for the host ID it
+        /// sends to the relay. Set it before constructing any hosts; changing it afterwards does
+        /// not affect hosts that already exist.
         /// </remarks>
         public static string HostId { get; set; } = Guid.NewGuid().ToString();
 

@@ -67,7 +67,7 @@ public class TunnelPort {
      * Selection of a default port for a connection also depends on matching the
      * connection to the port {@link TunnelPort#protocol}, so it is possible to configure
      * separate defaults for distinct protocols like {@link TunnelProtocol#http} and
-     * {@link TunnelProtocol#ssh}.
+     * {@link TunnelProtocol#tcp}.
      */
     @Expose
     public boolean isDefault;
@@ -105,7 +105,7 @@ public class TunnelPort {
     /**
      * Gets or sets the username for the ssh service user is trying to forward.
      *
-     * Should be provided if the {@link TunnelProtocol} is Ssh.
+     * This property is retained for compatibility with legacy SSH tunnel ports.
      */
     @Expose
     public String sshUser;

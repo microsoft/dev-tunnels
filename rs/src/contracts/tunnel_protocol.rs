@@ -13,9 +13,6 @@ pub const TUNNEL_PROTOCOL_TCP: &str = r#"tcp"#;
 // Unknown UDP protocol.
 pub const TUNNEL_PROTOCOL_UDP: &str = r#"udp"#;
 
-// SSH protocol.
-pub const TUNNEL_PROTOCOL_SSH: &str = r#"ssh"#;
-
 // Remote desktop protocol.
 pub const TUNNEL_PROTOCOL_RDP: &str = r#"rdp"#;
 

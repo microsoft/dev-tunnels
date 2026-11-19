@@ -133,6 +133,20 @@ namespace Microsoft.DevTunnels.Management
         public uint? Limit { get; set; }
 
         /// <summary>
+        /// Gets or sets an optional Azure geography filter used when a cluster is
+        /// automatically recommended during tunnel creation.
+        /// </summary>
+        /// <remarks>
+        /// This option only applies to <see cref="ITunnelManagementClient.CreateTunnelAsync"/>
+        /// when the tunnel does not already specify a <see cref="Tunnel.ClusterId"/>. In that
+        /// case the value is forwarded to the cluster recommendations request so that only
+        /// clusters in the specified geo are eligible for automatic selection. It has no effect
+        /// when a cluster is explicitly set or on any other request, and it is not sent as part
+        /// of the create-tunnel request itself.
+        /// </remarks>
+        public string? RequiredGeo { get; set; }
+
+        /// <summary>
         /// Converts tunnel request options to a query string for HTTP requests to the
         /// tunnel management API.
         /// </summary>

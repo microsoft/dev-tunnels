@@ -17,6 +17,20 @@ namespace Microsoft.DevTunnels.Connections
     /// </summary>
     public class TunnelRelayStreamFactory : ITunnelRelayStreamFactory
     {
+        private readonly string? hostId;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TunnelRelayStreamFactory"/> class.
+        /// </summary>
+        public TunnelRelayStreamFactory()
+        {
+        }
+
+        internal TunnelRelayStreamFactory(string hostId)
+        {
+            this.hostId = hostId;
+        }
+
         /// <inheritdoc/>
         public virtual async Task<(Stream Stream, string SubProtocol)> CreateRelayStreamAsync(
             Uri relayUri,
@@ -25,6 +39,10 @@ namespace Microsoft.DevTunnels.Connections
             TraceSource trace,
             CancellationToken cancellation)
         {
+            var isHostConnection =
+                Array.IndexOf(subprotocols, TunnelRelayConnection.HostWebSocketSubProtocol) >= 0 ||
+                Array.IndexOf(subprotocols, TunnelRelayConnection.HostWebSocketSubProtocolV2) >= 0;
+
             void ConfigureWebSocketOptions(ClientWebSocketOptions options)
             {
                 foreach (var subprotocol in subprotocols)
@@ -35,6 +53,12 @@ namespace Microsoft.DevTunnels.Connections
                 if (!string.IsNullOrEmpty(accessToken))
                 {
                     options.SetRequestHeader("Authorization", "tunnel " + accessToken);
+                }
+
+                if (isHostConnection && !string.IsNullOrEmpty(hostId))
+                {
+                    options.SetRequestHeader(
+                        TunnelRelayConnection.HostIdHeaderName, hostId);
                 }
             }
 

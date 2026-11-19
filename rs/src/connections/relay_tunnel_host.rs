@@ -12,15 +12,16 @@ use std::{
 };
 
 use crate::{
-    contracts::{TunnelConnectionMode, TunnelEndpoint, TunnelPort, TunnelRelayTunnelEndpoint},
+    contracts::{TunnelConnectionMode, TunnelEndpoint, TunnelPort},
     management::{
         Authorization, HttpError, TunnelLocator, TunnelManagementClient, TunnelRequestOptions,
         NO_REQUEST_OPTIONS,
     },
 };
 use async_trait::async_trait;
-use futures::{stream::FuturesUnordered, StreamExt, TryFutureExt};
+use futures_util::{stream::FuturesUnordered, StreamExt};
 use russh::{server::Server as ServerTrait, CryptoVec};
+use russh_keys::PublicKeyBase64;
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::TcpStream,
@@ -38,6 +39,21 @@ use super::{
 /// Mapping of port numbers to senders to which new port connections should be
 /// sent. Shared by the host relay to each connected session.
 type PortMap = HashMap<u32, mpsc::UnboundedSender<ForwardedPortConnection>>;
+
+// WebSocket writes can arrive here as a single large frame. If we hand that
+// whole buffer to russh and report it fully written, russh may queue data until
+// the SSH channel window is exhausted before the caller gets another chance to
+// poll and drain the other side. 32 KiB matches the SSH channel max packet size
+// used by the relay, so each accepted write maps to at most one SSH packet.
+// Reporting bounded chunks preserves normal AsyncWrite backpressure and lets
+// large responses continue making progress.
+const CHANNEL_WRITE_CHUNK_SIZE: usize = 32 * 1024;
+
+// Identifies the host process to the relay, so it can tell a host reconnecting
+// from a genuinely different host competing for the same tunnel. The value is
+// the same `host_id` reported on the TunnelEndpoint and stays constant for the
+// lifetime of a RelayTunnelHost. Only host connections send it; clients do not.
+const HOST_ID_HEADER_NAME: &str = "X-Tunnels-Host-Process-Id";
 
 /// The RelayTunnelHost can host connections via the tunneling service. After
 /// creating it, you will generally want to run `connect()` to create a new
@@ -128,7 +144,6 @@ pub struct RelayTunnelHost {
 /// Ports are handled by a client calling `add_port()` or `add_port_raw()`,
 /// which either forward to a local TCP connection or return the
 /// ForwardedPortConnection directly, respectively.
-
 #[allow(dead_code)]
 impl RelayTunnelHost {
     pub fn new(locator: TunnelLocator, mgmt: TunnelManagementClient) -> Self {
@@ -321,10 +336,13 @@ impl RelayTunnelHost {
     }
 
     fn make_ssh_server(keypair: russh_keys::key::KeyPair) -> Server {
+        let keypair_sha2_256 = keypair
+            .with_signature_hash(russh_keys::key::SignatureHash::SHA2_256)
+            .unwrap_or_else(|| keypair.clone());
         let c = russh::server::Config {
             connection_timeout: None,
             auth_rejection_time: std::time::Duration::from_secs(5),
-            keys: vec![keypair],
+            keys: vec![keypair_sha2_256, keypair],
             window_size: 1024 * 1024,
             preferred: russh::Preferred::COMPRESSED,
             limits: russh::Limits {
@@ -337,6 +355,10 @@ impl RelayTunnelHost {
 
         let config = Arc::new(c);
         Server { config }
+    }
+
+    fn host_public_keys_for_endpoint(&self) -> Vec<String> {
+        encode_host_public_keys(&self.host_keypair)
     }
 
     async fn make_ssh_client(
@@ -376,31 +398,23 @@ impl RelayTunnelHost {
     async fn create_websocket(
         &self,
         host_token: &str,
-    ) -> Result<
-        (
-            WebSocketStream<MaybeTlsStream<TcpStream>>,
-            TunnelRelayTunnelEndpoint,
-        ),
-        TunnelError,
-    > {
+    ) -> Result<(WebSocketStream<MaybeTlsStream<TcpStream>>, TunnelEndpoint), TunnelError> {
         let endpoint = self
             .mgmt
             .update_tunnel_relay_endpoints(
                 &self.locator,
-                &TunnelRelayTunnelEndpoint {
-                    base: TunnelEndpoint {
-                        id: Some(format!("{}-relay", self.host_id)),
-                        connection_mode: TunnelConnectionMode::TunnelRelay,
-                        host_id: self.host_id.to_string(),
-                        host_public_keys: vec![],
-                        port_uri_format: None,
-                        port_ssh_command_format: None,
-                        ssh_gateway_public_key: None,
-                        tunnel_ssh_command: None,
-                        tunnel_uri: None,
-                    },
-                    client_relay_uri: None,
-                    host_relay_uri: None,
+                &TunnelEndpoint {
+                    id: Some(format!("{}-relay", self.host_id)),
+                    connection_mode: TunnelConnectionMode::TunnelRelay,
+                    host_id: self.host_id.to_string(),
+                    host_public_keys: self.host_public_keys_for_endpoint(),
+                    port_uri_format: None,
+                    port_ssh_command_format: None,
+                    ssh_gateway_public_key: None,
+                    tunnel_ssh_command: None,
+                    tunnel_uri: None,
+                    local_network_tunnel_endpoint: Default::default(),
+                    tunnel_relay_tunnel_endpoint: Default::default(),
                 },
                 &TunnelRequestOptions {
                     authorization: Some(Authorization::Tunnel(host_token.to_string())),
@@ -414,18 +428,42 @@ impl RelayTunnelHost {
             })?;
 
         let url = endpoint
+            .tunnel_relay_tunnel_endpoint
             .host_relay_uri
             .as_deref()
             .ok_or(TunnelError::MissingHostEndpoint)?;
 
-        let req = build_websocket_request(
-            url,
-            &[
-                ("Sec-WebSocket-Protocol", "tunnel-relay-host"),
-                ("Authorization", &format!("tunnel {}", host_token)),
-                ("User-Agent", self.mgmt.user_agent.to_str().unwrap()),
-            ],
-        )?;
+        let mut headers = vec![
+            (
+                "Sec-WebSocket-Protocol".to_string(),
+                "tunnel-relay-host".to_string(),
+            ),
+            (
+                "Authorization".to_string(),
+                format!("tunnel {}", host_token),
+            ),
+            (
+                "User-Agent".to_string(),
+                self.mgmt.user_agent.to_str().unwrap().to_string(),
+            ),
+        ];
+        headers.extend(
+            self.mgmt
+                .request_headers()
+                .into_iter()
+                .filter_map(|(name, value)| {
+                    value
+                        .to_str()
+                        .ok()
+                        .map(|value| (name.as_str().to_string(), value.to_string()))
+                }),
+        );
+        headers.push((HOST_ID_HEADER_NAME.to_string(), self.host_id.to_string()));
+        let header_refs: Vec<(&str, &str)> = headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        let req = build_websocket_request(url, &header_refs)?;
 
         let cnx = if let Some(proxy) = &self.proxy {
             log::debug!("connecting via http_proxy on {}", proxy);
@@ -436,6 +474,25 @@ impl RelayTunnelHost {
 
         Ok((cnx, endpoint))
     }
+}
+
+/// Encodes the host's public key(s) for advertisement in a TunnelEndpoint.
+///
+/// We use the canonical SSH wire-format encoding of the public key (for RSA,
+/// this is the "ssh-rsa" blob, regardless of which signature-hash variant the
+/// keypair was generated with). This is the same form the russh client
+/// recovers from the server's host key during key exchange and base64-encodes
+/// via `PublicKey::public_key_base64()`, which is what `RelayTunnelClient`
+/// compares against.
+///
+/// Note: `KeyPair::public_key_base64()` is *not* equivalent — for RSA it
+/// includes the hash variant (e.g. "rsa-sha2-256") in the blob, which would
+/// never match what the client sees on the wire.
+fn encode_host_public_keys(keypair: &russh_keys::key::KeyPair) -> Vec<String> {
+    let public_key = keypair
+        .clone_public_key()
+        .expect("expected to clone host public key");
+    vec![public_key.public_key_base64()]
 }
 
 /// Type returned in a channel from `add_forwarded_port_raw`, implementing
@@ -452,8 +509,8 @@ impl ForwardedPortConnection {
     pub async fn send(&mut self, d: &[u8]) -> Result<(), ()> {
         self.handle
             .data(self.channel, CryptoVec::from_slice(d))
-            .map_err(|_| ())
             .await
+            .map_err(|_| ())
     }
 
     /// Receives data from the connection, returning None when it's closed.
@@ -479,6 +536,7 @@ impl ForwardedPortConnection {
                 channel: self.channel,
                 handle: self.handle,
                 is_write_fut_valid: false,
+                write_len: 0,
                 write_fut: tokio_util::sync::ReusableBoxFuture::new(make_server_write_fut(None)),
             },
             ForwardedPortReader {
@@ -494,6 +552,7 @@ pub struct ForwardedPortWriter {
     channel: russh::ChannelId,
     handle: russh::server::Handle,
     is_write_fut_valid: bool,
+    write_len: usize,
     write_fut: tokio_util::sync::ReusableBoxFuture<'static, Result<(), russh::CryptoVec>>,
 }
 
@@ -515,15 +574,25 @@ impl AsyncWrite for ForwardedPortWriter {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
+        if buf.is_empty() {
+            return Poll::Ready(Ok(0));
+        }
+
         if !self.is_write_fut_valid {
             let handle = self.handle.clone();
             let id = self.channel;
-            self.write_fut
-                .set(make_server_write_fut(Some((handle, id, buf.to_vec()))));
+            let write_len = buf.len().min(CHANNEL_WRITE_CHUNK_SIZE);
+            self.write_len = write_len;
+            self.write_fut.set(make_server_write_fut(Some((
+                handle,
+                id,
+                buf[..write_len].to_vec(),
+            ))));
             self.is_write_fut_valid = true;
         }
 
-        self.poll_flush(cx).map(|r| r.map(|_| buf.len()))
+        let write_len = self.write_len;
+        self.poll_flush(cx).map(|r| r.map(|_| write_len))
     }
 
     fn poll_flush(
@@ -542,7 +611,7 @@ impl AsyncWrite for ForwardedPortWriter {
             }
             Poll::Ready(Err(_)) => {
                 self.is_write_fut_valid = false;
-                Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF")))
+                Poll::Ready(Err(io::Error::other("EOF")))
             }
         }
     }
@@ -573,7 +642,7 @@ impl AsyncRead for ForwardedPortReader {
 
         match self.receiver.poll_recv(cx) {
             Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, msg, 0),
-            Poll::Ready(None) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF"))),
+            Poll::Ready(None) => Poll::Ready(Err(io::Error::other("EOF"))),
             Poll::Pending => Poll::Pending,
         }
     }
@@ -655,6 +724,9 @@ impl Server {
                         Some(cnx) => {
                             if let Some(p) = known_ports.get(&cnx.port) {
                                 p.send(cnx).ok(); // ignore error, could have dropped in the meantime
+                            } else {
+                                log::debug!("rejecting connection to unknown port {}", cnx.port);
+                                cnx.close().await;
                             }
                         },
                         None => {
@@ -840,6 +912,29 @@ impl russh::server::Handler for ServerHandle {
         Ok((self, true, session))
     }
 
+    async fn channel_open_direct_tcpip(
+        mut self,
+        channel: russh::Channel<russh::server::Msg>,
+        _host_to_connect: &str,
+        port_to_connect: u32,
+        _originator_address: &str,
+        _originator_port: u32,
+        session: russh::server::Session,
+    ) -> Result<(Self, bool, russh::server::Session), Self::Error> {
+        let (sender, receiver) = mpsc::channel(10);
+        let txd = self.cnx_tx.send(ForwardedPortConnection {
+            port: port_to_connect,
+            channel: channel.id(),
+            handle: session.handle(),
+            receiver,
+        });
+        if txd.is_ok() {
+            self.channel_senders.insert(channel.id(), sender);
+        }
+
+        Ok((self, true, session))
+    }
+
     async fn data(
         mut self,
         channel: russh::ChannelId,
@@ -933,6 +1028,7 @@ struct AsyncRWChannel {
     readbuf: super::io::ReadBuffer,
 
     is_write_fut_valid: bool,
+    write_len: usize,
     write_fut: tokio_util::sync::ReusableBoxFuture<'static, Result<(), russh::CryptoVec>>,
 }
 
@@ -949,6 +1045,7 @@ impl AsyncRWChannel {
                 incoming: rx,
                 readbuf: super::io::ReadBuffer::default(),
                 is_write_fut_valid: false,
+                write_len: 0,
                 write_fut: tokio_util::sync::ReusableBoxFuture::new(make_client_write_fut(None)),
             },
             tx,
@@ -978,15 +1075,25 @@ impl AsyncWrite for AsyncRWChannel {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
+        if buf.is_empty() {
+            return Poll::Ready(Ok(0));
+        }
+
         if !self.is_write_fut_valid {
             let session = self.session.clone();
             let id = self.id;
-            self.write_fut
-                .set(make_client_write_fut(Some((session, id, buf.to_vec()))));
+            let write_len = buf.len().min(CHANNEL_WRITE_CHUNK_SIZE);
+            self.write_len = write_len;
+            self.write_fut.set(make_client_write_fut(Some((
+                session,
+                id,
+                buf[..write_len].to_vec(),
+            ))));
             self.is_write_fut_valid = true;
         }
 
-        self.poll_flush(cx).map(|r| r.map(|_| buf.len()))
+        let write_len = self.write_len;
+        self.poll_flush(cx).map(|r| r.map(|_| write_len))
     }
 
     fn poll_flush(
@@ -1005,7 +1112,7 @@ impl AsyncWrite for AsyncRWChannel {
             }
             Poll::Ready(Err(_)) => {
                 self.is_write_fut_valid = false;
-                Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF")))
+                Poll::Ready(Err(io::Error::other("EOF")))
             }
         }
     }
@@ -1030,21 +1137,21 @@ impl AsyncRead for AsyncRWChannel {
 
         match self.incoming.poll_recv(cx) {
             Poll::Ready(Some(msg)) => self.readbuf.put_data(buf, msg, 0),
-            Poll::Ready(None) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, "EOF"))),
+            Poll::Ready(None) => Poll::Ready(Err(io::Error::other("EOF"))),
             Poll::Pending => Poll::Pending,
         }
     }
 }
 
 pub struct RelayHandle {
-    endpoint: TunnelRelayTunnelEndpoint,
+    endpoint: TunnelEndpoint,
     session: Arc<russh::client::Handle<Client>>,
     join: JoinHandle<Result<(), russh::Error>>,
 }
 
 impl RelayHandle {
     /// Gets the endpoint this relay is connected to.
-    pub fn endpoint(&self) -> &TunnelRelayTunnelEndpoint {
+    pub fn endpoint(&self) -> &TunnelEndpoint {
         &self.endpoint
     }
 
@@ -1070,5 +1177,37 @@ impl std::future::Future for RelayHandle {
             }),
             Poll::Pending => Poll::Pending,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use russh_keys::key::{KeyPair, SignatureHash};
+
+    /// Regression test for an interop bug where the host advertised RSA
+    /// public keys using `KeyPair::public_key_base64()` (which encodes the
+    /// hash-variant name like "rsa-sha2-256") while the client compared
+    /// against `PublicKey::public_key_base64()` (which always encodes the
+    /// canonical SSH wire name "ssh-rsa"). The two never matched and all
+    /// connections failed with "Unknown server key".
+    #[test]
+    fn encodes_rsa_public_key_in_canonical_ssh_wire_form() {
+        // Generate an RSA keypair with a non-default hash variant — this is
+        // what `RelayTunnelHost::new` does (SHA2_512).
+        let keypair =
+            KeyPair::generate_rsa(2048, SignatureHash::SHA2_512).expect("generate rsa keypair");
+
+        let advertised = encode_host_public_keys(&keypair);
+        assert_eq!(advertised.len(), 1, "expected exactly one host public key");
+
+        // The advertised key must equal the base64 encoding of the
+        // corresponding `PublicKey` — this is what `RelayTunnelClient`
+        // computes from the server's host key during SSH key exchange.
+        let public_key_b64 = keypair
+            .clone_public_key()
+            .expect("clone public key")
+            .public_key_base64();
+        assert_eq!(advertised[0], public_key_b64);
     }
 }

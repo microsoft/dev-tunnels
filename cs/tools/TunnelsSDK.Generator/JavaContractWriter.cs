@@ -436,6 +436,8 @@ internal class JavaContractWriter : ContractWriter
                 "uint" => "int",
                 "long" => "long",
                 "ulong" => "long",
+                "float" => "float",
+                "double" => "double",
                 "string" => "String",
                 "System.DateTime" => JavaDateTimeType,
                 "System.Text.RegularExpressions.Regex" => RegexPatternType,

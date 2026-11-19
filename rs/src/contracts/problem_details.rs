@@ -15,11 +15,14 @@ use std::collections::HashMap;
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct ProblemDetails {
     // Gets or sets the error title.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
 
     // Gets or sets the error detail.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
 
     // Gets or sets additional details about individual request properties.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub errors: Option<HashMap<String, Vec<String>>>,
 }

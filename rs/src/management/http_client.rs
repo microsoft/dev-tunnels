@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use reqwest::{
-    header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
+    header::{HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, Method, Request,
 };
 
@@ -14,13 +14,13 @@ use url::Url;
 use rand::Rng;
 
 use crate::contracts::{
-    env_production, NamedRateStatus, Tunnel, TunnelEndpoint, TunnelListByRegionResponse,
-    TunnelPort, TunnelPortListResponse, TunnelRelayTunnelEndpoint, TunnelServiceProperties,
+    env_production, ClusterRecommendationResponse, NamedRateStatus, Tunnel, TunnelEndpoint,
+    TunnelListByRegionResponse, TunnelPort, TunnelPortListResponse, TunnelServiceProperties,
 };
 
 use super::{
-    Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError, TunnelLocator,
-    TunnelRequestOptions, NO_REQUEST_OPTIONS,
+    Authorization, AuthorizationProvider, HttpError, HttpResult, ResponseError,
+    TunnelClusterSource, TunnelLocator, TunnelRequestOptions, NO_REQUEST_OPTIONS,
 };
 
 use crate::management::policy_provider::get_policy_header_value;
@@ -33,13 +33,19 @@ pub struct TunnelManagementClient {
     environment: TunnelServiceProperties,
     api_version: String,
     is_custom_domain: bool,
+    additional_headers: Vec<(HeaderName, HeaderValue)>,
+    additional_headers_provider:
+        Option<Arc<dyn Fn() -> Vec<(HeaderName, HeaderValue)> + Send + Sync>>,
 }
 
 const TUNNELS_API_PATH: &str = "/tunnels";
+const CLUSTERS_API_PATH: &str = "/clusters";
+const RECOMMENDATIONS_API_SUB_PATH: &str = "/recommendations";
 const USER_LIMITS_API_PATH: &str = "/userlimits";
 const ENDPOINTS_API_SUB_PATH: &str = "endpoints";
 const PORTS_API_SUB_PATH: &str = "ports";
 const CHECK_TUNNEL_NAME_SUB_PATH: &str = ":checkNameAvailability";
+const CLUSTER_SOURCE_HEADER_NAME: &str = "x-tunnel-cluster-source";
 const PKG_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
 const API_VERSIONS: &[&str] = &["2023-09-27-preview"];
 
@@ -54,7 +60,23 @@ impl TunnelManagementClient {
             environment: self.environment.clone(),
             api_version: self.api_version.clone(),
             is_custom_domain: self.is_custom_domain,
+            additional_headers: self.additional_headers.clone(),
+            additional_headers_provider: self.additional_headers_provider.clone(),
         }
+    }
+
+    /// Gets headers applied to every tunnel service request.
+    pub fn additional_headers(&self) -> &[(HeaderName, HeaderValue)] {
+        &self.additional_headers
+    }
+
+    /// Gets headers applied to this tunnel service request.
+    pub fn request_headers(&self) -> Vec<(HeaderName, HeaderValue)> {
+        let mut headers = self.additional_headers.clone();
+        if let Some(provider) = &self.additional_headers_provider {
+            headers.extend(provider());
+        }
+        headers
     }
 
     /// Lists tunnels owned by the user.
@@ -101,6 +123,38 @@ impl TunnelManagementClient {
         mut tunnel: Tunnel,
         options: &TunnelRequestOptions,
     ) -> HttpResult<Tunnel> {
+        let cluster_is_unspecified = match tunnel.cluster_id.as_deref() {
+            Some(cluster_id) => cluster_id.is_empty(),
+            None => true,
+        };
+        let cluster_source = if cluster_is_unspecified {
+            // An empty cluster is equivalent to no cluster and must use global routing if
+            // recommendation does not return one.
+            tunnel.cluster_id = None;
+            match self.get_cluster_recommendations_internal(None, None).await {
+                Ok(recommendations) => {
+                    if let Some(cluster_id) = recommendations
+                        .response
+                        .recommended_cluster_id
+                        .filter(|cluster_id| !cluster_id.is_empty())
+                    {
+                        tunnel.cluster_id = Some(cluster_id);
+                        if recommendations.auth_rejected {
+                            TunnelClusterSource::RecommendedAfterAuthRejected
+                        } else {
+                            TunnelClusterSource::Recommended
+                        }
+                    } else {
+                        TunnelClusterSource::FallbackEmpty
+                    }
+                }
+                Err(error) if is_unauthorized(&error) => TunnelClusterSource::FallbackAuthFailed,
+                Err(_) => TunnelClusterSource::FallbackError,
+            }
+        } else {
+            TunnelClusterSource::Explicit
+        };
+
         let tunnel_id = tunnel
             .tunnel_id
             .take()
@@ -112,8 +166,22 @@ impl TunnelManagementClient {
         tunnel.tunnel_id = Some(tunnel_id);
 
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
+        add_cluster_source_header(&mut request, cluster_source);
         json_body(&mut request, tunnel);
         self.execute_json("create_tunnel", request).await
+    }
+
+    /// Gets cluster recommendations for tunnel creation based on capacity and availability.
+    #[allow(clippy::result_large_err)]
+    pub async fn get_cluster_recommendations(
+        &self,
+        preferred_cluster_id: Option<&str>,
+        required_geo: Option<&str>,
+    ) -> HttpResult<ClusterRecommendationResponse> {
+        Ok(self
+            .get_cluster_recommendations_internal(preferred_cluster_id, required_geo)
+            .await?
+            .response)
     }
 
     /// Gets if tunnel name is avilable.
@@ -164,7 +232,11 @@ impl TunnelManagementClient {
     ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
             .append_pair("connectionMode", &endpoint.connection_mode.to_string());
@@ -177,15 +249,19 @@ impl TunnelManagementClient {
     pub async fn update_tunnel_relay_endpoints(
         &self,
         locator: &TunnelLocator,
-        endpoint: &TunnelRelayTunnelEndpoint,
+        endpoint: &TunnelEndpoint,
         options: &TunnelRequestOptions,
-    ) -> HttpResult<TunnelRelayTunnelEndpoint> {
+    ) -> HttpResult<TunnelEndpoint> {
         let mut url = self.build_tunnel_uri(
             locator,
-            Some(&format!("{}/{}", ENDPOINTS_API_SUB_PATH, endpoint.base.id.as_deref().unwrap())),
+            Some(&format!(
+                "{}/{}",
+                ENDPOINTS_API_SUB_PATH,
+                endpoint.id.as_deref().unwrap()
+            )),
         );
         url.query_pairs_mut()
-            .append_pair("connectionMode", &endpoint.base.connection_mode.to_string());
+            .append_pair("connectionMode", &endpoint.connection_mode.to_string());
         let mut request = self.make_tunnel_request(Method::PUT, url, options).await?;
         json_body(&mut request, endpoint);
         self.execute_json("update_tunnel_relay_endpoints", request)
@@ -392,6 +468,86 @@ impl TunnelManagementClient {
         }
     }
 
+    /// Requests cluster recommendations and reports whether the provider authorization was rejected.
+    #[allow(clippy::result_large_err)]
+    async fn get_cluster_recommendations_internal(
+        &self,
+        preferred_cluster_id: Option<&str>,
+        required_geo: Option<&str>,
+    ) -> HttpResult<ClusterRecommendationsResult> {
+        let authorization = self.authorization.get_authorization().await?;
+        let authorization_sent = authorization.as_header().is_some();
+
+        match self
+            .send_cluster_recommendations_request(
+                preferred_cluster_id,
+                required_geo,
+                &authorization,
+            )
+            .await
+        {
+            Ok(response) => Ok(ClusterRecommendationsResult {
+                response,
+                auth_rejected: false,
+            }),
+            Err(error) if authorization_sent && is_unauthorized(&error) => {
+                let response = self
+                    .send_cluster_recommendations_request(
+                        preferred_cluster_id,
+                        required_geo,
+                        &Authorization::Anonymous,
+                    )
+                    .await?;
+                Ok(ClusterRecommendationsResult {
+                    response,
+                    auth_rejected: true,
+                })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    async fn send_cluster_recommendations_request(
+        &self,
+        preferred_cluster_id: Option<&str>,
+        required_geo: Option<&str>,
+        authorization: &Authorization,
+    ) -> HttpResult<ClusterRecommendationResponse> {
+        let url = self.build_cluster_recommendations_uri(preferred_cluster_id, required_geo);
+        let request = self.make_tunnel_request_with_authorization(
+            Method::GET,
+            url,
+            NO_REQUEST_OPTIONS,
+            authorization,
+        );
+        self.execute_json("get_cluster_recommendations", request)
+            .await
+    }
+
+    fn build_cluster_recommendations_uri(
+        &self,
+        preferred_cluster_id: Option<&str>,
+        required_geo: Option<&str>,
+    ) -> Url {
+        let mut url = self.build_uri(
+            None,
+            &format!("{}{}", CLUSTERS_API_PATH, RECOMMENDATIONS_API_SUB_PATH),
+        );
+        {
+            let mut query = url.query_pairs_mut();
+            if let Some(preferred_cluster_id) =
+                preferred_cluster_id.filter(|value| !value.is_empty())
+            {
+                query.append_pair("preferredClusterId", preferred_cluster_id);
+            }
+            if let Some(required_geo) = required_geo.filter(|value| !value.is_empty()) {
+                query.append_pair("requiredGeo", required_geo);
+            }
+        }
+        url
+    }
+
     /// Builds a URI that does an operation on a tunnel.
     fn build_tunnel_uri(&self, locator: &TunnelLocator, path: Option<&str>) -> Url {
         let make_path = |ident: &str| {
@@ -428,30 +584,45 @@ impl TunnelManagementClient {
     async fn make_tunnel_request(
         &self,
         method: Method,
-        mut url: Url,
+        url: Url,
         tunnel_opts: &TunnelRequestOptions,
     ) -> HttpResult<Request> {
+        let authorization = match &tunnel_opts.authorization {
+            Some(authorization) => authorization.clone(),
+            None => self.authorization.get_authorization().await?,
+        };
+        Ok(self.make_tunnel_request_with_authorization(method, url, tunnel_opts, &authorization))
+    }
+
+    fn make_tunnel_request_with_authorization(
+        &self,
+        method: Method,
+        mut url: Url,
+        tunnel_opts: &TunnelRequestOptions,
+        authorization: &Authorization,
+    ) -> Request {
         add_query(&mut url, tunnel_opts, &self.api_version);
-        let mut request = self.make_request(method, url).await?;
+        let mut request = self.make_request(method, url);
 
         let headers = request.headers_mut();
-        if let Some(authorization) = &tunnel_opts.authorization {
-            if let Some(a) = authorization.as_header() {
-                headers.insert(AUTHORIZATION, HeaderValue::from_str(&a).unwrap());
-            } else {
-                headers.remove(AUTHORIZATION);
-            }
+        if let Some(a) = authorization.as_header() {
+            headers.insert(AUTHORIZATION, HeaderValue::from_str(&a).unwrap());
+        } else {
+            headers.remove(AUTHORIZATION);
         }
 
         for (name, value) in &tunnel_opts.headers {
             headers.append(name, value.to_owned());
         }
+        for (name, value) in self.request_headers() {
+            headers.append(name, value);
+        }
 
-        Ok(request)
+        request
     }
 
     /// Makes a basic request that communicates with the service.
-    async fn make_request(&self, method: Method, url: Url) -> HttpResult<Request> {
+    fn make_request(&self, method: Method, url: Url) -> Request {
         let mut request = Request::new(method, url);
         let headers = request.headers_mut();
         headers.insert("User-Agent", self.user_agent.clone());
@@ -473,11 +644,7 @@ impl TunnelManagementClient {
             }
         }
 
-        if let Some(a) = self.authorization.get_authorization().await?.as_header() {
-            headers.insert(AUTHORIZATION, HeaderValue::from_str(&a).unwrap());
-        }
-
-        Ok(request)
+        request
     }
 
     fn generate_tunnel_id() -> String {
@@ -528,6 +695,31 @@ impl TunnelManagementClient {
     }
 }
 
+struct ClusterRecommendationsResult {
+    response: ClusterRecommendationResponse,
+    auth_rejected: bool,
+}
+
+fn is_unauthorized(error: &HttpError) -> bool {
+    matches!(
+        error,
+        HttpError::ResponseError(ResponseError {
+            status_code,
+            ..
+        }) if status_code.as_u16() == 401 || status_code.as_u16() == 403
+    )
+}
+
+fn add_cluster_source_header(request: &mut Request, cluster_source: TunnelClusterSource) {
+    let header_name = HeaderName::from_static(CLUSTER_SOURCE_HEADER_NAME);
+    let headers = request.headers_mut();
+    headers.remove(&header_name);
+    headers.append(
+        header_name,
+        HeaderValue::from_static(cluster_source.as_header_value()),
+    );
+}
+
 fn json_body<T>(request: &mut Request, body: T)
 where
     T: Serialize,
@@ -545,6 +737,9 @@ pub struct TunnelClientBuilder {
     environment: TunnelServiceProperties,
     api_version: String,
     is_custom_domain: bool,
+    additional_headers: Vec<(HeaderName, HeaderValue)>,
+    additional_headers_provider:
+        Option<Arc<dyn Fn() -> Vec<(HeaderName, HeaderValue)> + Send + Sync>>,
 }
 
 /// Creates a new tunnel client builder. You can set options, then use `into()`
@@ -561,6 +756,8 @@ pub fn new_tunnel_management(user_agent: &str) -> TunnelClientBuilder {
         environment: env_production(),
         api_version: API_VERSIONS[0].to_owned(),
         is_custom_domain: false,
+        additional_headers: Vec::new(),
+        additional_headers_provider: None,
     }
 }
 
@@ -636,6 +833,21 @@ impl TunnelClientBuilder {
         self.environment = environment;
         self
     }
+
+    /// Adds headers to every tunnel service request and relay WebSocket handshake.
+    pub fn additional_headers(&mut self, headers: Vec<(HeaderName, HeaderValue)>) -> &mut Self {
+        self.additional_headers = headers;
+        self
+    }
+
+    /// Provides headers for each tunnel service request and relay WebSocket handshake.
+    pub fn additional_headers_provider(
+        &mut self,
+        provider: impl Fn() -> Vec<(HeaderName, HeaderValue)> + Send + Sync + 'static,
+    ) -> &mut Self {
+        self.additional_headers_provider = Some(Arc::new(provider));
+        self
+    }
 }
 
 impl From<TunnelClientBuilder> for TunnelManagementClient {
@@ -647,6 +859,8 @@ impl From<TunnelClientBuilder> for TunnelManagementClient {
             environment: builder.environment,
             api_version: builder.api_version,
             is_custom_domain: builder.is_custom_domain,
+            additional_headers: builder.additional_headers,
+            additional_headers_provider: builder.additional_headers_provider,
         }
     }
 }
@@ -688,14 +902,14 @@ fn add_query(url: &mut Url, tunnel_opts: &TunnelRequestOptions, api_version: &st
 mod test_end_to_end {
     use std::{env, time::Duration};
 
-    use async_trait::async_trait;
     use serde::Deserialize;
     use tokio::time::sleep;
 
     use crate::{
         contracts::{Tunnel, PROD_FIRST_PARTY_APP_ID},
         management::{
-            Authorization, AuthorizationProvider, HttpError, TunnelLocator, NO_REQUEST_OPTIONS,
+            Authorization, AuthorizationProvider, BoxFuture, HttpError, TunnelLocator,
+            NO_REQUEST_OPTIONS,
         },
     };
 
@@ -789,16 +1003,17 @@ mod test_end_to_end {
 
     struct AuthCodeProvider();
 
-    #[async_trait]
     impl AuthorizationProvider for AuthCodeProvider {
-        async fn get_authorization(&self) -> Result<Authorization, HttpError> {
-            let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
-                Ok(value) => value,
-                _ => do_device_code_flow(&reqwest::Client::new()).await,
-            };
+        fn get_authorization(&self) -> BoxFuture<'_, Result<Authorization, HttpError>> {
+            Box::pin(async {
+                let token = match env::var("TUNNEL_TEST_AAD_TOKEN") {
+                    Ok(value) => value,
+                    _ => do_device_code_flow(&reqwest::Client::new()).await,
+                };
 
-            env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
-            Ok(Authorization::Bearer(token))
+                env::set_var("TUNNEL_TEST_AAD_TOKEN", &token);
+                Ok(Authorization::Bearer(token))
+            })
         }
     }
 
@@ -811,10 +1026,28 @@ mod test_end_to_end {
 
 #[cfg(test)]
 mod tests {
-    use regex::Regex;
-    use reqwest::Url;
+    use std::{
+        net::SocketAddr,
+        sync::{Arc, Mutex},
+        time::Duration,
+    };
 
-    use crate::management::NO_REQUEST_OPTIONS;
+    use regex::Regex;
+    use reqwest::{
+        header::{HeaderName, HeaderValue},
+        Url,
+    };
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::{TcpListener, TcpStream},
+        task::JoinHandle,
+        time::timeout,
+    };
+
+    use crate::{
+        contracts::{Tunnel, TunnelServiceProperties},
+        management::{Authorization, TunnelRequestOptions, NO_REQUEST_OPTIONS},
+    };
 
     #[test]
     fn new_tunnel_management_has_user_agent() {
@@ -851,10 +1084,8 @@ mod tests {
 
     #[test]
     fn custom_domain_does_not_modify_hostname() {
-        let mut builder = super::new_tunnel_management_for_custom_domain(
-            "rs-sdk-tests",
-            "app.github.dev",
-        );
+        let builder =
+            super::new_tunnel_management_for_custom_domain("rs-sdk-tests", "app.github.dev");
         let client: super::TunnelManagementClient = builder.into();
         let url = client.build_uri(Some("usw2"), "/tunnels/tnnl0001");
         assert_eq!(url.host_str().unwrap(), "cp.app.github.dev");
@@ -870,5 +1101,486 @@ mod tests {
             "Expected hostname to start with usw2., got {}",
             url.host_str().unwrap()
         );
+    }
+
+    #[tokio::test]
+    async fn get_cluster_recommendations_includes_optional_query_parameters() {
+        let server = TestServer::start(vec![TestResponse::ok(recommendation_response(Some(
+            "recommended",
+        )))])
+        .await;
+        let client = test_client(&server, Authorization::Anonymous);
+
+        let response = client
+            .get_cluster_recommendations(Some("preferred cluster"), Some("eu west"))
+            .await
+            .unwrap();
+
+        assert_eq!(
+            response.recommended_cluster_id.as_deref(),
+            Some("recommended")
+        );
+        let requests = server.finish().await;
+        assert_eq!(requests.len(), 1);
+        assert!(requests[0].target.contains("preferredClusterId=preferred"));
+        assert!(requests[0].target.contains("requiredGeo=eu"));
+        assert_eq!(requests[0].target.matches("api-version=").count(), 1);
+    }
+
+    #[tokio::test]
+    async fn create_uses_authenticated_recommendation() {
+        let server = TestServer::start(vec![
+            TestResponse::ok(recommendation_response(Some("recommended"))),
+            TestResponse::ok(tunnel_response("recommended")),
+        ])
+        .await;
+        let client = test_client(&server, Authorization::Bearer("token".to_owned()));
+
+        let tunnel = client
+            .create_tunnel(Tunnel::default(), NO_REQUEST_OPTIONS)
+            .await
+            .unwrap();
+
+        assert_eq!(tunnel.cluster_id.as_deref(), Some("recommended"));
+        let requests = server.finish().await;
+        assert_eq!(requests.len(), 2);
+        assert!(requests[0].target.starts_with("/clusters/recommendations?"));
+        assert_eq!(requests[0].header_values("authorization"), ["bearer token"]);
+        assert!(requests[1].target.starts_with("/tunnels/"));
+        assert!(requests[1]
+            .host
+            .as_deref()
+            .map_or(false, |host| host.starts_with("recommended.localhost")));
+        assert_eq!(
+            requests[1].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
+            ["recommended"]
+        );
+    }
+
+    #[tokio::test]
+    async fn create_retries_unauthorized_recommendation_anonymously() {
+        for status in [401, 403] {
+            let server = TestServer::start(vec![
+                TestResponse::status(status),
+                TestResponse::ok(recommendation_response(Some("recommended"))),
+                TestResponse::ok(tunnel_response("recommended")),
+            ])
+            .await;
+            let client = test_client(&server, Authorization::Bearer("token".to_owned()));
+
+            client
+                .create_tunnel(Tunnel::default(), NO_REQUEST_OPTIONS)
+                .await
+                .unwrap();
+
+            let requests = server.finish().await;
+            assert_eq!(requests.len(), 3, "status {status}");
+            assert_eq!(
+                requests[0].header_values("authorization"),
+                ["bearer token"],
+                "status {status}"
+            );
+            assert!(
+                requests[1].header_values("authorization").is_empty(),
+                "status {status}"
+            );
+            assert_eq!(
+                requests[1].target.matches("api-version=").count(),
+                1,
+                "status {status}"
+            );
+            assert_eq!(
+                requests[2].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
+                ["recommended-after-auth-rejected"],
+                "status {status}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn create_does_not_retry_non_auth_recommendation_failure() {
+        let server = TestServer::start(vec![
+            TestResponse::status(500),
+            TestResponse::ok(tunnel_response("global")),
+        ])
+        .await;
+        let client = test_client(&server, Authorization::Bearer("token".to_owned()));
+
+        client
+            .create_tunnel(Tunnel::default(), NO_REQUEST_OPTIONS)
+            .await
+            .unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(requests.len(), 2);
+        assert!(requests[1].target.starts_with("/tunnels/"));
+        assert!(requests[1]
+            .host
+            .as_deref()
+            .map_or(false, |host| host.starts_with("localhost")));
+        assert_eq!(
+            requests[1].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
+            ["fallback-error"]
+        );
+    }
+
+    #[tokio::test]
+    async fn create_reports_auth_failure_after_anonymous_retry_is_rejected() {
+        let server = TestServer::start(vec![
+            TestResponse::status(401),
+            TestResponse::status(403),
+            TestResponse::ok(tunnel_response("global")),
+        ])
+        .await;
+        let client = test_client(&server, Authorization::Bearer("token".to_owned()));
+
+        client
+            .create_tunnel(Tunnel::default(), NO_REQUEST_OPTIONS)
+            .await
+            .unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(requests.len(), 3);
+        assert!(requests[1].header_values("authorization").is_empty());
+        assert_eq!(
+            requests[2].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
+            ["fallback-auth-failed"]
+        );
+    }
+
+    #[tokio::test]
+    async fn create_reports_empty_recommendation() {
+        let server = TestServer::start(vec![
+            TestResponse::ok(recommendation_response(None)),
+            TestResponse::ok(tunnel_response("global")),
+        ])
+        .await;
+        let client = test_client(&server, Authorization::Anonymous);
+
+        client
+            .create_tunnel(
+                Tunnel {
+                    cluster_id: Some(String::new()),
+                    ..Tunnel::default()
+                },
+                NO_REQUEST_OPTIONS,
+            )
+            .await
+            .unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(requests.len(), 2);
+        assert_eq!(
+            requests[1].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
+            ["fallback-empty"]
+        );
+    }
+
+    #[tokio::test]
+    async fn create_does_not_retry_anonymous_recommendation() {
+        let server = TestServer::start(vec![
+            TestResponse::status(401),
+            TestResponse::ok(tunnel_response("global")),
+        ])
+        .await;
+        let client = test_client(&server, Authorization::Anonymous);
+
+        client
+            .create_tunnel(Tunnel::default(), NO_REQUEST_OPTIONS)
+            .await
+            .unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(requests.len(), 2);
+        assert_eq!(
+            requests[1].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
+            ["fallback-auth-failed"]
+        );
+    }
+
+    #[tokio::test]
+    async fn create_explicit_cluster_bypasses_recommendations_and_prevents_source_spoofing() {
+        let server = TestServer::start(vec![TestResponse::ok(tunnel_response("explicit"))]).await;
+        let client = test_client(&server, Authorization::Anonymous);
+        let options = TunnelRequestOptions {
+            headers: vec![
+                (
+                    reqwest::header::HeaderName::from_static("x-caller-header"),
+                    reqwest::header::HeaderValue::from_static("caller"),
+                ),
+                (
+                    reqwest::header::HeaderName::from_static(super::CLUSTER_SOURCE_HEADER_NAME),
+                    reqwest::header::HeaderValue::from_static("spoofed"),
+                ),
+            ],
+            ..TunnelRequestOptions::default()
+        };
+
+        client
+            .create_tunnel(
+                Tunnel {
+                    cluster_id: Some("explicit".to_owned()),
+                    ..Tunnel::default()
+                },
+                &options,
+            )
+            .await
+            .unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(requests.len(), 1);
+        assert!(requests[0].target.starts_with("/tunnels/"));
+        assert!(requests[0]
+            .host
+            .as_deref()
+            .map_or(false, |host| host.starts_with("explicit.localhost")));
+        assert_eq!(requests[0].header_values("x-caller-header"), ["caller"]);
+        assert_eq!(
+            requests[0].header_values(super::CLUSTER_SOURCE_HEADER_NAME),
+            ["explicit"]
+        );
+    }
+
+    #[tokio::test]
+    async fn applies_additional_headers_to_tunnel_requests() {
+        let server = TestServer::start(vec![TestResponse::ok("{\"value\":[]}".to_string())]).await;
+        let client = test_client(&server, Authorization::Anonymous);
+        let mut builder = client.build();
+        builder.additional_headers(vec![
+            (
+                HeaderName::from_static("x-tunnels-vscode-session-id"),
+                HeaderValue::from_static("session-id"),
+            ),
+            (
+                HeaderName::from_static("x-tunnels-vscode-client-operation-id"),
+                HeaderValue::from_static("operation-id"),
+            ),
+            (
+                HeaderName::from_static("x-tunnels-vscode-client-request-id"),
+                HeaderValue::from_static("request-id"),
+            ),
+        ]);
+        let client: super::TunnelManagementClient = builder.into();
+
+        client.list_all_tunnels(NO_REQUEST_OPTIONS).await.unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-session-id"),
+            ["session-id"]
+        );
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-client-operation-id"),
+            ["operation-id"]
+        );
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-client-request-id"),
+            ["request-id"]
+        );
+    }
+
+    #[tokio::test]
+    async fn generates_additional_headers_for_each_tunnel_request() {
+        let server = TestServer::start(vec![
+            TestResponse::ok("{\"value\":[]}".to_string()),
+            TestResponse::ok("{\"value\":[]}".to_string()),
+        ])
+        .await;
+        let client = test_client(&server, Authorization::Anonymous);
+        let mut builder = client.build();
+        let request_number = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        builder.additional_headers_provider({
+            let request_number = request_number.clone();
+            move || {
+                let request_id = request_number.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                vec![(
+                    HeaderName::from_static("x-tunnels-vscode-client-request-id"),
+                    HeaderValue::from_str(&format!("request-{request_id}")).unwrap(),
+                )]
+            }
+        });
+        let client: super::TunnelManagementClient = builder.into();
+
+        client.list_all_tunnels(NO_REQUEST_OPTIONS).await.unwrap();
+        client.list_all_tunnels(NO_REQUEST_OPTIONS).await.unwrap();
+
+        let requests = server.finish().await;
+        assert_eq!(
+            requests[0].header_values("x-tunnels-vscode-client-request-id"),
+            ["request-0"]
+        );
+        assert_eq!(
+            requests[1].header_values("x-tunnels-vscode-client-request-id"),
+            ["request-1"]
+        );
+    }
+
+    fn recommendation_response(recommended_cluster_id: Option<&str>) -> String {
+        let recommended_cluster_id = recommended_cluster_id
+            .map(|value| format!("\"{value}\""))
+            .unwrap_or_else(|| "null".to_owned());
+        format!(
+            "{{\"recommendedClusterId\":{recommended_cluster_id},\"isFallback\":false,\"recommendations\":[]}}"
+        )
+    }
+
+    fn tunnel_response(cluster_id: &str) -> String {
+        format!("{{\"tunnelId\":\"created\",\"clusterId\":\"{cluster_id}\"}}")
+    }
+
+    fn test_client(
+        server: &TestServer,
+        authorization: Authorization,
+    ) -> super::TunnelManagementClient {
+        let http_client = reqwest::Client::builder()
+            .resolve("recommended.localhost", server.address)
+            .resolve("explicit.localhost", server.address)
+            .build()
+            .unwrap();
+        let mut builder = super::new_tunnel_management("rs-sdk-tests");
+        builder
+            .client(http_client)
+            .environment(TunnelServiceProperties {
+                service_uri: format!("http://localhost:{}/", server.address.port()),
+                service_app_id: String::new(),
+                service_internal_app_id: String::new(),
+                github_app_client_id: String::new(),
+            })
+            .authorization(authorization);
+        builder.into()
+    }
+
+    struct TestServer {
+        address: SocketAddr,
+        requests: Arc<Mutex<Vec<RecordedRequest>>>,
+        task: JoinHandle<()>,
+    }
+
+    impl TestServer {
+        async fn start(responses: Vec<TestResponse>) -> Self {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let requests = Arc::new(Mutex::new(Vec::new()));
+            let recorded_requests = requests.clone();
+            let task = tokio::spawn(async move {
+                for response in responses {
+                    let (mut stream, _) = listener.accept().await.unwrap();
+                    let request = read_request(&mut stream).await;
+                    recorded_requests.lock().unwrap().push(request);
+                    let response = response.as_http();
+                    stream.write_all(response.as_bytes()).await.unwrap();
+                }
+            });
+
+            Self {
+                address,
+                requests,
+                task,
+            }
+        }
+
+        async fn finish(mut self) -> Vec<RecordedRequest> {
+            if timeout(Duration::from_secs(1), &mut self.task)
+                .await
+                .is_err()
+            {
+                self.task.abort();
+                let _ = self.task.await;
+            }
+            Arc::try_unwrap(self.requests)
+                .unwrap()
+                .into_inner()
+                .unwrap()
+        }
+    }
+
+    struct TestResponse {
+        status: u16,
+        body: String,
+    }
+
+    impl TestResponse {
+        fn ok(body: String) -> Self {
+            Self { status: 200, body }
+        }
+
+        fn status(status: u16) -> Self {
+            Self {
+                status,
+                body: "{}".to_owned(),
+            }
+        }
+
+        fn as_http(&self) -> String {
+            format!(
+                "HTTP/1.1 {} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                self.status,
+                self.body.len(),
+                self.body
+            )
+        }
+    }
+
+    #[derive(Debug)]
+    struct RecordedRequest {
+        target: String,
+        host: Option<String>,
+        headers: Vec<(String, String)>,
+    }
+
+    impl RecordedRequest {
+        fn header_values(&self, name: &str) -> Vec<&str> {
+            self.headers
+                .iter()
+                .filter_map(|(header_name, value)| (header_name == name).then_some(value.as_str()))
+                .collect()
+        }
+    }
+
+    async fn read_request(stream: &mut TcpStream) -> RecordedRequest {
+        let mut data = Vec::new();
+        let mut buffer = [0; 1024];
+        let header_end;
+        loop {
+            let count = stream.read(&mut buffer).await.unwrap();
+            assert_ne!(count, 0, "connection closed before request headers");
+            data.extend_from_slice(&buffer[..count]);
+            if let Some(end) = data.windows(4).position(|window| window == b"\r\n\r\n") {
+                header_end = end + 4;
+                break;
+            }
+        }
+
+        let headers = std::str::from_utf8(&data[..header_end]).unwrap();
+        let mut lines = headers.split("\r\n");
+        let target = lines
+            .next()
+            .unwrap()
+            .split_whitespace()
+            .nth(1)
+            .unwrap()
+            .to_owned();
+        let headers: Vec<(String, String)> = lines
+            .filter_map(|line| line.split_once(':'))
+            .map(|(name, value)| (name.to_ascii_lowercase(), value.trim().to_owned()))
+            .collect();
+        let content_length = headers
+            .iter()
+            .find_map(|(name, value)| (name == "content-length").then_some(value))
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(0);
+        while data.len() < header_end + content_length {
+            let count = stream.read(&mut buffer).await.unwrap();
+            assert_ne!(count, 0, "connection closed before request body");
+            data.extend_from_slice(&buffer[..count]);
+        }
+
+        RecordedRequest {
+            host: headers
+                .iter()
+                .find_map(|(name, value)| (name == "host").then_some(value.clone())),
+            target,
+            headers,
+        }
     }
 }

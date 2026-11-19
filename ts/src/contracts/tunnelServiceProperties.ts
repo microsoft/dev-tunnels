@@ -56,7 +56,7 @@ export const devDnsName = 'global.ci.tunnels.dev.api.visualstudio.com';
 /**
  * Default host name for the local tunnel service.
  */
-export const localDnsName = 'tunnels.local.api.visualstudio.com:9901';
+export const localDnsName = 'global.tunnels.local.api.visualstudio.com';
 
 /**
  * First-party app ID: `Visual Studio Tunnel Service`

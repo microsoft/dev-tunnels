@@ -5,3 +5,4 @@ export * from './tunnelManagementHttpClient';
 export * from './tunnelManagementClient';
 export * from './tunnelRequestOptions';
 export * from './tunnelAccessTokenProperties';
+export * from './tunnelClusterSelection';

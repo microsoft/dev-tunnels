@@ -10,11 +10,14 @@ import {
     TunnelEndpoint,
     TunnelEvent,
     ClusterDetails,
+    ClusterAvailability,
+    ClusterRecommendationResponse,
     NamedRateStatus,
 } from '@microsoft/dev-tunnels-contracts';
 
 export class MockTunnelManagementClient implements TunnelManagementClient {
     private idCounter: number = 0;
+    public additionalRequestHeaders?: { [header: string]: string };
     public tunnels: Tunnel[] = [];
     public hostRelayUri?: string;
     public clientRelayUri?: string;
@@ -141,6 +144,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
     }
 
     public tunnelEndpointsUpdated: number = 0;
+    public lastTunnelEndpointUpdateOptions?: TunnelRequestOptions;
 
     updateTunnelEndpoint(
         tunnel: Tunnel,
@@ -148,6 +152,7 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
         options?: TunnelRequestOptions,
     ): Promise<TunnelEndpoint> {
         this.tunnelEndpointsUpdated++;
+        this.lastTunnelEndpointUpdateOptions = options;
         if (!tunnel.endpoints) {
             tunnel.endpoints = [];
         }
@@ -270,6 +275,27 @@ export class MockTunnelManagementClient implements TunnelManagementClient {
 
     listClusters(): Promise<ClusterDetails[]> {
         throw new Error('Method not implemented.');
+    }
+
+    getClusterRecommendations(
+        preferredClusterId?: string,
+        requiredGeo?: string,
+    ): Promise<ClusterRecommendationResponse> {
+        return Promise.resolve({
+            recommendedClusterId: 'localhost',
+            isFallback: false,
+            recommendations: [
+                {
+                    clusterId: 'localhost',
+                    azureLocation: '',
+                    azureGeo: '',
+                    clusterUri: '',
+                    availability: ClusterAvailability.Available,
+                    utilizationPercent: 0,
+                    reason: '',
+                },
+            ],
+        });
     }
 
     checkNameAvailablility(tunnelName: string): Promise<boolean> {        
