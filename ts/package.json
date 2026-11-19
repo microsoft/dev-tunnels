@@ -52,7 +52,7 @@
 		"eslint-plugin-security": "^1.7.1",
 		"mocha": "^12.0.3",
 		"mocha-multi-reporters": "^1.1.7",
-		"moment": "^2.29.4",
+		"moment": "^2.31.0",
 		"nerdbank-gitversioning": "^3.6.133",
 		"prettier": "^2.8.4",
 		"source-map-support": "^0.5.11",
