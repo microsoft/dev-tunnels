@@ -4,7 +4,7 @@
 import { CancellationToken } from '@microsoft/dev-tunnels-ssh';
 import { Tunnel, TunnelAccessScopes, TunnelPort } from '@microsoft/dev-tunnels-contracts';
 import { TunnelHost } from '.';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUuid } from './sshHelpers';
 import { TunnelConnectionBase } from './tunnelConnectionBase';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 
@@ -24,7 +24,7 @@ export class MultiModeTunnelHost extends TunnelConnectionBase implements TunnelH
      * sends to the relay. Set it before constructing any hosts; changing it afterwards does
      * not affect hosts that already exist.
      */
-    public static hostId: string = uuidv4();
+    public static hostId: string = randomUuid();
     public hosts: TunnelHost[];
 
     public constructor() {

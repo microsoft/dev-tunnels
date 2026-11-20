@@ -243,6 +243,52 @@ export const isNode = (): boolean =>
     process.release.name === 'node';
 
 /**
+ * Generates a random RFC 4122 v4 UUID using platform crypto APIs (Node or browser).
+ * @internal
+ */
+export function randomUuid(): string {
+    const webCrypto:
+        | {
+              randomUUID?: () => string;
+              getRandomValues?: (array: Uint8Array) => Uint8Array;
+          }
+        | undefined = typeof crypto !== 'undefined' ? (crypto as any) : undefined;
+    if (webCrypto && typeof webCrypto.randomUUID === 'function') {
+        return webCrypto.randomUUID();
+    }
+
+    if (isNode()) {
+        const nodeCrypto = require('crypto') as {
+            randomUUID?: () => string;
+            randomBytes: (size: number) => Uint8Array;
+        };
+        if (typeof nodeCrypto.randomUUID === 'function') {
+            return nodeCrypto.randomUUID();
+        }
+        return formatUuidV4(nodeCrypto.randomBytes(16));
+    }
+
+    if (webCrypto && typeof webCrypto.getRandomValues === 'function') {
+        return formatUuidV4(webCrypto.getRandomValues(new Uint8Array(16)));
+    }
+
+    throw new Error('No cryptographically secure random generator is available.');
+}
+
+function formatUuidV4(bytes: Uint8Array): string {
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex: string[] = [];
+    for (let i = 0; i < 16; i++) {
+        hex.push(bytes[i].toString(16).padStart(2, '0'));
+    }
+    return (
+        `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-` +
+        `${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`
+    );
+}
+
+/**
  * A workspace connection info
  */
 export interface IWorkspaceConnectionInfo {

@@ -46,7 +46,7 @@ import { RetryingTunnelConnectionEventArgs } from './retryingTunnelConnectionEve
 import { TunnelRelayStreamFactory } from './tunnelRelayStreamFactory';
 import { DefaultTunnelRelayStreamFactory } from './defaultTunnelRelayStreamFactory';
 import { IClientConfig } from 'websocket';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUuid } from './sshHelpers';
 
 /**
  * Tunnel connection session.
@@ -60,7 +60,7 @@ export class TunnelConnectionSession extends TunnelConnectionBase implements Tun
     private disconnectionReason?: SshDisconnectReason;
     private connectionStartTime: number = Date.now();
 
-    private readonly uniqueConnectionId: string = uuidv4();
+    private readonly uniqueConnectionId: string = randomUuid();
 
     private readonly refreshingTunnelEmitter =
         new TrackingEmitter<RefreshingTunnelEventArgs>();
