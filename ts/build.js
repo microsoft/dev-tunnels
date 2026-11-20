@@ -178,27 +178,15 @@ yargs.command('test-ts', 'Run TypeScript tests', async (yargs) => {
         testResultsDir,
         `TUNNELS-TS_${moment().format('YYYY-MM-DD_HH-mm-ss-SSS')}.xml`,
     );
-    const reporterConfig = {
-        reporterEnabled: 'spec, mocha-junit-reporter',
-        mochaJunitReporterReporterOptions: {
-            mochaFile: testResultsFile,
-        },
-    };
-    const reporterConfigFile = path.join(testResultsDir, 'mocha-multi-reporters.config');
-    await fs.writeFile(reporterConfigFile, JSON.stringify(reporterConfig));
 
     let command =
-        'npm run --silent mocha -- --reporter mocha-multi-reporters ' +
-        `--reporter-options configFile="${reporterConfigFile}"`;
+        'npm run --silent mocha -- --reporter ./mocha-reporter.js ' +
+        `--reporter-options mochaFile="${testResultsFile}"`;
     if (yargs.argv.filter) {
         command += ` --grep /${yargs.argv.filter}/i`;
     }
 
-    try {
-        await executeCommand(__dirname, command);
-    } finally {
-        await fs.unlink(reporterConfigFile);
-    }
+    await executeCommand(__dirname, command);
 });
 
 function forkCommand(command) {

@@ -47,14 +47,12 @@ import {
     RemotePortForwarder,
 } from '@microsoft/dev-tunnels-ssh-tcp';
 import { CancellationToken } from 'vscode-jsonrpc';
-import { SshHelpers } from './sshHelpers';
+import { SshHelpers, isNode, randomUuid } from './sshHelpers';
 import { MultiModeTunnelHost } from './multiModeTunnelHost';
 import { SessionPortKey } from './sessionPortKey';
 import { PortRelayConnectRequestMessage } from './messages/portRelayConnectRequestMessage';
 import { PortRelayConnectResponseMessage } from './messages/portRelayConnectResponseMessage';
-import { v4 as uuidv4 } from 'uuid';
 import { TunnelHost } from './tunnelHost';
-import { isNode } from './sshHelpers';
 import { TunnelConnectionOptions } from './tunnelConnectionOptions';
 import { TunnelConnectionSession } from './tunnelConnectionSession';
 
@@ -131,7 +129,7 @@ export class TunnelRelayTunnelHost extends TunnelConnectionSession implements Tu
         }
 
         this.hostId = MultiModeTunnelHost.hostId;
-        this.id = uuidv4() + "-relay";
+        this.id = randomUuid() + '-relay';
     }
 
     protected override get connectionId() {

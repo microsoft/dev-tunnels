@@ -1,5 +1,5 @@
 pool:
-  name: VSEngSS-MicroBuild2022-1ES
+  name: VSEng-MicroBuildVSStable
 
 # Publish only if changes to TypeScript directory are committed to main.
 trigger:
